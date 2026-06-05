@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request Status — Sanket Risk Consultants</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#1B2A4A;--navy-dark:#111E35;--gold:#C9A84C;--gold-pale:#F5EDD6;--slate:#4A5568;--text:#2D3748;--text-light:#718096;--border:#E2D9C5;--bg:#FAF8F3;--radius:10px;--shadow:0 2px 12px rgba(27,42,74,0.08)}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.site-header{background:var(--navy);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:64px;box-shadow:0 2px 12px rgba(0,0,0,0.2)}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none}
+.logo-mark{width:36px;height:36px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:var(--navy);font-family:'IBM Plex Mono',monospace}
+.logo-text{color:white;font-size:15px;font-weight:600}
+.logo-sub{color:rgba(255,255,255,0.5);font-size:11px}
+.header-badge{background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.3);color:var(--gold);font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:.04em;text-transform:uppercase}
+.hero{background:linear-gradient(135deg,var(--navy-dark),var(--navy));padding:48px 32px;text-align:center}
+.hero h1{font-size:clamp(22px,4vw,34px);font-weight:700;color:white;margin-bottom:12px}
+.hero p{font-size:14px;color:rgba(255,255,255,0.65);max-width:500px;margin:0 auto}
+.page-wrap{max-width:640px;margin:0 auto;padding:40px 24px 80px}
+.search-card{background:white;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px;margin-bottom:24px}
+.search-card label{display:block;font-size:12px;font-weight:600;color:var(--slate);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.search-row{display:flex;gap:10px}
+.search-row input{flex:1;font-family:'Inter',sans-serif;font-size:14px;color:var(--text);background:white;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px}
+.search-row input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,0.12)}
+.btn-search{padding:11px 24px;background:var(--gold);color:var(--navy);border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap}
+.btn-search:hover{background:#b8962f}
+.result-card{background:white;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;display:none}
+.result-header{background:var(--navy);padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+.result-ref{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--gold)}
+.status-badge{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em}
+.status-Pending{background:rgba(255,243,224,0.2);color:#FBD38D}
+.status-Assigned,.status-Reassigned{background:rgba(198,246,213,0.2);color:#9AE6B4}
+.status-Converted,.status-Completed{background:rgba(198,246,213,0.3);color:#68D391}
+.result-body{padding:20px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.detail-item label{font-size:11px;font-weight:600;color:var(--slate);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+.detail-item span{font-size:14px;color:var(--text)}
+.timeline{margin-top:20px;padding-top:20px;border-top:1px solid var(--border)}
+.timeline h4{font-size:12px;font-weight:600;color:var(--slate);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.timeline-steps{display:flex;gap:0}
+.step{flex:1;text-align:center;position:relative}
+.step::before{content:'';position:absolute;top:12px;left:50%;right:-50%;height:2px;background:var(--border);z-index:0}
+.step:last-child::before{display:none}
+.step-dot{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);background:white;margin:0 auto 6px;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;font-size:10px}
+.step-dot.done{background:var(--gold);border-color:var(--gold);color:var(--navy);font-weight:700}
+.step-dot.active{background:var(--navy);border-color:var(--navy);color:white;font-weight:700}
+.step-label{font-size:10px;color:var(--slate)}
+.step-label.done,.step-label.active{color:var(--navy);font-weight:600}
+.error-notice{background:#fee2e2;border-left:4px solid #e53e3e;border-radius:6px;padding:12px 16px;font-size:13px;color:#c53030;margin-top:12px;display:none}
+.site-footer{text-align:center;padding:24px;font-size:12px;color:var(--text-light);border-top:1px solid var(--border)}
+@media(max-width:560px){.search-row{flex-direction:column}.detail-grid{grid-template-columns:1fr}.site-header{padding:0 16px}}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <a class="logo-wrap" href="https://sanketrisk.netlify.app">
+    <div class="logo-mark">S</div>
+    <div><div class="logo-text">Sanket Risk Consultants</div><div class="logo-sub">Commercial Property Inspection</div></div>
+  </a>
+  <div class="header-badge">Request Status</div>
+</header>
+<div class="hero">
+  <h1>Check Your Request Status</h1>
+  <p>Enter your reference number below to see the current status of your inspection request.</p>
+</div>
+<div class="page-wrap">
+  <div class="search-card">
+    <label>Reference Number</label>
+    <div class="search-row">
+      <input type="text" id="ref-input" placeholder="e.g. SRC-260101-1234" autocomplete="off"
+        onkeydown="if(event.key==='Enter') lookupStatus()">
+      <button class="btn-search" onclick="lookupStatus()">Look Up →</button>
+    </div>
+    <div class="error-notice" id="error-notice"></div>
+  </div>
+  <div class="result-card" id="result-card">
+    <div class="result-header">
+      <span class="result-ref" id="result-ref">—</span>
+      <span class="status-badge" id="status-badge">—</span>
+    </div>
+    <div class="result-body">
+      <div class="detail-grid">
+        <div class="detail-item"><label>Insured / Property</label><span id="r-insured">—</span></div>
+        <div class="detail-item"><label>City</label><span id="r-city">—</span></div>
+        <div class="detail-item"><label>Submitted</label><span id="r-submitted">—</span></div>
+        <div class="detail-item"><label>Urgency</label><span id="r-urgency">—</span></div>
+        <div class="detail-item"><label>Purpose</label><span id="r-purpose">—</span></div>
+        <div class="detail-item"><label>Assigned Inspector</label><span id="r-assigned">—</span></div>
+      </div>
+      <div class="timeline">
+        <h4>Request Timeline</h4>
+        <div class="timeline-steps" id="timeline-steps"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<footer class="site-footer">&copy; Sanket Risk Consultants &nbsp;|&nbsp; <a href="https://sanketrisk.netlify.app" style="color:var(--gold);text-decoration:none;">Inspector Login</a></footer>
+<script>
+  const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{autoRefreshToken:false,persistSession:false}});
+
+  const STEPS = ['Pending','Assigned','In Progress','Completed'];
+
+  async function lookupStatus() {
+    const ref = document.getElementById('ref-input').value.trim().toUpperCase();
+    const errEl = document.getElementById('error-notice');
+    errEl.style.display = 'none';
+    if (!ref) { errEl.textContent = 'Please enter a reference number.'; errEl.style.display='block'; return; }
+    try {
+      const { data, error } = await _supabase.from('inspection_requests')
+        .select('request_ref,status,insured_name,city,submitted_at,urgency,purpose,assigned_to')
+        .eq('request_ref', ref).single();
+      if (error || !data) { errEl.textContent = 'Reference number not found. Please check and try again.'; errEl.style.display='block'; return; }
+      document.getElementById('result-ref').textContent = data.request_ref;
+      const badge = document.getElementById('status-badge');
+      badge.textContent = data.status || 'Pending';
+      badge.className = 'status-badge status-' + (data.status||'Pending').replace(/\s+/g,'');
+      document.getElementById('r-insured').textContent = data.insured_name || '—';
+      document.getElementById('r-city').textContent = data.city || '—';
+      document.getElementById('r-submitted').textContent = data.submitted_at ? new Date(data.submitted_at).toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'}) : '—';
+      document.getElementById('r-urgency').textContent = data.urgency || '—';
+      document.getElementById('r-purpose').textContent = data.purpose || '—';
+      document.getElementById('r-assigned').textContent = data.assigned_to || 'Pending assignment';
+      const currentStep = STEPS.indexOf(data.status);
+      const stepsEl = document.getElementById('timeline-steps');
+      stepsEl.innerHTML = STEPS.map((s,i) => {
+        const cls = i < currentStep ? 'done' : i === currentStep ? 'active' : '';
+        return '<div class="step"><div class="step-dot ' + cls + '">' + (cls==='done'?'✓': i+1) + '</div><div class="step-label ' + cls + '">' + s + '</div></div>';
+      }).join('');
+      document.getElementById('result-card').style.display = 'block';
+      document.getElementById('result-card').scrollIntoView({behavior:'smooth',block:'nearest'});
+    } catch(e) { errEl.textContent = 'Error looking up your request. Please try again.'; errEl.style.display='block'; }
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const refParam = params.get('ref');
+  if (refParam) { document.getElementById('ref-input').value = refParam; lookupStatus(); }
+</script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspection Report — Sanket Risk Consultants</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#1B2A4A;--gold:#C9A84C;--gold-pale:#F5EDD6;--slate:#4A5568;--text:#2D3748;--border:#E2D9C5;--bg:#FAF8F3;--radius:10px;--shadow:0 2px 12px rgba(27,42,74,0.08)}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.site-header{background:var(--navy);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:64px;box-shadow:0 2px 12px rgba(0,0,0,0.2)}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none}
+.logo-mark{width:36px;height:36px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:var(--navy);font-family:'IBM Plex Mono',monospace}
+.logo-text{color:white;font-size:15px;font-weight:600}
+.logo-sub{color:rgba(255,255,255,0.5);font-size:11px}
+.header-badge{background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.3);color:var(--gold);font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:.04em;text-transform:uppercase}
+.page-wrap{max-width:860px;margin:0 auto;padding:40px 24px 80px}
+.report-header{background:var(--navy);border-radius:var(--radius);padding:28px 32px;margin-bottom:24px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.report-header-left h1{font-size:22px;font-weight:700;color:white;margin-bottom:6px}
+.report-header-left p{font-size:13px;color:rgba(255,255,255,0.6)}
+.report-id{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold);margin-top:8px}
+.report-date{font-size:12px;color:rgba(255,255,255,0.5)}
+.card{background:white;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden}
+.card-title{background:var(--navy);color:white;padding:12px 18px;font-size:13px;font-weight:600}
+.card-body{padding:20px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.detail-item label{font-size:11px;font-weight:600;color:var(--slate);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+.detail-item span{font-size:14px;color:var(--text)}
+.quality-badge{display:inline-block;padding:6px 18px;border-radius:20px;font-size:13px;font-weight:700;margin-top:4px}
+.q-Preferred{background:#e6f7ee;color:#276749}
+.q-Standard{background:#ebf4ff;color:#2b6cb0}
+.q-Sub-Standard{background:#fff3e0;color:#c05621}
+.q-Unacceptable{background:#fee2e2;color:#c53030}
+.narrative{font-size:14px;line-height:1.75;color:var(--text);white-space:pre-wrap}
+.empty-state{text-align:center;padding:80px 24px;color:var(--slate)}
+.empty-icon{font-size:56px;margin-bottom:20px}
+.empty-state h2{font-size:20px;color:var(--navy);margin-bottom:10px}
+.loading{text-align:center;padding:60px;color:var(--slate);font-size:14px}
+.site-footer{text-align:center;padding:24px;font-size:12px;color:var(--slate);border-top:1px solid var(--border)}
+.confidential{background:var(--gold-pale);border:1px solid var(--gold);border-radius:6px;padding:10px 16px;font-size:12px;color:var(--slate);margin-bottom:20px;text-align:center}
+@media(max-width:560px){.detail-grid{grid-template-columns:1fr}.report-header{flex-direction:column}.site-header{padding:0 16px}}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <a class="logo-wrap" href="https://sanketrisk.netlify.app">
+    <div class="logo-mark">S</div>
+    <div><div class="logo-text">Sanket Risk Consultants</div><div class="logo-sub">Commercial Property Inspection</div></div>
+  </a>
+  <div class="header-badge">Inspection Report</div>
+</header>
+<div class="page-wrap" id="page-wrap">
+  <div class="loading" id="loading">Loading inspection report...</div>
+</div>
+<footer class="site-footer">&copy; Sanket Risk Consultants &nbsp;|&nbsp; This report is confidential and intended solely for the addressee.</footer>
+<script>
+  const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{autoRefreshToken:false,persistSession:false}});
+
+  async function loadReport() {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    const wrap = document.getElementById('page-wrap');
+
+    if (!ref) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><h2>No Report Reference</h2><p>Please use the link provided by Sanket Risk Consultants to access your report.</p></div>';
+      return;
+    }
+
+    try {
+      const { data, error } = await _supabase.from('inspections')
+        .select('inspection_id,inspection_date,insured_name,city,province_state,occupancy_class,risk_quality,uw_recommendation,inspector_name,form_data,updated_at')
+        .eq('inspection_id', ref)
+        .eq('report_published', true)
+        .single();
+
+      if (error || !data) {
+        wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🔒</div><h2>Report Not Available</h2><p>This report is not yet published or the reference number is invalid. Please contact Sanket Risk Consultants for assistance.</p></div>';
+        return;
+      }
+
+      const fd = data.form_data || {};
+      const date = data.inspection_date ? new Date(data.inspection_date).toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'}) : '—';
+      const updated = data.updated_at ? new Date(data.updated_at).toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'}) : '—';
+
+      wrap.innerHTML =
+        '<div class="confidential">🔒 Confidential — This report is prepared exclusively for the named insured and their insurance representative. Not for public distribution.</div>' +
+        '<div class="report-header">' +
+          '<div class="report-header-left">' +
+            '<h1>' + (data.insured_name || '—') + '</h1>' +
+            '<p>' + [data.city, data.province_state].filter(Boolean).join(', ') + '</p>' +
+            '<div class="report-id">Report: ' + (data.inspection_id || ref) + '</div>' +
+            '<div class="report-date">Inspection Date: ' + date + ' &nbsp;|&nbsp; Issued: ' + updated + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="card"><div class="card-title">Property & Occupancy</div><div class="card-body"><div class="detail-grid">' +
+          '<div class="detail-item"><label>Insured Name</label><span>' + (data.insured_name||'—') + '</span></div>' +
+          '<div class="detail-item"><label>Occupancy Class</label><span>' + (data.occupancy_class||'—') + '</span></div>' +
+          '<div class="detail-item"><label>City</label><span>' + (data.city||'—') + '</span></div>' +
+          '<div class="detail-item"><label>Province</label><span>' + (data.province_state||'—') + '</span></div>' +
+        '</div></div></div>' +
+        '<div class="card"><div class="card-title">Risk Assessment Summary</div><div class="card-body"><div class="detail-grid">' +
+          '<div class="detail-item"><label>Overall Risk Quality</label><span><span class="quality-badge q-' + (data.risk_quality||'').replace(/\s+/g,'-') + '">' + (data.risk_quality||'—') + '</span></span></div>' +
+          '<div class="detail-item"><label>Underwriting Recommendation</label><span>' + (data.uw_recommendation||'—') + '</span></div>' +
+          '<div class="detail-item"><label>Inspector</label><span>' + (data.inspector_name||'—') + '</span></div>' +
+          '<div class="detail-item"><label>Inspection Date</label><span>' + date + '</span></div>' +
+        '</div>' +
+        (fd.uw_narrative ? '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)"><label style="font-size:11px;font-weight:600;color:var(--slate);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:8px">Narrative Summary</label><div class="narrative">' + fd.uw_narrative + '</div></div>' : '') +
+        '</div></div>';
+
+    } catch(e) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><h2>Error Loading Report</h2><p>Please try again or contact Sanket Risk Consultants directly.</p></div>';
+    }
+  }
+
+  loadReport();
+</script>
+</body>
+</html>

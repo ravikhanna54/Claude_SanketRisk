@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESI — Engineering Service Instructions | SanketRisk Inspector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #0d1b2a;
+      --navy-mid:   #1a2e42;
+      --navy-light: #243d54;
+      --gold:       #c9a84c;
+      --gold-light: #e2c97e;
+      --gold-pale:  #f5ecd4;
+      --slate:      #4a6580;
+      --slate-light:#7a9ab5;
+      --border:     #d0c9bb;
+      --bg:         #f0f2f5;
+      --card:       #ffffff;
+      --text:       #0d1b2a;
+      --green:      #276749;
+      --orange:     #c05621;
+      --red:        #c53030;
+      --amber:      #b7791f;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .esi-header {
+      background: var(--navy);
+      border-bottom: 3px solid var(--gold);
+      padding: 0 32px;
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+
+    .esi-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .esi-logo-mark {
+      width: 36px; height: 36px;
+      background: var(--gold);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700;
+      color: var(--navy);
+      font-family: 'Playfair Display', serif;
+    }
+
+    .esi-logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px; font-weight: 700;
+      color: #fff;
+    }
+
+    .esi-logo-text span { color: var(--gold); }
+
+    .esi-logo-sub {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--slate-light);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+
+    .esi-badge {
+      background: var(--gold);
+      color: var(--navy);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* ── MAIN TABS ── */
+    .tab-bar {
+      background: var(--navy-mid);
+      display: flex;
+      padding: 0 32px;
+      border-bottom: 1px solid rgba(201,168,76,.2);
+    }
+
+    .main-tab {
+      padding: 14px 24px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--slate-light);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -1px;
+      transition: all .2s;
+      user-select: none;
+    }
+
+    .main-tab:hover { color: #fff; }
+    .main-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    /* ── LAYOUT ── */
+    .esi-body {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: calc(100vh - 110px);
+    }
+
+    /* ── SIDEBAR ── */
+    .esi-sidebar {
+      background: var(--navy);
+      padding: 20px 0;
+      position: sticky;
+      top: 110px;
+      height: calc(100vh - 110px);
+      overflow-y: auto;
+    }
+
+    .sidebar-section-title {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      color: var(--slate-light);
+      padding: 14px 20px 6px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .sidebar-link {
+      display: block;
+      padding: 8px 20px;
+      font-size: 12px;
+      color: #a8bfd4;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+      cursor: pointer;
+    }
+
+    .sidebar-link:hover { background: rgba(255,255,255,.05); color: #fff; border-left-color: var(--slate-light); }
+    .sidebar-link.active { background: rgba(201,168,76,.1); color: var(--gold); border-left-color: var(--gold); }
+
+    /* ── CONTENT ── */
+    .esi-content {
+      padding: 32px 40px 60px;
+      max-width: 900px;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── SECTION HEADERS ── */
+    .esi-section {
+      margin-bottom: 48px;
+      scroll-margin-top: 130px;
+    }
+
+    .esi-section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--navy);
+      border-bottom: 3px solid var(--gold);
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .esi-section-tag {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      background: var(--navy);
+      color: var(--gold);
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-left: auto;
+    }
+
+    .esi-sub {
+      font-size: 14px;
+      color: var(--slate);
+      margin-bottom: 16px;
+      line-height: 1.7;
+    }
+
+    /* ── CARDS ── */
+    .esi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+
+    .esi-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .esi-card-title::before {
+      content: '';
+      width: 3px; height: 16px;
+      background: var(--gold);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .esi-card p { font-size: 13px; line-height: 1.75; color: #2d3748; margin-bottom: 10px; }
+    .esi-card p:last-child { margin-bottom: 0; }
+
+    /* ── CALLOUT BOXES ── */
+    .callout {
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      line-height: 1.65;
+      border-left: 4px solid;
+    }
+
+    .callout-tip    { background: #f0fff4; border-color: var(--green); color: #1a4731; }
+    .callout-warn   { background: #fffbeb; border-color: var(--amber); color: #744210; }
+    .callout-alert  { background: #fff5f5; border-color: var(--red);   color: #742a2a; }
+    .callout-info   { background: #ebf4ff; border-color: #2b6cb0;      color: #1a365d; }
+
+    .callout strong { font-weight: 700; }
+
+    /* ── FIELD GUIDE TABLE ── */
+    .field-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 14px;
+    }
+
+    .field-table th {
+      background: var(--navy);
+      color: var(--gold);
+      padding: 8px 12px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .field-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+      line-height: 1.5;
+    }
+
+    .field-table tr:last-child td { border-bottom: none; }
+    .field-table tr:nth-child(even) td { background: #fafafa; }
+    .field-table .field-name { font-weight: 600; color: var(--navy); white-space: nowrap; }
+    .field-table .field-note { color: var(--slate); }
+
+    /* ── HAZARD DEEP DIVE ── */
+    .hazard-card {
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 28px;
+      border: 1px solid var(--border);
+    }
+
+    .hazard-header {
+      padding: 16px 22px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .hazard-icon { font-size: 28px; flex-shrink: 0; }
+
+    .hazard-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .hazard-sub { font-size: 12px; color: rgba(255,255,255,.7); margin-top: 2px; }
+
+    .hazard-body { padding: 20px 22px; background: #fff; }
+
+    .hazard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .hazard-block {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .hazard-block-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--slate);
+      margin-bottom: 8px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .hazard-block ul {
+      padding-left: 16px;
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--navy);
+    }
+
+    .hazard-block p {
+      font-size: 12px;
+      line-height: 1.65;
+      color: var(--navy);
+    }
+
+    .risk-signal {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 10px;
+    }
+
+    .risk-preferred { background: #f0fff4; color: var(--green); border: 1px solid var(--green); }
+    .risk-standard  { background: #fffbeb; color: var(--amber); border: 1px solid var(--amber); }
+    .risk-refer     { background: #fff5f5; color: var(--orange); border: 1px solid var(--orange); }
+    .risk-decline   { background: #fff5f5; color: var(--red);    border: 1px solid var(--red); }
+
+    /* ── NFPA TABLE ── */
+    .nfpa-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; border-radius: 8px; overflow: hidden; }
+    .nfpa-table th { background: var(--navy); color: var(--gold); padding: 9px 12px; text-align: left; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; }
+    .nfpa-table td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: top; line-height: 1.5; }
+    .nfpa-table tr:last-child td { border-bottom: none; }
+
+    /* ── PRINT ── */
+    @media print {
+      .esi-sidebar, .tab-bar, .esi-header { display: none !important; }
+      .esi-body { grid-template-columns: 1fr; }
+      .tab-panel { display: block !important; }
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .esi-body { grid-template-columns: 1fr; }
+      .esi-sidebar { display: none; }
+      .esi-content { padding: 20px 16px 40px; }
+      .hazard-grid { grid-template-columns: 1fr; }
+    }
+    /* ── BULLETINS ── */
+    .bulletin-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      transition: box-shadow .2s;
+    }
+    .bulletin-card:hover { box-shadow: 0 4px 16px rgba(13,27,42,.08); }
+
+    .bulletin-header {
+      padding: 14px 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bulletin-cat-pill {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-family: 'IBM Plex Mono', monospace;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .cat-technical  { background: #ebf4ff; color: #2b6cb0; }
+    .cat-platform   { background: #f0fff4; color: #276749; }
+    .cat-policy     { background: #fffbeb; color: #b7791f; }
+    .cat-general    { background: #f7f4ef; color: var(--slate); }
+
+    .bulletin-title-wrap { flex: 1; }
+
+    .bulletin-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 4px;
+    }
+
+    .bulletin-meta {
+      font-size: 11px;
+      color: var(--slate-light);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .bulletin-body {
+      padding: 16px 18px;
+      font-size: 13px;
+      line-height: 1.75;
+      color: #2d3748;
+      white-space: pre-wrap;
+    }
+
+    .bulletin-footer {
+      padding: 10px 18px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .bulletin-ref {
+      font-size: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--slate-light);
+    }
+
+    .bulletin-actions { display: flex; gap: 8px; }
+
+    .btn-bulletin-action {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--slate);
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'IBM Plex Sans', sans-serif;
+      transition: all .15s;
+    }
+
+    .btn-bulletin-action:hover { border-color: var(--navy); color: var(--navy); }
+    .btn-bulletin-action.danger:hover { border-color: #c53030; color: #c53030; }
+
+    /* Compose form */
+    .compose-card {
+      background: var(--navy);
+      border-radius: 12px;
+      padding: 22px 24px;
+      margin-bottom: 24px;
+    }
+
+    .compose-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .compose-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .compose-field label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--slate-light);
+      margin-bottom: 5px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .compose-field input,
+    .compose-field select,
+    .compose-field textarea {
+      width: 100%;
+      padding: 9px 12px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 7px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      color: #fff;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .compose-field input::placeholder,
+    .compose-field textarea::placeholder { color: rgba(255,255,255,.3); }
+    .compose-field input:focus,
+    .compose-field select:focus,
+    .compose-field textarea:focus { border-color: var(--gold); }
+    .compose-field select option { background: var(--navy-mid); color: #fff; }
+    .compose-field textarea { resize: vertical; min-height: 120px; }
+
+    .compose-field.full { grid-column: 1 / -1; }
+
+    .btn-post {
+      background: var(--gold);
+      color: var(--navy);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s;
+      margin-top: 4px;
+    }
+
+    .btn-post:hover { background: var(--gold-light); }
+    .btn-post:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Filter bar */
+    .bulletin-filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filter-pill {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid var(--border);
+      background: #fff;
+      color: var(--slate);
+      transition: all .15s;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    .filter-pill.active,
+    .filter-pill:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+    .bulletin-empty {
+      text-align: center;
+      padding: 50px 20px;
+      color: var(--slate-light);
+      font-size: 14px;
+    }
+
+    .bulletin-empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+    /* Edit modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal-box {
+      background: var(--navy);
+      border-radius: 12px;
+      padding: 24px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .modal-header-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    .btn-modal-close {
+      background: none;
+      border: none;
+      color: var(--slate-light);
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .btn-modal-close:hover { color: #fff; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="esi-header">
+  <div class="esi-logo">
+    <div class="esi-logo-mark">S</div>
+    <div>
+      <div class="esi-logo-text">Sanket<span>Risk</span> Inspector</div>
+      <div class="esi-logo-sub">Engineering Service Instructions</div>
+    </div>
+  </div>
+  <div class="esi-badge">ESI Reference Guide</div>
+</div>
+
+<!-- MAIN TABS -->
+<div class="tab-bar">
+  <div class="main-tab active" onclick="switchMainTab('guide', this)">📋 Form Guide</div>
+  <div class="main-tab" onclick="switchMainTab('technical', this)">🔬 Technical Reference</div>
+  <div class="main-tab" onclick="switchMainTab('bulletins', this)">📣 Bulletins & Updates <span id="bulletin-badge" style="display:none;background:var(--gold);color:var(--navy);font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px;vertical-align:middle;"></span></div>
+</div>
+
+<!-- BODY -->
+<div class="esi-body">
+
+  <!-- SIDEBAR -->
+  <nav class="esi-sidebar" id="esi-sidebar">
+    <!-- populated by JS -->
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="esi-content">
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- TAB 1: FORM GUIDE                          -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="tab-panel active" id="panel-guide">
+
+      <div class="esi-section" id="guide-intro">
+        <div class="esi-section-title">Introduction & Inspection Setup <span class="esi-section-tag">INTRO</span></div>
+        <p class="esi-sub">The Introduction section establishes the administrative identity of the inspection. Accuracy here is critical — these fields drive report headers, database records, and assignment tracking.</p>
+        <div class="esi-card">
+          <div class="esi-card-title">Inspection ID</div>
+          <p>Auto-generated on form load (format: INS-YYYY-MMDD-###). Do not alter unless directed by your QA reviewer. This is the primary record key used across all platform functions.</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Purpose of Inspection</div>
+          <p>Select the correct purpose before beginning data entry. The purpose drives the underwriting context for the entire report. Common purposes: <strong>New Business</strong> (first-time inspection for new policy), <strong>Renewal</strong> (periodic re-inspection), <strong>Mid-Term</strong> (triggered by change in occupancy or risk), <strong>Re-Inspection</strong> (follow-up on prior recommendations).</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Inspection Date</div>
+          <p>Always enter the actual date the site visit occurred, not the report completion date. These may differ by several days. The inspection date governs the currency of the risk assessment.</p>
+        </div>
+        <div class="callout callout-tip"><strong>Tip:</strong> Complete the Intro section before arriving on site. Pre-populate from the inspection request if one exists — use the Convert button in the dashboard to auto-fill insured details.</div>
+      </div>
+
+      <div class="esi-section" id="guide-insured">
+        <div class="esi-section-title">Insured Information <span class="esi-section-tag">INSURED</span></div>
+        <p class="esi-sub">Accurately identifying the insured entity and property location is foundational. Errors here affect policy matching, geocoding, and catastrophe modelling.</p>
+        <table class="field-table">
+          <thead><tr><th>Field</th><th>Guidance</th></tr></thead>
+          <tbody>
+            <tr><td class="field-name">Legal Entity Name</td><td>Use the full legal name as it appears on the insurance application or corporate registration. Do not abbreviate.</td></tr>
+            <tr><td class="field-name">DBA / Trade Name</td><td>Record any operating name that differs from the legal entity. Important for occupancy identification.</td></tr>
+            <tr><td class="field-name">Street Address</td><td>Use the civic address of the inspected building. If multiple buildings, use the primary entrance address and document others in Additional Buildings.</td></tr>
+            <tr><td class="field-name">Province / State</td><td>Critical for jurisdiction, building code year, and fire protection grading systems.</td></tr>
+            <tr><td class="field-name">Site Contact</td><td>Record the name and title of the person who accompanied or received you on site. Note if access was restricted.</td></tr>
+            <tr><td class="field-name">Year Established</td><td>Helps assess management experience and operational maturity. Long-established operations generally indicate stable risk.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout callout-warn"><strong>Important:</strong> If the legal entity does not match the named insured on the policy, flag this discrepancy in the Summary section and notify your QA reviewer.</div>
+      </div>
+
+      <div class="esi-section" id="guide-construction">
+        <div class="esi-section-title">Construction <span class="esi-section-tag">CONSTRUCTION</span></div>
+        <p class="esi-sub">Construction is one of the four COPE elements (Construction, Occupancy, Protection, Exposure) that form the backbone of commercial property underwriting. Accuracy is essential for rate adequacy and replacement cost estimation.</p>
+        <div class="esi-card">
+          <div class="esi-card-title">ISO Construction Class</div>
+          <p><strong>Class 1 — Frame:</strong> Exterior walls and structural members are wood or other combustible material. Highest fire vulnerability.</p>
+          <p><strong>Class 2 — Joisted Masonry:</strong> Exterior walls of masonry (brick, concrete block, stone) with wood floor and roof systems. Very common in older commercial buildings.</p>
+          <p><strong>Class 3 — Non-Combustible:</strong> Exterior walls, floors and roof of metal or other non-combustible material, but not fire-resistive rated. Steel construction with metal deck.</p>
+          <p><strong>Class 4 — Masonry Non-Combustible:</strong> Masonry exterior walls with non-combustible (metal) floors and roof. Better than Class 3 due to masonry walls.</p>
+          <p><strong>Class 5 — Modified Fire Resistive:</strong> Construction with fire-resistive rated assemblies but not meeting full Class 6 requirements. Includes some concrete tilt-up.</p>
+          <p><strong>Class 6 — Fire Resistive:</strong> All structural elements have minimum 2-hour fire resistance ratings. Concrete frame, fire-rated steel. Lowest fire vulnerability.</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Year Built & Renovation</div>
+          <p>Always ask about the original construction year AND any major renovations. A 1960s building with a 2015 full renovation may have substantially improved electrical and mechanical systems. Document both dates and the scope of renovation.</p>
+          <p>Buildings constructed before 1970 warrant additional scrutiny for: knob-and-tube wiring, asbestos-containing materials, inadequate electrical service, and non-code-compliant structural elements.</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Roof Assessment</div>
+          <p><strong>Age:</strong> Most insurers apply surcharges or restrictions on roofs over 20 years old. Record the year the current roof covering was installed (not year built).</p>
+          <p><strong>Type:</strong> Flat/low slope roofs require membrane inspection. Note any ponding water, blistering, or seam separation. Sloped roofs — assess shingle condition, ridge caps, and flashing.</p>
+          <p><strong>Drains:</strong> Flat roofs must have functional primary and secondary (overflow) drains. Clogged drains can cause structural collapse under water load.</p>
+        </div>
+        <div class="callout callout-info"><strong>Mixed Construction:</strong> Use the percentage breakdown fields for buildings with more than one construction type. The ISO class assigned should reflect the predominant construction of the insured building(s).</div>
+      </div>
+
+      <div class="esi-section" id="guide-occupancy">
+        <div class="esi-section-title">Occupancy <span class="esi-section-tag">OCCUPANCY</span></div>
+        <p class="esi-sub">Occupancy is the second COPE element. It describes what the building is used for — which directly determines fire load, hazard class, applicable supplements, and underwriting appetite.</p>
+        <div class="esi-card">
+          <div class="esi-card-title">Description of Operations</div>
+          <p>Write a clear, factual narrative of what occurs in the building. Include: primary products or services, production processes, number of employees, shifts operated, customer access, and any storage of raw materials or finished goods. A well-written description allows the underwriter to visualize the risk without visiting the site.</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Owner-Occupied vs. Tenant</div>
+          <p><strong>Owner-Occupied:</strong> The property owner operates from the building. Generally more stable — owner has direct incentive to maintain the property.</p>
+          <p><strong>Tenant:</strong> A third party occupies the building. Confirm: Is there a lease? Who is responsible for fire protection maintenance? Are building alterations permitted?</p>
+          <p><strong>Mixed:</strong> Some floors/units owner-occupied, others leased. Document the breakdown and identify tenant occupancies separately.</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Hazardous Operations & Materials</div>
+          <p>Select all applicable hazardous processes. Each selection opens a detailed supplementary panel — complete all fields within each active panel. The NFPA Hazard Category should reflect the overall hazard classification of the occupancy, taking into account all processes present.</p>
+          <p>When multiple hazards coexist (e.g., welding AND flammable liquid storage), the combined risk is greater than any single hazard alone. Elevate the NFPA category accordingly and document the interaction in the Hazard Notes field.</p>
+        </div>
+        <div class="callout callout-warn"><strong>Supplement Triggers:</strong> Certain occupancies require completion of a Supplement module. Activate the appropriate supplement via the Supplement Manager: Restaurant (cooking operations), Woodworking (millwork/cabinet shops), Warehouse (storage operations), Auto Service (garages/body shops), Sprinkler (sprinklered buildings), Apartments (multi-residential).</div>
+      </div>
+
+      <div class="esi-section" id="guide-protection">
+        <div class="esi-section-title">Protection <span class="esi-section-tag">PROTECTION</span></div>
+        <p class="esi-sub">Protection is the third COPE element. It covers both private fire protection (sprinklers, alarms, extinguishers) and public protection (fire department response). Together these are the most significant rating variables after construction class.</p>
+        <div class="esi-card">
+          <div class="esi-card-title">Sprinkler Systems</div>
+          <p><strong>Coverage:</strong> Note whether sprinklers cover the entire building or are partial. Partial coverage is a significant deficiency — document exactly which areas are unprotected and why.</p>
+          <p><strong>Type:</strong> Wet pipe (most common — water filled at all times), Dry pipe (air/nitrogen pressurized — used in unheated spaces), Pre-action (requires dual activation — used in data centres, museums), Deluge (all heads open simultaneously — for high-hazard areas).</p>
+          <p><strong>Condition:</strong> Check for: corrosion on heads or piping, painted heads (renders them ineffective — grounds for immediate recommendation), obstructions within 18 inches of heads, and evidence of recent service tag.</p>
+          <p>If the building has a sprinkler system, activate the <strong>Sprinkler Supplement</strong> for full system documentation.</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Fire Alarm Systems</div>
+          <p><strong>Local alarm:</strong> Sounds at the building only. No automatic notification of fire department — relies on occupants to call 911. Lowest level of protection.</p>
+          <p><strong>Central station monitored:</strong> Connects to a ULC-listed monitoring centre that notifies fire department 24/7. Preferred by most underwriters.</p>
+          <p><strong>Smoke vs. heat detection:</strong> Smoke detection responds earlier in fire development. Heat detectors are used in dusty or steamy environments where smoke detectors would false-alarm. Document which type is installed and coverage areas.</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">FUS / Public Protection</div>
+          <p>The Fire Underwriters Survey (FUS) grades assess the adequacy of municipal fire protection. Key factors: distance to responding fire hall, department type (full-time paid vs. volunteer), equipment, water supply, and communications.</p>
+          <p>In Canada, FUS grades run from 1 (best) to 10 (no protection). Grades 1–4 are preferred by most insurers. Grades 8–10 attract significant surcharges or restrictions.</p>
+          <p>For rural properties, note: nearest fire hall distance, tanker shuttle capability, and available water supply (cistern, pond, municipal hydrant).</p>
+        </div>
+        <div class="callout callout-tip"><strong>Extinguisher Tip:</strong> Verify that portable extinguishers are: correct type for the hazard (ABC dry chemical is standard; CO2 for electrical/server rooms; Class K for commercial cooking), within service date (annual inspection tag), accessible and unobstructed, and that staff have received training on use.</div>
+      </div>
+
+      <div class="esi-section" id="guide-exposure">
+        <div class="esi-section-title">Exposure <span class="esi-section-tag">EXPOSURE</span></div>
+        <p class="esi-sub">Exposure is the fourth COPE element. It addresses risks originating outside the insured building — neighbouring properties, natural hazards, and environmental factors.</p>
+        <div class="esi-card">
+          <div class="esi-card-title">Neighbouring Exposures</div>
+          <p>Assess each compass direction. For each neighbouring property, record: occupancy type, construction class (if determinable from exterior), distance from the insured building, and any mitigating factors (firewalls, setbacks, separation). A vacant lot or parking area provides excellent exposure protection; a woodworking shop or auto body operation immediately adjacent is a serious exposure.</p>
+          <p>Minimum separation distances for satisfactory exposure: Frame to Frame — 50 ft. Frame to Masonry — 30 ft. Masonry to Masonry — 20 ft. These are general thresholds — exact requirements vary by insurer appetite.</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Natural Hazard Exposure</div>
+          <p><strong>Flood:</strong> Confirm FEMA flood zone (US) or floodplain mapping (Canada). Basement vs. slab construction matters significantly. Document any flood mitigation measures: sump pumps, backflow preventers, site grading.</p>
+          <p><strong>Earthquake:</strong> Note the seismic zone and any seismic upgrades. Unreinforced masonry (URM) buildings in seismic zones are a particular concern — flag for underwriter.</p>
+          <p><strong>Wind/Hail:</strong> Note roof age and condition, roof-to-wall attachment, and any storm shutters or impact-resistant glazing for high-wind areas.</p>
+        </div>
+      </div>
+
+      <div class="esi-section" id="guide-loss">
+        <div class="esi-section-title">Loss History <span class="esi-section-tag">LOSS</span></div>
+        <p class="esi-sub">Loss history is a critical underwriting data point. Your role is to accurately record what is presented and to note any inconsistencies or concerns.</p>
+        <div class="esi-card">
+          <div class="esi-card-title">Recording Losses</div>
+          <p>Record all losses for the standard 5-year period. For each loss: date, cause (peril), gross incurred amount, and current status (open/closed). If the insured claims no losses, note this explicitly — do not leave the section blank.</p>
+          <p>Pay attention to: frequency (multiple small losses may indicate poor management or fraud), severity relative to building value, and whether recommended repairs from prior inspections were completed.</p>
+        </div>
+        <div class="callout callout-warn"><strong>Inconsistency Flag:</strong> If the site shows evidence of recent fire damage, water damage, or significant repairs that are not reflected in the stated loss history, document your observations in the Loss Comments field and flag for underwriter review. Do not accuse — describe what you observed objectively.</div>
+      </div>
+
+      <div class="esi-section" id="guide-safety">
+        <div class="esi-section-title">Safety & Compliance <span class="esi-section-tag">SAFETY</span></div>
+        <p class="esi-sub">The safety section assesses life safety systems and general compliance with fire and building codes. Deficiencies here may constitute minimum standards violations and must be documented regardless of their impact on rating.</p>
+        <div class="esi-card">
+          <div class="esi-card-title">Exit & Egress</div>
+          <p>Verify: all required exits are marked with illuminated exit signs, exit doors open in the direction of travel (outward), no exits are blocked or locked during occupancy, and emergency lighting is present and functional (test by covering the sensor or pressing the test button).</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Housekeeping</div>
+          <p>Poor housekeeping is one of the most common and significant fire risk factors. Assess: combustible waste accumulation, storage in mechanical/electrical rooms, blocked aisles, and general clutter. Rate using the 5-point scale and provide specific observations in the notes field.</p>
+        </div>
+        <div class="callout callout-alert"><strong>Minimum Standards:</strong> Blocked exits, non-functional exit signs, and missing fire extinguishers in required locations are minimum standards violations. These must be documented as High Priority recommendations regardless of other risk quality factors.</div>
+      </div>
+
+      <div class="esi-section" id="guide-recommendations">
+        <div class="esi-section-title">Recommendations <span class="esi-section-tag">RECS</span></div>
+        <p class="esi-sub">Recommendations are the actionable output of the inspection. They must be specific, measurable, and prioritized. Vague recommendations are not useful to the insured or the underwriter.</p>
+        <div class="esi-card">
+          <div class="esi-card-title">Priority Levels</div>
+          <p><strong>High Priority:</strong> Conditions that represent an immediate or serious risk of loss, or that violate minimum underwriting standards. Typically require correction within 30–60 days. Failure to comply may result in coverage restrictions or cancellation.</p>
+          <p><strong>Medium Priority:</strong> Conditions that elevate risk but are not immediately critical. Typically require correction within 90–180 days.</p>
+          <p><strong>Low Priority / Advisory:</strong> Best practice recommendations or minor improvements. No specific compliance deadline but should be communicated to the insured.</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Writing Effective Recommendations</div>
+          <p><strong>Poor:</strong> "Improve housekeeping."</p>
+          <p><strong>Better:</strong> "Remove accumulated combustible waste (cardboard, wood scraps) from the northeast storage room. Implement a scheduled weekly waste removal program. Combustible waste accumulation observed at time of inspection presents a significant fire load adjacent to the electrical panel."</p>
+          <p>Each recommendation should identify: the specific deficiency, its location, the required corrective action, and the reason it is required.</p>
+        </div>
+      </div>
+
+      <div class="esi-section" id="guide-photos">
+        <div class="esi-section-title">Photo Documentation <span class="esi-section-tag">PHOTOS</span></div>
+        <p class="esi-sub">Photographs provide objective evidence that supports your written findings. A well-documented photo log significantly enhances the credibility and utility of the inspection report.</p>
+        <div class="esi-card">
+          <div class="esi-card-title">Required Photo Coverage</div>
+          <p>At minimum, capture: all four exterior elevations, the main entrance, the roof (if safely accessible), the electrical panel, the sprinkler riser (if applicable), the fire alarm panel, any significant hazards or deficiencies, and representative interior views of each major occupancy area.</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Bulk Loading</div>
+          <p>Use the <strong>📁 Bulk Load Photos</strong> button to select multiple images at once from your device. Each image is automatically assigned to its own numbered slot. Assign a category and caption to each photo after loading. The first photo loaded becomes the cover page photo for the formal report.</p>
+        </div>
+        <div class="callout callout-tip"><strong>Photo Quality:</strong> Ensure photos are in focus, well-lit, and show the relevant detail clearly. For deficiency photos, take both a wide-angle context shot and a close-up detail shot. Add descriptive captions — a photo without context is of limited value to the underwriter reviewing the report remotely.</div>
+      </div>
+
+      <div class="esi-section" id="guide-summary">
+        <div class="esi-section-title">Underwriter Summary <span class="esi-section-tag">SUMMARY</span></div>
+        <p class="esi-sub">The Summary section is your professional assessment of the overall risk. The underwriter will read this section first. Write clearly and confidently.</p>
+        <div class="esi-card">
+          <div class="esi-card-title">Risk Quality Assessment</div>
+          <p><strong>Preferred / Low:</strong> Well-maintained property, superior construction, comprehensive fire protection, no significant hazards, excellent housekeeping, favourable loss history.</p>
+          <p><strong>Acceptable / Standard:</strong> Average condition, standard construction, adequate fire protection, minor hazards controlled, satisfactory housekeeping, normal loss history.</p>
+          <p><strong>Moderate:</strong> Some concerns — deferred maintenance, moderate hazards, fire protection gaps, poor housekeeping, adverse loss frequency or severity. Recommendations required.</p>
+          <p><strong>High Risk / Refer:</strong> Significant deficiencies, high hazard occupancy, inadequate fire protection, very poor housekeeping, significant loss history. Requires underwriter referral before binding.</p>
+          <p><strong>Decline:</strong> Conditions that fall outside acceptable risk appetite regardless of premium. Examples: severe structural deficiency, imminent collapse risk, illegal occupancy, evidence of fraud.</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Underwriting Recommendation</div>
+          <p>Your recommendation should be consistent with your risk quality rating and the recommendations listed. If you rate the risk as Moderate but recommend "Accept as is," the underwriter will question the inconsistency. Ensure alignment between: Risk Quality, number and priority of recommendations, and UW Recommendation.</p>
+        </div>
+      </div>
+
+    </div><!-- end panel-guide -->
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- TAB 2: TECHNICAL REFERENCE                 -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="tab-panel" id="panel-technical">
+
+      <!-- NFPA Overview -->
+      <div class="esi-section" id="tech-nfpa">
+        <div class="esi-section-title">NFPA Hazard Classification System <span class="esi-section-tag">NFPA 13</span></div>
+        <p class="esi-sub">The NFPA (National Fire Protection Association) hazard classification system is used to categorize the fire hazard of an occupancy based on the quantity and combustibility of contents, and the susceptibility to fire development and spread. It is the foundation of sprinkler system design and fire risk underwriting.</p>
+
+        <table class="nfpa-table">
+          <thead><tr><th>Class</th><th>Definition</th><th>Typical Occupancies</th><th>Fire Load</th><th>UW Signal</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong style="color:var(--green);">Light Hazard (LH)</strong></td>
+              <td>Low quantity of combustibles. Fires expected to be slow-developing with low heat release.</td>
+              <td>Offices, churches, schools, hospitals (patient areas), museums, residential.</td>
+              <td>Low</td>
+              <td><span class="risk-signal risk-preferred">✓ Preferred</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--amber);">Ordinary Hazard Group 1 (OH1)</strong></td>
+              <td>Moderate combustible content. Stocks are not over 8 ft high. Limited flammables.</td>
+              <td>Parking garages, bakeries, canneries, laundries, restaurants, glass/ceramics manufacturing.</td>
+              <td>Moderate</td>
+              <td><span class="risk-signal risk-standard">~ Standard</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--amber);">Ordinary Hazard Group 2 (OH2)</strong></td>
+              <td>Moderate-high combustible content. Some higher stock piles. Some flammable liquids.</td>
+              <td>Woodworking, machine shops, mercantile, auto showrooms, cold storage, feed mills.</td>
+              <td>Moderate-High</td>
+              <td><span class="risk-signal risk-standard">~ Standard / Refer</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--orange);">Extra Hazard Group 1 (EH1)</strong></td>
+              <td>High combustibility; dust, lint, or other materials present that may cause rapid fire spread with no or slight amount of flammable or combustible liquids.</td>
+              <td>Die casting, plywood manufacturing, upholstering, sawmills, cotton picking.</td>
+              <td>High</td>
+              <td><span class="risk-signal risk-refer">! Refer</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--red);">Extra Hazard Group 2 (EH2)</strong></td>
+              <td>High combustibility with significant quantities of flammable or combustible liquids present, or where shielding of combustibles is extensive.</td>
+              <td>Flammable liquid spraying, open oil quenching, varnish/lacquer dipping, solvent cleaning.</td>
+              <td>Very High</td>
+              <td><span class="risk-signal risk-decline">✗ Decline / Specialist</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout callout-info"><strong>Mixed Hazard Buildings:</strong> When multiple occupancies or processes are present, the sprinkler system must be designed for the highest hazard class present in each area. Document the hazard class by area in the Sprinkler Supplement if applicable.</div>
+      </div>
+
+      <!-- Cooking / Open Flame -->
+      <div class="esi-section" id="tech-cooking">
+        <div class="hazard-card">
+          <div class="hazard-header" style="background: linear-gradient(135deg, #7b341e, #c05621);">
+            <div class="hazard-icon">🔥</div>
+            <div>
+              <div class="hazard-title">Cooking / Open Flame</div>
+              <div class="hazard-sub">Commercial cooking operations, grease management, suppression systems</div>
+              <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;"><span style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 96</span><span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:10px;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 13 · NFPA 10</span></div>
+            </div>
+          </div>
+          <div class="hazard-body">
+            <div class="hazard-grid">
+              <div class="hazard-block">
+                <div class="hazard-block-title">Why It Matters</div>
+                <p>Cooking operations are among the leading causes of commercial property fires. Grease accumulation in hoods, ducts, and on cooking equipment is highly combustible and can cause rapid fire spread through the entire ventilation system. Deep fryer fires can reach 1,000°F within seconds.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Key Inspection Points</div>
+                <ul>
+                  <li>Hood suppression system type (UL 300 required for modern installations)</li>
+                  <li>Service tag — semi-annual service required for most commercial operations</li>
+                  <li>Hood and duct cleaning frequency and records</li>
+                  <li>Grease accumulation observed at time of inspection</li>
+                  <li>Cooking equipment arrangement and clearances</li>
+                  <li>Staff training on system use and manual pull station</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Grease Accumulation Assessment</div>
+                <ul>
+                  <li><strong>Minimal:</strong> Clean hood and filters, no visible grease buildup — good housekeeping</li>
+                  <li><strong>Moderate:</strong> Some grease on filters and hood interior — cleaning overdue but not critical</li>
+                  <li><strong>Heavy:</strong> Significant grease buildup on duct surfaces, plenum, or fan — immediate cleaning required. Issue High Priority recommendation.</li>
+                  <li><strong>Critical:</strong> Dripping grease, visible ignition risk — recommend shutdown until cleaned</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">UW Signals</div>
+                <ul>
+                  <li>✓ UL 300 system, current service, regular cleaning → Standard</li>
+                  <li>~ Older system, service current, minor grease → Monitor</li>
+                  <li>! Heavy grease, overdue service → High Priority Rec</li>
+                  <li>✗ No suppression, heavy grease, open flame → Refer / Decline</li>
+                </ul>
+              </div>
+            </div>
+            <div class="callout callout-alert"><strong>Solid Fuel Cooking:</strong> Wood-fired ovens, charcoal grills, and smokers present significantly elevated risk compared to gas or electric cooking. These require spark arrestors, non-combustible ash disposal, and enhanced clearances. Always flag for underwriter review.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Welding / Cutting -->
+      <div class="esi-section" id="tech-welding">
+        <div class="hazard-card">
+          <div class="hazard-header" style="background: linear-gradient(135deg, #1a365d, #2b6cb0);">
+            <div class="hazard-icon">⚡</div>
+            <div>
+              <div class="hazard-title">Welding / Cutting Operations</div>
+              <div class="hazard-sub">Hot work hazards, spark control, hot work permit programs</div>
+              <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;"><span style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 51B</span><span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:10px;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 51 · NFPA 10</span></div>
+            </div>
+          </div>
+          <div class="hazard-body">
+            <div class="hazard-grid">
+              <div class="hazard-block">
+                <div class="hazard-block-title">Why It Matters</div>
+                <p>Hot work (welding, cutting, brazing, grinding) is a leading cause of industrial fires. Sparks and spatter can travel up to 35 feet and ignite combustibles hours after work is completed. Many major warehouse and industrial fires are attributed to hot work with inadequate controls.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Hot Work Permit Program Elements</div>
+                <ul>
+                  <li>Written permit issued before each hot work operation</li>
+                  <li>Pre-work inspection of the area — 35-ft radius of combustibles cleared</li>
+                  <li>Fire watch posted during work AND for minimum 30 minutes after completion</li>
+                  <li>Fire extinguisher at the work site</li>
+                  <li>Supervisory sign-off required</li>
+                  <li>Contractor compliance with the permit program</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Welding Types — Risk Hierarchy</div>
+                <ul>
+                  <li><strong>MIG/TIG:</strong> Lower spatter, more controlled — lower risk</li>
+                  <li><strong>Stick/Arc:</strong> More spatter and slag — moderate risk</li>
+                  <li><strong>Oxy-acetylene cutting:</strong> High spatter, acetylene flammable — elevated risk</li>
+                  <li><strong>Plasma cutting:</strong> Hot metal particles, UV radiation — elevated risk</li>
+                  <li><strong>Grinding:</strong> Often overlooked — produces hot sparks that can travel significant distances</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Designated vs. Portable Operations</div>
+                <p><strong>Dedicated welding booth:</strong> Permanent area with non-combustible walls, concrete floor, ventilation — strongly preferred. Limits exposure to defined area.</p>
+                <p><strong>Portable/roving operations:</strong> High risk — hot work occurs throughout the facility in proximity to varying combustible loads. Hot work permit program is essential.</p>
+              </div>
+            </div>
+            <div class="callout callout-warn"><strong>Contractor Hot Work:</strong> Many losses occur when contractors (plumbers, HVAC technicians) perform hot work without the property owner's awareness or controls. Confirm whether the hot work permit program applies to contractors and whether it is enforced.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spray Painting -->
+      <div class="esi-section" id="tech-spray">
+        <div class="hazard-card">
+          <div class="hazard-header" style="background: linear-gradient(135deg, #44337a, #6b46c1);">
+            <div class="hazard-icon">🎨</div>
+            <div>
+              <div class="hazard-title">Spray Painting / Coating</div>
+              <div class="hazard-sub">Flammable vapour control, spray booths, electrostatic ignition</div>
+              <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;"><span style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 33</span><span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:10px;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 30 · NFPA 13</span></div>
+            </div>
+          </div>
+          <div class="hazard-body">
+            <div class="hazard-grid">
+              <div class="hazard-block">
+                <div class="hazard-block-title">Why It Matters</div>
+                <p>Solvent-based spray coatings create flammable vapour clouds that can ignite from static electricity, electrical equipment, or any open flame. The Lower Explosive Limit (LEL) can be reached quickly in enclosed spaces. Spray booth fires can involve rapid fire development with intense heat.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Spray Booth Requirements</div>
+                <ul>
+                  <li>Listed (FM/UL approved) construction — non-combustible panels</li>
+                  <li>Exhaust fan with explosion-proof motor</li>
+                  <li>Filters: maintained and changed regularly — clogged filters are a fire hazard</li>
+                  <li>Electrical: all fixtures inside booth must be explosion-proof rated</li>
+                  <li>Fire suppression: dry chemical system inside booth and at air intake</li>
+                  <li>Interlocks: exhaust must run before and after spraying</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Overspray Accumulation</div>
+                <p>Overspray deposits on booth walls, filters, ducts, and exhaust fans are highly combustible. Heavy accumulation can self-ignite from friction heat in the exhaust fan. Assess the accumulation level honestly — the interior of booth walls and duct surfaces should be checked.</p>
+                <p>Residue on external surfaces (roof, walls outside booth) indicates exhaust filter failure.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Water-Based vs. Solvent-Based</div>
+                <p><strong>Water-based coatings:</strong> Significantly lower fire risk. No LEL concern during normal application. Still require ventilation but much preferred from an insurance perspective.</p>
+                <p><strong>Solvent-based/flammable:</strong> Full spray booth and suppression requirements apply. Storage of solvents must be in approved flammable storage cabinets away from the booth.</p>
+              </div>
+            </div>
+            <div class="callout callout-alert"><strong>Open Area Spraying:</strong> Spraying outside of a listed spray booth using flammable materials is a serious deficiency. Issue a High Priority recommendation for either the installation of a proper booth or the conversion to water-based coatings. This condition often falls outside standard underwriting appetite.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chemical Mixing -->
+      <div class="esi-section" id="tech-chemical">
+        <div class="hazard-card">
+          <div class="hazard-header" style="background: linear-gradient(135deg, #1a4731, #276749);">
+            <div class="hazard-icon">⚗️</div>
+            <div>
+              <div class="hazard-title">Chemical Mixing</div>
+              <div class="hazard-sub">Chemical compatibility, SDS compliance, containment, reactivity hazards</div>
+              <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;"><span style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 400</span><span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:10px;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 30 · NFPA 704</span></div>
+            </div>
+          </div>
+          <div class="hazard-body">
+            <div class="hazard-grid">
+              <div class="hazard-block">
+                <div class="hazard-block-title">Why It Matters</div>
+                <p>Chemical mixing operations present multiple simultaneous hazards: fire (flammable solvents), explosion (reactive compounds), toxicity (inhalation/skin contact), and environmental (spills). Incompatible chemicals stored or mixed together can cause violent reactions, toxic gas generation, or spontaneous ignition.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Chemical Compatibility Rules</div>
+                <ul>
+                  <li><strong>Acids + Bases:</strong> Exothermic reaction, may generate heat and fumes</li>
+                  <li><strong>Oxidizers + Flammables:</strong> Can cause spontaneous ignition or explosion — must be separated by minimum 20 ft or fire-rated wall</li>
+                  <li><strong>Acids + Cyanides/Sulfides:</strong> Generate toxic hydrogen cyanide or hydrogen sulfide gas</li>
+                  <li><strong>Bleach + Ammonia:</strong> Generates chloramine vapour — toxic</li>
+                  <li>Storage must segregate incompatible chemical classes</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">SDS / WHMIS Assessment</div>
+                <p>Safety Data Sheets must be: current (SDS format per GHS standard), readily accessible to workers, and covering all hazardous materials on site. Ask to see the SDS binder. Absence of SDS for chemicals present is a significant compliance deficiency and a High Priority recommendation.</p>
+                <p>The SDS Section 2 (Hazard Identification) and Section 7 (Storage) are most relevant for insurance purposes.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Secondary Containment</div>
+                <p>Required for: any quantity of acids, corrosives, or flammable liquids stored in bulk containers. Containment capacity must equal 110% of the largest single container or 10% of total storage volume, whichever is greater.</p>
+                <p>Inspect for: cracks in berm/pallet, drain valves that are open (defeats containment), and incompatible materials within same containment area.</p>
+              </div>
+            </div>
+            <div class="callout callout-alert"><strong>Regulatory Compliance:</strong> Chemical storage above threshold quantities triggers regulatory reporting requirements under EPCRA (US) or Ontario Reg. 675/98 (Canada). Non-compliance with environmental regulations can affect insurability and create pollution liability exposure beyond standard property policy coverage.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Woodworking / Dust -->
+      <div class="esi-section" id="tech-wooddust">
+        <div class="hazard-card">
+          <div class="hazard-header" style="background: linear-gradient(135deg, #5d3a1a, #9c6a2d);">
+            <div class="hazard-icon">🪚</div>
+            <div>
+              <div class="hazard-title">Woodworking / Combustible Dust</div>
+              <div class="hazard-sub">Dust explosion hazards, deflagration risk, dust control systems</div>
+              <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;"><span style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 664</span><span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:10px;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 654 · NFPA 91 · NFPA 33</span></div>
+            </div>
+          </div>
+          <div class="hazard-body">
+            <div class="hazard-grid">
+              <div class="hazard-block">
+                <div class="hazard-block-title">Dust Explosion Fundamentals</div>
+                <p>Combustible dust explosions require five elements (the "Dust Explosion Pentagon"): fuel (dust), oxygen, ignition source, suspension in air, and confinement. Wood dust, at concentrations above its LEL, can deflagrate (rapid burning) or detonate (explosive shockwave). A primary explosion (small) can dislodge settled dust causing a catastrophic secondary explosion.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Dust Accumulation Assessment</div>
+                <ul>
+                  <li><strong>1/32 inch (0.8mm):</strong> NFPA 654 threshold for housekeeping action — any visible layer of dust on horizontal surfaces</li>
+                  <li>Check: roof trusses, beams, ledges, top of equipment, electrical conduit, light fixtures</li>
+                  <li>Fine dust on elevated surfaces is more dangerous than coarse shavings on floors</li>
+                  <li>Heavy accumulation on beams requires mechanical removal — compressed air blowdown simply redistributes dust into the air</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Dust Collection Systems</div>
+                <p><strong>Adequate system:</strong> Central dust collector with spark detection/extinguishment, properly sized ductwork, interlocked with machinery, and regularly serviced with clean filters.</p>
+                <p><strong>Inadequate:</strong> Portable collectors on individual machines only, no spark protection, overloaded filter bags, or collector located inside the building without explosion relief venting.</p>
+                <p>Ask for service records. Overloaded filter bags can auto-ignite from heat.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Ignition Source Controls</div>
+                <ul>
+                  <li>All electrical equipment in the dust area should be dust-rated (NEMA 12 enclosures minimum)</li>
+                  <li>Metal tramp (nails, screws in wood) can cause sparks in cutting equipment — magnetic separators at infeed</li>
+                  <li>Static bonding/grounding on all ductwork sections</li>
+                  <li>No smoking policy rigorously enforced</li>
+                  <li>Hot work requires dust area clearance and extra fire watch duration</li>
+                </ul>
+              </div>
+            </div>
+            <div class="callout callout-warn"><strong>Finishing Operations:</strong> The combination of wood dust AND solvent-based finishes (lacquers, stains) creates a compounded hazard. Finishing areas must be physically separated from woodworking areas, and finishing operations should cease before cutting/sanding resumes. This combination typically results in Extra Hazard Group 2 classification.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compressed Gas -->
+      <div class="esi-section" id="tech-compgas">
+        <div class="hazard-card">
+          <div class="hazard-header" style="background: linear-gradient(135deg, #1a365d, #2c5282);">
+            <div class="hazard-icon">🫙</div>
+            <div>
+              <div class="hazard-title">Compressed Gas</div>
+              <div class="hazard-sub">Cylinder storage, BLEVE risk, fuel/oxidizer separation</div>
+              <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;"><span style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 55</span><span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:10px;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 51 · NFPA 58 (LP-Gas)</span></div>
+            </div>
+          </div>
+          <div class="hazard-body">
+            <div class="hazard-grid">
+              <div class="hazard-block">
+                <div class="hazard-block-title">Why It Matters</div>
+                <p>Compressed gas cylinders present dual hazards: the physical hazard of a high-pressure vessel (a falling unsecured cylinder can become a missile if the valve breaks off) and the chemical hazard of the gas itself (flammable, toxic, or asphyxiant). A BLEVE (Boiling Liquid Expanding Vapour Explosion) from a heated propane cylinder is catastrophic.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Fuel/Oxidizer Separation Requirements</div>
+                <p>Flammable gases (propane, acetylene, hydrogen, natural gas) must be stored separately from oxidizing gases (oxygen) by either:</p>
+                <ul>
+                  <li>Minimum 20 feet (6m) separation, OR</li>
+                  <li>A non-combustible partition at least 5 feet high with minimum 0.5-hour fire rating</li>
+                </ul>
+                <p>The reaction between acetylene and oxygen (oxy-acetylene) in a fire can be particularly violent. Never store them in the same room.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Cylinder Securement</div>
+                <p>All cylinders must be chained or strapped to a wall, post, or cylinder cart. Two-point restraint is preferred for tall cylinders. Inspect for:</p>
+                <ul>
+                  <li>Cylinders standing unsecured — immediate High Priority recommendation</li>
+                  <li>Valve protection caps — present when not in use</li>
+                  <li>Cylinders lying on their side (except acetylene — must always be upright)</li>
+                  <li>Evidence of corrosion on cylinder body or valve</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Storage Location</div>
+                <ul>
+                  <li>Outdoors preferred for flammable gas cylinders whenever climate permits</li>
+                  <li>If indoors: dedicated ventilated room, no ignition sources, no basements (heavier-than-air gases accumulate at low points)</li>
+                  <li>Away from heat sources, electrical panels, and welding operations</li>
+                  <li>Signage: FLAMMABLE GAS / NO SMOKING / NO OPEN FLAMES</li>
+                  <li>Propane: outdoor storage preferred; indoor storage in listed propane storage room only</li>
+                </ul>
+              </div>
+            </div>
+            <div class="callout callout-info"><strong>Acetylene Special Note:</strong> Acetylene is uniquely dangerous — it is shock-sensitive above 15 psig and must always be stored and used in the upright position. Acetylene cylinders stored on their side must be stood upright and allowed to stabilize for one hour before use. Note any horizontal acetylene cylinders as a significant deficiency.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flammable Liquids -->
+      <div class="esi-section" id="tech-flamliq">
+        <div class="hazard-card">
+          <div class="hazard-header" style="background: linear-gradient(135deg, #7b341e, #dd6b20);">
+            <div class="hazard-icon">🛢️</div>
+            <div>
+              <div class="hazard-title">Flammable & Combustible Liquid Storage</div>
+              <div class="hazard-sub">Flash point classifications, storage requirements, spill control</div>
+              <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;"><span style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 30</span><span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:10px;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 30A · NFPA 13 · NFPA 400</span></div>
+            </div>
+          </div>
+          <div class="hazard-body">
+            <div class="hazard-grid">
+              <div class="hazard-block">
+                <div class="hazard-block-title">Flash Point Classification</div>
+                <ul>
+                  <li><strong>Class IA:</strong> FP &lt;73°F, BP &lt;100°F — Diethyl ether, pentane. Extreme fire hazard.</li>
+                  <li><strong>Class IB:</strong> FP &lt;73°F, BP ≥100°F — Gasoline, acetone, methanol. Most common industrial flammables.</li>
+                  <li><strong>Class IC:</strong> FP 73–100°F — Xylene, lacquer thinner. Still highly flammable.</li>
+                  <li><strong>Class II:</strong> FP 100–140°F — Diesel, stoddard solvent. Combustible but less volatile.</li>
+                  <li><strong>Class IIIA:</strong> FP 140–200°F — Fuel oils, lubricating oils. Lower volatility.</li>
+                  <li><strong>Class IIIB:</strong> FP ≥200°F — Motor oils, cooking oils. Limited vapour at room temperature.</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Maximum Allowable Quantities</div>
+                <p>NFPA 30 sets maximum allowable quantities (MAQ) without requiring a flammable storage room. For Class IB liquids, the typical MAQ inside a building is 120 gallons (approx. 450L) per control area without a sprinkler system. Exceeding MAQ requires: a dedicated flammable storage room with 2-hour fire rating, or an approved flammable liquid storage building.</p>
+                <p>Always compare observed quantities to the applicable MAQ and document any exceedance.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Flammable Storage Cabinet Requirements</div>
+                <ul>
+                  <li>Listed FM/UL 1275 or ULC/ORD-C30 construction</li>
+                  <li>Self-closing doors — never prop open</li>
+                  <li>Maximum 60 gallons per cabinet</li>
+                  <li>Maximum 3 cabinets per fire area without engineered exception</li>
+                  <li>Venting: cabinets do not require venting — if vented, must exhaust to safe exterior location</li>
+                  <li>Location: away from ignition sources and exit paths</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Bonding & Grounding</div>
+                <p>Static electricity generated during transfer of flammable liquids between containers can cause ignition. Bonding connects the containers together to equalize charge. Grounding dissipates charge to earth. Both are required when transferring Class I liquids.</p>
+                <p>Inspect for: bonding cables with alligator clips at dispensing stations, ground rod or connection to building ground system. Absent bonding/grounding for Class I liquid transfer is a High Priority recommendation.</p>
+              </div>
+            </div>
+            <div class="callout callout-alert"><strong>Gasoline Storage:</strong> Gasoline (Class IB) is one of the most commonly encountered and most dangerous flammable liquids. Even a small quantity (1 gallon) can generate enough vapour to fill a room to explosive concentration. Indoor gasoline storage above consumer quantities (1 gallon/4L) without proper controls is a High Priority deficiency at minimum.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cryogenics -->
+      <div class="esi-section" id="tech-cryogen">
+        <div class="hazard-card">
+          <div class="hazard-header" style="background: linear-gradient(135deg, #1a365d, #0987a0);">
+            <div class="hazard-icon">🧊</div>
+            <div>
+              <div class="hazard-title">Cryogenic Materials</div>
+              <div class="hazard-sub">Oxygen deficiency, pressure buildup, boiloff management</div>
+              <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;"><span style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 55</span><span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:10px;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 50 · CGA P-12</span></div>
+            </div>
+          </div>
+          <div class="hazard-body">
+            <div class="hazard-grid">
+              <div class="hazard-block">
+                <div class="hazard-block-title">Why It Matters</div>
+                <p>Cryogenic liquids (stored at temperatures below -150°C / -238°F) present severe hazards: asphyxiation from oxygen displacement (liquid nitrogen expanding 700:1 in volume to gas), pressure buildup causing vessel rupture, contact burns colder than dry ice, and in the case of liquid oxygen — extreme fire enhancement (oxidizer).</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Oxygen Deficiency Hazard</div>
+                <p>Normal oxygen concentration: 20.9%. Hazard thresholds:</p>
+                <ul>
+                  <li><strong>19.5%:</strong> OSHA minimum — below this is oxygen-deficient atmosphere</li>
+                  <li><strong>16%:</strong> Impaired judgment, rapid heart rate</li>
+                  <li><strong>14%:</strong> Faulty judgment, extreme fatigue</li>
+                  <li><strong>6%:</strong> Convulsions, death within minutes</li>
+                </ul>
+                <p>A single large Dewar of liquid nitrogen spilling in an enclosed room can instantly create a lethal atmosphere. Continuous monitoring with alarming O2 sensors is essential.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Liquid Oxygen (LOX) Special Hazards</div>
+                <p>Liquid oxygen is an extremely powerful oxidizer. Contact with organic materials (clothing, oil, grease) that would normally be non-flammable can cause violent ignition. LOX-saturated materials can explode on impact.</p>
+                <ul>
+                  <li>No oil or grease anywhere near LOX equipment — use only LOX-compatible lubricants</li>
+                  <li>Personnel must wear clean, oil-free clothing when handling LOX</li>
+                  <li>LOX storage must be away from all combustible materials</li>
+                  <li>Any LOX spill: evacuate, ventilate, wait for all frost to evaporate before re-entry</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Pressure Relief & Venting</div>
+                <p>All cryogenic vessels have pressure relief valves that vent gas (boiloff) as the liquid warms. This gas must be safely vented to the exterior. Inspect for:</p>
+                <ul>
+                  <li>Relief valve vent termination — must go to safe exterior location, not into occupied space</li>
+                  <li>Frost on exterior of vessel at non-insulated points — indicates insulation failure</li>
+                  <li>Over-pressure buildup — safety relief may have been tampered with (dangerous)</li>
+                  <li>Indoor placement without adequate ventilation for boiloff</li>
+                </ul>
+              </div>
+            </div>
+            <div class="callout callout-warn"><strong>Entry into Cryogen Storage Areas:</strong> Never enter an enclosed cryogen storage room alone or without first checking O2 levels with a calibrated monitor. If an O2 monitor is not available, treat the space as potentially oxygen-deficient. This applies to inspectors as well as workers.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Printing / Ink -->
+      <div class="esi-section" id="tech-printing">
+        <div class="hazard-card">
+          <div class="hazard-header" style="background: linear-gradient(135deg, #1a202c, #4a5568);">
+            <div class="hazard-icon">🖨️</div>
+            <div>
+              <div class="hazard-title">Printing & Ink Operations</div>
+              <div class="hazard-sub">Solvent vapours, rag accumulation, static discharge, UV curing</div>
+              <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;"><span style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 30</span><span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:10px;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;">NFPA 86 · NFPA 654 · NFPA 33</span></div>
+            </div>
+          </div>
+          <div class="hazard-body">
+            <div class="hazard-grid">
+              <div class="hazard-block">
+                <div class="hazard-block-title">Why It Matters</div>
+                <p>Commercial printing operations using solvent-based inks generate flammable vapours during printing, press cleaning, and solvent evaporation from wet prints. Ink-soaked rags and wipers are prone to spontaneous combustion. Large printing operations have significant fire load from paper stock, which burns intensely and is difficult to extinguish.</p>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Printing Process Risk Assessment</div>
+                <ul>
+                  <li><strong>Digital/Laser/Inkjet:</strong> Minimal solvent hazard. Toner fires possible from paper jams with heat. Lower risk.</li>
+                  <li><strong>Offset Lithographic:</strong> Isopropyl alcohol fountain solution. Blanket wash solvents (flammable). Moderate risk.</li>
+                  <li><strong>Screen Printing:</strong> Solvent-based inks common. Flash cure units (heat). Moderate-high risk.</li>
+                  <li><strong>Flexographic/Gravure:</strong> Often use solvent-based inks. Significant vapour generation at high production volumes. High risk.</li>
+                  <li><strong>UV Curing:</strong> UV inks not flammable, but UV lamps generate ozone. Lower fire risk but check lamp cooling and ballast condition.</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Rag / Wiper Management</div>
+                <p>Ink-soaked rags containing certain drying oils and solvents can self-heat through oxidation and spontaneously ignite. This is a well-documented cause of fires in printing operations.</p>
+                <ul>
+                  <li>Soiled rags must be stored in listed self-closing metal waste containers — never plastic bags or open boxes</li>
+                  <li>Containers must be emptied daily to an outside dumpster away from the building</li>
+                  <li>Rag laundering on site? Verify equipment and controls for washer/dryer fires</li>
+                  <li>Ask about end-of-shift rag disposal — lack of procedure is a High Priority recommendation</li>
+                </ul>
+              </div>
+              <div class="hazard-block">
+                <div class="hazard-block-title">Paper Stock Hazard</div>
+                <p>Large printing plants may store hundreds of tons of paper in roll or sheet form. Paper is an ordinary combustible but burns intensely and has a very high surface area. Key concerns:</p>
+                <ul>
+                  <li>Sprinkler system adequacy for paper storage height and density</li>
+                  <li>Housekeeping — paper trim, dust accumulation</li>
+                  <li>Forklift battery charging areas (hydrogen off-gassing)</li>
+                  <li>Smoking controls — paper dust can be a secondary fuel</li>
+                </ul>
+              </div>
+            </div>
+            <div class="callout callout-tip"><strong>Static Control:</strong> High-speed web presses generate significant static electricity from paper-metal contact. Static discharge can ignite solvent vapours. Check for anti-static brushes or bars on press, grounding straps on all press units, and humidity controls (higher humidity reduces static buildup). Inadequate static control combined with solvent-based inks is a significant hazard.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end panel-technical -->
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- TAB 3: BULLETINS & UPDATES                 -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="tab-panel" id="panel-bulletins">
+
+      <!-- Admin compose area (shown only to admins) -->
+      <div id="compose-wrap" style="display:none;">
+        <div class="compose-card">
+          <div class="compose-title">✏️ Post New Bulletin <span style="font-size:11px;font-weight:400;color:rgba(255,255,255,.5);font-family:'IBM Plex Mono',monospace;margin-left:8px;">Admin & QA Reviewer</span></div>
+          <div class="compose-grid">
+            <div class="compose-field">
+              <label>Bulletin Title</label>
+              <input type="text" id="b-title" placeholder="e.g. Updated NFPA 96 Hood Cleaning Requirements">
+            </div>
+            <div class="compose-field">
+              <label>Category</label>
+              <select id="b-category">
+                <option value="Technical Update">Technical Update</option>
+                <option value="Platform Update">Platform Update</option>
+                <option value="Policy & Procedure">Policy & Procedure</option>
+                <option value="General Notice">General Notice</option>
+              </select>
+            </div>
+            <div class="compose-field">
+              <label>Reference No. (optional)</label>
+              <input type="text" id="b-ref" placeholder="e.g. ESI-2026-001">
+            </div>
+            <div class="compose-field">
+              <label>Effective Date</label>
+              <input type="date" id="b-date">
+            </div>
+            <div class="compose-field full">
+              <label>Bulletin Content</label>
+              <textarea id="b-content" placeholder="Write the full bulletin content here. Use plain text — paragraph breaks are preserved."></textarea>
+            </div>
+          </div>
+          <button class="btn-post" id="btn-post" onclick="postBulletin()">📣 Post Bulletin</button>
+          <span id="post-msg" style="font-size:12px;margin-left:12px;color:rgba(255,255,255,.6);"></span>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="bulletin-filter-bar">
+        <span style="font-size:12px;font-weight:600;color:var(--slate);margin-right:4px;">Filter:</span>
+        <div class="filter-pill active" onclick="filterBulletins('all', this)">All</div>
+        <div class="filter-pill" onclick="filterBulletins('Technical Update', this)">🔬 Technical</div>
+        <div class="filter-pill" onclick="filterBulletins('Platform Update', this)">💻 Platform</div>
+        <div class="filter-pill" onclick="filterBulletins('Policy & Procedure', this)">📋 Policy</div>
+        <div class="filter-pill" onclick="filterBulletins('General Notice', this)">📢 General</div>
+        <div style="flex:1;"></div>
+        <div id="bulletin-count" style="font-size:11px;color:var(--slate-light);font-family:'IBM Plex Mono',monospace;"></div>
+      </div>
+
+      <!-- Bulletin list -->
+      <div id="bulletin-list">
+        <div class="bulletin-empty">
+          <div class="bulletin-empty-icon">📣</div>
+          Loading bulletins…
+        </div>
+      </div>
+
+    </div><!-- end panel-bulletins -->
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="edit-modal" onclick="if(event.target===this)closeEditModal()">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div class="modal-header-title">✏️ Edit Bulletin</div>
+          <button class="btn-modal-close" onclick="closeEditModal()">✕</button>
+        </div>
+        <div class="compose-grid">
+          <div class="compose-field">
+            <label>Title</label>
+            <input type="text" id="edit-title">
+          </div>
+          <div class="compose-field">
+            <label>Category</label>
+            <select id="edit-category">
+              <option value="Technical Update">Technical Update</option>
+              <option value="Platform Update">Platform Update</option>
+              <option value="Policy & Procedure">Policy & Procedure</option>
+              <option value="General Notice">General Notice</option>
+            </select>
+          </div>
+          <div class="compose-field">
+            <label>Reference No.</label>
+            <input type="text" id="edit-ref">
+          </div>
+          <div class="compose-field">
+            <label>Effective Date</label>
+            <input type="date" id="edit-date">
+          </div>
+          <div class="compose-field full">
+            <label>Content</label>
+            <textarea id="edit-content" style="min-height:160px;"></textarea>
+          </div>
+        </div>
+        <input type="hidden" id="edit-id">
+        <button class="btn-post" onclick="saveEdit()">💾 Save Changes</button>
+        <span id="edit-msg" style="font-size:12px;margin-left:12px;color:rgba(255,255,255,.6);"></span>
+      </div>
+    </div>
+
+  </div><!-- end esi-content -->
+</div><!-- end esi-body -->
+
+<script>
+  // ── SUPABASE ──
+  const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let currentUser     = null;
+  let currentUserRole = 'inspector';
+  let allBulletins    = [];
+  let activeFilter    = 'all';
+
+  // ── AUTH ──
+  (async () => {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) return; // ESI accessible without login — bulletins show as read-only
+    currentUser = session.user;
+    const { data: profiles } = await _supabase
+      .from('profiles').select('role, full_name').eq('id', currentUser.id);
+    currentUserRole = profiles?.[0]?.role || 'inspector';
+    if (currentUserRole === 'admin' || currentUserRole === 'reviewer') {
+      document.getElementById('compose-wrap').style.display = 'block';
+      document.getElementById('b-date').valueAsDate = new Date();
+    }
+  })();
+
+  // ── CATEGORY HELPERS ──
+  const CAT_CLASS = {
+    'Technical Update':  'cat-technical',
+    'Platform Update':   'cat-platform',
+    'Policy & Procedure':'cat-policy',
+    'General Notice':    'cat-general',
+  };
+
+  const CAT_ICON = {
+    'Technical Update':  '🔬',
+    'Platform Update':   '💻',
+    'Policy & Procedure':'📋',
+    'General Notice':    '📢',
+  };
+
+  // ── LOAD BULLETINS ──
+  async function loadBulletins() {
+    try {
+      const { data, error } = await _supabase
+        .from('esi_bulletins')
+        .select('*')
+        .order('posted_at', { ascending: false });
+
+      if (error) {
+        // Table may not exist yet — show helpful message
+        if (error.code === '42P01') {
+          renderBulletinSetupNotice();
+          return;
+        }
+        throw error;
+      }
+
+      allBulletins = data || [];
+      updateBulletinBadge(allBulletins.length);
+      renderBulletins(allBulletins);
+    } catch(e) {
+      document.getElementById('bulletin-list').innerHTML =
+        `<div class="bulletin-empty"><div class="bulletin-empty-icon">⚠️</div>Could not load bulletins: ${e.message}</div>`;
+    }
+  }
+
+  // ── RENDER SETUP NOTICE (first time) ──
+  function renderBulletinSetupNotice() {
+    const isAdmin = currentUserRole === 'admin';
+    document.getElementById('bulletin-list').innerHTML = `
+      <div class="bulletin-empty">
+        <div class="bulletin-empty-icon">📣</div>
+        <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:8px;">Bulletins not yet set up</div>
+        <div style="font-size:13px;color:var(--slate);max-width:420px;margin:0 auto 16px;">
+          The bulletins table needs to be created in Supabase before you can post.
+          ${isAdmin ? 'Click below to create it automatically, or run the SQL manually in your Supabase dashboard.' : 'Please ask your administrator to set up the bulletins table.'}
+        </div>
+        ${isAdmin ? `<button class="btn-post" style="margin:0 auto;" onclick="createBulletinsTable()">⚙️ Create Bulletins Table</button><div id="setup-msg" style="margin-top:10px;font-size:12px;color:var(--slate);"></div>` : ''}
+      </div>`;
+  }
+
+  // ── CREATE TABLE VIA RPC (admin) ──
+  async function createBulletinsTable() {
+    const msg = document.getElementById('setup-msg');
+    msg.textContent = 'Creating table…';
+    try {
+      const { error } = await _supabase.rpc('create_esi_bulletins_table');
+      if (error) throw error;
+      msg.textContent = '✓ Table created. Reloading…';
+      setTimeout(loadBulletins, 1000);
+    } catch(e) {
+      // RPC not available — show SQL instructions
+      msg.innerHTML = `
+        <div style="background:#f0f2f5;border:1px solid var(--border);border-radius:8px;padding:14px;text-align:left;max-width:500px;margin:10px auto 0;">
+          <div style="font-size:11px;font-weight:700;color:var(--slate);margin-bottom:8px;font-family:'IBM Plex Mono',monospace;">Run this SQL in your Supabase Dashboard → SQL Editor:</div>
+          <pre style="font-size:10px;font-family:'IBM Plex Mono',monospace;white-space:pre-wrap;color:var(--navy);">${SQL_CREATE_TABLE}</pre>
+          <button onclick="navigator.clipboard.writeText(SQL_CREATE_TABLE).then(()=>this.textContent='✓ Copied')"
+            style="margin-top:8px;font-size:11px;padding:4px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:#fff;font-family:inherit;">
+            📋 Copy SQL
+          </button>
+        </div>`;
+    }
+  }
+
+  const SQL_CREATE_TABLE = `create table if not exists public.esi_bulletins (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  category text not null default 'General Notice',
+  ref_number text,
+  effective_date date,
+  content text not null,
+  posted_by text,
+  posted_at timestamptz default now()
+);
+alter table public.esi_bulletins enable row level security;
+create policy "Anyone can read bulletins"
+  on public.esi_bulletins for select using (true);
+create policy "Admins and reviewers can insert bulletins"
+  on public.esi_bulletins for insert
+  with check (auth.role() = 'authenticated');
+create policy "Admins and reviewers can update bulletins"
+  on public.esi_bulletins for update using (auth.role() = 'authenticated');
+create policy "Admins only can delete bulletins"
+  on public.esi_bulletins for delete
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );`;
+
+  // ── RENDER BULLETINS ──
+  function renderBulletins(bulletins) {
+    const list = document.getElementById('bulletin-list');
+    const count = document.getElementById('bulletin-count');
+    const filtered = activeFilter === 'all'
+      ? bulletins
+      : bulletins.filter(b => b.category === activeFilter);
+
+    count.textContent = filtered.length + ' bulletin' + (filtered.length !== 1 ? 's' : '');
+
+    if (!filtered.length) {
+      list.innerHTML = `<div class="bulletin-empty">
+        <div class="bulletin-empty-icon">📭</div>
+        ${activeFilter === 'all' ? 'No bulletins posted yet.' : 'No bulletins in this category.'}
+      </div>`;
+      return;
+    }
+
+    const isAdmin = currentUserRole === 'admin';
+
+    list.innerHTML = filtered.map(b => {
+      const catClass = CAT_CLASS[b.category] || 'cat-general';
+      const catIcon  = CAT_ICON[b.category]  || '📢';
+      const date     = b.effective_date
+        ? new Date(b.effective_date + 'T00:00:00').toLocaleDateString('en-CA', { year:'numeric', month:'long', day:'numeric' })
+        : '—';
+      const posted   = b.posted_at
+        ? new Date(b.posted_at).toLocaleDateString('en-CA', { year:'numeric', month:'short', day:'numeric' })
+        : '—';
+      const canPost   = isAdmin || currentUserRole === 'reviewer';
+      const canDelete = isAdmin;
+      const adminBtns = canPost ? `
+        <button class="btn-bulletin-action" onclick="openEditModal('${b.id}')">✏️ Edit</button>
+        ${canDelete ? `<button class="btn-bulletin-action danger" onclick="deleteBulletin('${b.id}', this)">🗑 Delete</button>` : ''}` : '';
+
+      return `
+        <div class="bulletin-card" id="bulletin-${b.id}">
+          <div class="bulletin-header">
+            <span class="bulletin-cat-pill ${catClass}">${catIcon} ${b.category}</span>
+            <div class="bulletin-title-wrap">
+              <div class="bulletin-title">${escHtml(b.title)}</div>
+              <div class="bulletin-meta">
+                Effective: ${date} &nbsp;·&nbsp; Posted: ${posted}
+                ${b.posted_by ? ' &nbsp;·&nbsp; By: ' + escHtml(b.posted_by) : ''}
+              </div>
+            </div>
+          </div>
+          <div class="bulletin-body">${escHtml(b.content)}</div>
+          <div class="bulletin-footer">
+            <div class="bulletin-ref">${b.ref_number ? 'Ref: ' + escHtml(b.ref_number) : ''}</div>
+            <div class="bulletin-actions">${adminBtns}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── FILTER ──
+  function filterBulletins(cat, el) {
+    activeFilter = cat;
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    renderBulletins(allBulletins);
+  }
+
+  // ── POST BULLETIN ──
+  async function postBulletin() {
+    const title    = document.getElementById('b-title').value.trim();
+    const category = document.getElementById('b-category').value;
+    const ref      = document.getElementById('b-ref').value.trim();
+    const date     = document.getElementById('b-date').value;
+    const content  = document.getElementById('b-content').value.trim();
+    const msg      = document.getElementById('post-msg');
+    const btn      = document.getElementById('btn-post');
+
+    if (!title || !content) { msg.textContent = '⚠ Title and content are required.'; return; }
+
+    btn.disabled = true;
+    msg.textContent = 'Posting…';
+
+    const { data: profiles } = await _supabase
+      .from('profiles').select('full_name').eq('id', currentUser.id);
+    const postedBy = profiles?.[0]?.full_name || currentUser.email;
+
+    try {
+      const { error } = await _supabase.from('esi_bulletins').insert({
+        title, category,
+        ref_number: ref || null,
+        effective_date: date || null,
+        content,
+        posted_by: postedBy,
+      });
+      if (error) throw error;
+
+      msg.textContent = '✓ Bulletin posted successfully!';
+      // Clear form
+      ['b-title','b-ref','b-content'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('b-date').valueAsDate = new Date();
+      document.getElementById('b-category').value = 'Technical Update';
+      await loadBulletins();
+      // Scroll to bulletin list
+      document.getElementById('bulletin-list').scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => { msg.textContent = ''; }, 4000);
+    } catch(e) {
+      msg.textContent = '✗ Error: ' + e.message;
+    }
+    btn.disabled = false;
+  }
+
+  // ── DELETE ──
+  async function deleteBulletin(id, btn) {
+    if (!confirm('Delete this bulletin? This cannot be undone.')) return;
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+    try {
+      const { error } = await _supabase.from('esi_bulletins').delete().eq('id', id);
+      if (error) throw error;
+      allBulletins = allBulletins.filter(b => b.id !== id);
+      updateBulletinBadge(allBulletins.length);
+      renderBulletins(allBulletins);
+    } catch(e) {
+      alert('Delete failed: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = '🗑 Delete';
+    }
+  }
+
+  // ── EDIT MODAL ──
+  function openEditModal(id) {
+    const b = allBulletins.find(b => b.id === id);
+    if (!b) return;
+    document.getElementById('edit-id').value       = b.id;
+    document.getElementById('edit-title').value    = b.title;
+    document.getElementById('edit-category').value = b.category;
+    document.getElementById('edit-ref').value      = b.ref_number || '';
+    document.getElementById('edit-date').value     = b.effective_date || '';
+    document.getElementById('edit-content').value  = b.content;
+    document.getElementById('edit-msg').textContent = '';
+    document.getElementById('edit-modal').classList.add('open');
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-modal').classList.remove('open');
+  }
+
+  async function saveEdit() {
+    const id      = document.getElementById('edit-id').value;
+    const title   = document.getElementById('edit-title').value.trim();
+    const category= document.getElementById('edit-category').value;
+    const ref     = document.getElementById('edit-ref').value.trim();
+    const date    = document.getElementById('edit-date').value;
+    const content = document.getElementById('edit-content').value.trim();
+    const msg     = document.getElementById('edit-msg');
+
+    if (!title || !content) { msg.textContent = '⚠ Title and content required.'; return; }
+
+    msg.textContent = 'Saving…';
+    try {
+      const { error } = await _supabase.from('esi_bulletins').update({
+        title, category,
+        ref_number: ref || null,
+        effective_date: date || null,
+        content,
+      }).eq('id', id);
+      if (error) throw error;
+      msg.textContent = '✓ Saved!';
+      await loadBulletins();
+      setTimeout(closeEditModal, 800);
+    } catch(e) {
+      msg.textContent = '✗ ' + e.message;
+    }
+  }
+
+  // ── BADGE ──
+  function updateBulletinBadge(count) {
+    const badge = document.getElementById('bulletin-badge');
+    if (count > 0) {
+      badge.textContent = count;
+      badge.style.display = 'inline';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  // ── ESCAPE HTML ──
+  function escHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── SIDEBAR CONTENT ──
+  const sidebars = {
+    guide: [
+      { title: 'Form Sections', links: [
+        { id: 'guide-intro',            label: '📋 Introduction & Setup' },
+        { id: 'guide-insured',          label: '🏢 Insured Information' },
+        { id: 'guide-construction',     label: '🏗️ Construction' },
+        { id: 'guide-occupancy',        label: '🏭 Occupancy' },
+        { id: 'guide-protection',       label: '🔒 Protection' },
+        { id: 'guide-exposure',         label: '🌍 Exposure' },
+        { id: 'guide-loss',             label: '📉 Loss History' },
+        { id: 'guide-safety',           label: '⚠️ Safety & Compliance' },
+        { id: 'guide-recommendations',  label: '✅ Recommendations' },
+        { id: 'guide-photos',           label: '📷 Photo Documentation' },
+        { id: 'guide-summary',          label: '📝 Underwriter Summary' },
+      ]}
+    ],
+    technical: [
+      { title: 'Reference Topics', links: [
+        { id: 'tech-nfpa',      label: '📊 NFPA Hazard Classification — NFPA 13' },
+        { id: 'tech-cooking',   label: '🔥 Cooking / Open Flame — NFPA 96' },
+        { id: 'tech-welding',   label: '⚡ Welding / Cutting — NFPA 51B' },
+        { id: 'tech-spray',     label: '🎨 Spray Painting — NFPA 33' },
+        { id: 'tech-chemical',  label: '⚗️ Chemical Mixing — NFPA 400' },
+        { id: 'tech-wooddust',  label: '🪚 Woodworking / Dust — NFPA 664' },
+        { id: 'tech-compgas',   label: '🫙 Compressed Gas — NFPA 55' },
+        { id: 'tech-flamliq',   label: '🛢️ Flammable Liquids — NFPA 30' },
+        { id: 'tech-cryogen',   label: '🧊 Cryogenics — NFPA 55' },
+        { id: 'tech-printing',  label: '🖨️ Printing / Ink — NFPA 30' },
+      ]}
+    ],
+    bulletins: [
+      { title: 'Bulletin Categories', links: [
+        { id: null, label: '📣 All Bulletins',        action: () => filterBulletins('all', document.querySelector('.filter-pill')) },
+        { id: null, label: '🔬 Technical Updates',    action: () => filterBulletins('Technical Update', document.querySelectorAll('.filter-pill')[1]) },
+        { id: null, label: '💻 Platform Updates',     action: () => filterBulletins('Platform Update', document.querySelectorAll('.filter-pill')[2]) },
+        { id: null, label: '📋 Policy & Procedure',   action: () => filterBulletins('Policy & Procedure', document.querySelectorAll('.filter-pill')[3]) },
+        { id: null, label: '📢 General Notices',      action: () => filterBulletins('General Notice', document.querySelectorAll('.filter-pill')[4]) },
+      ]}
+    ],
+  };
+
+  let currentTab = 'guide';
+
+  function buildSidebar(tab) {
+    const nav = document.getElementById('esi-sidebar');
+    nav.innerHTML = '';
+    sidebars[tab].forEach(group => {
+      const title = document.createElement('div');
+      title.className = 'sidebar-section-title';
+      title.textContent = group.title;
+      nav.appendChild(title);
+      group.links.forEach(link => {
+        const a = document.createElement('div');
+        a.className = 'sidebar-link';
+        a.textContent = link.label;
+        if (link.id) {
+          a.dataset.target = link.id;
+          a.onclick = () => scrollTo(link.id);
+        } else if (link.action) {
+          a.onclick = link.action;
+        }
+        nav.appendChild(a);
+      });
+    });
+  }
+
+  function scrollTo(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    updateActiveSidebarLink(id);
+  }
+
+  function updateActiveSidebarLink(id) {
+    document.querySelectorAll('.sidebar-link').forEach(l => {
+      l.classList.toggle('active', l.dataset.target === id);
+    });
+  }
+
+  function switchMainTab(tab, btn) {
+    currentTab = tab;
+    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+    buildSidebar(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (tab === 'bulletins') loadBulletins();
+  }
+
+  // Intersection observer to highlight active sidebar link on scroll
+  function setupScrollSpy() {
+    const sections = document.querySelectorAll('.esi-section');
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) updateActiveSidebarLink(entry.target.id);
+      });
+    }, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+    sections.forEach(s => observer.observe(s));
+  }
+
+  // Init
+  buildSidebar('guide');
+  setupScrollSpy();
+</script>
+</body>
+</html>

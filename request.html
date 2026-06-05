@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="version" content="20260402-0458">
+<title>Request an Inspection — Sanket Risk Consultants</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+  // ── COLLECT SELECTED SERVICES FOR SUBMISSION ──
+  function getSelectedServices() {
+    var selected = [];
+    document.querySelectorAll('.pill-check.active').forEach(function(pill) {
+      var label = pill.textContent.trim();
+      if (label) selected.push(label);
+    });
+    return selected;
+  }
+
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#1B2A4A;--navy-dark:#111E35;--gold:#C9A84C;--gold-pale:#F5EDD6;--slate:#4A5568;--text:#2D3748;--text-light:#718096;--border:#E2D9C5;--bg:#FAF8F3;--radius:10px;--shadow:0 2px 12px rgba(27,42,74,0.08)}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.site-header{background:var(--navy);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:64px;box-shadow:0 2px 12px rgba(0,0,0,0.2)}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none}
+.logo-mark{width:36px;height:36px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:var(--navy);font-family:'IBM Plex Mono',monospace}
+.logo-text{color:white;font-size:15px;font-weight:600;line-height:1.2}
+.logo-sub{color:rgba(255,255,255,0.5);font-size:11px;font-weight:400}
+.header-badge{background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.3);color:var(--gold);font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:.04em;text-transform:uppercase}
+.hero{background:linear-gradient(135deg,var(--navy-dark) 0%,var(--navy) 100%);padding:56px 32px 48px;text-align:center}
+.hero h1{font-size:clamp(24px,4vw,38px);font-weight:700;color:white;line-height:1.2;margin-bottom:16px}
+.hero p{font-size:15px;color:rgba(255,255,255,0.65);max-width:560px;margin:0 auto;line-height:1.7}
+.page-wrap{max-width:780px;margin:0 auto;padding:40px 24px 80px}
+.card{background:white;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:24px;overflow:hidden}
+.card-header{background:var(--navy);padding:14px 20px;display:flex;align-items:center;gap:10px}
+.card-header-icon{font-size:16px}
+.card-header-title{color:white;font-size:13px;font-weight:600}
+.card-body{padding:20px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;font-weight:600;color:var(--slate);text-transform:uppercase;letter-spacing:.05em}
+.field label .req{color:var(--gold);margin-left:3px}
+.field input,.field select,.field textarea{font-family:'Inter',sans-serif;font-size:14px;color:var(--text);background:white;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,0.12)}
+.field textarea{resize:vertical;min-height:90px}
+.urgency-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.urgency-btn{padding:7px 16px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:white;color:var(--slate);transition:all .15s;user-select:none}
+.urgency-btn:hover{border-color:var(--navy);color:var(--navy)}
+.sel-routine{background:#e6f7ee;border-color:#2f855a;color:#2f855a}
+.sel-priority{background:#fff3e0;border-color:#dd6b20;color:#dd6b20}
+.sel-urgent{background:#fee2e2;border-color:#e53e3e;color:#e53e3e}
+.notice{background:#ebf4ff;border-left:4px solid #2b6cb0;border-radius:6px;padding:12px 16px;font-size:13px;color:#2b6cb0;margin-bottom:20px;line-height:1.6}
+.access-code-wrap{background:var(--gold-pale);border:1.5px solid var(--gold);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+.access-code-wrap label{display:block;font-size:12px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.access-code-row{display:flex;gap:10px}
+.access-code-row input{flex:1;font-family:'IBM Plex Mono',monospace;font-size:15px;letter-spacing:.1em;padding:10px 14px;border:1.5px solid var(--gold);border-radius:8px;background:white}
+.access-code-row input:focus{outline:none;box-shadow:0 0 0 3px rgba(201,168,76,0.2)}
+.btn-verify{padding:10px 20px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap}
+.btn-submit{width:100%;padding:16px;background:var(--gold);color:var(--navy);font-family:'Inter',sans-serif;font-size:15px;font-weight:700;border:none;border-radius:var(--radius);cursor:pointer;letter-spacing:.03em;margin-top:8px;box-shadow:0 4px 16px rgba(201,168,76,0.35)}
+.btn-submit:hover{background:#b8962f}
+.btn-submit:disabled{background:#ccc;color:#888;cursor:not-allowed;box-shadow:none}
+.success-wrap{display:none;text-align:center;padding:60px 32px}
+.success-icon{font-size:64px;margin-bottom:24px}
+.success-ref{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--navy);background:var(--gold-pale);border:1.5px solid var(--gold);border-radius:10px;padding:12px 28px;display:inline-block;margin:16px 0 24px}
+.success-wrap h2{font-size:26px;color:var(--navy);margin-bottom:10px}
+.success-wrap p{font-size:14px;color:var(--slate);line-height:1.7;max-width:480px;margin:0 auto 12px}
+.btn-new{margin-top:24px;padding:12px 28px;background:var(--navy);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+.error-msg{display:none;background:#fee2e2;border-left:4px solid #e53e3e;border-radius:6px;padding:12px 16px;font-size:13px;color:#c53030;margin-top:12px}
+.form-hidden{display:none}
+.site-footer{text-align:center;padding:24px;font-size:12px;color:var(--text-light);border-top:1px solid var(--border)}
+@media(max-width:560px){.form-grid{grid-template-columns:1fr}.site-header{padding:0 16px}}
+
+  /* ── PILL CHECKBOXES ── */
+  .pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .pill-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--slate);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: white;
+    user-select: none;
+    font-weight: 500;
+  }
+
+  .pill-check input[type="checkbox"] {
+    display: none;
+  }
+
+  .pill-check:hover {
+    border-color: var(--gold);
+    color: var(--navy);
+  }
+
+  .pill-check.active {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: var(--gold);
+    font-weight: 600;
+  }
+
+  .pill-check.active.core-always {
+    opacity: 0.7;
+    cursor: default;
+  }
+
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 12px;
+  }
+
+</style>
+</head>
+<body>
+<header class="site-header">
+  <a class="logo-wrap" href="https://sanketrisk.netlify.app">
+    <div class="logo-mark">S</div>
+    <div><div class="logo-text">Sanket Risk Consultants</div><div class="logo-sub">Commercial Property Inspection</div></div>
+  </a>
+  <div class="header-badge">Request Portal</div>
+</header>
+<div class="hero">
+  <h1>Request an Inspection</h1>
+  <p>Submit your inspection request below. Our team will review it and confirm scheduling within one business day.</p>
+</div>
+<div class="page-wrap">
+  <div class="success-wrap" id="success-wrap">
+    <div class="success-icon">✅</div>
+    <h2>Request Submitted Successfully</h2>
+    <p>Your inspection request has been received. Please save your reference number below.</p>
+    <div class="success-ref" id="success-ref">—</div>
+    <p>Our team will review your request and reach out to confirm scheduling within one business day.</p>
+    <button class="btn-new" onclick="resetForm()">Submit Another Request</button>
+  </div>
+  <div id="form-wrap">
+    <div class="access-code-wrap" id="access-code-wrap">
+      <label>🔑 Portal Access Code Required</label>
+      <p style="font-size:13px;color:var(--slate);margin-bottom:12px;">Please enter the access code provided by your Sanket Risk Consultants representative to proceed.</p>
+      <div class="access-code-row">
+        <input type="text" id="access-code-input" placeholder="Enter access code" autocomplete="off" onkeydown="if(event.key==='Enter')verifyCode()">
+        <button class="btn-verify" onclick="verifyCode()">Verify →</button>
+      </div>
+      <div class="error-msg" id="code-error"></div>
+    </div>
+    <div class="form-hidden" id="form-fields">
+      <div class="notice">Fields marked <strong style="color:#C9A84C;">*</strong> are required.</div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">👤</div><div class="card-header-title">Requestor Information</div></div>
+        <div class="card-body"><div class="form-grid">
+          <div class="field"><label>Your Name <span class="req">*</span></label><input type="text" id="requestor-name" placeholder="Full name"></div>
+          <div class="field"><label>Company / Organization <span class="req">*</span></label><input type="text" id="requestor-company" placeholder="Insurer, MGA, broker firm, etc."></div>
+          <div class="field"><label>Email Address <span class="req">*</span></label><input type="email" id="requestor-email" placeholder="you@company.com"></div>
+          <div class="field"><label>Phone Number</label><input type="tel" id="requestor-phone" placeholder="e.g. 416-555-0100"></div>
+          <div class="field"><label>Your Role</label>
+            <select id="requestor-role"><option value="">— Select —</option><option>Underwriter</option><option>Broker / Agent</option><option>Risk Manager</option><option>Claims Adjuster</option><option>Property Owner</option><option>Other</option></select>
+          </div>
+        </div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">🏢</div><div class="card-header-title">Property Information</div></div>
+        <div class="card-body"><div class="form-grid">
+          <div class="field form-full"><label>Insured / Property Owner Name <span class="req">*</span></label><input type="text" id="insured-name" placeholder="Legal entity or business name"></div>
+          <div class="field form-full"><label>Property Street Address <span class="req">*</span></label><input type="text" id="address" placeholder="Street number and name"></div>
+          <div class="field"><label>City <span class="req">*</span></label><input type="text" id="city" placeholder="City"></div>
+          <div class="field"><label>Province <span class="req">*</span></label>
+            <select id="province"><option value="">— Select —</option><option>Alberta</option><option>British Columbia</option><option>Manitoba</option><option>New Brunswick</option><option>Newfoundland and Labrador</option><option>Northwest Territories</option><option>Nova Scotia</option><option>Nunavut</option><option>Ontario</option><option>Prince Edward Island</option><option>Quebec</option><option>Saskatchewan</option><option>Yukon</option></select>
+          </div>
+          <div class="field"><label>Postal Code</label><input type="text" id="postal-code" placeholder="e.g. M5V 2T6" maxlength="7"></div>
+          <div class="field"><label>Occupancy Type <span class="req">*</span></label>
+            <select id="occupancy-type"><option value="">— Select —</option><option>Office / Professional</option><option>Retail — Low Hazard</option><option>Retail — High Hazard</option><option>Restaurant / Food Service</option><option>Warehouse / Storage</option><option>Light Manufacturing</option><option>Heavy Manufacturing</option><option>Auto Service / Repair</option><option>Apartments / Condominiums</option><option>Mixed Use</option><option>Vacant</option><option>Other</option></select>
+          </div>
+        </div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">📋</div><div class="card-header-title">Inspection Details</div></div>
+        <div class="card-body"><div class="form-grid">
+          <div class="field"><label>Purpose of Inspection <span class="req">*</span></label>
+            <select id="purpose"><option value="">— Select —</option><option>New Business</option><option>Renewal</option><option>Re-inspection</option><option>Mid-term Change</option><option>Loss Control / Recommendation Follow-up</option><option>Complaint / Concern</option><option>Other</option></select>
+          </div>
+          <div class="field"><label>Line of Business</label>
+            <select id="line-of-business"><option value="">— Select —</option><option>Property Only</option><option>General Liability Only</option><option>Property + General Liability</option><option>Commercial Package</option><option>Other</option></select>
+          </div>
+          <div class="field"><label>Policy Number</label><input type="text" id="policy-number" placeholder="If applicable"></div>
+          <div class="field"><label>Account Number</label><input type="text" id="account-number" placeholder="If applicable"></div>
+          <div class="field"><label>Preferred Inspection Date</label><input type="date" id="preferred-date"></div>
+          <div class="field"><label>Preferred Time of Day</label>
+            <select id="preferred-time"><option value="">— No preference —</option><option>Morning (8am – 12pm)</option><option>Afternoon (12pm – 5pm)</option><option>Either</option></select>
+          </div>
+          <div class="field form-full">
+            <label>Urgency <span class="req">*</span></label>
+            <div class="urgency-group">
+              <div class="urgency-btn" id="urg-routine" onclick="selectUrgency('Routine — Standard turnaround','routine')">🟢 Routine</div>
+              <div class="urgency-btn" id="urg-priority" onclick="selectUrgency('Priority — Within 5 business days','priority')">🟠 Priority</div>
+              <div class="urgency-btn" id="urg-urgent" onclick="selectUrgency('Urgent — Within 48 hours','urgent')">🔴 Urgent</div>
+            </div>
+            <input type="hidden" id="urgency-value">
+          </div>
+          <div class="field form-full"><label>Site Contact Name &amp; Phone</label><input type="text" id="site-contact" placeholder="Person to call for access — name and phone number"></div>
+          <div class="field form-full"><label>Special Instructions / Access Notes</label><textarea id="special-instructions" placeholder="Gate codes, restricted hours, hazards the inspector should know about..."></textarea></div>
+          <div class="field form-full">
+            <label>Additional Comments</label>
+            <textarea id="comments" placeholder="Any other information relevant to this inspection request..."></textarea>
+          </div>
+        </div></div>
+
+        <!-- ── INSPECTION SERVICES & SUPPLEMENTS ── -->
+        <div style="background:white;border:1px solid #ddd8d0;border-radius:12px;padding:24px;margin-top:20px;">
+          <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:#0d1b2a;margin-bottom:6px;">📋 Inspection Services &amp; Supplements Required</div>
+          <p style="font-size:13px;color:#4a6580;margin-bottom:20px;">Select all supplemental assessments required. Click to toggle on/off.</p>
+
+          <div style="margin-bottom:18px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#4a6580;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #c9a84c;">Core Assessment — Always Included</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <div style="padding:8px 16px;background:#0d1b2a;color:#c9a84c;border-radius:20px;font-size:13px;font-weight:600;cursor:default;">✓ COPE Assessment</div>
+              <div style="padding:8px 16px;background:#0d1b2a;color:#c9a84c;border-radius:20px;font-size:13px;font-weight:600;cursor:default;">✓ Photo Documentation</div>
+              <div style="padding:8px 16px;background:#0d1b2a;color:#c9a84c;border-radius:20px;font-size:13px;font-weight:600;cursor:default;">✓ Safety &amp; Compliance</div>
+              <div style="padding:8px 16px;background:#0d1b2a;color:#c9a84c;border-radius:20px;font-size:13px;font-weight:600;cursor:default;">✓ Recommendations Report</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:18px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#4a6580;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #c9a84c;">Special Occupancy Supplements</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;" id="supp-pills">
+              <div class="svc-pill" onclick="togglePill(this)">💧 Sprinkler Grading</div>
+              <div class="svc-pill" onclick="togglePill(this)">🏠 Apartments / Condominiums</div>
+              <div class="svc-pill" onclick="togglePill(this)">🍳 Restaurant / Food Service</div>
+              <div class="svc-pill" onclick="togglePill(this)">🏭 Warehouse / Distribution</div>
+              <div class="svc-pill" onclick="togglePill(this)">🪚 Woodworking / Lumber</div>
+              <div class="svc-pill" onclick="togglePill(this)">🔧 Auto Service / Repair</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:18px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#4a6580;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #c9a84c;">Liability &amp; GL Modules</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <div class="svc-pill" onclick="togglePill(this)">General Liability — Premises</div>
+              <div class="svc-pill" onclick="togglePill(this)">Products &amp; Completed Operations</div>
+              <div class="svc-pill" onclick="togglePill(this)">Commercial Auto / Fleet</div>
+              <div class="svc-pill" onclick="togglePill(this)">Multi-Residential Liability</div>
+              <div class="svc-pill" onclick="togglePill(this)">Contractors &amp; Admin</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:18px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#4a6580;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #c9a84c;">Additional Services</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <div class="svc-pill" onclick="togglePill(this)">💰 Building Valuation</div>
+              <div class="svc-pill" onclick="togglePill(this)">🚒 FUS Public Protection Grading</div>
+              <div class="svc-pill" onclick="togglePill(this)">🌡 Thermal Imaging Survey</div>
+              <div class="svc-pill" onclick="togglePill(this)">📷 360° Virtual Walkthrough</div>
+              <div class="svc-pill" onclick="togglePill(this)">📁 Re-Inspection Documentation</div>
+              <div class="svc-pill" onclick="togglePill(this)">📝 Narrative Report</div>
+            </div>
+          </div>
+
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#0d1b2a;display:block;margin-bottom:6px;">Other Requirements / Special Instructions to Inspector</label>
+            <textarea id="other-services" placeholder="Describe any additional assessments or specific requirements..." style="width:100%;min-height:60px;padding:10px;border:1px solid #ddd8d0;border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+          </div>
+        </div>
+
+            <!-- Report Format Preference -->
+            <div class="field form-full" style="margin-bottom:16px;">
+              <label style="font-size:13px;font-weight:600;color:#0d1b2a;display:block;margin-bottom:8px;">
+                📋 Preferred Report Format
+              </label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 16px;border:1.5px solid #ddd8d0;border-radius:8px;flex:1;min-width:140px;transition:border-color .15s;" id="fmt-both-label">
+                  <input type="radio" name="report-format" id="fmt-both" value="both" checked onchange="updateFormatLabel()">
+                  <span>
+                    <span style="font-weight:700;font-size:13px;">Both</span><br>
+                    <span style="font-size:11px;color:#666;">Structured + Narrative</span>
+                  </span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 16px;border:1.5px solid #ddd8d0;border-radius:8px;flex:1;min-width:140px;" id="fmt-structured-label">
+                  <input type="radio" name="report-format" id="fmt-structured" value="structured" onchange="updateFormatLabel()">
+                  <span>
+                    <span style="font-weight:700;font-size:13px;">📋 Structured COPE</span><br>
+                    <span style="font-size:11px;color:#666;">Quick tabular summary</span>
+                  </span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 16px;border:1.5px solid #ddd8d0;border-radius:8px;flex:1;min-width:140px;" id="fmt-narrative-label">
+                  <input type="radio" name="report-format" id="fmt-narrative" value="narrative" onchange="updateFormatLabel()">
+                  <span>
+                    <span style="font-weight:700;font-size:13px;">📝 Narrative Report</span><br>
+                    <span style="font-size:11px;color:#666;">Detailed paragraphs</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <button class="btn-submit" id="submit-btn" onclick="submitRequest()">Submit Inspection Request →</button>
+      <div class="error-msg" id="error-msg"></div>
+    </div>
+  </div>
+</div>
+<footer class="site-footer">&copy; Sanket Risk Consultants &nbsp;|&nbsp; Commercial Property Inspection Platform &nbsp;|&nbsp; <a href="https://sanketrisk.netlify.app" style="color:var(--gold);text-decoration:none;">Inspector Login</a></footer>
+<script>
+  const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{autoRefreshToken:false,persistSession:false}});
+  let selectedUrgency = '';
+  let codeVerified = false;
+
+  async function verifyCode() {
+    const code = document.getElementById('access-code-input').value.trim();
+    const errEl = document.getElementById('code-error');
+    errEl.style.display = 'none';
+    if (!code) { errEl.textContent = 'Please enter the access code.'; errEl.style.display='block'; return; }
+    try {
+      const { data, error } = await _supabase.from('platform_settings').select('value').eq('key','portal_access_code').single();
+      if (error || !data) throw new Error('Could not verify code');
+      if (code !== data.value) { errEl.textContent = 'Incorrect access code. Please check with your representative.'; errEl.style.display='block'; return; }
+      codeVerified = true;
+      document.getElementById('access-code-wrap').style.display = 'none';
+      document.getElementById('form-fields').style.display = 'block';
+    } catch(e) { errEl.textContent = 'Verification error. Please try again.'; errEl.style.display='block'; }
+  }
+
+  function selectUrgency(value, level) {
+    selectedUrgency = value;
+    document.getElementById('urgency-value').value = value;
+    ['routine','priority','urgent'].forEach(l => {
+      document.getElementById('urg-'+l).className = 'urgency-btn' + (l===level?' sel-'+l:'');
+    });
+  }
+
+  function generateRef() {
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth()+1).padStart(2,'0');
+    const dd = String(now.getDate()).padStart(2,'0');
+    return 'SRC-' + yy+mm+dd + '-' + (Math.floor(Math.random()*9000)+1000);
+  }
+
+  function showError(msg) { const el=document.getElementById('error-msg'); el.textContent='⚠️ '+msg; el.style.display='block'; el.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+  function hideError() { document.getElementById('error-msg').style.display='none'; }
+
+  function validate() {
+    const req=[{id:'requestor-name',label:'Your Name'},{id:'requestor-company',label:'Company'},{id:'requestor-email',label:'Email'},{id:'insured-name',label:'Insured Name'},{id:'address',label:'Property Address'},{id:'city',label:'City'},{id:'province',label:'Province'},{id:'occupancy-type',label:'Occupancy Type'},{id:'purpose',label:'Purpose of Inspection'}];
+    for (const f of req) { const el=document.getElementById(f.id); if(!el||!el.value.trim()){showError('Please fill in: '+f.label); if(el)el.focus(); return false;} }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('requestor-email').value)) { showError('Please enter a valid email address.'); return false; }
+    if (!selectedUrgency) { showError('Please select an urgency level.'); return false; }
+    return true;
+  }
+
+  function updateFormatLabel() {
+    ['both','structured','narrative'].forEach(function(v) {
+      var label = document.getElementById('fmt-' + v + '-label');
+      var input = document.getElementById('fmt-' + v);
+      if (label && input) {
+        label.style.borderColor = input.checked ? '#c9a84c' : '#ddd8d0';
+        label.style.background  = input.checked ? '#fffbf0' : 'white';
+      }
+    });
+  }
+
+  async function submitRequest() {
+    hideError();
+    if (!validate()) return;
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true; btn.textContent = 'Submitting...';
+    const ref = generateRef();
+    const payload = {
+      request_ref: ref, submitted_at: new Date().toISOString(), status: 'Pending',
+      requestor_name: document.getElementById('requestor-name').value.trim(),
+      requestor_company: document.getElementById('requestor-company').value.trim(),
+      requestor_email: document.getElementById('requestor-email').value.trim(),
+      requestor_phone: document.getElementById('requestor-phone').value.trim(),
+      requestor_role: document.getElementById('requestor-role').value,
+      insured_name: document.getElementById('insured-name').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      city: document.getElementById('city').value.trim(),
+      province: document.getElementById('province').value,
+      postal_code: document.getElementById('postal-code').value.trim(),
+      occupancy_type: document.getElementById('occupancy-type').value,
+      purpose: document.getElementById('purpose').value,
+      line_of_business: document.getElementById('line-of-business').value,
+      policy_number: document.getElementById('policy-number').value.trim(),
+      account_number: document.getElementById('account-number').value.trim(),
+      preferred_date: document.getElementById('preferred-date').value || null,
+      preferred_time: document.getElementById('preferred-time').value,
+      urgency: selectedUrgency,
+      site_contact: document.getElementById('site-contact').value.trim(),
+      special_instructions: (function() {
+        var base = document.getElementById('special-instructions').value.trim();
+        var svcs = getSelectedServices().join(', ');
+        var other = document.getElementById('other-services') ? document.getElementById('other-services').value.trim() : '';
+        var svcStr = svcs ? 'SERVICES REQUESTED: ' + svcs : '';
+        if (other) svcStr += (svcStr ? ' | ' : 'OTHER: ') + other;
+        return base ? base + (svcStr ? '\n\n' + svcStr : '') : svcStr;
+      })(),
+      comments:          document.getElementById('comments').value.trim(),
+      report_format:     (document.querySelector('input[name="report-format"]:checked') || {value:'both'}).value,
+    };
+    try {
+      const { error } = await _supabase.from('inspection_requests').insert([payload]);
+      if (error) throw error;
+      document.getElementById('form-wrap').style.display='none';
+      document.getElementById('success-ref').textContent = ref;
+      document.getElementById('success-wrap').style.display='block';
+      window.scrollTo({top:0,behavior:'smooth'});
+    } catch(e) { showError(e.message||'Please try again.'); btn.disabled=false; btn.textContent='Submit Inspection Request →'; }
+  }
+
+  function resetForm() {
+    document.getElementById('form-wrap').style.display='block';
+    document.getElementById('success-wrap').style.display='none';
+    document.getElementById('submit-btn').disabled=false;
+    document.getElementById('submit-btn').textContent='Submit Inspection Request →';
+    selectedUrgency=''; codeVerified=false;
+    document.getElementById('access-code-wrap').style.display='block';
+    document.getElementById('form-fields').style.display='none';
+    document.getElementById('access-code-input').value='';
+    document.querySelectorAll('input:not([type=hidden]),select,textarea').forEach(el=>el.value='');
+    ['routine','priority','urgent'].forEach(l=>{document.getElementById('urg-'+l).className='urgency-btn';});
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  document.getElementById('preferred-date').min = new Date().toISOString().split('T')[0];
+  document.getElementById('access-code-input').addEventListener('keydown', e=>{ if(e.key==='Enter') verifyCode(); });
+</script>
+<style>
+  .svc-pill {
+    padding: 8px 16px;
+    border: 2px solid #ddd8d0;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #4a6580;
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .svc-pill:hover { border-color: #c9a84c; color: #0d1b2a; }
+  .svc-pill.on { background: #0d1b2a; color: #c9a84c; border-color: #0d1b2a; font-weight: 600; }
+</style>
+<script>
+  function togglePill(el) {
+    el.classList.toggle('on');
+  }
+  function getSelectedServices() {
+    var selected = [];
+    document.querySelectorAll('.svc-pill.on').forEach(function(p) {
+      selected.push(p.textContent.trim());
+    });
+    return selected;
+  }
+// ── PILL CHECKBOX TOGGLE ── (runs after DOM ready)
+  document.querySelectorAll('.pill-check').forEach(function(pill) {
+    pill.addEventListener('click', function() {
+      this.classList.toggle('active');
+    });
+  });
+</script>
+</body>
+</html>

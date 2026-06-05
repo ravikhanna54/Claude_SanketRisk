@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — SanketRisk Inspector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #0d1b2a;
+      --navy-mid:   #1a2e42;
+      --navy-light: #243d54;
+      --gold:       #c9a84c;
+      --gold-light: #e2c97e;
+      --gold-pale:  #f5ecd4;
+      --slate:      #4a6580;
+      --slate-light:#7a9ab5;
+      --border:     #d0c9bb;
+      --bg:         #f7f4ef;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--navy);
+      color: var(--navy);
+    }
+
+    /* Subtle grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    /* ── LEFT PANEL ── */
+    .brand-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-panel::after {
+      content: '';
+      position: absolute;
+      top: -120px; right: -120px;
+      width: 400px; height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .logo-mark {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 60px;
+    }
+
+    .logo-icon {
+      width: 48px; height: 48px;
+      background: var(--gold);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+    }
+
+    .logo-text span { color: var(--gold); }
+    .logo-sub { font-size: 11px; color: var(--slate-light); letter-spacing: .12em; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; }
+
+    .brand-headline {
+      font-family: 'Playfair Display', serif;
+      font-size: 42px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.15;
+      margin-bottom: 20px;
+    }
+
+    .brand-headline em {
+      font-style: normal;
+      color: var(--gold);
+    }
+
+    .brand-desc {
+      font-size: 15px;
+      color: var(--slate-light);
+      line-height: 1.7;
+      max-width: 380px;
+      margin-bottom: 48px;
+    }
+
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .feature-list li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: #a8bfd4;
+    }
+
+    .feature-list li::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--gold);
+      flex-shrink: 0;
+    }
+
+    /* ── RIGHT PANEL ── */
+    .login-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 40px;
+      background: var(--bg);
+      border-left: 1px solid rgba(201,168,76,0.15);
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+
+    .login-subtitle {
+      font-size: 13px;
+      color: var(--slate);
+      margin-bottom: 36px;
+    }
+
+    .field-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--slate);
+      margin-bottom: 7px;
+    }
+
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      color: var(--navy);
+      background: #fff;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+
+    input[type="email"]:focus,
+    input[type="password"]:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(201,168,76,0.15);
+    }
+
+    .btn-signin {
+      width: 100%;
+      padding: 13px;
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background .2s, transform .1s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-signin:hover { background: var(--navy-mid); }
+    .btn-signin:active { transform: scale(0.99); }
+    .btn-signin:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-signin .btn-bar {
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 3px;
+      background: var(--gold);
+      width: 100%;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform .3s ease;
+    }
+
+    .btn-signin:hover .btn-bar { transform: scaleX(1); }
+
+    .error-box {
+      display: none;
+      background: #FEE2E2;
+      border: 1px solid #FC8181;
+      color: #C53030;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    .divider {
+      margin: 28px 0;
+      border: none;
+      border-top: 1px solid var(--border);
+    }
+
+    .platform-note {
+      font-size: 11px;
+      color: var(--slate-light);
+      text-align: center;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .page { grid-template-columns: 1fr; }
+      .brand-panel { display: none; }
+      .login-panel { padding: 40px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- LEFT: Brand Panel -->
+    <div class="brand-panel">
+      <div class="logo-mark">
+        <div class="logo-icon">🏢</div>
+        <div>
+          <div class="logo-text">Sanket<span>Risk</span></div>
+          <div class="logo-sub">Inspector Platform</div>
+        </div>
+      </div>
+
+      <h1 class="brand-headline">Commercial<br>Property <em>Risk</em><br>Intelligence</h1>
+      <p class="brand-desc">A professional platform for commercial property inspections, QA review, and underwriting-ready reporting.</p>
+
+      <ul class="feature-list">
+        <li>Structured inspection workflows across all occupancy types</li>
+        <li>Automated narrative report generation</li>
+        <li>Photo documentation with bulk upload</li>
+        <li>QA review and approval pipeline</li>
+        <li>Supabase-backed secure data storage</li>
+      </ul>
+    </div>
+
+    <!-- RIGHT: Login Panel -->
+    <div class="login-panel">
+      <div class="login-box">
+        <div class="login-title">Welcome back</div>
+        <div class="login-subtitle">Sign in to access your inspection dashboard</div>
+
+        <div class="error-box" id="error-box"></div>
+
+        <div class="field-group">
+          <label for="email">Email address</label>
+          <input type="email" id="email" placeholder="you@organization.com" autocomplete="email">
+        </div>
+
+        <div class="field-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+
+        <button class="btn-signin" id="signin-btn" onclick="doSignIn()">
+          Sign In →
+          <span class="btn-bar"></span>
+        </button>
+
+        <hr class="divider">
+        <div class="platform-note">SanketRisk Consultants · Secure Inspection Platform</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // If already logged in, redirect straight to dashboard
+    (async () => {
+      const { data: { session } } = await _supabase.auth.getSession();
+      if (session) window.location.href = '/dashboard.html';
+    })();
+
+    // Allow Enter key to submit
+    document.getElementById('password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doSignIn();
+    });
+    document.getElementById('email').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('password').focus();
+    });
+
+    function showError(msg) {
+      const box = document.getElementById('error-box');
+      box.textContent = msg;
+      box.style.display = 'block';
+    }
+
+    async function doSignIn() {
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const btn      = document.getElementById('signin-btn');
+
+      if (!email || !password) { showError('Please enter your email and password.'); return; }
+
+      document.getElementById('error-box').style.display = 'none';
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Signing in… <span class="btn-bar"></span>';
+
+      try {
+        const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+
+        if (error) {
+          showError(error.message || 'Sign in failed. Please check your credentials.');
+          btn.disabled = false;
+          btn.innerHTML = 'Sign In → <span class="btn-bar"></span>';
+          return;
+        }
+
+        // Ensure profile exists
+        const { data: profiles } = await _supabase
+          .from('profiles')
+          .select('role, full_name')
+          .eq('id', data.user.id);
+
+        if (!profiles?.length) {
+          await _supabase.from('profiles').insert({
+            id: data.user.id,
+            email,
+            role: 'inspector',
+            full_name: email.split('@')[0]
+          });
+        }
+
+        window.location.href = '/dashboard.html';
+
+      } catch(e) {
+        showError('Connection error. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = 'Sign In → <span class="btn-bar"></span>';
+      }
+    }
+  </script>
+</body>
+</html>
