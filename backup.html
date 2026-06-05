@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Backup — SanketRisk Inspector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #0d1b2a;
+      --navy-mid:   #1a2e42;
+      --navy-light: #243d54;
+      --gold:       #c9a84c;
+      --gold-pale:  #f5ecd4;
+      --slate:      #4a6580;
+      --slate-light:#7a9ab5;
+      --border:     #d0c9bb;
+      --bg:         #f0f2f5;
+      --green:      #276749;
+      --red:        #c53030;
+    }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg);
+      color: var(--navy);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .topnav {
+      background: var(--navy);
+      border-bottom: 3px solid var(--gold);
+      padding: 0 32px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      display: flex; align-items: center; gap: 12px;
+    }
+
+    .nav-logo-icon {
+      width: 32px; height: 32px;
+      background: var(--gold);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700;
+      color: var(--navy);
+      font-family: 'Playfair Display', serif;
+    }
+
+    .nav-logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 17px; font-weight: 700; color: #fff;
+    }
+
+    .nav-logo-text span { color: var(--gold); }
+
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+
+    .btn-nav {
+      background: none;
+      border: 1px solid rgba(255,255,255,.2);
+      color: #a8bfd4;
+      font-size: 12px;
+      padding: 5px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'IBM Plex Sans', sans-serif;
+      transition: all .2s;
+    }
+
+    .btn-nav:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── MAIN ── */
+    .main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 36px 24px 60px;
+    }
+
+    .page-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px; font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+
+    .page-sub {
+      font-size: 13px; color: var(--slate);
+      margin-bottom: 28px; line-height: 1.6;
+    }
+
+    /* ── INFO CARD ── */
+    .info-card {
+      background: var(--navy);
+      border-radius: 12px;
+      padding: 22px 26px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+    }
+
+    .info-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+
+    .info-body { flex: 1; }
+
+    .info-title {
+      font-size: 14px; font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 6px;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .info-text { font-size: 12px; color: #a8bfd4; line-height: 1.7; }
+
+    /* ── MAIN EXPORT CARD ── */
+    .export-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .export-card-header {
+      background: var(--navy-mid);
+      padding: 16px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .export-card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px; font-weight: 700;
+      color: #fff;
+    }
+
+    .export-card-sub {
+      font-size: 11px; color: var(--slate-light);
+      margin-top: 2px;
+    }
+
+    .export-card-body { padding: 22px; }
+
+    /* ── TABLE LIST ── */
+    .table-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .table-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      background: var(--bg);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      transition: border-color .2s;
+    }
+
+    .table-row.ready   { border-left: 4px solid var(--green); }
+    .table-row.pending { border-left: 4px solid var(--slate-light); }
+    .table-row.loading { border-left: 4px solid var(--gold); }
+    .table-row.error   { border-left: 4px solid var(--red); }
+
+    .table-icon { font-size: 20px; flex-shrink: 0; }
+
+    .table-info { flex: 1; }
+
+    .table-name {
+      font-size: 13px; font-weight: 700;
+      color: var(--navy);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .table-desc { font-size: 11px; color: var(--slate); margin-top: 2px; }
+
+    .table-status {
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .table-status.ready   { color: var(--green); }
+    .table-status.pending { color: var(--slate-light); }
+    .table-status.loading { color: var(--gold); }
+    .table-status.error   { color: var(--red); }
+
+    .table-count {
+      font-size: 11px;
+      color: var(--slate);
+      font-family: 'IBM Plex Mono', monospace;
+      white-space: nowrap;
+    }
+
+    /* ── BUTTONS ── */
+    .btn-export-all {
+      width: 100%;
+      padding: 16px;
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-export-all:hover:not(:disabled) { background: var(--navy-light); }
+    .btn-export-all:disabled { opacity: .6; cursor: not-allowed; }
+
+    .btn-export-all .gold-bar {
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 3px;
+      background: var(--gold);
+      width: 0%;
+      transition: width .3s ease;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      padding: 10px;
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--slate);
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .btn-secondary:hover { border-color: var(--navy); color: var(--navy); }
+    .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── PROGRESS ── */
+    .progress-wrap {
+      display: none;
+      margin-bottom: 18px;
+    }
+
+    .progress-bar-bg {
+      background: #e8e3dc;
+      border-radius: 20px;
+      height: 8px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--navy), var(--gold));
+      border-radius: 20px;
+      width: 0%;
+      transition: width .4s ease;
+    }
+
+    .progress-label {
+      font-size: 11px;
+      color: var(--slate);
+      font-family: 'IBM Plex Mono', monospace;
+      text-align: center;
+    }
+
+    /* ── LOG ── */
+    .log-wrap {
+      display: none;
+      background: var(--navy);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-top: 16px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .log-line {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: #a8bfd4;
+      line-height: 1.8;
+    }
+
+    .log-line.success { color: #68d391; }
+    .log-line.warn    { color: var(--gold); }
+    .log-line.err     { color: #fc8181; }
+
+    /* ── HISTORY CARD ── */
+    .history-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .history-header {
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--slate);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .history-body { padding: 16px 20px; }
+
+    .history-empty {
+      font-size: 13px;
+      color: var(--slate-light);
+      text-align: center;
+      padding: 10px 0;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0ece6;
+      font-size: 12px;
+    }
+
+    .history-item:last-child { border-bottom: none; }
+
+    .history-date {
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--navy);
+      font-weight: 600;
+    }
+
+    .history-detail { color: var(--slate); font-size: 11px; }
+
+    /* ── SPINNER ── */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--navy);
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+      z-index: 9999;
+      border-left: 3px solid var(--gold);
+      white-space: nowrap;
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="topnav">
+  <div class="nav-logo">
+    <div class="nav-logo-icon">S</div>
+    <div>
+      <div class="nav-logo-text">Sanket<span>Risk</span> Inspector</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <button class="btn-nav" onclick="window.location.href='/dashboard.html'">← Dashboard</button>
+    <button class="btn-nav" onclick="window.location.href='/app.html'">Inspection Form</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+  <div class="page-title">💾 Data Backup & Export</div>
+  <p class="page-sub">Export all platform data to CSV files for safekeeping. Download and save to your OneDrive or Google Drive. Recommended monthly or after major inspection batches.</p>
+
+  <!-- INFO CARD -->
+  <div class="info-card">
+    <div class="info-icon">🛡️</div>
+    <div class="info-body">
+      <div class="info-title">What gets backed up</div>
+      <div class="info-text">
+        This tool exports all database tables: inspection records, inspection requests, user profiles, recommendations, and platform settings — each as a separate CSV file, plus a combined ZIP archive.<br><br>
+        <strong style="color:var(--gold);">Photos are not included</strong> in this export as they are stored separately in Supabase Storage. Your original photos remain on the devices used to upload them (phones, tablets, computers). The photo storage paths are recorded in the inspections export so nothing is lost.
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPORT CARD -->
+  <div class="export-card">
+    <div class="export-card-header">
+      <div>
+        <div class="export-card-title">📦 Full Database Export</div>
+        <div class="export-card-sub">All tables · CSV format · Zipped for download</div>
+      </div>
+      <div id="last-backup-label" style="font-size:11px;color:var(--slate-light);font-family:'IBM Plex Mono',monospace;text-align:right;"></div>
+    </div>
+    <div class="export-card-body">
+
+      <!-- Table status list -->
+      <div class="table-list" id="table-list">
+        <div class="table-row pending" id="row-inspections">
+          <div class="table-icon">📋</div>
+          <div class="table-info">
+            <div class="table-name">inspections</div>
+            <div class="table-desc">All inspection records — COPE data, scores, report status, QA review</div>
+          </div>
+          <div class="table-count" id="count-inspections">— records</div>
+          <div class="table-status pending" id="status-inspections">Waiting</div>
+        </div>
+        <div class="table-row pending" id="row-inspection_requests">
+          <div class="table-icon">📩</div>
+          <div class="table-info">
+            <div class="table-name">inspection_requests</div>
+            <div class="table-desc">Incoming inspection requests from the public portal</div>
+          </div>
+          <div class="table-count" id="count-inspection_requests">— records</div>
+          <div class="table-status pending" id="status-inspection_requests">Waiting</div>
+        </div>
+        <div class="table-row pending" id="row-profiles">
+          <div class="table-icon">👤</div>
+          <div class="table-info">
+            <div class="table-name">profiles</div>
+            <div class="table-desc">User accounts, roles, and display names</div>
+          </div>
+          <div class="table-count" id="count-profiles">— records</div>
+          <div class="table-status pending" id="status-profiles">Waiting</div>
+        </div>
+        <div class="table-row pending" id="row-recommendations">
+          <div class="table-icon">✅</div>
+          <div class="table-info">
+            <div class="table-name">recommendations</div>
+            <div class="table-desc">Inspection recommendations and priority levels</div>
+          </div>
+          <div class="table-count" id="count-recommendations">— records</div>
+          <div class="table-status pending" id="status-recommendations">Waiting</div>
+        </div>
+        <div class="table-row pending" id="row-platform_settings">
+          <div class="table-icon">⚙️</div>
+          <div class="table-info">
+            <div class="table-name">platform_settings</div>
+            <div class="table-desc">Portal access codes and platform configuration</div>
+          </div>
+          <div class="table-count" id="count-platform_settings">— records</div>
+          <div class="table-status pending" id="status-platform_settings">Waiting</div>
+        </div>
+        <div class="table-row pending" id="row-contact_requests">
+          <div class="table-icon">📬</div>
+          <div class="table-info">
+            <div class="table-name">contact_requests</div>
+            <div class="table-desc">Demo and licensing enquiries from the marketing page</div>
+          </div>
+          <div class="table-count" id="count-contact_requests">— records</div>
+          <div class="table-status pending" id="status-contact_requests">Waiting</div>
+        </div>
+        <div class="table-row pending" id="row-esi_bulletins">
+          <div class="table-icon">📣</div>
+          <div class="table-info">
+            <div class="table-name">esi_bulletins</div>
+            <div class="table-desc">ESI bulletins and technical update notices</div>
+          </div>
+          <div class="table-count" id="count-esi_bulletins">— records</div>
+          <div class="table-status pending" id="status-esi_bulletins">Waiting</div>
+        </div>
+        <div class="table-row pending" id="row-scan_submissions">
+          <div class="table-icon">📸</div>
+          <div class="table-info">
+            <div class="table-name">scan_submissions</div>
+            <div class="table-desc">Public photo submissions from insured/broker SCAN ONE links</div>
+          </div>
+          <div class="table-count" id="count-scan_submissions">— records</div>
+          <div class="table-status pending" id="status-scan_submissions">Waiting</div>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-wrap" id="progress-wrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-label" id="progress-label">Preparing export…</div>
+      </div>
+
+      <!-- Log -->
+      <div class="log-wrap" id="log-wrap"></div>
+
+      <!-- Buttons -->
+      <button class="btn-export-all" id="btn-export" onclick="runExport()">
+        <span id="btn-icon">💾</span>
+        <span id="btn-text">Export All Tables & Download ZIP</span>
+        <div class="gold-bar" id="gold-bar"></div>
+      </button>
+
+      <div class="btn-row">
+        <button class="btn-secondary" id="btn-csv-only" onclick="runExport(true)">📄 Download CSVs Separately</button>
+        <button class="btn-secondary" onclick="resetUI()">↺ Reset</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SQL SETUP CARD -->
+  <div class="export-card" style="margin-bottom:20px;">
+    <div class="export-card-header">
+      <div>
+        <div class="export-card-title">⚙️ Supabase Table Setup</div>
+        <div class="export-card-sub">Run this SQL once in your Supabase Dashboard → SQL Editor to create all required tables</div>
+      </div>
+      <span style="font-size:11px;color:var(--slate-light);font-family:'IBM Plex Mono',monospace;">Run each block separately</span>
+    </div>
+    <div class="export-card-body" style="padding:16px 22px;">
+      <p style="font-size:12px;color:var(--slate);margin-bottom:16px;line-height:1.6;">
+        Run each SQL block below <strong>once</strong> in your <a href="https://supabase.com/dashboard" target="_blank" style="color:var(--navy);font-weight:600;">Supabase SQL Editor</a> for each new feature. Only run tables that have not yet been created.
+      </p>
+
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-size:11px;font-weight:700;color:var(--navy);font-family:'IBM Plex Mono',monospace;">1. contact_requests <span style="color:var(--slate);font-weight:400;">— Marketing page demo enquiries</span></div>
+          <button onclick="copySQL('sql-contact')" style="background:var(--gold);color:var(--navy);border:none;border-radius:5px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;" id="copy-sql-contact">📋 Copy</button>
+        </div>
+        <pre id="sql-contact" style="background:var(--navy);color:#a8d8a8;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:12px;border-radius:6px;overflow-x:auto;line-height:1.7;white-space:pre-wrap;margin:0"></pre>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-size:11px;font-weight:700;color:var(--navy);font-family:'IBM Plex Mono',monospace;">2. esi_bulletins <span style="color:var(--slate);font-weight:400;">— ESI Bulletins tab</span></div>
+          <button onclick="copySQL('sql-bulletins')" style="background:var(--gold);color:var(--navy);border:none;border-radius:5px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;" id="copy-sql-bulletins">📋 Copy</button>
+        </div>
+        <pre id="sql-bulletins" style="background:var(--navy);color:#a8d8a8;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:12px;border-radius:6px;overflow-x:auto;line-height:1.7;white-space:pre-wrap;margin:0"></pre>
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-size:11px;font-weight:700;color:var(--navy);font-family:'IBM Plex Mono',monospace;">3. scan_submissions <span style="color:var(--slate);font-weight:400;">— SCAN ONE public submissions</span></div>
+          <button onclick="copySQL('sql-scan')" style="background:var(--gold);color:var(--navy);border:none;border-radius:5px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;" id="copy-sql-scan">📋 Copy</button>
+        </div>
+        <pre id="sql-scan" style="background:var(--navy);color:#a8d8a8;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:12px;border-radius:6px;overflow-x:auto;line-height:1.7;white-space:pre-wrap;margin:0"></pre>
+      </div>
+
+      <!-- Migration block — run this on existing tables to add missing column + delete policy -->
+      <div style="margin-top:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-size:11px;font-weight:700;color:#b91c1c;font-family:'IBM Plex Mono',monospace;">4. MIGRATION — Run this on your existing live table <span style="color:var(--slate);font-weight:400;">(safe to run multiple times)</span></div>
+          <button onclick="copySQL('sql-migrate')" style="background:#b91c1c;color:#fff;border:none;border-radius:5px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;" id="copy-sql-migrate">📋 Copy</button>
+        </div>
+        <pre id="sql-migrate" style="background:var(--navy);color:#fca5a5;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:12px;border-radius:6px;overflow-x:auto;line-height:1.7;white-space:pre-wrap;margin:0"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- BACKUP HISTORY -->
+  <div class="history-card">
+    <div class="history-header">📅 Backup History (this browser)</div>
+    <div class="history-body">
+      <div id="history-list"><div class="history-empty">No backups recorded yet in this browser.</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const TABLES = [
+    { name: 'inspections',         label: 'inspections' },
+    { name: 'inspection_requests', label: 'inspection_requests' },
+    { name: 'profiles',            label: 'profiles' },
+    { name: 'recommendations',     label: 'recommendations' },
+    { name: 'platform_settings',   label: 'platform_settings' },
+    { name: 'contact_requests',    label: 'contact_requests' },
+    { name: 'esi_bulletins',       label: 'esi_bulletins' },
+    { name: 'scan_submissions',     label: 'scan_submissions' },
+  ];
+
+  let exportInProgress = false;
+
+  // ── SETUP SQL ──
+
+
+  const SQL_CONTACT = `create table if not exists public.contact_requests (
+  id            uuid default gen_random_uuid() primary key,
+  first_name    text not null,
+  last_name     text not null,
+  email         text not null,
+  organization  text,
+  role          text,
+  message       text,
+  created_at    timestamptz default now()
+);
+alter table public.contact_requests enable row level security;
+create policy "Anyone can submit contact requests"
+  on public.contact_requests for insert with check (true);
+create policy "Admins can read contact requests"
+  on public.contact_requests for select
+  using (auth.role() = 'authenticated');`;
+
+  const SQL_BULLETINS = `create table if not exists public.esi_bulletins (
+  id             uuid default gen_random_uuid() primary key,
+  title          text not null,
+  category       text not null default 'General Notice',
+  ref_number     text,
+  effective_date date,
+  content        text not null,
+  posted_by      text,
+  posted_at      timestamptz default now()
+);
+alter table public.esi_bulletins enable row level security;
+create policy "Anyone can read bulletins"
+  on public.esi_bulletins for select using (true);
+create policy "Authenticated users can insert bulletins"
+  on public.esi_bulletins for insert with check (auth.role() = 'authenticated');
+create policy "Authenticated users can update bulletins"
+  on public.esi_bulletins for update using (auth.role() = 'authenticated');
+create policy "Admins only can delete bulletins"
+  on public.esi_bulletins for delete
+  using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));`;
+
+  const SQL_SCAN = `create table if not exists public.scan_submissions (
+  id            uuid default gen_random_uuid() primary key,
+  submit_code   text,
+  insured_name  text,
+  address       text,
+  city          text,
+  province      text,
+  occupancy     text,
+  year_built    integer,
+  building_area integer,
+  form_data     jsonb,
+  photo_count   integer default 0,
+  photos        jsonb,
+  storage_paths jsonb,
+  submitted_at  timestamptz default now(),
+  status        text default 'pending'
+);
+alter table public.scan_submissions enable row level security;
+create policy "Anyone can submit scan forms"
+  on public.scan_submissions for insert with check (true);
+create policy "Admins can read scan submissions"
+  on public.scan_submissions for select
+  using (auth.role() = 'authenticated');
+create policy "Admins can delete scan submissions"
+  on public.scan_submissions for delete
+  using (auth.role() = 'authenticated');`;
+
+  const SQL_MIGRATE = `-- Migration: run all of these in Supabase SQL editor
+-- Safe to run multiple times
+
+-- 1. Add storage_paths column to scan_submissions
+alter table public.scan_submissions
+  add column if not exists storage_paths jsonb;
+
+-- 2. Add delete policy to scan_submissions
+drop policy if exists "Admins can delete scan submissions" on public.scan_submissions;
+create policy "Admins can delete scan submissions"
+  on public.scan_submissions for delete
+  using (auth.role() = 'authenticated');
+
+-- 3. Create scan_results table (used by background analysis function)
+create table if not exists public.scan_results (
+  id         uuid default gen_random_uuid() primary key,
+  job_id     text not null,
+  status     text default 'pending',
+  result     text,
+  error      text,
+  created_at timestamptz default now()
+);
+alter table public.scan_results enable row level security;
+create policy "Service can insert results"
+  on public.scan_results for insert with check (true);
+create policy "Authenticated can read results"
+  on public.scan_results for select using (auth.role() = 'authenticated');
+create policy "Authenticated can delete results"
+  on public.scan_results for delete using (auth.role() = 'authenticated');
+create index if not exists scan_results_job_id_idx on public.scan_results(job_id);`;
+
+  // Populate SQL blocks on load
+  document.getElementById('sql-contact').textContent   = SQL_CONTACT;
+  document.getElementById('sql-bulletins').textContent = SQL_BULLETINS;
+  document.getElementById('sql-scan').textContent      = SQL_SCAN;
+  document.getElementById('sql-migrate').textContent   = SQL_MIGRATE;
+
+  function copySQL(blockId) {
+    const sqlMap = { 'sql-contact': SQL_CONTACT, 'sql-bulletins': SQL_BULLETINS, 'sql-scan': SQL_SCAN, 'sql-migrate': SQL_MIGRATE };
+    const btnMap = { 'sql-contact': 'copy-sql-contact', 'sql-bulletins': 'copy-sql-bulletins', 'sql-scan': 'copy-sql-scan', 'sql-migrate': 'copy-sql-migrate' };
+    const sql = sqlMap[blockId];
+    const btn = document.getElementById(btnMap[blockId]);
+    navigator.clipboard.writeText(sql).then(() => {
+      btn.textContent = '\u2713 Copied!';
+      setTimeout(() => btn.textContent = '\uD83D\uDCCB Copy', 2500);
+    }).catch(() => {
+      // Fallback: select the text
+      const el = document.getElementById(blockId);
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      btn.textContent = 'Selected - press Ctrl+C';
+    });
+  }
+
+  // Keep old SETUP_SQL for backup export manifest compatibility
+  const SETUP_SQL = SQL_CONTACT + '\n\n' + SQL_BULLETINS + '\n\n' + SQL_SCAN;
+
+  // ── AUTH CHECK ──
+  (async () => {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) { window.location.replace('/index.html'); return; }
+    loadHistory();
+  })();
+
+  // ── LOGGING ──
+  function log(msg, type = '') {
+    const wrap = document.getElementById('log-wrap');
+    wrap.style.display = 'block';
+    const line = document.createElement('div');
+    line.className = 'log-line ' + type;
+    const time = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    line.textContent = `[${time}]  ${msg}`;
+    wrap.appendChild(line);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  // ── SET ROW STATE ──
+  function setRowState(table, state, countText) {
+    const row    = document.getElementById('row-' + table);
+    const status = document.getElementById('status-' + table);
+    const count  = document.getElementById('count-' + table);
+    if (!row || !status) return;
+    row.className    = 'table-row ' + state;
+    status.className = 'table-status ' + state;
+    const labels = { pending: 'Waiting', loading: 'Exporting…', ready: '✓ Done', error: '✗ Error' };
+    status.textContent = labels[state] || state;
+    if (countText !== undefined) count.textContent = countText;
+  }
+
+  // ── PROGRESS ──
+  function setProgress(pct, label) {
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-label').textContent = label;
+  }
+
+  // ── CSV HELPERS ──
+  function toCSV(rows) {
+    if (!rows || !rows.length) return '';
+    const headers = Object.keys(rows[0]);
+    const escape = v => {
+      if (v === null || v === undefined) return '';
+      const s = String(v);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    };
+    const lines = [headers.join(',')];
+    rows.forEach(row => lines.push(headers.map(h => escape(row[h])).join(',')));
+    return lines.join('\n');
+  }
+
+  function downloadFile(filename, content, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+  }
+
+  // ── FETCH TABLE (handles pagination for large tables) ──
+  async function fetchTable(tableName) {
+    const PAGE = 1000;
+    let allRows = [];
+    let from = 0;
+    while (true) {
+      const { data, error } = await _supabase
+        .from(tableName)
+        .select('*')
+        .range(from, from + PAGE - 1)
+        .order('id', { ascending: true });
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) break;
+      allRows = allRows.concat(data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+    return allRows;
+  }
+
+  // ── MAIN EXPORT ──
+  async function runExport(csvOnly = false) {
+    if (exportInProgress) return;
+    exportInProgress = true;
+
+    const btn     = document.getElementById('btn-export');
+    const btnCsv  = document.getElementById('btn-csv-only');
+    btn.disabled  = true;
+    btnCsv.disabled = true;
+    document.getElementById('btn-icon').innerHTML = '<span class="spinner"></span>';
+    document.getElementById('btn-text').textContent = 'Exporting — please wait…';
+    document.getElementById('progress-wrap').style.display = 'block';
+    document.getElementById('log-wrap').innerHTML = '';
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const timeStr = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h');
+    const prefix  = `SanketRisk-Backup-${dateStr}-${timeStr}`;
+
+    const csvFiles = {}; // name → csv string
+    let totalRecords = 0;
+    let errors = 0;
+
+    log('Starting full database export…');
+
+    for (let i = 0; i < TABLES.length; i++) {
+      const t = TABLES[i];
+      setRowState(t.name, 'loading');
+      setProgress(Math.round((i / TABLES.length) * 85), `Exporting ${t.name}…`);
+      log(`Fetching table: ${t.name}`);
+
+      try {
+        const rows = await fetchTable(t.name);
+        const csv  = toCSV(rows);
+        csvFiles[t.name] = csv;
+        totalRecords += rows.length;
+        setRowState(t.name, 'ready', rows.length.toLocaleString() + ' records');
+        log(`✓ ${t.name} — ${rows.length} records`, 'success');
+
+        if (csvOnly) {
+          downloadFile(`${prefix}_${t.name}.csv`, csv, 'text/csv');
+        }
+
+      } catch(e) {
+        errors++;
+        setRowState(t.name, 'error', 'Error');
+        log(`✗ ${t.name} — ${e.message}`, 'err');
+      }
+    }
+
+    setProgress(90, 'Building manifest…');
+
+    // ── MANIFEST ──
+    const manifest = [
+      '# SanketRisk Inspector — Database Backup Manifest',
+      `# Date: ${new Date().toLocaleString('en-CA')}`,
+      `# Platform: sanketrisk.netlify.app`,
+      `# Supabase Project: lzsfmqbhrpsmnivxhggi.supabase.co`,
+      '',
+      'FILES INCLUDED:',
+      ...TABLES.map(t => {
+        const csv = csvFiles[t.name] || '';
+        const lines = csv ? csv.split('\n').length - 1 : 0;
+        return `  ${t.name}.csv — ${lines} records`;
+      }),
+      '',
+      `TOTAL RECORDS EXPORTED: ${totalRecords}`,
+      `ERRORS: ${errors}`,
+      '',
+      'NOTE: Photos are stored in Supabase Storage (inspection-photos bucket).',
+      'Photo storage paths are recorded in the inspections.csv export.',
+      'Original photos remain on the devices used to upload them.',
+      '',
+      '# To restore: import each CSV into the corresponding Supabase table.',
+      '# via Supabase Dashboard → Table Editor → Import CSV.',
+    ].join('\n');
+
+    csvFiles['MANIFEST.txt'] = manifest;
+
+    if (!csvOnly) {
+      // ── ZIP using native CompressionStream (no library needed) ──
+      // Fallback: download each file individually if ZIP not supported
+      setProgress(95, 'Packaging ZIP…');
+      log('Building ZIP archive…');
+
+      try {
+        const zipBlob = await buildZip(csvFiles, prefix);
+        downloadFile(`${prefix}.zip`, zipBlob, 'application/zip');
+        log(`✓ ZIP downloaded: ${prefix}.zip`, 'success');
+      } catch(e) {
+        // ZIP failed — fall back to individual downloads
+        log('ZIP not supported in this browser — downloading files individually…', 'warn');
+        for (const [name, content] of Object.entries(csvFiles)) {
+          const ext = name.endsWith('.txt') ? '.txt' : '.csv';
+          const fname = name.endsWith('.txt') ? name : `${prefix}_${name}.csv`;
+          downloadFile(fname, content, 'text/plain');
+        }
+      }
+    }
+
+    setProgress(100, errors === 0 ? '✓ Export complete!' : `⚠ Complete with ${errors} error(s)`);
+    log(`Export finished. ${totalRecords} total records. ${errors} error(s).`, errors ? 'warn' : 'success');
+
+    // ── Save to history ──
+    saveHistory(dateStr, timeStr, totalRecords, errors);
+
+    btn.disabled = false;
+    btnCsv.disabled = false;
+    document.getElementById('btn-icon').textContent = '✓';
+    document.getElementById('btn-text').textContent = errors === 0
+      ? 'Export Complete — Save the downloaded file to OneDrive / Google Drive'
+      : `Export Complete with ${errors} error(s) — check log above`;
+
+    showToast(errors === 0 ? '✓ Backup downloaded successfully' : `⚠ Backup complete — ${errors} table(s) had errors`);
+    exportInProgress = false;
+  }
+
+  // ── BUILD ZIP ──
+  // Uses a simple ZIP structure without compression (store only) for broad compatibility
+  async function buildZip(files, prefix) {
+    const enc = new TextEncoder();
+    const parts = [];
+    const centralDir = [];
+    let offset = 0;
+
+    for (const [name, content] of Object.entries(files)) {
+      const fileName    = enc.encode(name);
+      const fileData    = typeof content === 'string' ? enc.encode(content) : content;
+      const crc         = crc32(fileData);
+      const size        = fileData.length;
+
+      // Local file header
+      const localHeader = buildLocalHeader(fileName, size, crc);
+      parts.push(localHeader, fileData);
+
+      // Central directory entry
+      centralDir.push(buildCentralEntry(fileName, size, crc, offset));
+      offset += localHeader.length + size;
+    }
+
+    const cdBytes   = concat(centralDir);
+    const endRecord = buildEndRecord(Object.keys(files).length, cdBytes.length, offset);
+
+    const allParts = [...parts, cdBytes, endRecord];
+    return new Blob(allParts, { type: 'application/zip' });
+  }
+
+  function concat(arrays) {
+    const total = arrays.reduce((s, a) => s + a.length, 0);
+    const out   = new Uint8Array(total);
+    let pos = 0;
+    arrays.forEach(a => { out.set(a, pos); pos += a.length; });
+    return out;
+  }
+
+  function u16(n) { return new Uint8Array([n & 0xff, (n >> 8) & 0xff]); }
+  function u32(n) { return new Uint8Array([n & 0xff, (n >> 8) & 0xff, (n >> 16) & 0xff, (n >> 24) & 0xff]); }
+
+  function buildLocalHeader(nameBytes, size, crc) {
+    return concat([
+      new Uint8Array([0x50, 0x4b, 0x03, 0x04]), // signature
+      u16(20),        // version needed
+      u16(0),         // flags
+      u16(0),         // compression (store)
+      u16(0), u16(0), // mod time/date
+      u32(crc),
+      u32(size),      // compressed size
+      u32(size),      // uncompressed size
+      u16(nameBytes.length),
+      u16(0),         // extra field length
+      nameBytes,
+    ]);
+  }
+
+  function buildCentralEntry(nameBytes, size, crc, offset) {
+    return concat([
+      new Uint8Array([0x50, 0x4b, 0x01, 0x02]), // signature
+      u16(20), u16(20),  // versions
+      u16(0),            // flags
+      u16(0),            // compression (store)
+      u16(0), u16(0),    // mod time/date
+      u32(crc),
+      u32(size),
+      u32(size),
+      u16(nameBytes.length),
+      u16(0), u16(0),    // extra, comment lengths
+      u16(0), u16(0),    // disk start, internal attrs
+      u32(0),            // external attrs
+      u32(offset),       // local header offset
+      nameBytes,
+    ]);
+  }
+
+  function buildEndRecord(count, cdSize, cdOffset) {
+    return concat([
+      new Uint8Array([0x50, 0x4b, 0x05, 0x06]), // signature
+      u16(0), u16(0),     // disk numbers
+      u16(count), u16(count),
+      u32(cdSize),
+      u32(cdOffset),
+      u16(0),             // comment length
+    ]);
+  }
+
+  // CRC-32 implementation
+  const CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let j = 0; j < 8; j++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+      t[i] = c;
+    }
+    return t;
+  })();
+
+  function crc32(data) {
+    let crc = 0xffffffff;
+    for (let i = 0; i < data.length; i++) crc = CRC_TABLE[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  // ── HISTORY (localStorage) ──
+  function saveHistory(date, time, records, errors) {
+    const key = 'sanketrisk_backup_history';
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+    history.unshift({ date, time, records, errors, ts: Date.now() });
+    if (history.length > 20) history = history.slice(0, 20);
+    localStorage.setItem(key, JSON.stringify(history));
+    renderHistory(history);
+  }
+
+  function loadHistory() {
+    const key = 'sanketrisk_backup_history';
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+    renderHistory(history);
+    if (history.length > 0) {
+      document.getElementById('last-backup-label').textContent = 'Last backup: ' + history[0].date;
+    }
+  }
+
+  function renderHistory(history) {
+    const list = document.getElementById('history-list');
+    if (!history.length) {
+      list.innerHTML = '<div class="history-empty">No backups recorded yet in this browser.</div>';
+      return;
+    }
+    list.innerHTML = history.map(h => `
+      <div class="history-item">
+        <div>
+          <div class="history-date">${h.date} at ${h.time}</div>
+          <div class="history-detail">${h.records.toLocaleString()} records exported · ${h.errors === 0 ? '✓ No errors' : '⚠ ' + h.errors + ' error(s)'}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  // ── RESET ──
+  function resetUI() {
+    if (exportInProgress) return;
+    TABLES.forEach(t => setRowState(t.name, 'pending', '— records'));
+    document.getElementById('progress-wrap').style.display = 'none';
+    document.getElementById('log-wrap').style.display = 'none';
+    document.getElementById('log-wrap').innerHTML = '';
+    document.getElementById('progress-fill').style.width = '0%';
+    document.getElementById('btn-icon').textContent = '💾';
+    document.getElementById('btn-text').textContent = 'Export All Tables & Download ZIP';
+    document.getElementById('btn-export').disabled = false;
+    document.getElementById('btn-csv-only').disabled = false;
+  }
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 4000);
+  }
+</script>
+</body>
+</html>

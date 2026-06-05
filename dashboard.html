@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — SanketRisk Inspector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #0d1b2a;
+      --navy-mid:   #1a2e42;
+      --navy-light: #243d54;
+      --gold:       #c9a84c;
+      --gold-light: #e2c97e;
+      --gold-pale:  #f5ecd4;
+      --slate:      #4a6580;
+      --slate-light:#7a9ab5;
+      --border:     #d0c9bb;
+      --bg:         #f0f2f5;
+      --card-bg:    #ffffff;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg);
+      color: var(--navy);
+    }
+
+    /* ── TOP NAV ── */
+    .topnav {
+      background: var(--navy);
+      padding: 0 32px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 2px solid var(--gold);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-logo-icon {
+      width: 32px; height: 32px;
+      background: var(--gold);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+
+    .nav-logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .nav-logo-text span { color: var(--gold); }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .nav-user {
+      font-size: 13px;
+      color: var(--slate-light);
+    }
+
+    .nav-user strong {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .role-pill {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .role-pill.admin    { background: var(--gold); color: var(--navy); }
+    .role-pill.inspector { background: rgba(255,255,255,0.12); color: #c8d8e8; }
+
+    .btn-signout {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #a8bfd4;
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'IBM Plex Sans', sans-serif;
+      transition: all .2s;
+    }
+
+    .btn-signout:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── MAIN LAYOUT ── */
+    .main {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 32px 32px 60px;
+    }
+
+    /* ── PAGE HEADER ── */
+    .page-header {
+      margin-bottom: 28px;
+    }
+
+    .page-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--slate);
+    }
+
+    /* ── STAT CARDS ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow .2s;
+    }
+
+    .stat-card:hover { box-shadow: 0 4px 16px rgba(13,27,42,.08); }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 4px; height: 100%;
+      background: var(--accent, var(--gold));
+    }
+
+    .stat-card.accent-green  { --accent: #38a169; }
+    .stat-card.accent-orange { --accent: #dd6b20; }
+    .stat-card.accent-purple { --accent: #805ad5; }
+    .stat-card.accent-red    { --accent: #e53e3e; }
+
+    .stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--slate);
+      margin-bottom: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .stat-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1;
+    }
+
+    .stat-sub {
+      font-size: 11px;
+      color: var(--slate-light);
+      margin-top: 6px;
+    }
+
+    /* ── SECTION HEADER ── */
+    .section-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .section-hdr-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    .section-hdr-sub {
+      font-size: 12px;
+      color: var(--slate);
+      margin-top: 2px;
+    }
+
+    /* ── NOTIFICATIONS ── */
+    .notif-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .notif-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      border-left: 4px solid var(--notif-color, var(--gold));
+      transition: box-shadow .2s;
+    }
+
+    .notif-card:hover { box-shadow: 0 3px 12px rgba(13,27,42,.07); }
+    .notif-card.urgent { --notif-color: #e53e3e; }
+    .notif-card.warning { --notif-color: #dd6b20; }
+    .notif-card.info  { --notif-color: var(--gold); }
+
+    .notif-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    .notif-body { flex: 1; }
+    .notif-title { font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 2px; }
+    .notif-desc  { font-size: 12px; color: var(--slate); }
+
+    .notif-time {
+      font-size: 10px;
+      color: var(--slate-light);
+      font-family: 'IBM Plex Mono', monospace;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+
+    .notif-empty {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 20px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--slate-light);
+    }
+
+    /* ── INSPECTIONS TABLE ── */
+    .table-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: visible;
+    }
+
+    .table-scroll-wrap {
+      overflow-x: auto;
+      border-radius: 0 0 10px 10px;
+    }
+
+    .table-toolbar {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 160px;
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      color: var(--navy);
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .search-input:focus { border-color: var(--gold); }
+
+    .filter-select {
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 12px;
+      color: var(--navy);
+      background: #fff;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .btn-new-insp {
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 7px 16px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+      white-space: nowrap;
+    }
+
+    .btn-new-insp:hover { background: var(--navy-mid); }
+
+    table {
+      width: 100%;
+      min-width: 800px;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead th {
+      background: #f0f2f5;
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--slate);
+      border-bottom: 1px solid var(--border);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #f0ece6;
+      transition: background .15s;
+      cursor: pointer;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #faf7f2; }
+
+    td {
+      padding: 12px 14px;
+      color: var(--navy);
+      vertical-align: middle;
+    }
+
+    .td-id {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--slate);
+    }
+
+    .td-name { font-weight: 600; }
+    .td-sub  { font-size: 11px; color: var(--slate); margin-top: 2px; }
+
+    .status-badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .status-draft     { background: #EDF2F7; color: #4A5568; }
+    .status-submitted { background: #FFF3E0; color: #C05621; }
+    .status-inreview  { background: #FAF5FF; color: #6B46C1; }
+    .status-approved  { background: #F0FFF4; color: #276749; }
+    .status-returned  { background: #FEE2E2; color: #C53030; }
+
+    .btn-open {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--slate);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .btn-open:hover { border-color: var(--navy); color: var(--navy); background: #f7f4ef; }
+
+    .empty-state {
+      text-align: center;
+      padding: 50px 20px;
+      color: var(--slate-light);
+    }
+
+    .empty-icon { font-size: 36px; margin-bottom: 10px; }
+    .empty-text { font-size: 14px; }
+    .empty-sub  { font-size: 12px; margin-top: 4px; }
+
+    /* Loading shimmer */
+    .shimmer {
+      background: linear-gradient(90deg, #f0ece6 25%, #e8e3dc 50%, #f0ece6 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite;
+      border-radius: 4px;
+      height: 14px;
+    }
+
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Admin: inspector filter pill */
+    .inspector-filter-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── TABS ── */
+    #admin-tabs { border-bottom: 2px solid var(--border); margin-bottom: 20px; }
+    .dash-tab {
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: 10px 20px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--slate);
+      cursor: pointer;
+      margin-bottom: -2px;
+      transition: color .2s, border-color .2s;
+    }
+    .dash-tab:hover { color: var(--navy); }
+    .dash-tab.active { color: var(--navy); border-bottom-color: var(--gold); }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--navy);
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+      z-index: 9999;
+      border-left: 3px solid var(--gold);
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .topnav { padding: 0 16px; }
+      .main { padding: 20px 14px 50px; }
+      .nav-user { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <div class="nav-logo">
+      <div class="nav-logo-icon">🏢</div>
+      <div class="nav-logo-text">Sanket<span>Risk</span> Inspector</div>
+    </div>
+    <div class="nav-right">
+      <span class="nav-user">Signed in as <strong id="nav-name">—</strong></span>
+      <span class="role-pill" id="nav-role-pill">inspector</span>
+      <button class="btn-signout" onclick="window.location.href='/backup.html'" id="btn-backup" style="display:none;border-color:rgba(201,168,76,.4);color:var(--gold);">💾 Backup</button>
+      <button class="btn-signout" onclick="signOut()">Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-title" id="page-title">Dashboard</div>
+      <div class="page-subtitle" id="page-subtitle">Loading your inspections…</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Assigned</div>
+        <div class="stat-value" id="stat-total">—</div>
+        <div class="stat-sub">total open inspections</div>
+      </div>
+      <div class="stat-card accent-orange">
+        <div class="stat-label">In Progress</div>
+        <div class="stat-value" id="stat-inprogress">—</div>
+        <div class="stat-sub">draft / in review</div>
+      </div>
+      <div class="stat-card accent-green">
+        <div class="stat-label">Approved</div>
+        <div class="stat-value" id="stat-approved">—</div>
+        <div class="stat-sub">this cycle</div>
+      </div>
+      <div class="stat-card accent-red">
+        <div class="stat-label">Needs Attention</div>
+        <div class="stat-value" id="stat-attention">—</div>
+        <div class="stat-sub">returned / overdue</div>
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="section-hdr" style="margin-bottom:12px;">
+      <div>
+        <div class="section-hdr-title">🔔 Notifications</div>
+        <div class="section-hdr-sub">Pending actions and recent updates</div>
+      </div>
+    </div>
+    <div class="notif-list" id="notif-list">
+      <div class="notif-empty">Loading notifications…</div>
+    </div>
+
+    <!-- Tab Nav (admin only) -->
+    <div id="admin-tabs" style="display:none;margin-bottom:20px;border-bottom:2px solid var(--border);display:none;">
+      <button class="dash-tab active" onclick="switchTab('inspections')">📋 Inspections</button>
+      <button class="dash-tab" onclick="switchTab('requests')">📩 Inspection Requests</button>
+      <button class="dash-tab" onclick="switchTab('portal')">⚙️ Portal Settings</button>
+      <button class="dash-tab" onclick="switchTab('enquiries')">📬 Contact Enquiries</button>
+      <button class="dash-tab" onclick="switchTab('scan')">📸 SCAN ONE Submissions</button>
+    </div>
+
+    <!-- INSPECTIONS TAB -->
+    <div id="tab-inspections">
+      <div>
+        <div class="section-hdr-title" id="table-title">My Open Inspections</div>
+        <div class="section-hdr-sub">Closed inspections are not shown</div>
+      </div>
+      <button class="btn-new-insp" id="btn-new-insp" style="display:none" onclick="window.location.href='/app.html'">＋ New Inspection</button>
+      <button class="btn-new-insp" id="btn-scan-one" style="display:none;background:linear-gradient(135deg,#065f73,#0891b2);" onclick="window.location.href='/scan.html'">📸 SCAN ONE</button>
+    </div>
+
+    <div class="table-card">
+      <div class="table-toolbar">
+        <input class="search-input" id="search-input" type="text" placeholder="🔍  Search by name, ID, city…" oninput="filterTable()">
+        <select class="filter-select" id="filter-status" onchange="filterTable()">
+          <option value="">All Statuses</option>
+          <option value="draft">Draft</option>
+          <option value="submitted">Submitted</option>
+          <option value="inreview">In Review</option>
+          <option value="approved">Approved</option>
+          <option value="returned">Returned</option>
+        </select>
+        <select class="filter-select" id="filter-inspector" style="display:none" onchange="filterTable()">
+          <option value="">All Inspectors</option>
+        </select>
+      </div>
+      <div class="table-scroll-wrap">
+        <div id="table-wrap">
+          <div class="empty-state">
+            <div class="empty-icon">🔄</div>
+            <div class="empty-text">Loading inspections…</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- end tab-inspections -->
+
+    <!-- REQUESTS TAB (admin only) -->
+    <div id="tab-requests" style="display:none;">
+      <div class="section-hdr" style="margin-bottom:14px;">
+        <div>
+          <div class="section-hdr-title">📩 Inspection Requests</div>
+          <div class="section-hdr-sub">Assign, convert, and manage incoming inspection requests</div>
+        </div>
+        <button class="btn-new-insp" onclick="loadRequests()">🔄 Refresh</button>
+      </div>
+      <div class="table-card">
+        <div class="table-scroll-wrap">
+          <div id="requests-table-wrap">
+            <div class="empty-state"><div class="empty-icon">📩</div><div class="empty-text">Click Refresh to load requests</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PORTAL SETTINGS TAB (admin only) -->
+    <div id="tab-portal" style="display:none;">
+      <div class="section-hdr" style="margin-bottom:14px;">
+        <div>
+          <div class="section-hdr-title">⚙️ Portal Settings</div>
+          <div class="section-hdr-sub">Manage the public inspection request portal</div>
+        </div>
+      </div>
+      <div class="table-card" style="padding:24px;">
+        <div style="margin-bottom:24px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;">Portal Access Code</div>
+          <div style="font-size:13px;color:var(--slate);margin-bottom:14px;line-height:1.6;">
+            This code is required on the public request form at <strong>sanketrisk.netlify.app/request</strong>.
+            Share it only with authorised clients. Change it anytime — the new code takes effect immediately.
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+              <label style="font-size:11px;font-weight:600;color:var(--slate);display:block;margin-bottom:4px;">Current Access Code</label>
+              <input type="text" id="portal-access-code-input"
+                style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;letter-spacing:.08em;
+                       padding:10px 14px;border:2px solid var(--gold);border-radius:8px;width:100%;color:var(--navy);outline:none;"
+                placeholder="Loading...">
+            </div>
+            <button onclick="saveAccessCode()"
+              style="padding:10px 20px;background:var(--gold);color:var(--navy);border:none;border-radius:8px;
+                     font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;">
+              💾 Save New Code
+            </button>
+          </div>
+          <div id="access-code-msg" style="margin-top:8px;font-size:12px;display:none;"></div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:20px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);margin-bottom:8px;font-family:'IBM Plex Mono',monospace;">Portal URL</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <code style="font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--gold-pale);
+                         color:var(--navy);padding:6px 12px;border-radius:6px;border:1px solid var(--gold);">
+              https://sanketrisk.netlify.app/request
+            </code>
+            <button onclick="navigator.clipboard.writeText('https://sanketrisk.netlify.app/request').then(()=>showToast('✓ URL copied'))"
+              style="font-size:11px;padding:6px 12px;border-radius:6px;cursor:pointer;background:white;border:1px solid var(--border);font-family:'IBM Plex Sans',sans-serif;">
+              📋 Copy Link
+            </button>
+          </div>
+          <div style="font-size:12px;color:var(--slate-light);margin-top:8px;">Share this link with clients along with the access code above.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACT ENQUIRIES TAB (admin only) -->
+    <div id="tab-enquiries" style="display:none;">
+      <div class="section-hdr" style="margin-bottom:14px;">
+        <div>
+          <div class="section-hdr-title">📬 Contact Enquiries</div>
+          <div class="section-hdr-sub">Demo and licensing requests from the marketing page</div>
+        </div>
+        <button class="btn-new-insp" onclick="loadEnquiries()">🔄 Refresh</button>
+      </div>
+      <div class="table-card">
+        <div class="table-scroll-wrap">
+          <div id="enquiries-table-wrap">
+            <div class="empty-state"><div class="empty-icon">📬</div><div class="empty-text">Click Refresh to load enquiries</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCAN ONE SUBMISSIONS TAB -->
+    <div id="tab-scan" style="display:none;">
+      <div class="section-hdr" style="margin-bottom:14px;">
+        <div>
+          <div class="section-hdr-title">📸 SCAN ONE Submissions</div>
+          <div class="section-hdr-sub">Photo submissions from insureds and brokers awaiting AI analysis</div>
+        </div>
+        <button class="btn-new-insp" onclick="loadScanSubmissions()">🔄 Refresh</button>
+      </div>
+      <div class="table-card">
+        <div class="table-scroll-wrap">
+          <div id="scan-table-wrap">
+            <div class="empty-state"><div class="empty-icon">📸</div><div class="empty-text">Click Refresh to load submissions</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script>
+    const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentUser     = null;
+    let currentUserRole = 'inspector';
+    let currentUserName = '';
+    let allInspections  = [];
+
+    // ── AUTH CHECK ──
+    async function init() {
+      const { data: { session } } = await _supabase.auth.getSession();
+      if (!session) { window.location.replace('/index.html'); return; }
+
+      currentUser = session.user;
+
+      // Get profile
+      const { data: profiles } = await _supabase
+        .from('profiles')
+        .select('role, full_name')
+        .eq('id', currentUser.id);
+
+      currentUserRole = profiles?.[0]?.role || 'inspector';
+      currentUserName = profiles?.[0]?.full_name || currentUser.email.split('@')[0];
+
+      // Update nav
+      document.getElementById('nav-name').textContent = currentUserName;
+      const pill = document.getElementById('nav-role-pill');
+      pill.textContent = currentUserRole;
+      pill.className = 'role-pill ' + currentUserRole;
+
+      // Update page header
+      const isAdmin = currentUserRole === 'admin';
+      document.getElementById('page-title').textContent = isAdmin ? 'Admin Dashboard' : 'My Dashboard';
+      document.getElementById('page-subtitle').textContent = isAdmin
+        ? 'All inspectors · All open inspections'
+        : `Welcome back, ${currentUserName} — your assigned inspections`;
+
+      if (isAdmin) {
+        document.getElementById('btn-new-insp').style.display = 'inline-block';
+        document.getElementById('table-title').textContent = 'All Open Inspections';
+        document.getElementById('filter-inspector').style.display = 'inline-block';
+        document.getElementById('admin-tabs').style.display = 'block';
+        document.getElementById('btn-backup').style.display = 'inline-block';
+        document.getElementById('btn-scan-one').style.display = 'inline-block';
+      }
+
+      await loadInspections();
+    }
+
+    // ── LOAD INSPECTIONS ──
+    async function loadInspections() {
+      const isAdmin = currentUserRole === 'admin';
+
+      let query = _supabase
+        .from('inspections')
+        .select('id,inspection_id,insured_name,city,province_state,occupancy_class,inspector_name,user_id,report_status,report_published,inspection_date,updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(300);
+
+      if (isAdmin) {
+        // Admin sees all — but filter out fully closed/published approved reports
+        // "Closed" = approved AND published
+        query = query.not('report_status', 'eq', 'closed');
+      } else {
+        // Inspector sees only their own, and only non-closed
+        // Inspector sees only their own assigned records, non-closed only
+        query = query
+          .eq('user_id', currentUser.id)
+          .not('report_status', 'eq', 'closed')
+          .not('inspector_name', 'is', null);
+      }
+
+      const { data: rows, error } = await query;
+      if (error) {
+        console.error('Dashboard load error:', error);
+        document.getElementById('table-wrap').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error loading data</div><div class="empty-sub">${error.message}</div></div>`;
+        return;
+      }
+
+      allInspections = rows || [];
+      updateStats(allInspections);
+      buildNotifications(allInspections);
+      populateInspectorFilter(allInspections);
+      renderTable(allInspections);
+    }
+
+    // ── STATS ──
+    function updateStats(rows) {
+      const total      = rows.length;
+      const inProgress = rows.filter(r => r.report_status === 'draft' || r.report_status === 'submitted' || r.report_status === 'inreview').length;
+      const approved   = rows.filter(r => r.report_status === 'approved').length;
+      const attention  = rows.filter(r => r.report_status === 'returned' || isOverdue(r)).length;
+
+      document.getElementById('stat-total').textContent      = total;
+      document.getElementById('stat-inprogress').textContent = inProgress;
+      document.getElementById('stat-approved').textContent   = approved;
+      document.getElementById('stat-attention').textContent  = attention;
+    }
+
+    function isOverdue(r) {
+      if (!r.inspection_date) return false;
+      const daysSince = (Date.now() - new Date(r.inspection_date).getTime()) / 86400000;
+      return daysSince > 30 && r.report_status === 'draft';
+    }
+
+    // ── NOTIFICATIONS ──
+    function buildNotifications(rows) {
+      const notifs = [];
+
+      const returned = rows.filter(r => r.report_status === 'returned');
+      returned.forEach(r => {
+        notifs.push({
+          type: 'urgent',
+          icon: '↩️',
+          title: `Report returned: ${r.insured_name || r.inspection_id || 'Inspection'}`,
+          desc: 'This report was returned by the QA reviewer and requires your attention.',
+          time: formatDate(r.updated_at)
+        });
+      });
+
+      const overdue = rows.filter(r => isOverdue(r));
+      overdue.forEach(r => {
+        notifs.push({
+          type: 'warning',
+          icon: '⏰',
+          title: `Overdue draft: ${r.insured_name || r.inspection_id || 'Inspection'}`,
+          desc: 'This inspection was completed more than 30 days ago and is still in draft.',
+          time: formatDate(r.inspection_date)
+        });
+      });
+
+      // Admin: submitted reports waiting for review
+      if (currentUserRole === 'admin') {
+        const submitted = rows.filter(r => r.report_status === 'submitted');
+        submitted.forEach(r => {
+          notifs.push({
+            type: 'info',
+            icon: '📋',
+            title: `Awaiting QA review: ${r.insured_name || r.inspection_id || 'Inspection'}`,
+            desc: `Submitted by ${r.inspector_name || 'inspector'} — assign a reviewer to proceed.`,
+            time: formatDate(r.updated_at)
+          });
+        });
+      }
+
+      const list = document.getElementById('notif-list');
+      if (!notifs.length) {
+        list.innerHTML = '<div class="notif-empty">✅ No pending notifications — you\'re all caught up.</div>';
+        return;
+      }
+
+      list.innerHTML = notifs.slice(0, 6).map(n => `
+        <div class="notif-card ${n.type}">
+          <div class="notif-icon">${n.icon}</div>
+          <div class="notif-body">
+            <div class="notif-title">${n.title}</div>
+            <div class="notif-desc">${n.desc}</div>
+          </div>
+          <div class="notif-time">${n.time}</div>
+        </div>
+      `).join('');
+    }
+
+    // ── INSPECTOR FILTER (admin only) ──
+    function populateInspectorFilter(rows) {
+      const sel = document.getElementById('filter-inspector');
+      const names = [...new Set(rows.map(r => r.inspector_name).filter(Boolean))].sort();
+      names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+    }
+
+    // ── TABLE ──
+    function filterTable() {
+      const search   = document.getElementById('search-input').value.toLowerCase();
+      const status   = document.getElementById('filter-status').value;
+      const inspector = document.getElementById('filter-inspector').value;
+
+      const filtered = allInspections.filter(r => {
+        const matchSearch = !search ||
+          (r.insured_name || '').toLowerCase().includes(search) ||
+          (r.inspection_id || '').toLowerCase().includes(search) ||
+          (r.city || '').toLowerCase().includes(search) ||
+          (r.inspector_name || '').toLowerCase().includes(search);
+        const matchStatus    = !status   || r.report_status === status;
+        const matchInspector = !inspector || r.inspector_name === inspector;
+        return matchSearch && matchStatus && matchInspector;
+      });
+
+      renderTable(filtered);
+    }
+
+    function renderTable(rows) {
+      const wrap = document.getElementById('table-wrap');
+      const isAdmin = currentUserRole === 'admin';
+
+      if (!rows.length) {
+        wrap.innerHTML = `<div class="empty-state">
+          <div class="empty-icon">📂</div>
+          <div class="empty-text">No inspections found</div>
+          <div class="empty-sub">Try adjusting your filters</div>
+        </div>`;
+        return;
+      }
+
+      const adminCol = isAdmin ? '<th>Inspector</th>' : '';
+
+      wrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Ref ID</th>
+              <th>Insured / Property</th>
+              <th>Date</th>
+              <th>Status</th>
+              ${adminCol}
+              <th>Updated</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => {
+              const statusClass = 'status-' + (r.report_status || 'draft');
+              const statusLabel = {
+                draft: 'Draft', submitted: 'Submitted', inreview: 'In Review',
+                approved: 'Approved', returned: 'Returned'
+              }[r.report_status] || (r.report_status || 'Draft');
+
+              const adminCell = isAdmin
+                ? `<td><span style="font-size:12px;">${r.inspector_name || '—'}</span></td>`
+                : '';
+
+              const deleteBtn = isAdmin
+                ? `<button class="btn-open" style="color:#c53030;border-color:#c53030;margin-left:4px;" onclick="event.stopPropagation();deleteInspection('${r.id}','${(r.insured_name||'this inspection').replace(/'/g,'')}')">🗑</button>`
+                : '';
+
+              return `<tr onclick="openInspection('${r.id}')">
+                <td class="td-id">${r.inspection_id || r.id?.substring(0,8) || '—'}</td>
+                <td>
+                  <div class="td-name">${r.insured_name || '—'}</div>
+                  <div class="td-sub">${[r.city, r.province_state].filter(Boolean).join(', ') || r.occupancy_class || ''}</div>
+                </td>
+                <td style="font-size:12px;color:var(--slate);">${formatDate(r.inspection_date)}</td>
+                <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+                ${adminCell}
+                <td style="font-size:11px;color:var(--slate-light);font-family:'IBM Plex Mono',monospace;">${formatDate(r.updated_at)}</td>
+                <td style="white-space:nowrap;">
+                  <button class="btn-open" onclick="event.stopPropagation();openInspection('${r.id}')">Open →</button>
+                  ${deleteBtn}
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    // ── DELETE INSPECTION ──
+    async function deleteInspection(id, name) {
+      if (!confirm('Permanently delete "' + name + '"?\n\nThis will remove the inspection record from the database. This action cannot be undone.')) return;
+
+      showToast('\u23F3 Deleting inspection\u2026');
+      try {
+        const { error } = await _supabase
+          .from('inspections')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        // Remove from local array and re-render
+        allInspections = allInspections.filter(r => r.id !== id);
+        renderTable(allInspections);
+        updateStats(allInspections);
+        buildNotifications(allInspections);
+        showToast('\u2713 Inspection deleted successfully');
+      } catch(e) {
+        showToast('\u26A0 Delete failed: ' + e.message);
+      }
+    }
+
+    // ── OPEN INSPECTION ──
+    function openInspection(id) {
+      window.location.href = `/app.html?load=${id}`;
+    }
+
+    // ── HELPERS ──
+    function formatDate(dateStr) {
+      if (!dateStr) return '—';
+      const d = new Date(dateStr);
+      if (isNaN(d)) return '—';
+      return d.toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // ── SIGN OUT ──
+    async function signOut() {
+      await _supabase.auth.signOut();
+      window.location.replace('/index.html');
+    }
+
+    // ── TABS ──
+    function switchTab(tab) {
+      ['inspections','requests','portal','enquiries','scan'].forEach(t => {
+        document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+      });
+      document.querySelectorAll('.dash-tab').forEach((btn, i) => {
+        btn.classList.toggle('active', ['inspections','requests','portal','enquiries','scan'][i] === tab);
+      });
+      if (tab === 'requests')  loadRequests();
+      if (tab === 'portal')    loadAccessCode();
+      if (tab === 'enquiries') loadEnquiries();
+      if (tab === 'scan')      loadScanSubmissions();
+    }
+
+    // ── CONTACT ENQUIRIES ──
+    async function loadEnquiries() {
+      const wrap = document.getElementById('enquiries-table-wrap');
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Loading enquiries…</div></div>';
+      try {
+        const { data: rows, error } = await _supabase
+          .from('contact_requests')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          if (error.code === '42P01') {
+            wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚙️</div><div class="empty-text">contact_requests table not yet created</div><div class="empty-sub">Run the setup SQL from the Backup page to create it.</div></div>';
+          } else {
+            throw error;
+          }
+          return;
+        }
+
+        if (!rows || !rows.length) {
+          wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No enquiries yet</div><div class="empty-sub">Submissions from the marketing page will appear here.</div></div>';
+          return;
+        }
+
+        const rows_html = rows.map(r => {
+          const date = r.created_at ? new Date(r.created_at).toLocaleDateString('en-CA', { year:'numeric', month:'short', day:'numeric' }) : '—';
+          return `<tr>
+            <td style="font-size:12px;color:var(--slate);font-family:'IBM Plex Mono',monospace;">${date}</td>
+            <td><div style="font-weight:600;font-size:13px;">${r.first_name || ''} ${r.last_name || ''}</div><div style="font-size:11px;color:var(--slate);">${r.email || ''}</div></td>
+            <td style="font-size:12px;">${r.organization || '—'}</td>
+            <td style="font-size:12px;">${r.role || '—'}</td>
+            <td style="font-size:12px;color:var(--slate);max-width:260px;">${r.message ? r.message.substring(0,120) + (r.message.length > 120 ? '…' : '') : '—'}</td>
+          </tr>`;
+        }).join('');
+
+        wrap.innerHTML = `
+          <div style="overflow-x:auto;">
+          <table style="width:100%;min-width:800px;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr>
+                <th style="background:#f0f2f5;padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Date</th>
+                <th style="background:#f0f2f5;padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Contact</th>
+                <th style="background:#f0f2f5;padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Organization</th>
+                <th style="background:#f0f2f5;padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Role</th>
+                <th style="background:#f0f2f5;padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Message</th>
+              </tr>
+            </thead>
+            <tbody style="background:#fff;">${rows_html}</tbody>
+          </table>
+          </div>
+          <div style="font-size:11px;color:var(--slate-light);padding:10px 14px;">${rows.length} enquir${rows.length === 1 ? 'y' : 'ies'} received</div>`;
+
+      } catch(e) {
+        wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error: ${e.message}</div></div>`;
+      }
+    }
+
+    // ── SCAN ONE SUBMISSIONS ──
+    async function loadScanSubmissions() {
+      const wrap = document.getElementById('scan-table-wrap');
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x23F3;</div><div class="empty-text">Loading submissions&#x2026;</div></div>';
+      try {
+        const { data: rows, error } = await _supabase
+          .from('scan_submissions')
+          .select('id, insured_name, city, province, occupancy, photo_count, submitted_at, status, scan_result, inspection_id')
+          .order('submitted_at', { ascending: false });
+
+        if (error) {
+          if (error.code === '42P01') {
+            wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x2699;&#xFE0F;</div><div class="empty-text">scan_submissions table not yet created</div><div class="empty-sub">Run SQL block 3 from the Backup page.</div></div>';
+          } else { throw error; }
+          return;
+        }
+
+        if (!rows || !rows.length) {
+          wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x1F4ED;</div><div class="empty-text">No submissions yet</div><div class="empty-sub">Submissions from insured/broker SCAN ONE links will appear here.</div></div>';
+          return;
+        }
+
+        function buildRow(r) {
+          var date = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-CA', {year:'numeric',month:'short',day:'numeric'}) : '-';
+          var sColor = r.status === 'analysed' ? '#276749' : r.status === 'reviewing' ? '#2b6cb0' : '#b7791f';
+          var sBg    = r.status === 'analysed' ? '#f0fff4' : r.status === 'reviewing' ? '#ebf4ff'  : '#fef3c7';
+          var sLabel = r.status === 'analysed' ? '&#x2713; Analysed' : r.status === 'reviewing' ? '&#x1F441; Reviewing' : '&#x23F3; Pending';
+          var tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td style="font-size:12px;color:var(--slate)">' + date + '</td>' +
+            '<td><div style="font-weight:600;font-size:13px">' + (r.insured_name || '-') + '</div>' +
+            '<div style="font-size:11px;color:var(--slate)">' + [r.city, r.province].filter(Boolean).join(', ') + '</div></td>' +
+            '<td style="font-size:12px">' + (r.occupancy || '-') + '</td>' +
+            '<td style="text-align:center"><span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;background:' + sBg + ';color:' + sColor + '">' + sLabel + '</span></td>' +
+            '<td style="text-align:center;font-size:13px;font-weight:600;color:var(--slate)">' + (r.photo_count || 0) + '</td>' +
+            '<td style="text-align:center;white-space:nowrap">' +
+              (r.status === 'analysed' && r.scan_result
+                ? '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;font-size:11px" data-view-id="' + r.id + '">&#x1F4CB; View Report</button> '
+                : '<button class="btn-open" style="background:#0891b2;color:#fff;border-color:#0891b2;font-size:11px" data-scan-id="' + r.id + '">&#x1F916; Analyse</button> ') +
+              '<button class="btn-open" style="color:#c53030;border-color:#c53030;font-size:11px" data-del-id="' + r.id + '">&#x1F5D1;</button>' +
+            '</td>';
+          if (tr.querySelector('[data-scan-id]')) {
+            tr.querySelector('[data-scan-id]').addEventListener('click', function() { launchScanAnalysis(r.id); });
+          }
+          if (tr.querySelector('[data-view-id]')) {
+            tr.querySelector('[data-view-id]').addEventListener('click', function() { viewScanReport(r.id, r.scan_result); });
+          }
+          tr.querySelector('[data-del-id]').addEventListener('click', function() { deleteScanSubmission(r.id, r.insured_name || 'this submission'); });
+          return tr;
+        }
+
+        var thL = 'background:#f0f2f5;padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);white-space:nowrap';
+        var thC = 'background:#f0f2f5;padding:10px 14px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);white-space:nowrap';
+
+        var container = document.createElement('div');
+        container.style.overflowX = 'auto';
+        var table = document.createElement('table');
+        table.style.cssText = 'width:100%;min-width:700px;border-collapse:collapse;font-size:13px';
+        table.innerHTML =
+          '<thead><tr>' +
+          '<th style="' + thL + '">Date</th>' +
+          '<th style="' + thL + '">Property</th>' +
+          '<th style="' + thL + '">Occupancy</th>' +
+          '<th style="' + thC + '">Status</th>' +
+          '<th style="' + thC + '">Photos</th>' +
+          '<th style="' + thC + '">Action</th>' +
+          '</tr></thead>';
+        var tbody = document.createElement('tbody');
+        tbody.style.background = '#fff';
+        rows.forEach(function(r) { tbody.appendChild(buildRow(r)); });
+        table.appendChild(tbody);
+        container.appendChild(table);
+
+        var footer = document.createElement('div');
+        footer.style.cssText = 'font-size:11px;color:var(--slate-light);padding:10px 14px';
+        footer.textContent = rows.length + ' submission' + (rows.length !== 1 ? 's' : '') + ' received';
+
+        wrap.innerHTML = '';
+        wrap.appendChild(container);
+        wrap.appendChild(footer);
+
+      } catch(e) {
+        wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x26A0;&#xFE0F;</div><div class="empty-text">Error: ' + e.message + '</div></div>';
+      }
+    }
+
+    function viewScanReport(id, scanResultJson) {
+      try {
+        var result = typeof scanResultJson === 'string' ? JSON.parse(scanResultJson) : scanResultJson;
+        if (!result) { showToast('⚠ No report data found for this submission.'); return; }
+        // Encode result and redirect to scan.html in view-report mode
+        var encoded = encodeURIComponent(JSON.stringify(result));
+        window.location.href = '/scan.html?view_report=' + id + '&result=' + encoded;
+      } catch(e) {
+        showToast('⚠ Could not load report: ' + e.message);
+      }
+    }
+
+    async function launchScanAnalysis(id) {
+      showToast('\u23F3 Loading submission\u2026');
+      try {
+        const { data: sub, error } = await _supabase
+          .from('scan_submissions').select('*').eq('id', id).single();
+        if (error) throw error;
+        // Pass the full record using correct column names from scan_submissions table
+        const subMeta = {
+          id:            sub.id,
+          insured_name:  sub.insured_name,
+          address:       sub.address,
+          city:          sub.city,
+          province:      sub.province,
+          occupancy:     sub.occupancy,
+          year_built:    sub.year_built,
+          building_area: sub.building_area,
+          form_data:     sub.form_data,   // full JSON with all fields
+          photos:        sub.photos,       // base64 photo array
+          submitted_at:  sub.submitted_at,
+        };
+        sessionStorage.setItem('scanSubmission', JSON.stringify(subMeta));
+        window.location.href = '/scan.html?review=' + id;
+      } catch(e) {
+        showToast('\u26A0 Could not load submission: ' + e.message);
+      }
+    }
+
+    async function deleteScanSubmission(id, name) {
+      if (!confirm('Delete submission for "' + name + '"?\nThis cannot be undone.')) return;
+      try {
+        const { error } = await _supabase.from('scan_submissions').delete().eq('id', id);
+        if (error) throw error;
+        showToast('\u2713 Submission deleted');
+        loadScanSubmissions();
+      } catch(e) {
+        showToast('\u26A0 Delete failed: ' + e.message);
+      }
+    }
+
+
+    // ── INSPECTOR LIST ──
+    let _inspectorList = [];
+    async function loadInspectorList() {
+      try {
+        const { data } = await _supabase.from('profiles').select('full_name, email').order('full_name');
+        _inspectorList = (data || []).filter(p => p.full_name || p.email);
+      } catch(e) { _inspectorList = []; }
+    }
+
+    // ── REQUESTS ──
+    async function loadRequests() {
+      const tbl = document.getElementById('requests-table-wrap');
+      tbl.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Loading requests…</div></div>';
+      await loadInspectorList();
+      try {
+        const { data: rows, error } = await _supabase
+          .from('inspection_requests')
+          .select('*')
+          .order('submitted_at', { ascending: false });
+        if (error) throw error;
+
+        if (!rows || !rows.length) {
+          tbl.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No inspection requests yet</div></div>';
+          return;
+        }
+
+        const urgencyColor = u => {
+          if (!u) return '#888';
+          if (u.includes('Urgent'))   return '#e53e3e';
+          if (u.includes('Priority')) return '#dd6b20';
+          return '#2f855a';
+        };
+
+        const statusBadge = s => {
+          const colors = {
+            'Pending':    'background:#fff3e0;color:#dd6b20;border:1px solid #dd6b20;',
+            'Assigned':   'background:#ebf4ff;color:#2b6cb0;border:1px solid #2b6cb0;',
+            'Converted':  'background:#f0fff4;color:#276749;border:1px solid #2f855a;',
+            'Completed':  'background:#f0fff4;color:#276749;border:1px solid #2f855a;',
+            'Reassigned': 'background:#faf5ff;color:#6b46c1;border:1px solid #805ad5;',
+          };
+          const style = colors[s] || 'background:#f7f7f7;color:#888;border:1px solid #ccc;';
+          return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;${style}">${s || '—'}</span>`;
+        };
+
+        const inspOpts = _inspectorList.length
+          ? _inspectorList.map(p => `<option value="${p.full_name || p.email}">${p.full_name || p.email}</option>`).join('')
+          : '<option value="">— No inspectors found —</option>';
+
+        const rows_html = rows.map(r => {
+          const date = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-CA') : '—';
+          const pref = r.preferred_date ? new Date(r.preferred_date + 'T00:00:00').toLocaleDateString('en-CA') : '—';
+          const assignedTo = r.assigned_to
+            ? `<span style="font-size:11px;font-weight:600;color:var(--navy);">👤 ${r.assigned_to}</span>`
+            : `<span style="font-size:11px;color:var(--slate-light);font-style:italic;">Unassigned</span>`;
+          const rJson = JSON.stringify(r).replace(/"/g, '&quot;');
+          const isCompleted = r.status === 'Completed' || r.status === 'Converted';
+
+          return `<tr style="${isCompleted ? 'opacity:0.65;' : ''}">
+            <td><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--gold-pale);color:var(--navy);padding:2px 8px;border-radius:10px;">${r.request_ref || '—'}</span></td>
+            <td style="font-size:12px;">${date}</td>
+            <td><strong style="font-size:12px;">${r.insured_name || '—'}</strong><br><span style="font-size:10px;color:var(--slate)">${[r.city, r.province].filter(Boolean).join(', ')}</span></td>
+            <td style="font-size:12px;">${r.occupancy_type || '—'}</td>
+            <td style="font-size:12px;">${r.purpose || '—'}</td>
+            <td><span style="font-size:11px;font-weight:600;color:${urgencyColor(r.urgency)}">${r.urgency ? r.urgency.split('—')[0].trim() : '—'}</span></td>
+            <td>${statusBadge(r.status)}</td>
+            <td>
+              ${assignedTo}
+              <div style="margin-top:6px;display:flex;gap:4px;align-items:center;">
+                <select id="assign-sel-${r.id}" style="font-size:10px;padding:2px 4px;border-radius:6px;border:1px solid var(--border);max-width:120px;">
+                  <option value="">— Assign to —</option>${inspOpts}
+                </select>
+                <button class="btn-open" style="font-size:10px;padding:3px 8px;white-space:nowrap;"
+                  onclick="assignInspector('${r.id}','${r.status}')">
+                  ${r.assigned_to ? '↻ Reassign' : 'Assign'}
+                </button>
+              </div>
+            </td>
+            <td style="font-size:12px;">${pref}</td>
+            <td>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <button class="btn-open" style="font-size:11px;" onclick="convertRequest('${r.id}')">↪ Convert</button>
+                <button class="btn-open" style="font-size:11px;${isCompleted ? 'opacity:0.5;cursor:not-allowed;' : ''}"
+                  onclick="markCompleted('${r.id}')">
+                  ${isCompleted ? '✓ Done' : '✓ Complete'}
+                </button>
+                ${isCompleted ? `<button class="btn-open" style="font-size:10px;color:#dd6b20;border-color:#dd6b20;"
+                  onclick="reopenRequest('${r.id}')">↺ Reopen</button>` : ''}
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+
+        tbl.innerHTML = `
+          <div style="overflow-x:auto;">
+          <table style="width:100%;min-width:1100px;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr>
+                <th style="background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Ref #</th>
+                <th style="background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Submitted</th>
+                <th style="background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Property</th>
+                <th style="background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Occupancy</th>
+                <th style="background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Purpose</th>
+                <th style="background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Urgency</th>
+                <th style="background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Status</th>
+                <th style="background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Assigned To</th>
+                <th style="background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Pref. Date</th>
+                <th style="background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;white-space:nowrap;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>${rows_html}</tbody>
+          </table>
+          </div>
+          <div style="font-size:11px;color:var(--slate-light);padding:10px 14px;">↻ Reassign resets status to Assigned &nbsp;·&nbsp; ↺ Reopen resets Completed back to Pending</div>`;
+
+      } catch(e) {
+        tbl.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Failed to load: ${e.message}</div></div>`;
+      }
+    }
+
+    async function assignInspector(id, currentStatus) {
+      const sel = document.getElementById('assign-sel-' + id);
+      const inspector = sel ? sel.value.trim() : '';
+      if (!inspector) { showToast('Please select an inspector first'); return; }
+      const isReassign = currentStatus === 'Assigned' || currentStatus === 'Converted';
+      const newStatus  = isReassign ? 'Reassigned' : 'Assigned';
+      try {
+        const { error } = await _supabase.from('inspection_requests')
+          .update({ assigned_to: inspector, status: newStatus }).eq('id', id);
+        if (error) throw error;
+        showToast('✓ ' + (isReassign ? 'Reassigned to ' : 'Assigned to ') + inspector);
+        loadRequests();
+      } catch(e) { showToast('⚠ Failed: ' + e.message); }
+    }
+
+    async function markCompleted(id) {
+      try {
+        const { error } = await _supabase.from('inspection_requests')
+          .update({ status: 'Completed' }).eq('id', id);
+        if (error) throw error;
+        showToast('✓ Marked as Completed');
+        loadRequests();
+      } catch(e) { showToast('⚠ Failed: ' + e.message); }
+    }
+
+    async function reopenRequest(id) {
+      if (!confirm('Reopen this request and reset status to Pending?')) return;
+      try {
+        const { error } = await _supabase.from('inspection_requests')
+          .update({ status: 'Pending', assigned_to: null }).eq('id', id);
+        if (error) throw error;
+        showToast('✓ Request reopened');
+        loadRequests();
+      } catch(e) { showToast('⚠ Failed: ' + e.message); }
+    }
+
+    function convertRequest(id) {
+      // Redirect to app.html with the request id to pre-populate the form
+      window.location.href = '/app.html?convert=' + id;
+    }
+
+    // ── PORTAL SETTINGS ──
+    async function loadAccessCode() {
+      const input = document.getElementById('portal-access-code-input');
+      const msg   = document.getElementById('access-code-msg');
+      input.value = 'Loading…';
+      input.disabled = true;
+      msg.style.display = 'none';
+      try {
+        const { data, error } = await _supabase
+          .from('platform_settings').select('value').eq('key', 'portal_access_code').single();
+        input.disabled = false;
+        input.value = (error || !data) ? 'Sanket2026' : data.value;
+      } catch(e) {
+        input.disabled = false;
+        input.value = 'Sanket2026';
+      }
+    }
+
+    async function saveAccessCode() {
+      const input = document.getElementById('portal-access-code-input');
+      const msg   = document.getElementById('access-code-msg');
+      const newCode = input.value.trim();
+      if (!newCode) {
+        msg.textContent = '⚠ Please enter a code before saving.';
+        msg.style.color = '#e53e3e'; msg.style.display = 'block'; return;
+      }
+      msg.textContent = '⏳ Saving…'; msg.style.color = 'var(--slate)'; msg.style.display = 'block';
+      try {
+        const { error } = await _supabase.from('platform_settings')
+          .upsert({ key: 'portal_access_code', value: newCode }, { onConflict: 'key' });
+        if (error) throw error;
+        msg.textContent = '✓ Access code updated. New code is live immediately.';
+        msg.style.color = '#276749';
+        showToast('✓ Portal access code updated');
+      } catch(e) {
+        msg.textContent = '⚠ Failed to save: ' + e.message;
+        msg.style.color = '#e53e3e';
+      }
+    }
+
+    // ── START ──
+    init();
+  </script>
+</body>
+</html>
