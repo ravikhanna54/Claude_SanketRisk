@@ -1156,18 +1156,8 @@
       }
     }
 
-    function viewScanReport(id, scanResultJson) {
-      try {
-        var result = typeof scanResultJson === 'string' ? JSON.parse(scanResultJson) : scanResultJson;
-        if (!result) { showToast('⚠ No report data found for this submission.'); return; }
-        // Encode result and redirect to scan.html in view-report mode
-        var encoded = encodeURIComponent(JSON.stringify(result));
-        window.location.href = '/scan.html?view_report=' + id + '&result=' + encoded;
-      } catch(e) {
-        showToast('⚠ Could not load report: ' + e.message);
-      }
-    }
-
+    function viewScanReport(id, scanResultJson) {   window.location.href = '/scan-report.html?id=' + id; }
+      
     async function launchScanAnalysis(id) {
       showToast('\u23F3 Loading submission\u2026');
       try {
