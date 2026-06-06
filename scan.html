@@ -2347,55 +2347,53 @@
     if (!lastResult) return;
     showToast('\u23F3 Saving assessment to dashboard\u2026');
     try {
-      const d  = lastResult.formData;
+      const d   = lastResult.formData || {};
       const now = new Date();
-      const inspId = 'SCAN-' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(Math.floor(Math.random()*900)+100);
-      // Save to inspections table (existing report list)
-      const { error } = await _supabase.from('inspections').insert({
-        inspection_id:   inspId,
-        insured_name:    d.insured || 'Unknown',
-        city:            d.city    || '',
-        province_state:  d.province || '',
-        occupancy_class: d.occupancy || '',
-        inspector_name:  currentUser?.email || '',
-        user_id:         currentUser?.id || null,
-        user_email:      currentUser?.email || '',
-        report_status:   'complete',
-        inspection_date: now.toISOString().split('T')[0],
-        risk_quality:    lastResult.risk_quality || '',
-        uw_recommendation: lastResult.uw_recommendation || '',
-        form_data: JSON.stringify({
-          fields: {
-            'inspection-id': inspId,
-            'legal-entity': d.insured || '',
-            'city': d.city || '',
-            'province': d.province || '',
-            'street-address': d.address || '',
-            'scan-one-assessment': 'true',
-            'scan-one-photo-count': String(lastResult.photoCount),
-          },
-          scan_result: lastResult,
-        }),
-        updated_at: now.toISOString(),
-      });
-      if (error) throw error;
 
-      // Also update scan_submissions with result if this came from a submission
+      // Get next SRC2 sequence number
+      const seqRes = await fetch(
+        'https://lzsfmqbhrpsmnivxhggi.supabase.co/rest/v1/rpc/next_src2',
+        { method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' }, body: '{}' }
+      );
+      let seqNum = 1001;
+      if (seqRes.ok) { try { seqNum = await seqRes.json(); } catch(e) {} }
+      const inspId = 'SRC2' + String(seqNum).padStart(6, '0');
+
+      // Save or update scan_submissions
       if (_reviewId) {
-        await _supabase.from('scan_submissions').update({
-          status: 'analysed',
-          scan_result: JSON.stringify(lastResult),
+        const { error } = await _supabase.from('scan_submissions').update({
+          status:        'analysed',
+          scan_result:   JSON.stringify(lastResult),
           inspection_id: inspId,
+          file_number:   inspId,
         }).eq('id', _reviewId);
+        if (error) throw error;
+      } else {
+        const { error } = await _supabase.from('scan_submissions').insert({
+          inspection_id:  inspId,
+          file_number:    inspId,
+          insured_name:   d.insured   || 'Unknown',
+          address:        d.address   || '',
+          city:           d.city      || '',
+          province:       d.province  || '',
+          occupancy:      d.occupancy || '',
+          year_built:     d.yearBuilt || null,
+          building_area:  d.area      || null,
+          photo_count:    lastResult.photoCount || 0,
+          status:         'analysed',
+          scan_result:    JSON.stringify(lastResult),
+          submitted_at:   now.toISOString(),
+          storage_paths:  JSON.stringify(_storagePaths || []),
+        });
+        if (error) throw error;
       }
 
-      showToast('\u2713 Saved — redirecting to dashboard\u2026');
+      showToast('\u2713 Saved as ' + inspId + ' \u2014 redirecting\u2026');
       setTimeout(() => window.location.href = '/dashboard.html', 2000);
     } catch(e) {
       showToast('\u26A0 Save failed: ' + e.message);
     }
   }
-
   // ── RESET ──
   function resetForm() {
     uploadedPhotos = [];
