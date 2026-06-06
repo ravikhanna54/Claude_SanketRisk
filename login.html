@@ -1,1 +1,198 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SanketRisk ONE — Sign In</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #1b2a4a;
+      --navy-light: #243660;
+      --gold: #c9a84c;
+      --gold-pale: #fdf8ee;
+      --text: #1a202c;
+      --text-mid: #4a5568;
+      --text-light: #718096;
+      --border: #e2e8f0;
+      --bg: #f7f8fc;
+    }
+    html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body {
+      display: flex;
+      min-height: 100vh;
+      background: var(--bg);
+    }
+    .brand-panel {
+      flex: 1;
+      background: var(--navy);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 60px 56px;
+      min-width: 340px;
+    }
+    @media (max-width: 700px) { .brand-panel { display: none; } }
+    .brand-logo {
+      width: 56px; height: 56px;
+      background: var(--gold);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 800; color: var(--navy);
+      margin-bottom: 28px;
+    }
+    .brand-title { font-size: 26px; font-weight: 700; color: white; margin-bottom: 6px; }
+    .brand-sub { font-size: 12px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 48px; }
+    .brand-features { list-style: none; }
+    .brand-features li {
+      color: rgba(255,255,255,0.75);
+      font-size: 13.5px;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-features li::before { content: '✓'; color: var(--gold); font-weight: 700; font-size: 14px; }
+    .brand-copy { margin-top: 48px; font-size: 11px; color: rgba(255,255,255,0.3); }
+    .form-panel {
+      width: 420px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 48px 40px;
+      background: white;
+      box-shadow: -4px 0 32px rgba(0,0,0,0.06);
+    }
+    @media (max-width: 700px) { .form-panel { width: 100%; box-shadow: none; } }
+    .form-logo-mobile {
+      display: none;
+      width: 44px; height: 44px;
+      background: var(--gold);
+      border-radius: 10px;
+      align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800; color: var(--navy);
+      margin-bottom: 20px;
+    }
+    @media (max-width: 700px) { .form-logo-mobile { display: flex; } }
+    .form-title { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 6px; width: 100%; }
+    .form-sub { font-size: 13px; color: var(--text-light); margin-bottom: 36px; width: 100%; }
+    .field { width: 100%; margin-bottom: 20px; }
+    .field label { display: block; font-size: 11.5px; font-weight: 600; color: var(--text-mid); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 7px; }
+    .field input {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.18); }
+    .error-box {
+      width: 100%;
+      background: #fff5f5;
+      border: 1px solid #fc8181;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #c53030;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .sign-in-btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--navy);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.15s;
+      font-family: inherit;
+      margin-top: 4px;
+    }
+    .sign-in-btn:hover { background: var(--navy-light); }
+    .sign-in-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+    .form-footer { margin-top: 32px; font-size: 11.5px; color: var(--text-light); text-align: center; width: 100%; }
+  </style>
+</head>
+<body>
+  <div class="brand-panel">
+    <div class="brand-logo">S</div>
+    <div class="brand-title">SanketRisk ONE</div>
+    <div class="brand-sub">Commercial Inspection Platform</div>
+    <ul class="brand-features">
+      <li>COPE-based commercial property inspection</li>
+      <li>AI-powered photo analysis (SCAN ONE)</li>
+      <li>Automated risk assessment reports</li>
+      <li>Secure cloud storage &amp; QA workflow</li>
+      <li>Sanket VISION ONE — Matterport LiDAR</li>
+    </ul>
+    <div class="brand-copy">© 2026 Sanket Risk Consultants. All rights reserved.</div>
+  </div>
+  <div class="form-panel">
+    <div class="form-logo-mobile">S</div>
+    <div class="form-title">Welcome back</div>
+    <div class="form-sub">Sign in to your SanketRisk ONE account</div>
+    <div class="error-box" id="error-box"></div>
+    <div class="field">
+      <label>Email address</label>
+      <input type="email" id="email" placeholder="inspector@sanketrisk.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="sign-in-btn" id="sign-in-btn" onclick="doLogin()">Sign In →</button>
+    <div class="form-footer">Authorised users only — Sanket Risk Consultants</div>
+  </div>
+  <script>
+    const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { autoRefreshToken: true, persistSession: true, storageKey: 'src-auth' }
+    });
+    (async () => {
+      const { data: { session } } = await _supabase.auth.getSession();
+      if (session) window.location.replace('/dashboard.html');
+    })();
+    async function doLogin() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('sign-in-btn');
+      const err = document.getElementById('error-box');
+      if (!email || !password) { showError('Please enter your email and password.'); return; }
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+      err.style.display = 'none';
+      try {
+        const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+        if (error) { showError(error.message || 'Sign in failed.'); reset(); return; }
+        window.location.replace('/dashboard.html');
+      } catch(e) {
+        showError('Connection error. Please try again.');
+        reset();
+      }
+    }
+    function showError(msg) {
+      const el = document.getElementById('error-box');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function reset() {
+      const btn = document.getElementById('sign-in-btn');
+      btn.disabled = false;
+      btn.textContent = 'Sign In →';
+    }
+  </script>
+</body>
+</html>
