@@ -64,3 +64,8 @@
   for = "/netlify/functions/*"
   [headers.values]
     Cache-Control = "no-store"
+
+    [[redirects]]
+  from = "/scan-report"
+  to = "/scan-report.html"
+  status = 200
