@@ -1316,7 +1316,7 @@
     var fmt = getReportFormat();
     if (fmt === 'structured') {
       return 'OUTPUT: Structured COPE assessment. Write each narrative section as a detailed professional paragraph of 3-5 sentences. Be specific and technical. Follow these mandatory assessment rules:' +
-      ' CONSTRUCTION: identify structural system, cladding type, roof assembly, year-built indicators, mezzanine levels, crane systems, any visible deficiencies.' +
+      ' CONSTRUCTION: identify structural system, cladding type, roof assembly, interior wall and ceiling finishes (note combustible vs non-combustible — drywall/gypsum = non-combustible, wood panelling/OSB/plywood = combustible), year-built indicators, mezzanine levels, crane systems, any visible deficiencies.' +
       ' CONSTRUCTION CLASS: be conservative — Class 1 Fire Resistive ONLY if fireproofing visibly confirmed on ALL structural members. Exposed steel deck = Class 2 Non-Combustible. When in doubt assign Class 2.' +
       ' OCCUPANCY: for manufacturing/industrial — inventory major equipment visible (overhead cranes, extrusion machines, chiller/cooling units, boilers, furnaces, quality control ovens, air compressors, printing equipment, rail unloading). Identify forklift type (propane = higher hazard vs battery electric). Assess combustible loading including plastic resin, finished goods, rack storage height (high-piled storage >3.6m is a separate hazard class). Note any hazardous materials in chemical storage areas.' +
       ' PROTECTION: identify ALL visible — sprinkler heads, piping, risers, alarm panels, pull stations, strobes, extinguishers, exit signs. CRITICAL: for each extinguisher and sprinkler system — note whether service/inspection tags are visible in photos. If no service tags visible, flag as deficiency requiring annual inspection verification. State sprinkler density and coverage adequacy for occupancy type if determinable.' +
@@ -2155,7 +2155,7 @@
     // Show/hide narrative sections based on format
     var narrativeSections = document.querySelectorAll('.result-section');
     narrativeSections.forEach(function(s) {
-      s.style.display = (fmt === 'structured') ? 'none' : 'block';
+      s.style.display = 'block';
     });
 
     document.getElementById('res-construction').textContent = r.construction || '\u2014';
