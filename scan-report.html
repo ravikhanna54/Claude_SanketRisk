@@ -426,7 +426,11 @@
         .from('scan_submissions').select('*').eq('id', id).single();
       if (error || !sub) { showError('Report not found. It may have been deleted.'); return; }
       if (!sub.scan_result) { showError('This submission has not been analysed yet.'); return; }
-      const r = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
+      let r = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
+      // Safety: if r is still a string (double-stringified), parse again
+      if (typeof r === 'string') { try { r = JSON.parse(r); } catch(e) {} }
+      // If construction is missing but nested under a result key, unwrap it
+      if (!r.construction && r.result) { try { const inner = typeof r.result === 'string' ? JSON.parse(r.result) : r.result; if (inner.construction) r = { ...inner, formData: r.formData }; } catch(e) {} }
       const fd = r.formData || {};
       currentQAStatus = sub.qa_status || 'draft';
       applyQAState(sub);
@@ -668,7 +672,14 @@
       '<div class="cope-row"><div class="cope-row-label">' + esc(row[0]) + '</div><div class="cope-row-value">' + esc(row[1]) + '</div></div>'
     ).join('');
 
-    document.getElementById('text-construction').textContent = r.construction || r.construction_assessment || '—';
+    // Visible debug panel (remove after fix confirmed)
+    var dbg = document.createElement('div');
+    dbg.style.cssText = 'background:#1a2e42;color:#e2c97e;padding:12px 16px;font-family:monospace;font-size:11px;border-radius:8px;margin-bottom:16px;white-space:pre-wrap;line-height:1.6;';
+    var keys = Object.keys(r);
+    var conVal = r.construction ? r.construction.substring(0,100) + '...' : 'MISSING';
+    dbg.textContent = 'DEBUG\nKeys: ' + keys.join(', ') + '\nconstruction: ' + conVal;
+    document.getElementById('text-construction').before(dbg);
+    document.getElementById('text-construction').textContent = r.construction || r.construction_assessment || r.cope_construction || '—';
     document.getElementById('text-occupancy').textContent    = r.occupancy    || '—';
     document.getElementById('text-protection').textContent   = r.protection   || '—';
     document.getElementById('text-exposure').textContent     = r.exposure     || '—';
