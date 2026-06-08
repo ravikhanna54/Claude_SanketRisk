@@ -24,6 +24,7 @@
     .screen-nav-right { display: flex; align-items: center; gap: 10px; }
     .btn-back { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.2); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-block; }
     .btn-print { background: var(--gold); color: var(--navy); border: none; padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .btn-print:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-email { background: var(--scan-teal); color: white; border: none; padding: 7px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
     .loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 16px; }
     .loading-spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -117,11 +118,59 @@
     .rq-moderate { color: var(--amber); }
     .rq-high { color: var(--red); }
     .rq-decline { color: var(--red); font-weight: 700; }
-    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--navy); color: white; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 9999; }
+
+    /* ── QA WORKFLOW ── */
+    .qa-banner {
+      padding: 12px 24px; font-size: 13px; font-weight: 600;
+      text-align: center; border-bottom: 3px solid;
+      display: none;
+    }
+    .qa-banner.draft     { display:block; background:#EBF4FF; color:#2B6CB0; border-color:#2B6CB0; }
+    .qa-banner.submitted { display:block; background:#FFF3E0; color:#C05621; border-color:#C05621; }
+    .qa-banner.approved  { display:block; background:#F0FFF4; color:#276749; border-color:#276749; }
+    .qa-banner.returned  { display:block; background:#FEE2E2; color:#C53030; border-color:#C53030; }
+
+    .qa-panel {
+      max-width: 900px; margin: 0 auto 20px; padding: 0 20px;
+    }
+    .qa-card {
+      background: white; border: 2px solid var(--gold);
+      border-radius: 12px; overflow: hidden;
+    }
+    .qa-card-header {
+      background: var(--navy); color: white;
+      padding: 12px 20px; display: flex;
+      align-items: center; justify-content: space-between;
+    }
+    .qa-card-body { padding: 20px; }
+    .qa-status-pill {
+      font-size: 11px; font-weight: 700; padding: 3px 12px;
+      border-radius: 20px; text-transform: uppercase; letter-spacing: .06em;
+    }
+    .pill-draft     { background:rgba(255,255,255,.15); color:#c8d8e8; }
+    .pill-submitted { background:#FFF3E0; color:#C05621; }
+    .pill-approved  { background:#F0FFF4; color:#276749; }
+    .pill-returned  { background:#FEE2E2; color:#C53030; }
+    .qa-field { margin-bottom: 14px; }
+    .qa-field label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--text-light); margin-bottom:5px; }
+    .qa-field input, .qa-field textarea {
+      width:100%; padding:8px 12px; border:1.5px solid var(--border);
+      border-radius:7px; font-family:inherit; font-size:13px; outline:none;
+    }
+    .qa-field input:focus, .qa-field textarea:focus { border-color: var(--gold); }
+    .qa-field textarea { resize:vertical; min-height:70px; }
+    .qa-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+    .btn-qa-submit   { padding:10px 22px; background:var(--gold); color:var(--navy); border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
+    .btn-qa-approve  { padding:10px 22px; background:#276749; color:white; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; display:none; }
+    .btn-qa-return   { padding:10px 22px; background:#C53030; color:white; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; display:none; }
+    .btn-qa-reset    { padding:8px 16px; background:none; border:2px solid #C53030; color:#C53030; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; display:none; margin-left:auto; }
+
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--navy); color: white; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 9999; border-left:3px solid var(--gold); }
     .toast.show { opacity: 1; }
+
     @media print {
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      .screen-nav { display: none !important; }
+      .screen-nav, .qa-banner, .qa-panel { display: none !important; }
       body { background: white; }
       .report-wrap { margin: 0; padding: 0; max-width: 100%; }
       .report-page { border: none; border-radius: 0; box-shadow: none; margin-bottom: 0; page-break-after: always; }
@@ -129,12 +178,12 @@
       .cover-page { min-height: 100vh; }
       .rec-item { page-break-inside: avoid; }
       .photo-appendix-item { page-break-inside: avoid; }
-      .rec-photo-strip { page-break-inside: avoid; }
     }
   </style>
 </head>
 <body>
-  <nav class="screen-nav">
+
+<nav class="screen-nav">
   <div class="screen-nav-brand">
     <div class="screen-nav-logo">S</div>
     <div class="screen-nav-title">SanketRisk <span>ONE</span> — SCAN ONE Report</div>
@@ -142,9 +191,12 @@
   <div class="screen-nav-right">
     <a class="btn-back" href="/dashboard.html">← Dashboard</a>
     <button class="btn-email" id="btn-email" onclick="emailReport()" style="display:none;">✉ Email</button>
-    <button class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+    <button class="btn-print" id="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
   </div>
 </nav>
+
+<!-- QA STATUS BANNER -->
+<div class="qa-banner" id="qa-banner"></div>
 
 <div class="loading-wrap" id="loading-wrap">
   <div class="loading-spinner"></div>
@@ -154,6 +206,39 @@
 <div class="error-wrap" id="error-wrap" style="display:none;">
   <div class="error-icon">⚠️</div>
   <div class="error-msg" id="error-msg">Report not found.</div>
+</div>
+
+<!-- QA PANEL -->
+<div class="qa-panel" id="qa-panel" style="display:none;">
+  <div class="qa-card">
+    <div class="qa-card-header">
+      <span>🔍 QA Review — SCAN ONE</span>
+      <span class="qa-status-pill" id="qa-status-pill">Draft</span>
+    </div>
+    <div class="qa-card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="qa-field">
+          <label>Reviewer Name</label>
+          <input type="text" id="qa-reviewer" placeholder="—" readonly style="background:#f7f8fc;cursor:not-allowed;">
+        </div>
+        <div class="qa-field">
+          <label>Review Date</label>
+          <input type="date" id="qa-date">
+        </div>
+      </div>
+      <div class="qa-field">
+        <label>QA Notes / Comments</label>
+        <textarea id="qa-notes" placeholder="Reviewer comments, deficiencies, approval notes…"></textarea>
+      </div>
+      <div class="qa-actions">
+        <button class="btn-qa-submit"  id="btn-qa-submit"  onclick="submitForQA()">📋 Submit for QA Review</button>
+        <button class="btn-qa-approve" id="btn-qa-approve" onclick="approveQA()">✅ Approve Report</button>
+        <button class="btn-qa-return"  id="btn-qa-return"  onclick="returnQA()">↩ Return for Correction</button>
+        <button class="btn-qa-reset"   id="btn-qa-reset"   onclick="resetQA()">↺ Reset to Draft</button>
+      </div>
+      <div id="qa-return-notes" style="display:none;margin-top:12px;padding:12px 16px;background:#FEE2E2;border-radius:8px;font-size:13px;color:#2D3748;"></div>
+    </div>
+  </div>
 </div>
 
 <div class="report-wrap" id="report-wrap" style="display:none;">
@@ -307,6 +392,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
 <script>
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
@@ -314,9 +400,19 @@
     auth: { autoRefreshToken: true, persistSession: true, storageKey: 'src-auth' }
   });
 
+  let currentUser = null;
+  let currentUserRole = 'inspector';
+  let currentUserName = '';
+  let currentSubId = null;
+  let currentQAStatus = 'draft';
+
   (async () => {
     const { data: { session } } = await _supabase.auth.getSession();
     if (!session) { window.location.replace('/login.html'); return; }
+    currentUser = session.user;
+    const { data: profiles } = await _supabase.from('profiles').select('role,full_name').eq('id', currentUser.id);
+    currentUserRole = profiles?.[0]?.role || 'inspector';
+    currentUserName = profiles?.[0]?.full_name || currentUser.email.split('@')[0];
     loadReport();
   })();
 
@@ -324,6 +420,7 @@
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
     if (!id) { showError('No report ID specified.'); return; }
+    currentSubId = id;
     try {
       const { data: sub, error } = await _supabase
         .from('scan_submissions').select('*').eq('id', id).single();
@@ -331,12 +428,139 @@
       if (!sub.scan_result) { showError('This submission has not been analysed yet.'); return; }
       const r = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
       const fd = r.formData || {};
+      currentQAStatus = sub.qa_status || 'draft';
+      applyQAState(sub);
       renderReport(sub, r, fd);
     } catch(e) {
       showError('Error loading report: ' + e.message);
     }
   }
 
+  // ── QA WORKFLOW ──
+  function applyQAState(sub) {
+    const status = sub.qa_status || 'draft';
+    currentQAStatus = status;
+    const isAdmin = currentUserRole === 'admin' || currentUserRole === 'reviewer';
+
+    // Banner
+    const banner = document.getElementById('qa-banner');
+    const messages = {
+      draft:     '📝 Draft — Submit for QA review when the report is ready.',
+      submitted: '⏳ Submitted for QA Review — awaiting reviewer action.',
+      approved:  '✅ QA Approved — Report is cleared for printing.',
+      returned:  '↩ Returned for Correction — please review the QA notes below.',
+    };
+    banner.textContent = messages[status] || '';
+    banner.className = 'qa-banner ' + status;
+
+    // Show QA panel
+    document.getElementById('qa-panel').style.display = 'block';
+
+    // Status pill
+    const pill = document.getElementById('qa-status-pill');
+    pill.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+    pill.className = 'qa-status-pill pill-' + status;
+
+    // Reviewer field
+    const revEl = document.getElementById('qa-reviewer');
+    if (sub.qa_reviewer) revEl.value = sub.qa_reviewer;
+    if (sub.qa_date) document.getElementById('qa-date').value = sub.qa_date;
+    if (sub.qa_notes) document.getElementById('qa-notes').value = sub.qa_notes;
+
+    // Return notes display
+    if (status === 'returned' && sub.qa_notes) {
+      const rn = document.getElementById('qa-return-notes');
+      rn.style.display = 'block';
+      rn.innerHTML = '<strong>Return Notes:</strong> ' + esc(sub.qa_notes);
+    }
+
+    // Button visibility
+    const btnSubmit  = document.getElementById('btn-qa-submit');
+    const btnApprove = document.getElementById('btn-qa-approve');
+    const btnReturn  = document.getElementById('btn-qa-return');
+    const btnReset   = document.getElementById('btn-qa-reset');
+    const btnPrint   = document.getElementById('btn-print');
+
+    // Reset all
+    btnSubmit.style.display  = 'none';
+    btnApprove.style.display = 'none';
+    btnReturn.style.display  = 'none';
+    btnReset.style.display   = 'none';
+
+    if (status === 'draft' || status === 'returned') {
+      btnSubmit.style.display = 'inline-block';
+      btnSubmit.textContent = status === 'returned' ? '📋 Resubmit for QA Review' : '📋 Submit for QA Review';
+    }
+    if ((status === 'submitted' || status === 'approved') && isAdmin) {
+      btnApprove.style.display = 'inline-block';
+      btnReturn.style.display  = 'inline-block';
+    }
+    if (isAdmin && status !== 'draft') {
+      btnReset.style.display = 'inline-block';
+    }
+
+    // Lock print unless approved (inspectors only — admins can always print)
+    if (!isAdmin && status !== 'approved') {
+      btnPrint.disabled = true;
+      btnPrint.title = 'Print is available after QA approval';
+    } else {
+      btnPrint.disabled = false;
+    }
+  }
+
+  async function submitForQA() {
+    if (!confirm('Submit this report for QA Review?\n\nThe report will be locked for editing until reviewed.')) return;
+    try {
+      const { error } = await _supabase.from('scan_submissions')
+        .update({ qa_status: 'submitted', qa_reviewer: null, qa_notes: null, qa_date: null })
+        .eq('id', currentSubId);
+      if (error) throw error;
+      toast('✓ Submitted for QA review');
+      loadReport();
+    } catch(e) { toast('⚠ Failed: ' + e.message); }
+  }
+
+  async function approveQA() {
+    const notes   = document.getElementById('qa-notes').value;
+    const dateVal = document.getElementById('qa-date').value || new Date().toISOString().split('T')[0];
+    if (!confirm('Approve this SCAN ONE report?')) return;
+    try {
+      const { error } = await _supabase.from('scan_submissions')
+        .update({ qa_status: 'approved', qa_reviewer: currentUserName, qa_notes: notes, qa_date: dateVal })
+        .eq('id', currentSubId);
+      if (error) throw error;
+      toast('✓ Report approved — print is now available');
+      loadReport();
+    } catch(e) { toast('⚠ Failed: ' + e.message); }
+  }
+
+  async function returnQA() {
+    const notes = document.getElementById('qa-notes').value;
+    if (!notes.trim()) { toast('⚠ Please add return notes before returning.'); return; }
+    if (!confirm('Return this report to the inspector for correction?')) return;
+    try {
+      const { error } = await _supabase.from('scan_submissions')
+        .update({ qa_status: 'returned', qa_reviewer: currentUserName, qa_notes: notes, qa_date: new Date().toISOString().split('T')[0] })
+        .eq('id', currentSubId);
+      if (error) throw error;
+      toast('↩ Report returned for correction');
+      loadReport();
+    } catch(e) { toast('⚠ Failed: ' + e.message); }
+  }
+
+  async function resetQA() {
+    if (!confirm('Reset QA status to Draft?')) return;
+    try {
+      const { error } = await _supabase.from('scan_submissions')
+        .update({ qa_status: 'draft', qa_reviewer: null, qa_notes: null, qa_date: null })
+        .eq('id', currentSubId);
+      if (error) throw error;
+      toast('✓ Reset to Draft');
+      loadReport();
+    } catch(e) { toast('⚠ Failed: ' + e.message); }
+  }
+
+  // ── RENDER REPORT ──
   async function renderReport(sub, r, fd) {
     const insured = sub.insured_name || fd.insured || 'Subject Property';
     const address = (sub.address || fd.address || '').replace(/,\s*$/, '').trim();
@@ -389,7 +613,6 @@
     document.getElementById('cover-date').textContent = date;
     document.getElementById('cover-file-num').textContent = sub.file_number || sub.inspection_id || ('SCAN-' + sub.id.substring(0,8).toUpperCase());
     document.getElementById('cover-photo-count').textContent = photoCount + ' photo' + (photoCount !== 1 ? 's' : '') + ' analysed';
-
     document.getElementById('report-sub').textContent = 'Photo-Based Assessment · ' + date + ' · ' + photoCount + ' photos';
 
     // Property strip
@@ -409,17 +632,14 @@
     ].filter(f => f[1]);
 
     document.getElementById('prop-strip').innerHTML = stripFields.map(f =>
-      '<div class="prop-cell">' +
-        '<div class="prop-cell-label">' + esc(f[0]) + '</div>' +
-        '<div class="prop-cell-value">' + esc(f[1]) + '</div>' +
-      '</div>'
+      '<div class="prop-cell"><div class="prop-cell-label">' + esc(f[0]) + '</div><div class="prop-cell-value">' + esc(f[1]) + '</div></div>'
     ).join('');
 
-    document.getElementById('exec-text').textContent = r.executive_summary || '—';
-    document.getElementById('score-c').textContent = r.score_construction || '—';
-    document.getElementById('score-p').textContent = r.score_protection || '—';
-    document.getElementById('score-s').textContent = r.score_safety || '—';
-    document.getElementById('score-o').textContent = r.score_overall || '—';
+    document.getElementById('exec-text').textContent   = r.executive_summary || '—';
+    document.getElementById('score-c').textContent     = r.score_construction || '—';
+    document.getElementById('score-p').textContent     = r.score_protection    || '—';
+    document.getElementById('score-s').textContent     = r.score_safety        || '—';
+    document.getElementById('score-o').textContent     = r.score_overall       || '—';
 
     const copeRows = [
       ['Construction Class', r.construction_class],
@@ -433,13 +653,10 @@
     ].filter(row => row[1]);
 
     document.getElementById('cope-grid').innerHTML = copeRows.map(row =>
-      '<div class="cope-row">' +
-        '<div class="cope-row-label">' + esc(row[0]) + '</div>' +
-        '<div class="cope-row-value">' + esc(row[1]) + '</div>' +
-      '</div>'
+      '<div class="cope-row"><div class="cope-row-label">' + esc(row[0]) + '</div><div class="cope-row-value">' + esc(row[1]) + '</div></div>'
     ).join('');
 
-    document.getElementById('text-construction').textContent = r.construction || r.construction_assessment || '(See COPE Structured Summary above for construction details.)';
+    document.getElementById('text-construction').textContent = r.construction || r.construction_assessment || '—';
     document.getElementById('text-occupancy').textContent    = r.occupancy    || '—';
     document.getElementById('text-protection').textContent   = r.protection   || '—';
     document.getElementById('text-exposure').textContent     = r.exposure     || '—';
@@ -460,17 +677,11 @@
         const refs = Array.isArray(rec.photo_refs) ? rec.photo_refs : [];
         const photoHtml = refs.length > 0 ? buildRecPhotoStrip(refs, storagePaths) : '';
         return '<div class="rec-item">' +
-          '<div class="rec-left">' +
-            '<span class="rec-priority ' + cls + '">' + esc(rec.priority || '') + '</span>' +
-            '<span class="rec-seq">' + seq + '</span>' +
-          '</div>' +
-          '<div style="flex:1;">' +
-            '<div class="rec-code">' + seq + esc(code) + '</div>' +
-            (rec.title ? '<div class="rec-title">' + esc(rec.title) + '</div>' : '') +
-            '<div class="rec-text">' + esc(rec.text || rec.description || '') + '</div>' +
-            photoHtml +
-          '</div>' +
-        '</div>';
+          '<div class="rec-left"><span class="rec-priority ' + cls + '">' + esc(rec.priority || '') + '</span><span class="rec-seq">' + seq + '</span></div>' +
+          '<div style="flex:1;"><div class="rec-code">' + seq + esc(code) + '</div>' +
+          (rec.title ? '<div class="rec-title">' + esc(rec.title) + '</div>' : '') +
+          '<div class="rec-text">' + esc(rec.text || rec.description || '') + '</div>' +
+          photoHtml + '</div></div>';
       }).join('');
     }
 
@@ -486,10 +697,10 @@
       rqLow.includes('high') || rqLow.includes('refer') ? 'rq-high' :
       rqLow.includes('decline') ? 'rq-decline' : ''
     );
-    document.getElementById('uw-recommendation').textContent = r.uw_recommendation || '—';
-    document.getElementById('uw-narrative').textContent = r.uw_narrative || '';
-    document.getElementById('uw-confidence').textContent = r.confidence || '';
-    document.getElementById('uw-confidence-note').textContent = r.confidence_note ? ' — ' + r.confidence_note : '';
+    document.getElementById('uw-recommendation').textContent   = r.uw_recommendation || '—';
+    document.getElementById('uw-narrative').textContent        = r.uw_narrative || '';
+    document.getElementById('uw-confidence').textContent       = r.confidence || '';
+    document.getElementById('uw-confidence-note').textContent  = r.confidence_note ? ' — ' + r.confidence_note : '';
 
     // Profile
     const profileText = r.insured_profile || r.profile || '';
@@ -535,10 +746,7 @@
     ].filter(f => f[1]);
 
     document.getElementById('appendix-grid').innerHTML = appendixFields.map(f =>
-      '<div class="appendix-cell">' +
-        '<div class="appendix-cell-label">' + esc(f[0]) + '</div>' +
-        '<div class="appendix-cell-value">' + esc(f[1]) + '</div>' +
-      '</div>'
+      '<div class="appendix-cell"><div class="appendix-cell-label">' + esc(f[0]) + '</div><div class="appendix-cell-value">' + esc(f[1]) + '</div></div>'
     ).join('');
 
     // Appendix B — Photos
@@ -582,47 +790,36 @@
     }
 
     document.getElementById('loading-wrap').style.display = 'none';
-    document.getElementById('report-wrap').style.display = 'block';
+    document.getElementById('report-wrap').style.display  = 'block';
   }
 
   function buildRecPhotoStrip(photoNums, paths) {
     if (!paths || !paths.length || !photoNums.length) return '';
     const valid = photoNums.map(n => parseInt(n)).filter(n => !isNaN(n) && n >= 1 && n <= paths.length);
     if (!valid.length) return '';
-    const thumbs = valid.map(n => {
+    return '<div class="rec-photo-strip">' + valid.map(n => {
       const path = paths[n - 1];
       if (!path) return '';
-      const isPdf = /\.pdf$/i.test(path);
-      if (isPdf) {
+      if (/\.pdf$/i.test(path)) {
         return '<div class="rec-photo-thumb"><div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:22px;background:#f0f2f5;">📄</div><div class="rec-photo-num">File ' + n + '</div></div>';
       }
-      const pubUrl = SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + path;
-      return '<div class="rec-photo-thumb">' +
-        '<img src="' + pubUrl + '" alt="Photo ' + n + '" class="rec-photo-img" onerror="this.closest(\'.rec-photo-thumb\').style.display=\'none\'">' +
-        '<div class="rec-photo-num">Photo ' + n + '</div>' +
-        '</div>';
-    }).join('');
-    return '<div class="rec-photo-strip">' + thumbs + '</div>';
+      return '<div class="rec-photo-thumb"><img src="' + SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + path + '" alt="Photo ' + n + '" class="rec-photo-img" onerror="this.closest(\'.rec-photo-thumb\').style.display=\'none\'"><div class="rec-photo-num">Photo ' + n + '</div></div>';
+    }).join('') + '</div>';
   }
 
   function emailReport() {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
+    const params  = new URLSearchParams(window.location.search);
+    const id      = params.get('id');
     const fileNum = document.getElementById('cover-file-num')?.textContent || id;
     const subject = encodeURIComponent('SanketRisk SCAN ONE Assessment — ' + fileNum);
-    const body = encodeURIComponent(
-      'Please find the SanketRisk SCAN ONE Photo Assessment attached.\n\n' +
-      'To save as PDF: open the report and use Print → Save as PDF.\n\n' +
-      'Report reference: ' + fileNum + '\n\n' +
-      'Prepared by Sanket Risk Consultants'
-    );
+    const body    = encodeURIComponent('Please find the SanketRisk SCAN ONE Photo Assessment attached.\n\nTo save as PDF: open the report and use Print → Save as PDF.\n\nReport reference: ' + fileNum + '\n\nPrepared by Sanket Risk Consultants');
     window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
   }
 
   function showError(msg) {
     document.getElementById('loading-wrap').style.display = 'none';
-    document.getElementById('error-wrap').style.display = 'block';
-    document.getElementById('error-msg').textContent = msg;
+    document.getElementById('error-wrap').style.display  = 'block';
+    document.getElementById('error-msg').textContent     = msg;
   }
 
   let toastTimer;
