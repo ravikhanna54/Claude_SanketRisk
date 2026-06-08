@@ -491,6 +491,18 @@
       btnSubmit.style.display = 'inline-block';
       btnSubmit.textContent = status === 'returned' ? '📋 Resubmit for QA Review' : '📋 Submit for QA Review';
     }
+
+    // Show/hide Return to Edit button in nav
+    var existingEditBtn = document.getElementById('btn-return-edit');
+    if (existingEditBtn) existingEditBtn.remove();
+    if (status === 'returned') {
+      var editBtn = document.createElement('a');
+      editBtn.id = 'btn-return-edit';
+      editBtn.href = '/scan.html?review=' + currentSubId;
+      editBtn.style.cssText = 'background:#C53030;color:white;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-block;';
+      editBtn.textContent = '✏️ Return to Edit';
+      document.getElementById('btn-print').before(editBtn);
+    }
     if ((status === 'submitted' || status === 'approved') && isAdmin) {
       btnApprove.style.display = 'inline-block';
       btnReturn.style.display  = 'inline-block';
