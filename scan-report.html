@@ -393,7 +393,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script>   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);    var _reportId = new URLSearchParams(window.location.search).get('id');    document.getElementById('loading-wrap').style.display = 'none';   document.getElementById('error-wrap').style.display = 'block';   document.getElementById('error-msg').textContent = 'Test OK — ID is: ' + (_reportId || 'MISSING');    function esc(s) { return String(s||''); }   function toast(msg) {}   function emailReport() {}   function submitForQA() {}   function approveQA() {}   function returnQA() {}   function resetQA() {} </script>
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
