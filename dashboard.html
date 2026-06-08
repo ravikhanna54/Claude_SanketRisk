@@ -1099,6 +1099,7 @@
           var sLabel = r.status === 'analysed' ? '&#x2713; Analysed' : r.status === 'reviewing' ? '&#x1F441; Reviewing' : '&#x23F3; Pending';
           var tr = document.createElement('tr');
           tr.innerHTML =
+            '<td><span style="font-family:monospace;font-size:11px;background:#f5ecd4;color:#0d1b2a;padding:2px 8px;border-radius:8px;">' + (r.file_number || r.inspection_id || '—') + '</span></td>' +
             '<td style="font-size:12px;color:var(--slate)">' + date + '</td>' +
             '<td><div style="font-weight:600;font-size:13px">' + (r.insured_name || '-') + '</div>' +
             '<div style="font-size:11px;color:var(--slate)">' + [r.city, r.province].filter(Boolean).join(', ') + '</div></td>' +
@@ -1130,6 +1131,7 @@
         table.style.cssText = 'width:100%;min-width:700px;border-collapse:collapse;font-size:13px';
         table.innerHTML =
           '<thead><tr>' +
+          '<th style="' + thL + '">File #</th>' +
           '<th style="' + thL + '">Date</th>' +
           '<th style="' + thL + '">Property</th>' +
           '<th style="' + thL + '">Occupancy</th>' +
