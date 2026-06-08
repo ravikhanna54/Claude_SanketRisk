@@ -428,15 +428,26 @@
     try {
       const { data: sub, error } = await _supabase
         .from('scan_submissions').select('*').eq('id', id).single();
-      if (error || !sub) { showError('Report not found. It may have been deleted.'); return; }
-      if (!sub.scan_result) { showError('This submission has not been analysed yet.'); return; }
-      const r = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
+      if (error) { showError('Database error: ' + error.message); return; }
+      if (!sub) { showError('Report not found.'); return; }
+      if (!sub.scan_result) { showError('This submission has not been analysed yet. Please run the AI analysis first.'); return; }
+      let r;
+      try {
+        r = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
+      } catch(parseErr) {
+        showError('Could not read report data: ' + parseErr.message);
+        return;
+      }
       const fd = r.formData || {};
       currentQAStatus = sub.qa_status || 'draft';
-      applyQAState(sub);
-      renderReport(sub, r, fd);
+      try { applyQAState(sub); } catch(qaErr) { console.warn('QA state error:', qaErr.message); }
+      try {
+        await renderReport(sub, r, fd);
+      } catch(renderErr) {
+        showError('Error displaying report: ' + renderErr.message);
+      }
     } catch(e) {
-      showError('Error loading report: ' + e.message);
+      showError('Unexpected error: ' + e.message);
     }
   }
 
