@@ -426,11 +426,7 @@
         .from('scan_submissions').select('*').eq('id', id).single();
       if (error || !sub) { showError('Report not found. It may have been deleted.'); return; }
       if (!sub.scan_result) { showError('This submission has not been analysed yet.'); return; }
-      let r = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
-      // Safety: if r is still a string (double-stringified), parse again
-      if (typeof r === 'string') { try { r = JSON.parse(r); } catch(e) {} }
-      // If construction is missing but nested under a result key, unwrap it
-      if (!r.construction && r.result) { try { const inner = typeof r.result === 'string' ? JSON.parse(r.result) : r.result; if (inner.construction) r = { ...inner, formData: r.formData }; } catch(e) {} }
+      const r = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
       const fd = r.formData || {};
       currentQAStatus = sub.qa_status || 'draft';
       applyQAState(sub);
