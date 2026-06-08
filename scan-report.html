@@ -396,9 +396,7 @@
 <script>
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
-  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { autoRefreshToken: true, persistSession: true, storageKey: 'src-auth' }
-  });
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let currentUser = null;
   let currentUserRole = 'inspector';
