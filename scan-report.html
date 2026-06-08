@@ -405,13 +405,19 @@
   let currentQAStatus = 'draft';
 
   (async () => {
-    const { data: { session } } = await _supabase.auth.getSession();
-    if (!session) { window.location.replace('/login.html'); return; }
-    currentUser = session.user;
-    const { data: profiles } = await _supabase.from('profiles').select('role,full_name').eq('id', currentUser.id);
-    currentUserRole = profiles?.[0]?.role || 'inspector';
-    currentUserName = profiles?.[0]?.full_name || currentUser.email.split('@')[0];
-    loadReport();
+    try {
+      const { data: { session } } = await _supabase.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        const { data: profiles } = await _supabase.from('profiles').select('role,full_name').eq('id', currentUser.id);
+        currentUserRole = profiles?.[0]?.role || 'inspector';
+        currentUserName = profiles?.[0]?.full_name || currentUser.email.split('@')[0];
+      }
+      // Load report regardless - it will show public data or redirect if truly needed
+      loadReport();
+    } catch(e) {
+      loadReport();
+    }
   })();
 
   async function loadReport() {
