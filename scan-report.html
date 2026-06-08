@@ -672,14 +672,29 @@
       '<div class="cope-row"><div class="cope-row-label">' + esc(row[0]) + '</div><div class="cope-row-value">' + esc(row[1]) + '</div></div>'
     ).join('');
 
-    // Visible debug panel (remove after fix confirmed)
-    var dbg = document.createElement('div');
-    dbg.style.cssText = 'background:#1a2e42;color:#e2c97e;padding:12px 16px;font-family:monospace;font-size:11px;border-radius:8px;margin-bottom:16px;white-space:pre-wrap;line-height:1.6;';
-    var keys = Object.keys(r);
-    var conVal = r.construction ? r.construction.substring(0,100) + '...' : 'MISSING';
-    dbg.textContent = 'DEBUG\nKeys: ' + keys.join(', ') + '\nconstruction: ' + conVal;
-    document.getElementById('text-construction').before(dbg);
-    document.getElementById('text-construction').textContent = r.construction || r.construction_assessment || r.cope_construction || '—';
+    // Build construction narrative from available fields if 'construction' key missing
+    var constructionText = r.construction || r.construction_assessment || r.cope_construction || '';
+    if (!constructionText) {
+      // Assemble from structured fields
+      var parts = [];
+      var insuredName = sub.insured_name || fd.insured || 'The subject property';
+      var cityProv = [sub.city, sub.province].filter(Boolean).join(', ');
+      var yrBuilt = r.year_built_assessed || sub.year_built || fd.yearBuilt || '';
+      var storeys = r.stories || fd.storeys || '';
+      var area = r.area_sqft || (sub.building_area ? sub.building_area + ' sq ft' : '') || '';
+      var conClass = r.construction_class || fd.construction || '';
+      var roofType = r.roof_type || '';
+
+      var intro = insuredName + (cityProv ? ', ' + cityProv : '');
+      if (yrBuilt) intro += ' is a ' + (new Date().getFullYear() - parseInt(yrBuilt)) + '-year-old building constructed in ' + yrBuilt;
+      if (storeys) intro += ', comprising ' + storeys + ' stor' + (storeys === '1' ? 'ey' : 'eys');
+      if (area) intro += ' with a gross floor area of approximately ' + area;
+      parts.push(intro + '.');
+      if (conClass) parts.push('The ISO construction classification is ' + conClass + '.');
+      if (roofType) parts.push('The roof assembly consists of ' + roofType + '.');
+      constructionText = parts.join(' ');
+    }
+    document.getElementById('text-construction').textContent = constructionText || '—';
     document.getElementById('text-occupancy').textContent    = r.occupancy    || '—';
     document.getElementById('text-protection').textContent   = r.protection   || '—';
     document.getElementById('text-exposure').textContent     = r.exposure     || '—';
