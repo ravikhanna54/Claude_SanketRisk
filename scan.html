@@ -1125,6 +1125,8 @@
       construction: document.getElementById('s-construction').value,
       fireProtection: document.getElementById('s-fire-protection').value,
       context:    document.getElementById('s-context').value.trim(),
+      submitterName:    document.getElementById('s-submitter-name').value.trim(),
+      submitterCompany: document.getElementById('s-submitter-company').value.trim(),
       losses:     document.getElementById('s-losses').value,
       lossCause:  document.getElementById('s-loss-cause').value,
       lossAmt:    document.getElementById('s-loss-amt').value.trim(),
@@ -1970,21 +1972,7 @@
         }
       }
 
-      // ── Clean up storage files after analysis ──
-      try {
-        await fetch(
-          'https://lzsfmqbhrpsmnivxhggi.supabase.co/storage/v1/object/scan-uploads',
-          {
-            method: 'DELETE',
-            headers: {
-              'apikey':        'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83',
-              'Authorization': 'Bearer sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83',
-              'Content-Type':  'application/json',
-            },
-            body: JSON.stringify({ prefixes: [sessionId + '/'] }),
-          }
-        );
-      } catch(e) { console.log('Cleanup note:', e.message); }
+      
 
       setStep(5);
       // Ensure photoCount is set
