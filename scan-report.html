@@ -404,21 +404,21 @@
   let currentSubId = null;
   let currentQAStatus = 'draft';
 
-  (async () => {
-    try {
-      const { data: { session } } = await _supabase.auth.getSession();
+  window.addEventListener('DOMContentLoaded', function() {
+    _supabase.auth.getSession().then(function(result) {
+      var session = result.data && result.data.session;
       if (session) {
         currentUser = session.user;
-        const { data: profiles } = await _supabase.from('profiles').select('role,full_name').eq('id', currentUser.id);
-        currentUserRole = profiles?.[0]?.role || 'inspector';
-        currentUserName = profiles?.[0]?.full_name || currentUser.email.split('@')[0];
+        _supabase.from('profiles').select('role,full_name').eq('id', currentUser.id).then(function(res) {
+          currentUserRole = (res.data && res.data[0] && res.data[0].role) || 'inspector';
+          currentUserName = (res.data && res.data[0] && res.data[0].full_name) || currentUser.email.split('@')[0];
+          loadReport();
+        }).catch(function() { loadReport(); });
+      } else {
+        loadReport();
       }
-      // Load report regardless - it will show public data or redirect if truly needed
-      loadReport();
-    } catch(e) {
-      loadReport();
-    }
-  })();
+    }).catch(function() { loadReport(); });
+  });
 
   async function loadReport() {
     const params = new URLSearchParams(window.location.search);
