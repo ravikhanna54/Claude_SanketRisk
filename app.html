@@ -6161,7 +6161,7 @@
           <div class="field">
             <label>Subject to DOT / FMCSA Regulations?</label>
             <select id="subject-to-dot-fmcsa-regulations">
-              <option value="">— Select —</option>
+              <option value="">— Select —</option>d
               <option>No — Below threshold</option>
               <option>Yes — Intrastate only</option>
               <option>Yes — Interstate commerce</option>
@@ -7951,11 +7951,11 @@
     closeDashboard();
     showSection('intro', document.querySelector('[data-section="intro"]'));
     // Give the form a moment to become visible then populate
-    setTimeout(() => {
+    setTimeout(async () => {
       const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
       // Generate a new inspection ID
       const now = new Date();
-      const newId = await (async function() {   try {     const res = await fetch('https://lzsfmqbhrpsmnivxhggi.supabase.co/rest/v1/rpc/get_next_file_number', {       method: 'POST',       headers: { 'apikey': 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83', 'Authorization': 'Bearer sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83', 'Content-Type': 'application/json' },       body: JSON.stringify({ category_code: 100 })     });     if (res.ok) { const num = await res.json(); return num; }   } catch(e) {}   return 'SRC100' + String(Math.floor(Math.random()*9000)+1000); })();
+      const newId = await (async function() {   try {     const res = await fetch('https://lzsfmqbhrpsmnivxhggi.supabase.co/rest/v1/rpc/get_next_file_number', {       method: 'POST',       headers: { 'apikey': 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83', 'Authorization': 'Bearer sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83', 'Content-Type': 'application/json' },       body: JSON.stringify({ p_category: 100 })     });     if (res.ok) { const num = await res.json(); return num; }   } catch(e) {}   return 'SRC100' + String(Math.floor(Math.random()*9000)+1000); })();
       set('inspection-id', newId);
       const badge = document.getElementById('inspection-id-badge');
       if (badge) badge.textContent = newId;
@@ -8335,7 +8335,7 @@
     toast.style.color = '#ffffff';
     toast.textContent = msg;
     toast.style.opacity = '1';
-    setTimeout(() => { toast.style.opacity = '0'; }, 3500);
+    setTimeout(async () => { toast.style.opacity = '0'; }, 3500);
   }
     // ── COUNTRY / OSHA VISIBILITY ──
   function syncCountry(val) {
