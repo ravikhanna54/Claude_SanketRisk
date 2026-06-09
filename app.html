@@ -1499,7 +1499,7 @@
         <div class="form-grid">
           <div class="field">
             <label>Inspection ID <span class="req">*</span></label>
-            <input type="text" value="" id="inspection-id" placeholder="Auto-assigned" oninput="document.getElementById('inspection-id-badge').textContent=this.value">
+            <input type="text" value="" id="inspection-id" readonly placeholder="Auto-assigned" oninput="document.getElementById('inspection-id-badge').textContent=this.value">
           </div>
           <div class="field">
             <label>Account Number</label>
@@ -7244,9 +7244,7 @@
   }
   function doLogout() {
     if (!confirm('Sign out?')) return;
-    _supabase.auth.signOut()
-      .then(function() { window.location.replace('/login.html'); })
-      .catch(function() { window.location.replace('/login.html'); });
+    _supabase.auth.signOut().then(function(){ window.location.replace('/login.html'); }).catch(function(){ window.location.replace('/login.html'); });
   }
   // ══════════════════════════════════════════
   // PHASE 4 — ENHANCED DASHBOARD
@@ -7356,7 +7354,7 @@
     const glModules = [...activeGL];
     // Key summary fields for dashboard display
     const summary = {
-      inspection_id:  get('inspection-id') || 'SRC100' + String(Math.floor(Math.random()*9000)+1000),
+      inspection_id:  get('inspection-id') || '',
       account_number: get('account-number') || '',
       policy_number:  get('policy-number') || '',
       inspection_date: get('inspection-date'),
@@ -7953,17 +7951,12 @@
     // Give the form a moment to become visible then populate
     setTimeout(async () => {
       const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-      // Generate a new inspection ID
-      // Generate SRC1 file number from sequence
-      let newId = 'SRC100' + String(Math.floor(Math.random()*9000)+1000); // fallback
+      // Generate SRC1 file number
+      let newId = 'SRC100' + String(Math.floor(Math.random()*9000)+1000);
       try {
-        const seqRes = await fetch('https://lzsfmqbhrpsmnivxhggi.supabase.co/rest/v1/rpc/get_next_file_number', {
-          method: 'POST',
-          headers: { 'apikey': 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83', 'Authorization': 'Bearer sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ p_category: 100 })
-        });
-        if (seqRes.ok) { newId = await seqRes.json(); }
-      } catch(e) { console.warn('File number:', e.message); }
+        const { data: seqData, error: seqErr } = await _supabase.rpc('get_next_file_number', { p_category: 100 });
+        if (!seqErr && seqData) { newId = seqData; }
+      } catch(e) {}
       set('inspection-id', newId);
       const badge = document.getElementById('inspection-id-badge');
       if (badge) badge.textContent = newId;
