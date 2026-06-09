@@ -7955,7 +7955,7 @@
       const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
       // Generate a new inspection ID
       const now = new Date();
-      const newId = 'INS-' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(Math.floor(Math.random()*900)+100);
+      const newId = await (async function() {   try {     const res = await fetch('https://lzsfmqbhrpsmnivxhggi.supabase.co/rest/v1/rpc/get_next_file_number', {       method: 'POST',       headers: { 'apikey': 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83', 'Authorization': 'Bearer sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83', 'Content-Type': 'application/json' },       body: JSON.stringify({ category_code: 100 })     });     if (res.ok) { const num = await res.json(); return 'SRC1' + String(num).padStart(6,'0'); }   } catch(e) {}   return 'SRC1' + String(Math.floor(Math.random()*900000)+100000); })();
       set('inspection-id', newId);
       const badge = document.getElementById('inspection-id-badge');
       if (badge) badge.textContent = newId;
