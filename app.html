@@ -7235,6 +7235,14 @@
     // Only reset QA state to draft if no inspection is currently loaded
     if (!currentInspectionId) {
       applyQAState('draft');
+      // Generate new SRC1 file number for new inspection
+      _supabase.rpc('get_next_file_number', { p_category: 100 }).then(function(res) {
+        var newId = (!res.error && res.data) ? res.data : 'SRC100' + String(Math.floor(Math.random()*9000)+1000);
+        var idField = document.getElementById('inspection-id');
+        var idBadge = document.getElementById('inspection-id-badge');
+        if (idField) idField.value = newId;
+        if (idBadge) idBadge.textContent = newId;
+      }).catch(function() {});
     }
   }
   function showLoginError(msg) {
