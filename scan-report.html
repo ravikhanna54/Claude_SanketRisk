@@ -404,7 +404,7 @@
   var currentSubId = null;
   var currentQAStatus = 'draft';
 
-  // Start auth in background - don't block report loading
+  // Fetch role FIRST, then load report so admin buttons show correctly
   _supabase.auth.getSession().then(function(res) {
     var session = res && res.data && res.data.session;
     if (session) {
@@ -415,12 +415,12 @@
             currentUserRole = pr.data[0].role || 'inspector';
             currentUserName = pr.data[0].full_name || session.user.email.split('@')[0];
           }
-        }).catch(function(){});
+          loadReport();
+        }).catch(function(){ loadReport(); });
+    } else {
+      loadReport();
     }
-  }).catch(function(){});
-
-  // Load report immediately
-  loadReport();
+  }).catch(function(){ loadReport(); });
 
   function loadReport() {
     var id = new URLSearchParams(window.location.search).get('id');
