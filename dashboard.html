@@ -570,7 +570,10 @@
             tr.querySelector('[data-scan-id]').addEventListener('click', function() { launchScanAnalysis(r.id); });
           }
           if (tr.querySelector('[data-view-id]')) {
-            tr.querySelector('[data-view-id]').addEventListener('click', function() { window.location.href = '/scan-report.html?id=' + r.id; });
+            tr.querySelector('[data-view-id]').addEventListener('click', function() {
+            try { sessionStorage.setItem('scanReport_' + r.id, JSON.stringify(r)); } catch(e) {}
+            window.location.href = '/scan-report.html?id=' + r.id;
+          });
           }
           tr.querySelector('[data-del-id]').addEventListener('click', function() { deleteScanSubmission(r.id, r.insured_name||'this submission'); });
           return tr;
