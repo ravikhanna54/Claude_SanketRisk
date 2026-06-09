@@ -398,137 +398,116 @@
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  let currentUser = null;
-  let currentUserRole = 'inspector';
-  let currentUserName = '';
-  let currentSubId = null;
-  let currentQAStatus = 'draft';
+  var currentUser = null;
+  var currentUserRole = 'inspector';
+  var currentUserName = '';
+  var currentSubId = null;
+  var currentQAStatus = 'draft';
 
-  // Load report immediately - auth runs in background
-  var _reportId = new URLSearchParams(window.location.search).get('id');
+  // Start auth in background - don't block report loading
   _supabase.auth.getSession().then(function(res) {
     var session = res && res.data && res.data.session;
     if (session) {
       currentUser = session.user;
-      _supabase.from('profiles').select('role,full_name').eq('id', session.user.id).then(function(pr) {
-        if (pr.data && pr.data[0]) {
-          currentUserRole = pr.data[0].role || 'inspector';
-          currentUserName = pr.data[0].full_name || session.user.email.split('@')[0];
-        }
-      }).catch(function(){});
+      _supabase.from('profiles').select('role,full_name').eq('id', session.user.id)
+        .then(function(pr) {
+          if (pr.data && pr.data[0]) {
+            currentUserRole = pr.data[0].role || 'inspector';
+            currentUserName = pr.data[0].full_name || session.user.email.split('@')[0];
+          }
+        }).catch(function(){});
     }
-    loadReport();
-  }).catch(function(){ loadReport(); });
+  }).catch(function(){});
+
+  // Load report immediately
+  loadReport();
 
   function loadReport() {
     var id = new URLSearchParams(window.location.search).get('id');
     if (!id) { showError('No report ID specified.'); return; }
     currentSubId = id;
 
-    // Try sessionStorage first (passed from dashboard - no Supabase call needed)
+    // Show timeout message after 10 seconds
+    var _timer = setTimeout(function() {
+      showError('Request timed out. Please check your connection and try again. (ID: ' + id + ')');
+    }, 10000);
+
+    // Try sessionStorage first - data may have been passed from dashboard
     var cached = null;
     try { cached = sessionStorage.getItem('scanReport_' + id); } catch(e) {}
-
     if (cached) {
       try {
         var sub = JSON.parse(cached);
+        clearTimeout(_timer);
         processSubmission(sub);
-        // Still fetch fresh data in background for QA status
-        _supabase.from('scan_submissions')
-          .select('qa_status,qa_reviewer,qa_notes,qa_date,file_number,inspection_id')
-          .eq('id', id).single()
-          .then(function(res) {
-            if (res.data) {
-              sub.qa_status   = res.data.qa_status;
-              sub.qa_reviewer = res.data.qa_reviewer;
-              sub.qa_notes    = res.data.qa_notes;
-              sub.qa_date     = res.data.qa_date;
-              try { applyQAState(sub); } catch(e) {}
-            }
-          }).catch(function(){});
         return;
       } catch(e) {}
     }
 
-    // Fallback: fetch from Supabase
+    // Fetch from Supabase
     _supabase.from('scan_submissions').select('*').eq('id', id).single()
       .then(function(res) {
+        clearTimeout(_timer);
         if (res.error) { showError('Database error: ' + res.error.message); return; }
         if (!res.data) { showError('Report not found.'); return; }
         processSubmission(res.data);
       })
-      .catch(function(e) { showError('Failed to load: ' + e.message); });
+      .catch(function(e) {
+        clearTimeout(_timer);
+        showError('Failed to load report: ' + e.message);
+      });
   }
 
   function processSubmission(sub) {
-    if (!sub.scan_result) { showError('This submission has not been analysed yet.'); return; }
+    if (!sub.scan_result) { showError('This submission has not been analysed yet. Please run AI analysis first.'); return; }
     var r;
     try {
       r = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
-    } catch(e) { showError('Could not parse report: ' + e.message); return; }
+    } catch(e) { showError('Could not read report data: ' + e.message); return; }
     var fd = r.formData || {};
     currentQAStatus = sub.qa_status || 'draft';
     try { applyQAState(sub); } catch(e) {}
     try { renderReport(sub, r, fd); } catch(e) { showError('Display error: ' + e.message); }
   }
 
-  // ── QA WORKFLOW ──
   function applyQAState(sub) {
-    const status = sub.qa_status || 'draft';
+    var status = sub.qa_status || 'draft';
     currentQAStatus = status;
-    const isAdmin = currentUserRole === 'admin' || currentUserRole === 'reviewer';
-
-    // Banner
-    const banner = document.getElementById('qa-banner');
-    const messages = {
+    var isAdmin = currentUserRole === 'admin' || currentUserRole === 'reviewer';
+    var banner = document.getElementById('qa-banner');
+    var messages = {
       draft:     '📝 Draft — Submit for QA review when the report is ready.',
       submitted: '⏳ Submitted for QA Review — awaiting reviewer action.',
       approved:  '✅ QA Approved — Report is cleared for printing.',
-      returned:  '↩ Returned for Correction — please review the QA notes below.',
+      returned:  '↩ Returned for Correction — please review the QA notes below.'
     };
     banner.textContent = messages[status] || '';
     banner.className = 'qa-banner ' + status;
-
-    // Show QA panel
     document.getElementById('qa-panel').style.display = 'block';
-
-    // Status pill
-    const pill = document.getElementById('qa-status-pill');
+    var pill = document.getElementById('qa-status-pill');
     pill.textContent = status.charAt(0).toUpperCase() + status.slice(1);
     pill.className = 'qa-status-pill pill-' + status;
-
-    // Reviewer field
-    const revEl = document.getElementById('qa-reviewer');
-    if (sub.qa_reviewer) revEl.value = sub.qa_reviewer;
+    if (sub.qa_reviewer) document.getElementById('qa-reviewer').value = sub.qa_reviewer;
     if (sub.qa_date) document.getElementById('qa-date').value = sub.qa_date;
     if (sub.qa_notes) document.getElementById('qa-notes').value = sub.qa_notes;
-
-    // Return notes display
     if (status === 'returned' && sub.qa_notes) {
-      const rn = document.getElementById('qa-return-notes');
+      var rn = document.getElementById('qa-return-notes');
       rn.style.display = 'block';
       rn.innerHTML = '<strong>Return Notes:</strong> ' + esc(sub.qa_notes);
     }
-
-    // Button visibility
-    const btnSubmit  = document.getElementById('btn-qa-submit');
-    const btnApprove = document.getElementById('btn-qa-approve');
-    const btnReturn  = document.getElementById('btn-qa-return');
-    const btnReset   = document.getElementById('btn-qa-reset');
-    const btnPrint   = document.getElementById('btn-print');
-
-    // Reset all
-    btnSubmit.style.display  = 'none';
+    var btnSubmit  = document.getElementById('btn-qa-submit');
+    var btnApprove = document.getElementById('btn-qa-approve');
+    var btnReturn  = document.getElementById('btn-qa-return');
+    var btnReset   = document.getElementById('btn-qa-reset');
+    var btnPrint   = document.getElementById('btn-print');
+    btnSubmit.style.display = 'none';
     btnApprove.style.display = 'none';
-    btnReturn.style.display  = 'none';
-    btnReset.style.display   = 'none';
-
+    btnReturn.style.display = 'none';
+    btnReset.style.display = 'none';
     if (status === 'draft' || status === 'returned') {
       btnSubmit.style.display = 'inline-block';
       btnSubmit.textContent = status === 'returned' ? '📋 Resubmit for QA Review' : '📋 Submit for QA Review';
     }
-
-    // Show/hide Return to Edit button in nav
     var existingEditBtn = document.getElementById('btn-return-edit');
     if (existingEditBtn) existingEditBtn.remove();
     if (status === 'returned') {
@@ -541,13 +520,11 @@
     }
     if ((status === 'submitted' || status === 'approved') && isAdmin) {
       btnApprove.style.display = 'inline-block';
-      btnReturn.style.display  = 'inline-block';
+      btnReturn.style.display = 'inline-block';
     }
     if (isAdmin && status !== 'draft') {
       btnReset.style.display = 'inline-block';
     }
-
-    // Lock print unless approved (inspectors only — admins can always print)
     if (!isAdmin && status !== 'approved') {
       btnPrint.disabled = true;
       btnPrint.title = 'Print is available after QA approval';
@@ -569,7 +546,7 @@
   }
 
   function approveQA() {
-    var notes   = document.getElementById('qa-notes').value;
+    var notes = document.getElementById('qa-notes').value;
     var dateVal = document.getElementById('qa-date').value || new Date().toISOString().split('T')[0];
     if (!confirm('Approve this SCAN ONE report?')) return;
     _supabase.from('scan_submissions')
@@ -608,55 +585,58 @@
       }).catch(function(e) { toast('⚠ ' + e.message); });
   }
 
-  // ── RENDER REPORT ──
   function renderReport(sub, r, fd) {
-    const insured = sub.insured_name || fd.insured || 'Subject Property';
-    const address = (sub.address || fd.address || '').replace(/,\s*$/, '').trim();
-    const city    = sub.city || fd.city || '';
-    const rawProv = sub.province || fd.province || '';
-    const prov    = rawProv.replace(/\s+[A-Z]\d[A-Z]\s*\d[A-Z]\d/i, '').trim();
-    const postalMatch = rawProv.match(/[A-Z]\d[A-Z]\s*\d[A-Z]\d/i);
-    const postal  = postalMatch ? postalMatch[0] : '';
-    const occ     = sub.occupancy || fd.occupancy || '';
-    const yr      = sub.year_built || fd.yearBuilt || '';
-    const area    = sub.building_area || fd.buildingArea || fd.area || '';
-    const date    = sub.submitted_at
+    var insured = sub.insured_name || fd.insured || 'Subject Property';
+    var address = (sub.address || fd.address || '').replace(/,\s*$/, '').trim();
+    var city    = sub.city || fd.city || '';
+    var rawProv = sub.province || fd.province || '';
+    var prov    = rawProv.replace(/\s+[A-Z]\d[A-Z]\s*\d[A-Z]\d/i, '').trim();
+    var postalMatch = rawProv.match(/[A-Z]\d[A-Z]\s*\d[A-Z]\d/i);
+    var postal  = postalMatch ? postalMatch[0] : '';
+    var occ     = sub.occupancy || fd.occupancy || '';
+    var yr      = sub.year_built || fd.yearBuilt || '';
+    var area    = sub.building_area || fd.buildingArea || fd.area || '';
+    var date    = sub.submitted_at
       ? new Date(sub.submitted_at).toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'})
       : new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'});
-    const photoCount = sub.photo_count || r.photoCount || 0;
+    var photoCount = sub.photo_count || r.photoCount || 0;
 
     document.title = insured + ' — SCAN ONE Report';
 
-    const storagePaths = sub.storage_paths
-      ? (typeof sub.storage_paths === 'string' ? JSON.parse(sub.storage_paths) : sub.storage_paths)
-      : [];
+    var storagePaths = [];
+    if (sub.storage_paths) {
+      try { storagePaths = typeof sub.storage_paths === 'string' ? JSON.parse(sub.storage_paths) : sub.storage_paths; } catch(e) {}
+    }
 
     // Cover photo
-    const coverWrap = document.getElementById('cover-photo-wrap');
-    const placeholder = document.getElementById('cover-photo-placeholder');
-    let coverPath = storagePaths.find(p => !/\.pdf$/i.test(p)) || storagePaths[0] || null;
+    var coverWrap = document.getElementById('cover-photo-wrap');
+    var placeholder = document.getElementById('cover-photo-placeholder');
+    var coverPath = null;
+    for (var ci = 0; ci < storagePaths.length; ci++) {
+      if (!/\.pdf$/i.test(storagePaths[ci])) { coverPath = storagePaths[ci]; break; }
+    }
     if (coverPath) {
-      const img = document.createElement('img');
+      var img = document.createElement('img');
       img.style.cssText = 'width:100%;height:380px;object-fit:cover;display:block;opacity:0.82;';
       img.alt = insured;
-      img.onload = () => { if (placeholder) placeholder.style.display = 'none'; };
+      img.onload = function() { if (placeholder) placeholder.style.display = 'none'; };
       img.onerror = function() {
         _supabase.storage.from('scan-uploads').createSignedUrl(coverPath, 3600)
           .then(function(res) {
             if (res.data && res.data.signedUrl) img.src = res.data.signedUrl;
             else img.remove();
-          }).catch(function(){ img.remove(); });
+          }).catch(function() { img.remove(); });
       };
       img.src = SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + coverPath;
       coverWrap.insertBefore(img, coverWrap.firstChild);
     }
 
-    const overlay = document.createElement('div');
+    var overlay = document.createElement('div');
     overlay.className = 'cover-photo-overlay';
     overlay.innerHTML =
       '<div class="cover-insured">' + esc(insured) + '</div>' +
       '<div class="cover-address">' + esc([address, city, prov, postal].filter(Boolean).join(', ')) + '</div>' +
-      '<div class="cover-meta">' + esc(occ) + (yr ? ' &nbsp;·&nbsp; Built ' + yr : '') + '</div>';
+      '<div class="cover-meta">' + esc(occ) + (yr ? ' &nbsp;&middot;&nbsp; Built ' + yr : '') + '</div>';
     coverWrap.appendChild(overlay);
 
     document.getElementById('cover-date').textContent = date;
@@ -664,8 +644,7 @@
     document.getElementById('cover-photo-count').textContent = photoCount + ' photo' + (photoCount !== 1 ? 's' : '') + ' analysed';
     document.getElementById('report-sub').textContent = 'Photo-Based Assessment · ' + date + ' · ' + photoCount + ' photos';
 
-    // Property strip
-    const stripFields = [
+    var stripFields = [
       ['Insured / Property', insured],
       ['Address', address],
       ['City', city],
@@ -677,20 +656,20 @@
       ['File Number', sub.file_number || sub.inspection_id || null],
       ['Assessment Date', date],
       ['Submitted By', fd.submitterName || null],
-      ['Company / Broker', fd.submitterCompany || null],
-    ].filter(f => f[1]);
+      ['Company / Broker', fd.submitterCompany || null]
+    ].filter(function(f) { return f[1]; });
 
-    document.getElementById('prop-strip').innerHTML = stripFields.map(f =>
-      '<div class="prop-cell"><div class="prop-cell-label">' + esc(f[0]) + '</div><div class="prop-cell-value">' + esc(f[1]) + '</div></div>'
-    ).join('');
+    document.getElementById('prop-strip').innerHTML = stripFields.map(function(f) {
+      return '<div class="prop-cell"><div class="prop-cell-label">' + esc(f[0]) + '</div><div class="prop-cell-value">' + esc(f[1]) + '</div></div>';
+    }).join('');
 
-    document.getElementById('exec-text').textContent   = r.executive_summary || '—';
-    document.getElementById('score-c').textContent     = r.score_construction || '—';
-    document.getElementById('score-p').textContent     = r.score_protection    || '—';
-    document.getElementById('score-s').textContent     = r.score_safety        || '—';
-    document.getElementById('score-o').textContent     = r.score_overall       || '—';
+    document.getElementById('exec-text').textContent = r.executive_summary || '—';
+    document.getElementById('score-c').textContent   = r.score_construction || '—';
+    document.getElementById('score-p').textContent   = r.score_protection   || '—';
+    document.getElementById('score-s').textContent   = r.score_safety       || '—';
+    document.getElementById('score-o').textContent   = r.score_overall      || '—';
 
-    const copeRows = [
+    var copeRows = [
       ['Construction Class', r.construction_class],
       ['Year Built', r.year_built_assessed || String(yr)],
       ['Storeys', r.stories],
@@ -698,58 +677,52 @@
       ['Roof Type', r.roof_type],
       ['Sprinkler System', r.sprinkler_type],
       ['Fire Alarm', r.alarm_type],
-      ['Occupancy Class', r.occupancy_class],
-    ].filter(row => row[1]);
+      ['Occupancy Class', r.occupancy_class]
+    ].filter(function(row) { return row[1]; });
 
-    document.getElementById('cope-grid').innerHTML = copeRows.map(row =>
-      '<div class="cope-row"><div class="cope-row-label">' + esc(row[0]) + '</div><div class="cope-row-value">' + esc(row[1]) + '</div></div>'
-    ).join('');
+    document.getElementById('cope-grid').innerHTML = copeRows.map(function(row) {
+      return '<div class="cope-row"><div class="cope-row-label">' + esc(row[0]) + '</div><div class="cope-row-value">' + esc(row[1]) + '</div></div>';
+    }).join('');
 
-    // Build construction narrative from available fields if 'construction' key missing
-    var constructionText = r.construction || r.construction_assessment || r.cope_construction || '';
+    // Construction narrative
+    var constructionText = r.construction || r.construction_assessment || '';
     if (!constructionText) {
-      // Assemble from structured fields
       var parts = [];
-      var insuredName = sub.insured_name || fd.insured || 'The subject property';
-      var cityProv = [sub.city, sub.province].filter(Boolean).join(', ');
-      var yrBuilt = r.year_built_assessed || sub.year_built || fd.yearBuilt || '';
-      var storeys = r.stories || fd.storeys || '';
-      var area = r.area_sqft || (sub.building_area ? sub.building_area + ' sq ft' : '') || '';
+      var yrBuilt  = r.year_built_assessed || String(sub.year_built || fd.yearBuilt || '');
+      var storeys  = r.stories || String(fd.storeys || '');
       var conClass = r.construction_class || fd.construction || '';
       var roofType = r.roof_type || '';
-
-      var intro = insuredName + (cityProv ? ', ' + cityProv : '');
-      if (yrBuilt) intro += ' is a ' + (new Date().getFullYear() - parseInt(yrBuilt)) + '-year-old building constructed in ' + yrBuilt;
-      if (storeys) intro += ', comprising ' + storeys + ' stor' + (storeys === '1' ? 'ey' : 'eys');
-      if (area) intro += ' with a gross floor area of approximately ' + area;
+      var bldgArea = r.area_sqft || (sub.building_area ? sub.building_area + ' sq ft' : '');
+      var intro = insured + (city ? ', ' + city : '');
+      if (yrBuilt) intro += ' is a building constructed in ' + yrBuilt;
+      if (storeys) intro += ', comprising ' + storeys + ' storey' + (storeys === '1' ? '' : 's');
+      if (bldgArea) intro += ', with a gross floor area of approximately ' + bldgArea;
       parts.push(intro + '.');
-      if (conClass) parts.push('The ISO construction classification is ' + conClass + '.');
-      if (roofType) parts.push('The roof assembly consists of ' + roofType + '.');
+      if (conClass) parts.push('Construction classification: ' + conClass + '.');
+      if (roofType) parts.push('Roof assembly: ' + roofType + '.');
       constructionText = parts.join(' ');
     }
     document.getElementById('text-construction').textContent = constructionText || '—';
-    document.getElementById('text-occupancy').textContent    = r.occupancy    || '—';
-    document.getElementById('text-protection').textContent   = r.protection   || '—';
-    document.getElementById('text-exposure').textContent     = r.exposure     || '—';
-    document.getElementById('text-hazards').textContent      = r.hazards      || 'No significant hazards identified from submitted photographs.';
+    document.getElementById('text-occupancy').textContent    = r.occupancy || '—';
+    document.getElementById('text-protection').textContent   = r.protection || '—';
+    document.getElementById('text-exposure').textContent     = r.exposure || '—';
+    document.getElementById('text-hazards').textContent      = r.hazards || 'No significant hazards identified from submitted photographs.';
 
     // Recommendations
     if (r.recommendations && r.recommendations.length) {
       document.getElementById('rec-page').style.display = 'block';
-      document.getElementById('rec-count-label').textContent =
-        r.recommendations.length + ' recommendation' + (r.recommendations.length !== 1 ? 's' : '');
-      const now = new Date();
-      const yyyymm = now.getFullYear().toString() + String(now.getMonth()+1).padStart(2,'0');
-      document.getElementById('rec-list').innerHTML = r.recommendations.map((rec, idx) => {
-        const pri = (rec.priority || '').toLowerCase();
-        const cls = pri === 'high' ? 'rec-high' : pri === 'medium' ? 'rec-med' : 'rec-low';
-        const seq = yyyymm + '-' + String(idx+1).padStart(3,'0');
-        const code = rec.code ? ' [' + rec.code + ']' : '';
-        const refs = Array.isArray(rec.photo_refs) ? rec.photo_refs : [];
-        const photoHtml = refs.length > 0 ? buildRecPhotoStrip(refs, storagePaths) : '';
+      document.getElementById('rec-count-label').textContent = r.recommendations.length + ' recommendation' + (r.recommendations.length !== 1 ? 's' : '');
+      var now = new Date();
+      var yyyymm = now.getFullYear().toString() + String(now.getMonth() + 1).padStart(2, '0');
+      document.getElementById('rec-list').innerHTML = r.recommendations.map(function(rec, idx) {
+        var pri = (rec.priority || '').toLowerCase();
+        var cls = pri === 'high' ? 'rec-high' : pri === 'medium' ? 'rec-med' : 'rec-low';
+        var seq = yyyymm + '-' + String(idx + 1).padStart(3, '0');
+        var refs = Array.isArray(rec.photo_refs) ? rec.photo_refs : [];
+        var photoHtml = refs.length > 0 ? buildRecPhotoStrip(refs, storagePaths) : '';
         return '<div class="rec-item">' +
           '<div class="rec-left"><span class="rec-priority ' + cls + '">' + esc(rec.priority || '') + '</span><span class="rec-seq">' + seq + '</span></div>' +
-          '<div style="flex:1;"><div class="rec-code">' + seq + esc(code) + '</div>' +
+          '<div style="flex:1;"><div class="rec-code">' + seq + '</div>' +
           (rec.title ? '<div class="rec-title">' + esc(rec.title) + '</div>' : '') +
           '<div class="rec-text">' + esc(rec.text || rec.description || '') + '</div>' +
           photoHtml + '</div></div>';
@@ -757,43 +730,35 @@
     }
 
     // Underwriting
-    const rq = r.risk_quality || '—';
-    const rqEl = document.getElementById('uw-risk-quality');
+    var rq = r.risk_quality || '—';
+    var rqEl = document.getElementById('uw-risk-quality');
     rqEl.textContent = rq;
-    const rqLow = rq.toLowerCase();
+    var rqLow = rq.toLowerCase();
     rqEl.className = 'uw-card-value ' + (
-      rqLow.includes('preferred') || rqLow.includes('low') ? 'rq-preferred' :
-      rqLow.includes('acceptable') ? 'rq-acceptable' :
-      rqLow.includes('moderate') ? 'rq-moderate' :
-      rqLow.includes('high') || rqLow.includes('refer') ? 'rq-high' :
-      rqLow.includes('decline') ? 'rq-decline' : ''
+      rqLow.indexOf('preferred') >= 0 || rqLow.indexOf('low') >= 0 ? 'rq-preferred' :
+      rqLow.indexOf('acceptable') >= 0 ? 'rq-acceptable' :
+      rqLow.indexOf('moderate') >= 0 ? 'rq-moderate' :
+      rqLow.indexOf('high') >= 0 || rqLow.indexOf('refer') >= 0 ? 'rq-high' :
+      rqLow.indexOf('decline') >= 0 ? 'rq-decline' : ''
     );
-    document.getElementById('uw-recommendation').textContent   = r.uw_recommendation || '—';
-    document.getElementById('uw-narrative').textContent        = r.uw_narrative || '';
-    document.getElementById('uw-confidence').textContent       = r.confidence || '';
-    document.getElementById('uw-confidence-note').textContent  = r.confidence_note ? ' — ' + r.confidence_note : '';
+    document.getElementById('uw-recommendation').textContent  = r.uw_recommendation || '—';
+    document.getElementById('uw-narrative').textContent       = r.uw_narrative || '';
+    document.getElementById('uw-confidence').textContent      = r.confidence || '';
+    document.getElementById('uw-confidence-note').textContent = r.confidence_note ? ' — ' + r.confidence_note : '';
 
     // Profile
-    const profileText = r.insured_profile || r.profile || '';
-    if (profileText) {
-      document.getElementById('profile-page').style.display = 'block';
-      document.getElementById('profile-text').textContent = profileText;
-    } else if (insured) {
-      document.getElementById('profile-page').style.display = 'block';
-      document.getElementById('profile-text').textContent =
-        'No public profile data was retrieved for ' + insured + '. ' +
-        'For underwriting purposes, verify business details directly with the insured or through corporate registry.';
-    }
+    document.getElementById('profile-page').style.display = 'block';
+    document.getElementById('profile-text').textContent = r.insured_profile || r.profile ||
+      ('No public profile data was retrieved for ' + insured + '. Verify business details directly with the insured or through corporate registry.');
 
     // Appendix A
-    const upgrades = fd.upgrades || {};
-    const appendixFields = [
+    var upgrades = fd.upgrades || {};
+    var appendixFields = [
       ['File Number', sub.file_number || sub.inspection_id || null],
       ['Insured / Property', insured],
       ['Street Address', address],
       ['City', city],
       ['Province / State', prov],
-      ['Postal / Zip', postal || null],
       ['Occupancy Type', occ],
       ['Year Built', yr ? String(yr) : null],
       ['Building Area', area ? area + ' sq ft' : null],
@@ -813,46 +778,45 @@
       ['Submission Date', date],
       ['Photos Submitted', String(photoCount)],
       ['Hazards Declared', (fd.hazards || []).join(', ') || 'None declared'],
-      ['Additional Context', fd.context || null],
-    ].filter(f => f[1]);
+      ['Additional Context', fd.context || null]
+    ].filter(function(f) { return f[1]; });
 
-    document.getElementById('appendix-grid').innerHTML = appendixFields.map(f =>
-      '<div class="appendix-cell"><div class="appendix-cell-label">' + esc(f[0]) + '</div><div class="appendix-cell-value">' + esc(f[1]) + '</div></div>'
-    ).join('');
+    document.getElementById('appendix-grid').innerHTML = appendixFields.map(function(f) {
+      return '<div class="appendix-cell"><div class="appendix-cell-label">' + esc(f[0]) + '</div><div class="appendix-cell-value">' + esc(f[1]) + '</div></div>';
+    }).join('');
 
     // Appendix B — Photos
     if (storagePaths.length > 0) {
       document.getElementById('photos-page').style.display = 'block';
-      document.getElementById('photos-count-label').textContent =
-        storagePaths.length + ' file' + (storagePaths.length !== 1 ? 's' : '') + ' submitted';
-      const photoGrid = document.getElementById('photo-grid');
-      const descriptions = (fd.photos || []).map(p => p.description || '');
-      for (let i = 0; i < storagePaths.length; i++) {
-        const path = storagePaths[i];
-        const desc = descriptions[i] || '';
-        const isPdf = /\.pdf$/i.test(path);
-        const num = i + 1;
-        const item = document.createElement('div');
+      document.getElementById('photos-count-label').textContent = storagePaths.length + ' file' + (storagePaths.length !== 1 ? 's' : '') + ' submitted';
+      var photoGrid = document.getElementById('photo-grid');
+      for (var i = 0; i < storagePaths.length; i++) {
+        var path = storagePaths[i];
+        var isPdf = /\.pdf$/i.test(path);
+        var num = i + 1;
+        var item = document.createElement('div');
         item.className = 'photo-appendix-item';
         if (isPdf) {
           item.innerHTML =
             '<div class="photo-appendix-img" style="display:flex;align-items:center;justify-content:center;font-size:40px;background:#f0f2f5;">📄</div>' +
-            '<div class="photo-appendix-caption"><span class="photo-appendix-num">File ' + num + '</span>' + (desc ? ' — ' + esc(desc) : ' — PDF Document') + '</div>';
+            '<div class="photo-appendix-caption"><span class="photo-appendix-num">File ' + num + '</span> — PDF Document</div>';
         } else {
-          const imgEl = document.createElement('img');
+          var imgEl = document.createElement('img');
           imgEl.className = 'photo-appendix-img';
           imgEl.alt = 'Photo ' + num;
           imgEl.loading = 'lazy';
           imgEl.src = SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + path;
-          imgEl.onerror = function() {
-            _supabase.storage.from('scan-uploads').createSignedUrl(path, 3600)
-              .then(function(res) {
-                if (res.data && res.data.signedUrl) imgEl.src = res.data.signedUrl;
-              }).catch(function(){});
-          };
-          const caption = document.createElement('div');
+          (function(p, el) {
+            el.onerror = function() {
+              _supabase.storage.from('scan-uploads').createSignedUrl(p, 3600)
+                .then(function(res) {
+                  if (res.data && res.data.signedUrl) el.src = res.data.signedUrl;
+                }).catch(function() {});
+            };
+          })(path, imgEl);
+          var caption = document.createElement('div');
           caption.className = 'photo-appendix-caption';
-          caption.innerHTML = '<span class="photo-appendix-num">Photo ' + num + '</span>' + (desc ? ' — ' + esc(desc) : '');
+          caption.innerHTML = '<span class="photo-appendix-num">Photo ' + num + '</span>';
           item.appendChild(imgEl);
           item.appendChild(caption);
         }
@@ -866,24 +830,29 @@
 
   function buildRecPhotoStrip(photoNums, paths) {
     if (!paths || !paths.length || !photoNums.length) return '';
-    const valid = photoNums.map(n => parseInt(n)).filter(n => !isNaN(n) && n >= 1 && n <= paths.length);
+    var valid = [];
+    for (var i = 0; i < photoNums.length; i++) {
+      var n = parseInt(photoNums[i]);
+      if (!isNaN(n) && n >= 1 && n <= paths.length) valid.push(n);
+    }
     if (!valid.length) return '';
-    return '<div class="rec-photo-strip">' + valid.map(n => {
-      const path = paths[n - 1];
-      if (!path) return '';
+    var html = '<div class="rec-photo-strip">';
+    for (var j = 0; j < valid.length; j++) {
+      var path = paths[valid[j] - 1];
+      if (!path) continue;
       if (/\.pdf$/i.test(path)) {
-        return '<div class="rec-photo-thumb"><div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:22px;background:#f0f2f5;">📄</div><div class="rec-photo-num">File ' + n + '</div></div>';
+        html += '<div class="rec-photo-thumb"><div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:22px;background:#f0f2f5;">📄</div><div class="rec-photo-num">File ' + valid[j] + '</div></div>';
+      } else {
+        html += '<div class="rec-photo-thumb"><img src="' + SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + path + '" alt="Photo ' + valid[j] + '" class="rec-photo-img" onerror="this.closest(\'.rec-photo-thumb\').style.display=\'none\'"><div class="rec-photo-num">Photo ' + valid[j] + '</div></div>';
       }
-      return '<div class="rec-photo-thumb"><img src="' + SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + path + '" alt="Photo ' + n + '" class="rec-photo-img" onerror="this.closest(\'.rec-photo-thumb\').style.display=\'none\'"><div class="rec-photo-num">Photo ' + n + '</div></div>';
-    }).join('') + '</div>';
+    }
+    return html + '</div>';
   }
 
   function emailReport() {
-    const params  = new URLSearchParams(window.location.search);
-    const id      = params.get('id');
-    const fileNum = document.getElementById('cover-file-num')?.textContent || id;
-    const subject = encodeURIComponent('SanketRisk SCAN ONE Assessment — ' + fileNum);
-    const body    = encodeURIComponent('Please find the SanketRisk SCAN ONE Photo Assessment attached.\n\nTo save as PDF: open the report and use Print → Save as PDF.\n\nReport reference: ' + fileNum + '\n\nPrepared by Sanket Risk Consultants');
+    var fileNum = document.getElementById('cover-file-num').textContent || currentSubId;
+    var subject = encodeURIComponent('SanketRisk SCAN ONE Assessment — ' + fileNum);
+    var body = encodeURIComponent('Please find the SanketRisk SCAN ONE Photo Assessment attached.\n\nReport reference: ' + fileNum + '\n\nPrepared by Sanket Risk Consultants');
     window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
   }
 
@@ -893,18 +862,19 @@
     document.getElementById('error-msg').textContent     = msg;
   }
 
-  let toastTimer;
+  var toastTimer;
   function toast(msg) {
-    const el = document.getElementById('toast');
+    var el = document.getElementById('toast');
     el.textContent = msg;
     el.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+    toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
   }
 
   function esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 </script>
+
 </body>
 </html>
