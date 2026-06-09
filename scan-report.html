@@ -404,40 +404,42 @@
   let currentSubId = null;
   let currentQAStatus = 'draft';
 
-  (async () => {
-    try {
-      const { data: { session } } = await _supabase.auth.getSession();
-      if (session) {
-        currentUser = session.user;
-        const { data: profiles } = await _supabase.from('profiles').select('role,full_name').eq('id', currentUser.id);
-        currentUserRole = profiles?.[0]?.role || 'inspector';
-        currentUserName = profiles?.[0]?.full_name || currentUser.email.split('@')[0];
-      }
-      // Load report regardless - it will show public data or redirect if truly needed
-      loadReport();
-    } catch(e) {
-      loadReport();
+  // Load report immediately - auth runs in background
+  var _reportId = new URLSearchParams(window.location.search).get('id');
+  _supabase.auth.getSession().then(function(res) {
+    var session = res && res.data && res.data.session;
+    if (session) {
+      currentUser = session.user;
+      _supabase.from('profiles').select('role,full_name').eq('id', session.user.id).then(function(pr) {
+        if (pr.data && pr.data[0]) {
+          currentUserRole = pr.data[0].role || 'inspector';
+          currentUserName = pr.data[0].full_name || session.user.email.split('@')[0];
+        }
+      }).catch(function(){});
     }
-  })();
+    loadReport();
+  }).catch(function(){ loadReport(); });
 
-  async function loadReport() {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
+  function loadReport() {
+    var id = new URLSearchParams(window.location.search).get('id');
     if (!id) { showError('No report ID specified.'); return; }
     currentSubId = id;
-    try {
-      const { data: sub, error } = await _supabase
-        .from('scan_submissions').select('*').eq('id', id).single();
-      if (error || !sub) { showError('Report not found. It may have been deleted.'); return; }
-      if (!sub.scan_result) { showError('This submission has not been analysed yet.'); return; }
-      const r = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
-      const fd = r.formData || {};
-      currentQAStatus = sub.qa_status || 'draft';
-      applyQAState(sub);
-      renderReport(sub, r, fd);
-    } catch(e) {
-      showError('Error loading report: ' + e.message);
-    }
+    _supabase.from('scan_submissions').select('*').eq('id', id).single()
+      .then(function(res) {
+        if (res.error) { showError('Database error: ' + res.error.message); return; }
+        if (!res.data) { showError('Report not found.'); return; }
+        var sub = res.data;
+        if (!sub.scan_result) { showError('This submission has not been analysed yet.'); return; }
+        var r;
+        try {
+          r = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
+        } catch(e) { showError('Could not parse report: ' + e.message); return; }
+        var fd = r.formData || {};
+        currentQAStatus = sub.qa_status || 'draft';
+        try { applyQAState(sub); } catch(e) {}
+        try { renderReport(sub, r, fd); } catch(e) { showError('Display error: ' + e.message); }
+      })
+      .catch(function(e) { showError('Failed to load: ' + e.message); });
   }
 
   // ── QA WORKFLOW ──
@@ -524,60 +526,60 @@
     }
   }
 
-  async function submitForQA() {
-    if (!confirm('Submit this report for QA Review?\n\nThe report will be locked for editing until reviewed.')) return;
-    try {
-      const { error } = await _supabase.from('scan_submissions')
-        .update({ qa_status: 'submitted', qa_reviewer: null, qa_notes: null, qa_date: null })
-        .eq('id', currentSubId);
-      if (error) throw error;
-      toast('✓ Submitted for QA review');
-      loadReport();
-    } catch(e) { toast('⚠ Failed: ' + e.message); }
+  function submitForQA() {
+    if (!confirm('Submit this report for QA Review?')) return;
+    _supabase.from('scan_submissions')
+      .update({ qa_status: 'submitted', qa_reviewer: null, qa_notes: null, qa_date: null })
+      .eq('id', currentSubId)
+      .then(function(res) {
+        if (res.error) { toast('⚠ Failed: ' + res.error.message); return; }
+        toast('✓ Submitted for QA review');
+        loadReport();
+      }).catch(function(e) { toast('⚠ ' + e.message); });
   }
 
-  async function approveQA() {
-    const notes   = document.getElementById('qa-notes').value;
-    const dateVal = document.getElementById('qa-date').value || new Date().toISOString().split('T')[0];
+  function approveQA() {
+    var notes   = document.getElementById('qa-notes').value;
+    var dateVal = document.getElementById('qa-date').value || new Date().toISOString().split('T')[0];
     if (!confirm('Approve this SCAN ONE report?')) return;
-    try {
-      const { error } = await _supabase.from('scan_submissions')
-        .update({ qa_status: 'approved', qa_reviewer: currentUserName, qa_notes: notes, qa_date: dateVal })
-        .eq('id', currentSubId);
-      if (error) throw error;
-      toast('✓ Report approved — print is now available');
-      loadReport();
-    } catch(e) { toast('⚠ Failed: ' + e.message); }
+    _supabase.from('scan_submissions')
+      .update({ qa_status: 'approved', qa_reviewer: currentUserName, qa_notes: notes, qa_date: dateVal })
+      .eq('id', currentSubId)
+      .then(function(res) {
+        if (res.error) { toast('⚠ Failed: ' + res.error.message); return; }
+        toast('✓ Report approved — print is now available');
+        loadReport();
+      }).catch(function(e) { toast('⚠ ' + e.message); });
   }
 
-  async function returnQA() {
-    const notes = document.getElementById('qa-notes').value;
+  function returnQA() {
+    var notes = document.getElementById('qa-notes').value;
     if (!notes.trim()) { toast('⚠ Please add return notes before returning.'); return; }
     if (!confirm('Return this report to the inspector for correction?')) return;
-    try {
-      const { error } = await _supabase.from('scan_submissions')
-        .update({ qa_status: 'returned', qa_reviewer: currentUserName, qa_notes: notes, qa_date: new Date().toISOString().split('T')[0] })
-        .eq('id', currentSubId);
-      if (error) throw error;
-      toast('↩ Report returned for correction');
-      loadReport();
-    } catch(e) { toast('⚠ Failed: ' + e.message); }
+    _supabase.from('scan_submissions')
+      .update({ qa_status: 'returned', qa_reviewer: currentUserName, qa_notes: notes, qa_date: new Date().toISOString().split('T')[0] })
+      .eq('id', currentSubId)
+      .then(function(res) {
+        if (res.error) { toast('⚠ Failed: ' + res.error.message); return; }
+        toast('↩ Report returned for correction');
+        loadReport();
+      }).catch(function(e) { toast('⚠ ' + e.message); });
   }
 
-  async function resetQA() {
+  function resetQA() {
     if (!confirm('Reset QA status to Draft?')) return;
-    try {
-      const { error } = await _supabase.from('scan_submissions')
-        .update({ qa_status: 'draft', qa_reviewer: null, qa_notes: null, qa_date: null })
-        .eq('id', currentSubId);
-      if (error) throw error;
-      toast('✓ Reset to Draft');
-      loadReport();
-    } catch(e) { toast('⚠ Failed: ' + e.message); }
+    _supabase.from('scan_submissions')
+      .update({ qa_status: 'draft', qa_reviewer: null, qa_notes: null, qa_date: null })
+      .eq('id', currentSubId)
+      .then(function(res) {
+        if (res.error) { toast('⚠ Failed: ' + res.error.message); return; }
+        toast('✓ Reset to Draft');
+        loadReport();
+      }).catch(function(e) { toast('⚠ ' + e.message); });
   }
 
   // ── RENDER REPORT ──
-  async function renderReport(sub, r, fd) {
+  function renderReport(sub, r, fd) {
     const insured = sub.insured_name || fd.insured || 'Subject Property';
     const address = (sub.address || fd.address || '').replace(/,\s*$/, '').trim();
     const city    = sub.city || fd.city || '';
@@ -608,11 +610,12 @@
       img.style.cssText = 'width:100%;height:380px;object-fit:cover;display:block;opacity:0.82;';
       img.alt = insured;
       img.onload = () => { if (placeholder) placeholder.style.display = 'none'; };
-      img.onerror = async () => {
-        try {
-          const { data: signed } = await _supabase.storage.from('scan-uploads').createSignedUrl(coverPath, 3600);
-          if (signed?.signedUrl) img.src = signed.signedUrl;
-        } catch(e) { img.remove(); }
+      img.onerror = function() {
+        _supabase.storage.from('scan-uploads').createSignedUrl(coverPath, 3600)
+          .then(function(res) {
+            if (res.data && res.data.signedUrl) img.src = res.data.signedUrl;
+            else img.remove();
+          }).catch(function(){ img.remove(); });
       };
       img.src = SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + coverPath;
       coverWrap.insertBefore(img, coverWrap.firstChild);
@@ -811,11 +814,11 @@
           imgEl.alt = 'Photo ' + num;
           imgEl.loading = 'lazy';
           imgEl.src = SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + path;
-          imgEl.onerror = async () => {
-            try {
-              const { data: signed } = await _supabase.storage.from('scan-uploads').createSignedUrl(path, 3600);
-              if (signed?.signedUrl) imgEl.src = signed.signedUrl;
-            } catch(e) {}
+          imgEl.onerror = function() {
+            _supabase.storage.from('scan-uploads').createSignedUrl(path, 3600)
+              .then(function(res) {
+                if (res.data && res.data.signedUrl) imgEl.src = res.data.signedUrl;
+              }).catch(function(){});
           };
           const caption = document.createElement('div');
           caption.className = 'photo-appendix-caption';
