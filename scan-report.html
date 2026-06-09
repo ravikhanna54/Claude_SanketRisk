@@ -424,22 +424,52 @@
     var id = new URLSearchParams(window.location.search).get('id');
     if (!id) { showError('No report ID specified.'); return; }
     currentSubId = id;
+
+    // Try sessionStorage first (passed from dashboard - no Supabase call needed)
+    var cached = null;
+    try { cached = sessionStorage.getItem('scanReport_' + id); } catch(e) {}
+
+    if (cached) {
+      try {
+        var sub = JSON.parse(cached);
+        processSubmission(sub);
+        // Still fetch fresh data in background for QA status
+        _supabase.from('scan_submissions')
+          .select('qa_status,qa_reviewer,qa_notes,qa_date,file_number,inspection_id')
+          .eq('id', id).single()
+          .then(function(res) {
+            if (res.data) {
+              sub.qa_status   = res.data.qa_status;
+              sub.qa_reviewer = res.data.qa_reviewer;
+              sub.qa_notes    = res.data.qa_notes;
+              sub.qa_date     = res.data.qa_date;
+              try { applyQAState(sub); } catch(e) {}
+            }
+          }).catch(function(){});
+        return;
+      } catch(e) {}
+    }
+
+    // Fallback: fetch from Supabase
     _supabase.from('scan_submissions').select('*').eq('id', id).single()
       .then(function(res) {
         if (res.error) { showError('Database error: ' + res.error.message); return; }
         if (!res.data) { showError('Report not found.'); return; }
-        var sub = res.data;
-        if (!sub.scan_result) { showError('This submission has not been analysed yet.'); return; }
-        var r;
-        try {
-          r = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
-        } catch(e) { showError('Could not parse report: ' + e.message); return; }
-        var fd = r.formData || {};
-        currentQAStatus = sub.qa_status || 'draft';
-        try { applyQAState(sub); } catch(e) {}
-        try { renderReport(sub, r, fd); } catch(e) { showError('Display error: ' + e.message); }
+        processSubmission(res.data);
       })
       .catch(function(e) { showError('Failed to load: ' + e.message); });
+  }
+
+  function processSubmission(sub) {
+    if (!sub.scan_result) { showError('This submission has not been analysed yet.'); return; }
+    var r;
+    try {
+      r = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
+    } catch(e) { showError('Could not parse report: ' + e.message); return; }
+    var fd = r.formData || {};
+    currentQAStatus = sub.qa_status || 'draft';
+    try { applyQAState(sub); } catch(e) {}
+    try { renderReport(sub, r, fd); } catch(e) { showError('Display error: ' + e.message); }
   }
 
   // ── QA WORKFLOW ──
