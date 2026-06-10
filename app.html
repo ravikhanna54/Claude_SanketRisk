@@ -12444,7 +12444,7 @@ ${activeSuppHTML}
   // Give Edge a moment then send print command via postMessage
   window._reportWindow = w;
   } catch(err) {
-    alert('Report error: ' + err.message + '\n\nLine: ' + (err.lineNumber || err.stack));
+    alert('FORMAL REPORT ERROR:\n' + err.message + '\n\n' + (err.stack || err.lineNumber || ''));
   }
 }
 
