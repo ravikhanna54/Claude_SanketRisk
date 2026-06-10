@@ -12436,6 +12436,29 @@ ${activeSuppHTML}
     </div>` : '<p style="color:#aaa;font-size:9pt;padding:8px 0;">No photos attached to this inspection.</p>'}
   </div>
 </div>
+  ${attachedPDFs && attachedPDFs.length > 0 ? `
+  <div class="report-section" style="margin-top:32px;">
+    <div class="sec-header">
+      <div class="sec-header-left">
+        <span class="sec-icon">📄</span>
+        <span class="sec-title">PDF Attachments</span>
+      </div>
+      <span class="sec-tag">DOCUMENTS</span>
+    </div>
+    ${attachedPDFs.map(function(pdf, i) {
+      var size = pdf.size > 1024*1024 ? (pdf.size/1024/1024).toFixed(1) + ' MB' : Math.round(pdf.size/1024) + ' KB';
+      return '<div style="margin-top:20px;page-break-before:always;">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:#f8f5f0;border-radius:6px;">' +
+          '<span style="font-size:18px;">📄</span>' +
+          '<div style="flex:1;font-weight:700;font-size:12px;color:#0d1b2a;">' + pdf.name + '</div>' +
+          '<div style="font-size:10px;color:#4a6580;">' + size + '</div>' +
+        '</div>' +
+        (pdf.url ? '<embed src="' + pdf.url + '" type="application/pdf" width="100%" height="1100px" style="border:1px solid #ddd8d0;border-radius:6px;">' +
+          '<p style="font-size:10px;color:#4a6580;margin-top:4px;">If PDF does not display, <a href="' + pdf.url + '" target="_blank">click here to open it</a>.</p>' : 
+          '<p style="color:#aaa;font-size:10px;">PDF URL not available.</p>') +
+        '</div>';
+    }).join('')}
+  </div>` : ''}
 </div><!-- /report-wrap -->
 </body>
 </html>`;
