@@ -2259,7 +2259,7 @@
         <div class="card-title">Primary Occupancy</div>
         <div class="form-grid">
           <div class="field" style="position:relative;">
-            <label>Primary SIC / NAICS Code</label>
+            <label>IBC / SIC / NAICS Code</label>
             <input id="primary-sic-naics-code" type="text" placeholder="Type to search (e.g. office, retail, warehouse...)"
               autocomplete="off" spellcheck="false"
               oninput="filterSICCodes(this.value)"
@@ -12173,95 +12173,209 @@ ${activeSuppHTML}
 }
 
   // ── SIC / NAICS CODE LOOKUP ──
+  // ── IBC / SIC / NAICS CODE LOOKUP ──
+  // IBC = Insurance Bureau of Canada codes (used by Canadian P&C insurers)
+  // SIC = Standard Industrial Classification | NAICS = North American Industry Classification
   var SIC_NAICS_CODES = [
-    // Office & Professional
-    { code:'6512 / 531120', label:'Office Building Operators' },
-    { code:'7389 / 561499', label:'Office Services' },
-    { code:'8711 / 541330', label:'Engineering Services' },
-    { code:'8712 / 541310', label:'Architectural Services' },
-    { code:'8721 / 541211', label:'Accounting / CPA Firms' },
-    { code:'8742 / 541611', label:'Management Consulting' },
-    { code:'8111 / 541110', label:'Legal Services / Law Office' },
-    { code:'6411 / 524210', label:'Insurance Agents & Brokers' },
-    { code:'6159 / 522292', label:'Mortgage Bankers' },
-    { code:'6022 / 522110', label:'Commercial Banks' },
-    // Retail
-    { code:'5411 / 445110', label:'Grocery Stores / Supermarkets' },
-    { code:'5912 / 446110', label:'Drug Stores / Pharmacies' },
-    { code:'5251 / 444130', label:'Hardware Stores' },
-    { code:'5712 / 442110', label:'Furniture Stores' },
-    { code:'5621 / 448120', label:'Women's Clothing Stores' },
-    { code:'5661 / 448210', label:'Shoe Stores' },
-    { code:'5734 / 443142', label:'Electronics / Computer Stores' },
-    { code:'5311 / 452111', label:'Department Stores' },
-    { code:'5812 / 722513', label:'Limited Service Restaurants' },
-    { code:'5812 / 722511', label:'Full Service Restaurants' },
-    { code:'5813 / 722410', label:'Drinking Establishments / Bars' },
-    { code:'5541 / 447110', label:'Gas Stations with Convenience' },
-    { code:'7542 / 811192', label:'Car Wash' },
-    // Industrial & Warehouse
-    { code:'4213 / 484122', label:'General Freight Trucking' },
-    { code:'4225 / 493110', label:'General Warehousing & Storage' },
-    { code:'4226 / 493190', label:'Cold Storage / Refrigerated' },
-    { code:'5080 / 423830', label:'Industrial Machinery Wholesale' },
-    { code:'2911 / 324110', label:'Petroleum Refining' },
-    { code:'3440 / 332310', label:'Metal Fabrication' },
-    { code:'3559 / 333249', label:'Industrial Machinery Mfg' },
-    { code:'3599 / 333999', label:'General Industrial Mfg' },
-    { code:'3714 / 336350', label:'Auto Parts Manufacturing' },
-    { code:'2650 / 322210', label:'Paperboard Container Mfg' },
-    { code:'2750 / 323111', label:'Commercial Printing' },
-    // Construction
-    { code:'1521 / 236115', label:'General Contractors — Residential' },
-    { code:'1522 / 236116', label:'General Contractors — Commercial' },
-    { code:'1731 / 238210', label:'Electrical Contractors' },
-    { code:'1711 / 238220', label:'Plumbing & HVAC Contractors' },
-    { code:'1741 / 238140', label:'Masonry Contractors' },
-    { code:'1761 / 238160', label:'Roofing Contractors' },
-    // Healthcare
-    { code:'8011 / 621111', label:'Offices of Physicians / Doctors' },
-    { code:'8021 / 621210', label:'Dental Offices' },
-    { code:'8099 / 621399', label:'Other Health Practitioners' },
-    { code:'8049 / 621112', label:'Chiropractic Offices' },
-    { code:'8062 / 622110', label:'General Medical Hospitals' },
-    { code:'8051 / 623110', label:'Nursing Care Facilities' },
-    { code:'5047 / 423450', label:'Medical & Hospital Equipment' },
-    // Hospitality
-    { code:'7011 / 721110', label:'Hotels & Motels' },
-    { code:'7011 / 721120', label:'Casino Hotels' },
-    { code:'7021 / 721191', label:'Bed & Breakfast Inns' },
-    { code:'7041 / 721214', label:'RV Parks & Campgrounds' },
-    // Auto Service
-    { code:'7514 / 532111', label:'Auto Rental' },
-    { code:'7521 / 812930', label:'Parking Lots & Garages' },
-    { code:'7531 / 811121', label:'Auto Body Repair Shops' },
-    { code:'7538 / 811111', label:'Auto Repair — General' },
-    { code:'5511 / 441110', label:'Auto Dealers — New Cars' },
-    { code:'5521 / 441120', label:'Auto Dealers — Used Cars' },
-    // Education
-    { code:'8211 / 611110', label:'Elementary & Secondary Schools' },
-    { code:'8221 / 611310', label:'Colleges & Universities' },
-    { code:'8249 / 611519', label:'Vocational / Trade Schools' },
-    { code:'8299 / 611699', label:'Other Schools & Instruction' },
-    // Religious & Non-Profit
-    { code:'8661 / 813110', label:'Religious Organizations / Churches' },
-    { code:'8641 / 813410', label:'Civic & Social Organizations' },
-    { code:'8699 / 813990', label:'Non-Profit Organizations' },
-    // Recreation
-    { code:'7941 / 711211', label:'Sports Teams & Clubs' },
-    { code:'7991 / 713940', label:'Physical Fitness Facilities / Gyms' },
-    { code:'7999 / 713990', label:'Recreation / Amusement' },
-    { code:'7832 / 512131', label:'Motion Picture Theatres' },
-    // Real Estate
-    { code:'6500 / 531100', label:'Real Estate Lessors' },
-    { code:'6552 / 531312', label:'Property Management' },
-    { code:'6531 / 531210', label:'Real Estate Agents & Managers' },
-    // Mixed Use / Other
-    { code:'6512 / 531110', label:'Lessors of Residential Buildings' },
-    { code:'6798 / 525990', label:'Real Estate Investment Trusts' },
-    { code:'4911 / 221122', label:'Electric Power Distribution' },
-    { code:'4941 / 221310', label:'Water Supply' },
-    { code:'7389 / 561790', label:'Other Services to Buildings' },
+    // ── APARTMENTS & RESIDENTIAL ──
+    { ibc:'1110', sic:'6512', naics:'531110', label:'Apartment Buildings — Low Rise (1-3 Storeys)' },
+    { ibc:'1120', sic:'6512', naics:'531110', label:'Apartment Buildings — High Rise (4+ Storeys)' },
+    { ibc:'1130', sic:'6512', naics:'531110', label:'Condominium Buildings — Residential' },
+    { ibc:'1140', sic:'6513', naics:'531110', label:'Rooming / Boarding Houses' },
+    { ibc:'1150', sic:'7021', naics:'721191', label:'Bed & Breakfast / Tourist Homes' },
+    { ibc:'1160', sic:'6515', naics:'531190', label:'Mobile Home Parks / RV Parks' },
+    // ── HOTELS & MOTELS ──
+    { ibc:'2110', sic:'7011', naics:'721110', label:'Hotels — Full Service' },
+    { ibc:'2120', sic:'7011', naics:'721110', label:'Motels / Motor Hotels' },
+    { ibc:'2130', sic:'7011', naics:'721120', label:'Casino Hotels' },
+    { ibc:'2140', sic:'7041', naics:'721214', label:'Campgrounds / RV Parks' },
+    // ── OFFICES & PROFESSIONAL ──
+    { ibc:'3110', sic:'6512', naics:'531120', label:'Office Buildings — General' },
+    { ibc:'3120', sic:'8711', naics:'541330', label:'Engineering / Architectural Offices' },
+    { ibc:'3130', sic:'8721', naics:'541211', label:'Accounting / CPA Offices' },
+    { ibc:'3140', sic:'8111', naics:'541110', label:'Legal / Law Offices' },
+    { ibc:'3150', sic:'8742', naics:'541611', label:'Management Consulting' },
+    { ibc:'3160', sic:'6411', naics:'524210', label:'Insurance Agents & Brokers' },
+    { ibc:'3170', sic:'6022', naics:'522110', label:'Banks & Financial Institutions' },
+    { ibc:'3180', sic:'6159', naics:'522292', label:'Mortgage Companies' },
+    { ibc:'3190', sic:'6531', naics:'531210', label:'Real Estate Offices' },
+    { ibc:'3210', sic:'8049', naics:'621112', label:'Chiropractic / Physiotherapy Offices' },
+    { ibc:'3220', sic:'8011', naics:'621111', label:'Medical / Physicians Offices' },
+    { ibc:'3230', sic:'8021', naics:'621210', label:'Dental Offices' },
+    { ibc:'3240', sic:'8099', naics:'621399', label:'Other Health Practitioner Offices' },
+    { ibc:'3250', sic:'8049', naics:'621320', label:'Optometrist Offices' },
+    { ibc:'3260', sic:'8099', naics:'621330', label:'Mental Health / Counselling' },
+    { ibc:'3270', sic:'7389', naics:'561499', label:'General Business Services' },
+    { ibc:'3280', sic:'7372', naics:'511210', label:'Software / Technology Companies' },
+    { ibc:'3290', sic:'7374', naics:'518210', label:'Data Processing / IT Services' },
+    // ── RETAIL & MERCANTILE ──
+    { ibc:'4110', sic:'5411', naics:'445110', label:'Grocery Stores / Supermarkets' },
+    { ibc:'4120', sic:'5912', naics:'446110', label:'Drug Stores / Pharmacies' },
+    { ibc:'4130', sic:'5311', naics:'452111', label:'Department Stores' },
+    { ibc:'4140', sic:'5600', naics:'448000', label:'Clothing / Apparel Stores' },
+    { ibc:'4150', sic:'5712', naics:'442110', label:'Furniture / Home Furnishings' },
+    { ibc:'4160', sic:'5251', naics:'444130', label:'Hardware / Home Improvement Stores' },
+    { ibc:'4170', sic:'5734', naics:'443142', label:'Electronics / Computer Stores' },
+    { ibc:'4180', sic:'5945', naics:'451120', label:'Hobby / Toy / Game Stores' },
+    { ibc:'4190', sic:'5065', naics:'423690', label:'Electrical Supplies — Wholesale/Retail' },
+    { ibc:'4210', sic:'5941', naics:'451110', label:'Sporting Goods Stores' },
+    { ibc:'4220', sic:'5942', naics:'451211', label:'Book Stores' },
+    { ibc:'4230', sic:'5944', naics:'448310', label:'Jewelry Stores' },
+    { ibc:'4240', sic:'5947', naics:'453220', label:'Gift / Novelty Stores' },
+    { ibc:'4250', sic:'7841', naics:'532230', label:'Video / DVD Rental' },
+    { ibc:'4260', sic:'5999', naics:'453998', label:'Miscellaneous Retail Stores' },
+    { ibc:'4270', sic:'5541', naics:'447110', label:'Gas Stations with Convenience' },
+    { ibc:'4280', sic:'5411', naics:'445120', label:'Convenience Stores' },
+    { ibc:'4290', sic:'5921', naics:'445310', label:'Liquor / Beer / Wine Stores' },
+    { ibc:'4310', sic:'5251', naics:'444110', label:'Home Centres / Building Supply' },
+    { ibc:'4320', sic:'5531', naics:'441310', label:'Auto Parts & Accessories Stores' },
+    { ibc:'4330', sic:'5571', naics:'441228', label:'Motorcycle Dealers' },
+    { ibc:'4340', sic:'5261', naics:'444220', label:'Nurseries / Garden Centres' },
+    { ibc:'4350', sic:'5999', naics:'453910', label:'Pet Stores' },
+    { ibc:'4360', sic:'5812', naics:'445291', label:'Baked Goods Stores / Bakeries' },
+    { ibc:'4370', sic:'5441', naics:'445292', label:'Confectionery / Candy Stores' },
+    // ── RESTAURANTS & FOOD SERVICE ──
+    { ibc:'5110', sic:'5812', naics:'722511', label:'Restaurants — Full Service (Sit-Down)' },
+    { ibc:'5120', sic:'5812', naics:'722513', label:'Restaurants — Fast Food / Limited Service' },
+    { ibc:'5130', sic:'5813', naics:'722410', label:'Bars / Taverns / Drinking Establishments' },
+    { ibc:'5140', sic:'5812', naics:'722515', label:'Snack Bars / Food Stands' },
+    { ibc:'5150', sic:'5812', naics:'722320', label:'Caterers / Catering Services' },
+    { ibc:'5160', sic:'5812', naics:'722330', label:'Mobile Food Services' },
+    { ibc:'5170', sic:'5812', naics:'722514', label:'Cafeterias / Grill Buffets' },
+    // ── ENTERTAINMENT & RECREATION ──
+    { ibc:'6110', sic:'7832', naics:'512131', label:'Movie Theatres / Cinemas' },
+    { ibc:'6120', sic:'7922', naics:'711110', label:'Live Theatre / Performing Arts' },
+    { ibc:'6130', sic:'7991', naics:'713940', label:'Fitness Centres / Gyms / Health Clubs' },
+    { ibc:'6140', sic:'7999', naics:'713990', label:'Bowling Alleys' },
+    { ibc:'6150', sic:'7993', naics:'713210', label:'Casinos / Gaming Establishments' },
+    { ibc:'6160', sic:'7999', naics:'713950', label:'Golf Courses / Country Clubs' },
+    { ibc:'6170', sic:'7941', naics:'711211', label:'Sports Arenas / Stadiums' },
+    { ibc:'6180', sic:'7996', naics:'713110', label:'Amusement Parks' },
+    { ibc:'6190', sic:'8412', naics:'712110', label:'Museums / Art Galleries' },
+    { ibc:'6210', sic:'8422', naics:'712130', label:'Zoos / Botanical Gardens' },
+    { ibc:'6220', sic:'7999', naics:'713920', label:'Ski Resorts / Winter Sports' },
+    { ibc:'6230', sic:'7999', naics:'713910', label:'Golf Driving Ranges / Mini Golf' },
+    { ibc:'6240', sic:'7011', naics:'721199', label:'Hunting / Fishing Lodges' },
+    // ── MANUFACTURING & PROCESSING ──
+    { ibc:'7110', sic:'2000', naics:'311000', label:'Food Manufacturing — General' },
+    { ibc:'7120', sic:'2080', naics:'312110', label:'Beverage Manufacturing' },
+    { ibc:'7130', sic:'2750', naics:'323111', label:'Commercial Printing' },
+    { ibc:'7140', sic:'2650', naics:'322210', label:'Paperboard / Container Manufacturing' },
+    { ibc:'7150', sic:'2800', naics:'325000', label:'Chemical Manufacturing' },
+    { ibc:'7160', sic:'2911', naics:'324110', label:'Petroleum Refining / Processing' },
+    { ibc:'7170', sic:'3310', naics:'331110', label:'Steel / Iron Manufacturing' },
+    { ibc:'7180', sic:'3440', naics:'332310', label:'Metal Fabrication' },
+    { ibc:'7190', sic:'3559', naics:'333249', label:'Industrial Machinery Manufacturing' },
+    { ibc:'7210', sic:'3599', naics:'333999', label:'General Industrial Manufacturing' },
+    { ibc:'7220', sic:'3714', naics:'336350', label:'Auto Parts Manufacturing' },
+    { ibc:'7230', sic:'3490', naics:'332999', label:'Metal Services — General' },
+    { ibc:'7240', sic:'3460', naics:'332111', label:'Metal Forgings & Stampings' },
+    { ibc:'7250', sic:'3990', naics:'339999', label:'Miscellaneous Manufacturing' },
+    { ibc:'7260', sic:'2400', naics:'321000', label:'Lumber / Wood Products Manufacturing' },
+    { ibc:'7270', sic:'2510', naics:'337110', label:'Wood Furniture Manufacturing' },
+    { ibc:'7280', sic:'3140', naics:'316210', label:'Footwear Manufacturing' },
+    { ibc:'7290', sic:'2300', naics:'315000', label:'Apparel Manufacturing' },
+    { ibc:'7310', sic:'3674', naics:'334413', label:'Semiconductor / Electronics Mfg' },
+    { ibc:'7320', sic:'3825', naics:'334515', label:'Instruments / Measuring Devices Mfg' },
+    { ibc:'7330', sic:'3841', naics:'339112', label:'Medical Equipment Manufacturing' },
+    { ibc:'7340', sic:'3086', naics:'326140', label:'Plastics / Foam Products Mfg' },
+    { ibc:'7350', sic:'2890', naics:'325900', label:'Industrial Chemicals Manufacturing' },
+    // ── WAREHOUSING & STORAGE ──
+    { ibc:'8110', sic:'4225', naics:'493110', label:'General Warehousing & Storage' },
+    { ibc:'8120', sic:'4226', naics:'493120', label:'Refrigerated / Cold Storage Warehouses' },
+    { ibc:'8130', sic:'4226', naics:'493130', label:'Farm Product Storage' },
+    { ibc:'8140', sic:'4225', naics:'493190', label:'Self-Storage / Mini-Storage Facilities' },
+    { ibc:'8150', sic:'4213', naics:'484122', label:'Truck Terminals / Freight' },
+    { ibc:'8160', sic:'4412', naics:'483111', label:'Marine / Port Facilities' },
+    { ibc:'8170', sic:'4581', naics:'488190', label:'Airport / Aviation Facilities' },
+    { ibc:'8180', sic:'5080', naics:'423830', label:'Industrial Machinery — Wholesale' },
+    { ibc:'8190', sic:'5040', naics:'423450', label:'Medical Supplies — Wholesale' },
+    // ── AUTO & TRANSPORTATION ──
+    { ibc:'9110', sic:'5511', naics:'441110', label:'Auto Dealers — New Vehicles' },
+    { ibc:'9120', sic:'5521', naics:'441120', label:'Auto Dealers — Used Vehicles' },
+    { ibc:'9130', sic:'7531', naics:'811121', label:'Auto Body / Collision Repair' },
+    { ibc:'9140', sic:'7538', naics:'811111', label:'Auto Repair — General Mechanical' },
+    { ibc:'9150', sic:'7542', naics:'811192', label:'Car Wash Facilities' },
+    { ibc:'9160', sic:'7521', naics:'812930', label:'Parking Lots & Garages' },
+    { ibc:'9170', sic:'7514', naics:'532111', label:'Auto / Truck Rental' },
+    { ibc:'9180', sic:'5984', naics:'454310', label:'Propane / Fuel Dealers' },
+    { ibc:'9190', sic:'5571', naics:'441228', label:'RV / Boat / Motorcycle Dealers' },
+    { ibc:'9210', sic:'4212', naics:'484110', label:'Local Trucking / Courier' },
+    { ibc:'9220', sic:'4111', naics:'485111', label:'Transit / Bus Services' },
+    { ibc:'9230', sic:'7549', naics:'811198', label:'Windshield / Auto Glass Repair' },
+    // ── CONSTRUCTION & TRADES ──
+    { ibc:'0110', sic:'1521', naics:'236115', label:'General Contractors — Residential' },
+    { ibc:'0120', sic:'1522', naics:'236220', label:'General Contractors — Commercial' },
+    { ibc:'0130', sic:'1731', naics:'238210', label:'Electrical Contractors' },
+    { ibc:'0140', sic:'1711', naics:'238220', label:'Plumbing & HVAC Contractors' },
+    { ibc:'0150', sic:'1741', naics:'238140', label:'Masonry / Concrete Contractors' },
+    { ibc:'0160', sic:'1761', naics:'238160', label:'Roofing Contractors' },
+    { ibc:'0170', sic:'1771', naics:'238110', label:'Paving & Asphalt Contractors' },
+    { ibc:'0180', sic:'1751', naics:'238350', label:'Carpentry Contractors' },
+    { ibc:'0190', sic:'1799', naics:'238990', label:'Other Specialty Contractors' },
+    { ibc:'0210', sic:'5031', naics:'423310', label:'Lumber Dealers / Building Materials' },
+    // ── HEALTHCARE & SOCIAL SERVICES ──
+    { ibc:'3310', sic:'8062', naics:'622110', label:'General / Acute Care Hospitals' },
+    { ibc:'3320', sic:'8049', naics:'622210', label:'Psychiatric / Mental Health Hospitals' },
+    { ibc:'3330', sic:'8051', naics:'623110', label:'Nursing Care / Long Term Care Facilities' },
+    { ibc:'3340', sic:'8059', naics:'623210', label:'Residential Care Facilities' },
+    { ibc:'3350', sic:'8099', naics:'621910', label:'Ambulance Services' },
+    { ibc:'3360', sic:'8049', naics:'621498', label:'Urgent Care / Walk-In Clinics' },
+    { ibc:'3370', sic:'8742', naics:'621999', label:'Home Health Care Services' },
+    { ibc:'3380', sic:'8322', naics:'624190', label:'Social Services / Community Centres' },
+    { ibc:'3390', sic:'8361', naics:'623990', label:'Group Homes / Assisted Living' },
+    // ── EDUCATION ──
+    { ibc:'3410', sic:'8211', naics:'611110', label:'Elementary & Secondary Schools' },
+    { ibc:'3420', sic:'8221', naics:'611310', label:'Colleges & Universities' },
+    { ibc:'3430', sic:'8249', naics:'611519', label:'Trade / Vocational Schools' },
+    { ibc:'3440', sic:'8299', naics:'611699', label:'Other Educational Facilities' },
+    { ibc:'3450', sic:'8351', naics:'624410', label:'Daycare / Child Care Centres' },
+    { ibc:'3460', sic:'8211', naics:'611610', label:'Fine Arts / Dance / Music Schools' },
+    { ibc:'3470', sic:'8243', naics:'611420', label:'Computer Training Schools' },
+    // ── RELIGIOUS & NON-PROFIT ──
+    { ibc:'3510', sic:'8661', naics:'813110', label:'Churches / Religious Organizations' },
+    { ibc:'3520', sic:'8641', naics:'813410', label:'Civic / Social / Fraternal Organizations' },
+    { ibc:'3530', sic:'8699', naics:'813990', label:'Non-Profit Organizations' },
+    { ibc:'3540', sic:'8322', naics:'813311', label:'Charities / Foundations' },
+    { ibc:'3550', sic:'8641', naics:'813910', label:'Business / Professional Associations' },
+    // ── PERSONAL SERVICES ──
+    { ibc:'5210', sic:'7011', naics:'812310', label:'Coin-Operated Laundromats' },
+    { ibc:'5220', sic:'7212', naics:'812320', label:'Dry Cleaners / Laundry Services' },
+    { ibc:'5230', sic:'7231', naics:'812112', label:'Hair Salons / Barber Shops' },
+    { ibc:'5240', sic:'7241', naics:'812111', label:'Beauty Salons / Nail Salons' },
+    { ibc:'5250', sic:'7261', naics:'812210', label:'Funeral Homes / Mortuaries' },
+    { ibc:'5260', sic:'7299', naics:'812990', label:'Other Personal Services' },
+    { ibc:'5270', sic:'7999', naics:'812910', label:'Pet Grooming / Boarding' },
+    { ibc:'5280', sic:'7699', naics:'811490', label:'Appliance / Electronics Repair' },
+    { ibc:'5290', sic:'7631', naics:'811490', label:'Watch / Jewelry Repair' },
+    // ── UTILITIES & PUBLIC SERVICES ──
+    { ibc:'0310', sic:'4911', naics:'221122', label:'Electric Power Distribution' },
+    { ibc:'0320', sic:'4924', naics:'221210', label:'Natural Gas Distribution' },
+    { ibc:'0330', sic:'4941', naics:'221310', label:'Water / Sewage Utilities' },
+    { ibc:'0340', sic:'4812', naics:'517110', label:'Telephone / Telecom Services' },
+    { ibc:'0350', sic:'4833', naics:'515120', label:'Television / Radio Broadcasting' },
+    { ibc:'0360', sic:'7372', naics:'518210', label:'Internet / Cloud Services' },
+    // ── REAL ESTATE ──
+    { ibc:'6510', sic:'6500', naics:'531100', label:'Real Estate Lessors — General' },
+    { ibc:'6520', sic:'6552', naics:'531312', label:'Property Management Companies' },
+    { ibc:'6530', sic:'6798', naics:'525990', label:'Real Estate Investment Trusts (REITs)' },
+    { ibc:'6540', sic:'6552', naics:'531311', label:'Strata / Condo Management' },
+    // ── AGRICULTURE & RELATED ──
+    { ibc:'0410', sic:'0100', naics:'111000', label:'Crop Farming / Agriculture' },
+    { ibc:'0420', sic:'0200', naics:'112000', label:'Livestock / Animal Production' },
+    { ibc:'0430', sic:'0700', naics:'115000', label:'Agricultural Services' },
+    { ibc:'0440', sic:'2048', naics:'311119', label:'Feed Mills / Grain Elevators' },
+    { ibc:'0450', sic:'5191', naics:'424910', label:'Farm Supplies — Wholesale' },
+    // ── MISCELLANEOUS ──
+    { ibc:'9910', sic:'9111', naics:'921110', label:'Government / Municipal Buildings' },
+    { ibc:'9920', sic:'9221', naics:'922120', label:'Police / Fire Stations' },
+    { ibc:'9930', sic:'9311', naics:'921130', label:'Courthouses / Justice Facilities' },
+    { ibc:'9940', sic:'8011', naics:'621111', label:'Laboratories / Research Facilities' },
+    { ibc:'9950', sic:'7389', naics:'561790', label:'Building Cleaning / Maintenance Services' },
+    { ibc:'9960', sic:'7011', naics:'721110', label:'Conference / Convention Centres' },
+    { ibc:'9970', sic:'4953', naics:'562111', label:'Waste Management / Recycling' },
+    { ibc:'9980', sic:'5093', naics:'423930', label:'Salvage / Scrap Yards' },
+    { ibc:'9990', sic:'9999', naics:'999990', label:'Vacant / Unoccupied Buildings' },
   ];
 
   function filterSICCodes(query) {
@@ -12269,23 +12383,27 @@ ${activeSuppHTML}
     if (!query || query.length < 2) { dropdown.style.display = 'none'; return; }
     var q = query.toLowerCase();
     var matches = SIC_NAICS_CODES.filter(function(item) {
-      return item.label.toLowerCase().includes(q) || item.code.toLowerCase().includes(q);
-    }).slice(0, 12);
+      return item.label.toLowerCase().includes(q) ||
+             item.ibc.includes(q) ||
+             item.sic.includes(q) ||
+             item.naics.includes(q);
+    }).slice(0, 15);
     if (!matches.length) { dropdown.style.display = 'none'; return; }
     dropdown.innerHTML = matches.map(function(item) {
-      return '<div onclick="selectSICCode(\'' + item.code.replace(/'/g,"\'") + '\', \'' + item.label.replace(/'/g,"\'") + '\')" ' +
-        'style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0ece6;font-size:13px;" ' +
+      var escaped = item.label.replace(/'/g,"\'");
+      return '<div onclick="selectSICCode(\'' + item.ibc + '\',\'' + item.sic + '\',\'' + item.naics + '\',\'' + escaped + '\')" ' +
+        'style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0ece6;font-size:12px;line-height:1.6;" ' +
         'onmouseover="this.style.background='#f8f5f0'" onmouseout="this.style.background=''">' +
-        '<span style="font-weight:700;color:var(--navy);">' + item.code + '</span>' +
-        '<span style="color:var(--slate);margin-left:10px;">' + item.label + '</span>' +
+        '<div style="font-weight:700;color:var(--navy);">' + item.label + '</div>' +
+        '<div style="color:var(--slate);font-size:11px;">IBC: <b>' + item.ibc + '</b> &nbsp;|&nbsp; SIC: ' + item.sic + ' &nbsp;|&nbsp; NAICS: ' + item.naics + '</div>' +
         '</div>';
     }).join('');
     dropdown.style.display = 'block';
   }
 
-  function selectSICCode(code, label) {
+  function selectSICCode(ibc, sic, naics, label) {
     var input = document.getElementById('primary-sic-naics-code');
-    input.value = code + ' — ' + label;
+    input.value = 'IBC:' + ibc + ' / SIC:' + sic + ' / NAICS:' + naics + ' — ' + label;
     document.getElementById('sic-dropdown').style.display = 'none';
   }
 
