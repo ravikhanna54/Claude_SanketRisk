@@ -1402,7 +1402,7 @@
   <div class="header-meta">
     <div class="db-status"><div class="db-dot" id="db-dot"></div><span id="db-label">Connecting...</span></div>
     <div class="header-badge">COMMERCIAL INSPECTION PLATFORM &nbsp;·&nbsp; v20260403-1018</div>
-    <div class="header-badge" id="inspection-id-badge">Loading...</div>
+    <div class="header-badge" id="inspection-id-badge">INS-2026-0001</div>
     <div class="header-badge" id="account-badge" style="display:none;border-color:var(--gold);color:var(--gold);">ACC</div>
     <div class="user-badge" id="user-badge" style="display:none;">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -1499,7 +1499,7 @@
         <div class="form-grid">
           <div class="field">
             <label>Inspection ID <span class="req">*</span></label>
-            <input type="text" value="" id="inspection-id" readonly placeholder="Auto-assigned" oninput="document.getElementById('inspection-id-badge').textContent=this.value">
+            <input type="text" value="INS-2026-0001" id="inspection-id" oninput="document.getElementById('inspection-id-badge').textContent=this.value">
           </div>
           <div class="field">
             <label>Account Number</label>
@@ -1604,7 +1604,14 @@
           </div>
         </div>
       </div>
-    </div>
+    
+
+  <!-- Section Navigation -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;margin-top:24px;border-top:2px solid var(--border);">
+    <div></div>
+    <button onclick="saveAndNext('insured')" style="padding:10px 24px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">Save &amp; Next: Insured & Property Info →</button>
+  </div>
+</div>
     <!-- ══ SECTION: INSURED ══ -->
     <div class="section-panel" id="section-insured">
       <div class="section-header">
@@ -1724,7 +1731,14 @@
           </div>
         </div>
       </div>
-    </div>
+    
+
+  <!-- Section Navigation -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;margin-top:24px;border-top:2px solid var(--border);">
+    <button onclick="showSection('intro', document.querySelector('[data-section=intro]'))" style="padding:10px 20px;background:#fff;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy);display:flex;align-items:center;gap:8px;">← Assignment Overview</button>
+    <button onclick="saveAndNext('construction')" style="padding:10px 24px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">Save &amp; Next: C — Construction →</button>
+  </div>
+</div>
     <!-- ══ SECTION: CONSTRUCTION ══ -->
     <div class="section-panel" id="section-construction">
       <div class="section-header">
@@ -2245,7 +2259,14 @@
           <textarea id="construction-notes" rows="6" placeholder="General observations about construction quality, materials, age, condition, renovations, code compliance, or any other construction-related notes relevant to underwriting..."></textarea>
         </div>
       </div>
-    </div>
+    
+
+  <!-- Section Navigation -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;margin-top:24px;border-top:2px solid var(--border);">
+    <button onclick="showSection('insured', document.querySelector('[data-section=insured]'))" style="padding:10px 20px;background:#fff;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy);display:flex;align-items:center;gap:8px;">← Insured & Property Info</button>
+    <button onclick="saveAndNext('occupancy')" style="padding:10px 24px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">Save &amp; Next: O — Occupancy →</button>
+  </div>
+</div>
     <!-- ══ SECTION: OCCUPANCY ══ -->
     <div class="section-panel" id="section-occupancy">
       <div class="section-header">
@@ -2866,7 +2887,14 @@
           </div>
         </div>
       </div>
-    </div>
+    
+
+  <!-- Section Navigation -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;margin-top:24px;border-top:2px solid var(--border);">
+    <button onclick="showSection('construction', document.querySelector('[data-section=construction]'))" style="padding:10px 20px;background:#fff;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy);display:flex;align-items:center;gap:8px;">← C — Construction</button>
+    <button onclick="saveAndNext('protection')" style="padding:10px 24px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">Save &amp; Next: P — Protection →</button>
+  </div>
+</div>
     <!-- ══ SECTION: PROTECTION ══ -->
     <div class="section-panel" id="section-protection">
       <div class="section-header">
@@ -3109,7 +3137,14 @@
           <textarea id="security-notes" placeholder="Burglar alarm monitoring station, guard patrol schedule, vulnerabilities observed..."></textarea>
         </div>
       </div>
-    </div>
+    
+
+  <!-- Section Navigation -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;margin-top:24px;border-top:2px solid var(--border);">
+    <button onclick="showSection('occupancy', document.querySelector('[data-section=occupancy]'))" style="padding:10px 20px;background:#fff;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy);display:flex;align-items:center;gap:8px;">← O — Occupancy</button>
+    <button onclick="saveAndNext('exposure')" style="padding:10px 24px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">Save &amp; Next: E — Exposure →</button>
+  </div>
+</div>
     <!-- ══ SECTION: EXPOSURE ══ -->
     <div class="section-panel" id="section-exposure">
       <div class="section-header">
@@ -3254,7 +3289,14 @@
           </div>
         </div>
       </div>
-    </div>
+    
+
+  <!-- Section Navigation -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;margin-top:24px;border-top:2px solid var(--border);">
+    <button onclick="showSection('protection', document.querySelector('[data-section=protection]'))" style="padding:10px 20px;background:#fff;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy);display:flex;align-items:center;gap:8px;">← P — Protection</button>
+    <button onclick="saveAndNext('loss')" style="padding:10px 24px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">Save &amp; Next: Loss History →</button>
+  </div>
+</div>
     <!-- ══ SECTION: LOSS HISTORY ══ -->
     <div class="section-panel" id="section-loss">
       <div class="section-header">
@@ -3343,7 +3385,14 @@
           </div>
         </div>
       </div>
-    </div>
+    
+
+  <!-- Section Navigation -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;margin-top:24px;border-top:2px solid var(--border);">
+    <button onclick="showSection('exposure', document.querySelector('[data-section=exposure]'))" style="padding:10px 20px;background:#fff;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy);display:flex;align-items:center;gap:8px;">← E — Exposure</button>
+    <button onclick="saveAndNext('safety')" style="padding:10px 24px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">Save &amp; Next: Safety & Compliance →</button>
+  </div>
+</div>
     <!-- ══ SECTION: SAFETY ══ -->
     <div class="section-panel" id="section-safety">
       <div class="section-header">
@@ -3494,7 +3543,14 @@
           </div>
         </div>
       </div>
-    </div>
+    
+
+  <!-- Section Navigation -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;margin-top:24px;border-top:2px solid var(--border);">
+    <button onclick="showSection('loss', document.querySelector('[data-section=loss]'))" style="padding:10px 20px;background:#fff;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy);display:flex;align-items:center;gap:8px;">← Loss History</button>
+    <button onclick="saveAndNext('recommendations')" style="padding:10px 24px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">Save &amp; Next: Recommendations →</button>
+  </div>
+</div>
     <!-- ══ SECTION: RECOMMENDATIONS ══ -->
     <div class="section-panel" id="section-recommendations">
       <div class="section-header">
@@ -3589,7 +3645,14 @@
         </div>
         <button class="btn-add-rec" onclick="addRecommendation()">＋ Add Recommendation</button>
       </div>
-    </div>
+    
+
+  <!-- Section Navigation -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;margin-top:24px;border-top:2px solid var(--border);">
+    <button onclick="showSection('safety', document.querySelector('[data-section=safety]'))" style="padding:10px 20px;background:#fff;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy);display:flex;align-items:center;gap:8px;">← Safety & Compliance</button>
+    <button onclick="saveAndNext('photos')" style="padding:10px 24px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">Save &amp; Next: Photo Documentation →</button>
+  </div>
+</div>
     <!-- ══ SECTION: PHOTOS ══ -->
     <div class="section-panel" id="section-photos">
       <div class="section-header">
@@ -3611,7 +3674,14 @@
         </div>
         <input type="file" id="bulk-photo-input" accept="image/*" multiple style="display:none" onchange="bulkLoadPhotos(this)">
       </div>
-    </div>
+    
+
+  <!-- Section Navigation -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;margin-top:24px;border-top:2px solid var(--border);">
+    <button onclick="showSection('recommendations', document.querySelector('[data-section=recommendations]'))" style="padding:10px 20px;background:#fff;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy);display:flex;align-items:center;gap:8px;">← Recommendations</button>
+    <button onclick="saveAndNext('summary')" style="padding:10px 24px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">Save &amp; Next: Underwriter Summary →</button>
+  </div>
+</div>
     <!-- ══ SECTION: SUMMARY ══ -->
     <div class="section-panel" id="section-summary">
       <div class="section-header">
@@ -6647,7 +6717,14 @@
         <span style="color:var(--gold-dark);font-weight:600;">Click a recommendation to insert it into the report</span>
       </div>
     </div>
+  
+
+  <!-- Section Navigation -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px;margin-top:24px;border-top:2px solid var(--border);">
+    <button onclick="showSection('photos', document.querySelector('[data-section=photos]'))" style="padding:10px 20px;background:#fff;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy);display:flex;align-items:center;gap:8px;">← Photo Documentation</button>
+    <button onclick="saveInspection()" style="padding:10px 24px;background:var(--green,#276749);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">✓ Save &amp; Complete</button>
   </div>
+</div>
   </main>
 </div>
 <!-- DASHBOARD MODAL -->
@@ -7235,14 +7312,6 @@
     // Only reset QA state to draft if no inspection is currently loaded
     if (!currentInspectionId) {
       applyQAState('draft');
-      // Generate new SRC1 file number for new inspection
-      _supabase.rpc('get_next_file_number', { p_category: 100 }).then(function(res) {
-        var newId = (!res.error && res.data) ? res.data : 'SRC100' + String(Math.floor(Math.random()*9000)+1000);
-        var idField = document.getElementById('inspection-id');
-        var idBadge = document.getElementById('inspection-id-badge');
-        if (idField) idField.value = newId;
-        if (idBadge) idBadge.textContent = newId;
-      }).catch(function() {});
     }
   }
   function showLoginError(msg) {
@@ -7250,9 +7319,10 @@
     el.textContent = msg;
     el.style.display = 'block';
   }
-  function doLogout() {
+  async function doLogout() {
     if (!confirm('Sign out?')) return;
-    _supabase.auth.signOut().then(function(){ window.location.replace('/login.html'); }).catch(function(){ window.location.replace('/login.html'); });
+    try { await _supabase.auth.signOut(); } catch(e) {}
+    window.location.replace('/login.html');
   }
   // ══════════════════════════════════════════
   // PHASE 4 — ENHANCED DASHBOARD
@@ -7362,7 +7432,7 @@
     const glModules = [...activeGL];
     // Key summary fields for dashboard display
     const summary = {
-      inspection_id:  get('inspection-id') || '',
+      inspection_id:  get('inspection-id') || 'INS-2026-0001',
       account_number: get('account-number') || '',
       policy_number:  get('policy-number') || '',
       inspection_date: get('inspection-date'),
@@ -7957,14 +8027,11 @@
     closeDashboard();
     showSection('intro', document.querySelector('[data-section="intro"]'));
     // Give the form a moment to become visible then populate
-    setTimeout(async () => {
+    setTimeout(() => {
       const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-      // Generate SRC1 file number
-      let newId = 'SRC100' + String(Math.floor(Math.random()*9000)+1000);
-      try {
-        const { data: seqData, error: seqErr } = await _supabase.rpc('get_next_file_number', { p_category: 100 });
-        if (!seqErr && seqData) { newId = seqData; }
-      } catch(e) {}
+      // Generate a new inspection ID
+      const now = new Date();
+      const newId = 'INS-' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(Math.floor(Math.random()*900)+100);
       set('inspection-id', newId);
       const badge = document.getElementById('inspection-id-badge');
       if (badge) badge.textContent = newId;
@@ -8316,6 +8383,13 @@
     }
   }
   // ── NEW INSPECTION ──
+  async function saveAndNext(nextSection) {
+    await saveInspection();
+    const el = document.querySelector('[data-section="' + nextSection + '"]');
+    showSection(nextSection, el);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   function newInspection() {
     if (!confirm('Start a new inspection? Any unsaved changes will be lost.')) return;
     currentInspectionId = null;
