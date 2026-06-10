@@ -10091,15 +10091,15 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   s9+='.'+NL;
   return [s1,s2,s3,s4,s5,s6,s7,s8,s9].join('');
 }
-async function generateNarrativeReport() {
+async function pctRowSummary(pctRows, key) {
+  var rows = (pctRows || {})[key] || [];
+  var filled = rows.filter(function(r) { return r.val && r.pct; });
+  if (!filled.length) return '';
+  return filled.map(function(r) { return r.val + ' ' + r.pct + '%'; }).join(', ');
+}
+
+function generateNarrativeReport() {
   const d = collectFormData();
-  // Helper to summarise pct_rows into readable string e.g. "Gable 90%, Flat 10%"
-  function pctRowSummary(pctRows, key) {
-    var rows = (pctRows || {})[key] || [];
-    var filled = rows.filter(function(r) { return r.val && r.pct; });
-    if (!filled.length) return '';
-    return filled.map(function(r) { return r.val + ' ' + r.pct + '%'; }).join(', ');
-  }
   const f = d.form_fields || {};
   const pills = d.pill_selections || {};
   const ratings = d.rating_values || {};
@@ -10119,7 +10119,9 @@ async function generateNarrativeReport() {
   const yearBuilt     = g('year-built')   || '—';
   const stories       = g('stories-above-grade') || '—';
   const totalArea     = g('total-building-area')   || '—';
-  const constructClass= (pills['iso_construction_class'] || []).join(', ') || g('iso-construction-class') || '—';
+  // Read ISO class from selected radio button text (not input value which gives "on")
+  var _isoBtn = document.querySelector('#iso-class .radio-btn.selected');
+  const constructClass = (_isoBtn ? _isoBtn.textContent.trim() : '') || pctRowSummary(d.pct_rows, 'iso-pct-rows') || '—';
   const extWall       = (pills['exterior_wall_construction'] || []).join(', ') || g('exterior-wall-construction') || '—';
   const roofType      = pctRowSummary(d.pct_rows, 'rooftype-pct-rows') || '—';
   const roofCovering  = pctRowSummary(d.pct_rows, 'roof-pct-rows') || '—';
