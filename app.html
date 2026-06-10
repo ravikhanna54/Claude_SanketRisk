@@ -3639,6 +3639,7 @@
           <div class="score-lbl" style="color:var(--navy-mid)">Overall</div>
         </div>
       </div>
+
       <div class="card">
         <div class="card-title">Overall Risk Quality</div>
         <div class="field" style="margin-bottom:16px">
@@ -6766,6 +6767,7 @@
 <script>
   // ── NAVIGATION ──
   function showSection(id, el) {
+    if (id === 'summary') { setTimeout(calculateCOPEScores, 200); }
     document.querySelectorAll('.section-panel').forEach(p => {
       p.classList.remove('active');
     });
@@ -6880,13 +6882,77 @@
       updateOverallScore();
     }
   }
+  // ── AUTO COPE SCORING ──
+  function calculateCOPEScores() {
+    var d = collectFormData();
+    var f = d.form_fields || {};
+    var pills = d.pill_selections || {};
+    var ratings = d.rating_values || {};
+    var get = function(id) { return f[id] || ''; };
+
+    // ── CONSTRUCTION SCORE (1-5) ──
+    var cScore = 3.0; // default
+    var conClass = (pills['iso_construction_class'] || []).join('').toLowerCase();
+    if (conClass.includes('1') || conClass.includes('fire resistive')) cScore = 5.0;
+    else if (conClass.includes('2') || conClass.includes('non-combustible')) cScore = 4.0;
+    else if (conClass.includes('3') || conClass.includes('masonry')) cScore = 3.5;
+    else if (conClass.includes('4') || conClass.includes('modified')) cScore = 3.0;
+    else if (conClass.includes('5') || conClass.includes('joisted')) cScore = 2.5;
+    else if (conClass.includes('6') || conClass.includes('frame')) cScore = 2.0;
+    // Adjust for age
+    var yr = parseInt(get('year-built')) || 0;
+    if (yr > 0) {
+      var age = new Date().getFullYear() - yr;
+      if (age > 50) cScore = Math.max(1, cScore - 0.5);
+      else if (age < 15) cScore = Math.min(5, cScore + 0.3);
+    }
+
+    // ── PROTECTION SCORE (1-5) ──
+    var pScore = 2.5;
+    var spk = (pills['sprinkler_coverage'] || []).join('').toLowerCase();
+    var alarm = (pills['fire_alarm_type'] || []).join('').toLowerCase();
+    if (spk.includes('full') || spk.includes('90')) pScore += 1.0;
+    else if (spk.includes('partial') || spk.includes('50')) pScore += 0.5;
+    else if (spk.includes('none') || spk === '') pScore -= 0.5;
+    if (alarm.includes('central') || alarm.includes('monitored')) pScore += 0.5;
+    else if (alarm.includes('local')) pScore += 0.2;
+    // FUS grade
+    var fusGrade = parseInt(get('fus-grade')) || 0;
+    if (fusGrade === 1 || fusGrade === 2) pScore += 0.3;
+    else if (fusGrade >= 5) pScore -= 0.3;
+    pScore = Math.min(5, Math.max(1, pScore));
+
+    // ── SAFETY SCORE (1-5) from rating buttons ──
+    var safetyRatings = Object.values(ratings).map(function(v) { return parseFloat(v); }).filter(function(v) { return !isNaN(v) && v >= 1 && v <= 5; });
+    var sScore = safetyRatings.length ? (safetyRatings.reduce(function(a,b){return a+b;},0) / safetyRatings.length) : 3.0;
+
+    // ── OVERALL ──
+    var oScore = ((cScore + pScore + sScore) / 3);
+
+    // Update tiles
+    document.getElementById('score-construction').textContent = cScore.toFixed(1);
+    document.getElementById('score-protection').textContent   = pScore.toFixed(1);
+    document.getElementById('score-safety').textContent       = sScore.toFixed(1);
+    document.getElementById('score-overall').textContent      = oScore.toFixed(1);
+  }
+
+  function updateScoreFromInput(type, val) {
+    var num = parseFloat(val);
+    var tile = document.getElementById('score-' + type);
+    var input = document.getElementById('input-score-' + type);
+    if (tile) tile.textContent = (!isNaN(num) && num >= 1 && num <= 5) ? num.toFixed(1) : '—';
+    updateOverallScore();
+  }
+
   function updateOverallScore() {
     const vals = ['score-construction','score-protection','score-safety']
       .map(id => parseFloat(document.getElementById(id).textContent))
       .filter(v => !isNaN(v));
     if (vals.length) {
-      document.getElementById('score-overall').textContent =
-        (vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(1);
+      var overall = (vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(1);
+      document.getElementById('score-overall').textContent = overall;
+      var overallInput = document.getElementById('input-score-overall');
+      if (overallInput) overallInput.value = overall;
     }
   }
   // ── RECOMMENDATIONS ──
@@ -7560,6 +7626,12 @@
         finish_rows: data.finish_rows,
         rec_items:   data.rec_items,
         safety_notes: data.safety_notes,
+        scores: {
+          construction: document.getElementById('score-construction')?.textContent || '',
+          protection:   document.getElementById('score-protection')?.textContent   || '',
+          safety:       document.getElementById('score-safety')?.textContent       || '',
+          overall:      document.getElementById('score-overall')?.textContent      || '',
+        },
       }),
       updated_at: new Date().toISOString()
     };
@@ -8092,6 +8164,17 @@
           if (panel) panel.style.display = btn.classList.contains('selected') ? 'block' : 'none';
         });
       }
+      // ── Restore scores ──
+      var scores = fd.scores || {};
+      ['construction','protection','safety','overall'].forEach(function(type) {
+        var val = scores[type];
+        if (val) {
+          var tile = document.getElementById('score-' + type);
+          var input = document.getElementById('input-score-' + type);
+          if (tile) tile.textContent = val;
+          if (input) input.value = val;
+        }
+      });
       // ── Restore rating buttons ──
       const ratings = fd.ratings || fd.rating_values || {};
       document.querySelectorAll('.rating-row').forEach(function(row) {
