@@ -3790,9 +3790,10 @@
         <div class="qa-card-body" id="qa-card-body">
           <div class="form-grid">
             <div class="field">
-              <label>Reviewer Name</label>
-              <input type="text" id="qa-reviewer-name" placeholder="—" readonly
-                style="background:var(--light);cursor:not-allowed;font-weight:600;">
+              <label>Assign to Reviewer</label>
+              <select id="qa-reviewer-name" style="font-weight:600;">
+                <option value="">— Select Reviewer —</option>
+              </select>
             </div>
             <div class="field">
               <label>Review Date</label>
@@ -9596,7 +9597,22 @@
     if (qaApproved) qaApproved.style.display = 'none';
     if (qaReturned) qaReturned.style.display = 'none';
     // Populate reviewer fields
-    if (nameEl) nameEl.value = currentQAReviewer || '';
+    // Populate reviewer dropdown
+    if (nameEl && nameEl.tagName === 'SELECT') {
+      nameEl.innerHTML = '<option value="">— Select Reviewer —</option>';
+      qaReviewerList.forEach(function(r) {
+        var opt = document.createElement('option');
+        opt.value = r.full_name || r.email;
+        opt.textContent = (r.full_name || r.email) + ' (' + r.role + ')';
+        if ((r.full_name || r.email) === currentQAReviewer) opt.selected = true;
+        nameEl.appendChild(opt);
+      });
+      nameEl.disabled = !isReviewer;
+      nameEl.style.background = isReviewer ? '' : 'var(--light)';
+      nameEl.style.cursor = isReviewer ? '' : 'not-allowed';
+    } else if (nameEl) {
+      nameEl.value = currentQAReviewer || '';
+    }
     if (notesEl && currentQANotes) notesEl.value = currentQANotes;
     if (currentReportStatus === 'draft') {
       if (banner) { banner.className = 'qa-status-banner'; banner.textContent = ''; }
@@ -9732,12 +9748,15 @@
   // Reviewer approves
   async function approveQA() {
     if (!currentInspectionId) return;
-    var notes    = document.getElementById('qa-notes')?.value || '';
-    var dateVal  = document.getElementById('qa-review-date')?.value || new Date().toISOString().split('T')[0];
+    var notes       = document.getElementById('qa-notes')?.value || '';
+    var dateVal     = document.getElementById('qa-review-date')?.value || new Date().toISOString().split('T')[0];
+    var reviewerEl  = document.getElementById('qa-reviewer-name');
+    var reviewerVal = reviewerEl ? reviewerEl.value : (currentQAReviewer || '');
+    if (!reviewerVal) { showToast('⚠ Please select a reviewer before approving.', 'warn'); return; }
     if (!confirm('Approve this report? The Export PDF button will become available.')) return;
     try {
       var { error } = await _supabase.from('inspections')
-        .update({ report_status: 'approved', qa_notes: notes, qa_date: dateVal })
+        .update({ report_status: 'approved', qa_reviewer: reviewerVal, qa_notes: notes, qa_date: dateVal })
         .eq('id', currentInspectionId);
       if (error) throw error;
       currentReportStatus = 'approved';
