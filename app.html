@@ -9945,7 +9945,7 @@
 <script>
 // ── NARRATIVE REPORT GENERATOR ──
 // Uses Anthropic API to generate a professional written narrative inspection report
-function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,insuredName,inspId,inspDate,city,province,occupancy,inspName,riskQuality,uwRec,execSummary,yearBuilt,stories,totalArea,constructClass,extWall,roofType,roofCovering,roofYear,electrical,heating,constNotes,occupancyDesc,hazardNotes,sprinklerCoverage,sprinklerType,sprinklerCond,fireAlarm,extPresent,fusDistance,fusDeptType,fusGrade,security,protNotes,northExp,southExp,eastExp,westExp,expRating,floodZone,earthquake,expNotes,totalLosses,totalIncurred,primaryCause,lossComments,safetyText,recText) {
+function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,insuredName,inspId,inspDate,city,province,occupancy,inspName,riskQuality,uwRec,execSummary,yearBuilt,stories,totalArea,constructClass,extWall,extFinish,structFrame,roofType,roofCovering,roofDeck,roofYear,electrical,heating,constNotes,occupancyDesc,hazardNotes,sprinklerCoverage,sprinklerType,sprinklerCond,fireAlarm,extPresent,fusDistance,fusDeptType,fusGrade,security,protNotes,northExp,southExp,eastExp,westExp,expRating,floodZone,earthquake,expNotes,totalLosses,totalIncurred,primaryCause,lossComments,safetyText,recText) {
   function fmt(v) { return (v && v !== '\u2014') ? v : null; }
   var loc = city && province ? city + ', ' + province : (city || province || 'the subject location');
   var recItems = d.rec_items || [];
@@ -9969,19 +9969,19 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   if (fmt(constructClass)) {
     s2 += 'The ISO Construction Classification is ' + constructClass + '. ';
   }
-  if (fmt(extWall)) {
-    var wallParts = extWall.split(',');
-    s2 += 'Exterior wall construction consists of ' + wallParts.map(function(p){return p.trim().toLowerCase();}).join(', ') + '. ';
-  }
+  if (fmt(extWall)) s2 += 'Exterior wall construction consists of ' + String(extWall) + '. ';
+  if (fmt(extFinish)) s2 += 'The exterior wall finish is ' + String(extFinish) + '. ';
+  if (fmt(structFrame)) s2 += 'The structural frame is ' + String(structFrame) + '. ';
   if (fmt(constNotes)) s2 += constNotes + ' ';
   s2 += NL;
   s2 += 'The roof ';
-  if (fmt(roofType)) s2 += 'is of ' + roofType.toLowerCase() + ' design';
-  if (fmt(roofCovering)) s2 += (fmt(roofType)?' with ':'features ') + roofCovering.toLowerCase() + ' covering';
+  if (fmt(roofType)) s2 += 'is of ' + String(roofType).toLowerCase() + ' design';
+  if (fmt(roofCovering)) s2 += (fmt(roofType)?' with ':'features ') + String(roofCovering).toLowerCase() + ' covering';
+  if (fmt(roofDeck)) s2 += ', with a ' + String(roofDeck).toLowerCase() + ' deck';
   if (fmt(roofYear)) s2 += ', last replaced in ' + roofYear;
   s2 += '. ';
-  if (fmt(electrical)) s2 += 'Electrical service is provided via ' + electrical.toLowerCase() + ' panels. ';
-  if (fmt(heating)) s2 += 'The heating system consists of ' + heating.toLowerCase() + '. ';
+  if (fmt(electrical)) s2 += 'Electrical service is provided via ' + String(electrical).toLowerCase() + ' panels. ';
+  if (fmt(heating)) s2 += 'The heating system consists of ' + String(heating).toLowerCase() + '. ';
   s2 += NL;
   var s3 = '**3. Occupancy & Operations**' + NL;
   if (fmt(occupancyDesc)) { s3 += occupancyDesc + NL; } else { s3 += 'The premises are occupied as ' + (fmt(occupancy)||'a commercial property') + '. No description of operations was recorded.' + NL; }
@@ -10122,8 +10122,11 @@ function generateNarrativeReport() {
   // Read ISO class from selected radio button text (not input value which gives "on")
   var _isoBtn = document.querySelector('#iso-class .radio-btn.selected');
   const constructClass = (_isoBtn ? _isoBtn.textContent.trim() : '') || pctRowSummary(d.pct_rows, 'iso-pct-rows') || '—';
-  const extWall       = (pills['exterior_wall_construction'] || []).join(', ') || g('exterior-wall-construction') || '—';
-  const roofType      = pctRowSummary(d.pct_rows, 'rooftype-pct-rows') || '—';
+  const extWall     = pctRowSummary(d.pct_rows, 'wall-pct-rows') || (pills['exterior_wall_construction'] || []).join(', ') || '—';
+  const extFinish   = pctRowSummary(d.pct_rows, 'ext-finish-pct-rows') || '—';
+  const structFrame = pctRowSummary(d.pct_rows, 'frame-pct-rows') || '—';
+  const roofDeck    = pctRowSummary(d.pct_rows, 'deck-pct-rows') || '—';
+  const roofType    = pctRowSummary(d.pct_rows, 'rooftype-pct-rows') || '—';
   const roofCovering  = pctRowSummary(d.pct_rows, 'roof-pct-rows') || '—';
   const roofYear      = g('roof-year') || '—';
   const electrical    = g('electrical-panel-type') || (pills['electrical___panel_type'] || []).join(', ') || '—';
@@ -10277,7 +10280,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
     var narrativeText = generateNarrativeText(d, g, ratings, pills, scoreC, scoreP, scoreS, scoreO,
       insuredName, inspId, inspDate, city, province, occupancy, inspName,
       riskQuality, uwRec, execSummary, yearBuilt, stories, totalArea,
-      constructClass, extWall, roofType, roofCovering, roofYear,
+      constructClass, extWall, extFinish, structFrame, roofType, roofCovering, roofDeck, roofYear,
       electrical, heating, constNotes, occupancyDesc, hazardNotes,
       sprinklerCoverage, sprinklerType, sprinklerCond, fireAlarm,
       extPresent, fusDistance, fusDeptType, fusGrade, security, protNotes,
@@ -10295,6 +10298,27 @@ Write in formal insurance inspection language. Be specific with measurements, da
         + '</p>';
     }
     var narrativeHTML = mdToHtml(narrativeText);
+
+    // ── Collect photos BEFORE building template ──
+    var photo1 = document.getElementById('photo-1-img');
+    var coverPhotoSrc = (photo1 && photo1.classList.contains('loaded') && photo1.src) ? photo1.src : '';
+    var allPhotos = [];
+    var pIdx = 1;
+    while (pIdx <= 40) {
+      var pImg = document.getElementById('photo-' + pIdx + '-img');
+      if (!pImg && pIdx > 20) break;
+      if (pImg && pImg.classList.contains('loaded') && pImg.src) {
+        var pCap = document.getElementById('photo-' + pIdx + '-caption');
+        var pCat = document.getElementById('photo-' + pIdx + '-category');
+        allPhotos.push({ num: pIdx, src: pImg.src,
+          caption: pCap ? pCap.value : '', category: pCat ? pCat.value : '' });
+      }
+      pIdx++;
+    }
+    var photosHTML = allPhotos.length ? allPhotos.map(function(p) {
+      return '<div class="photo-item"><img class="photo-img" src="' + p.src + '" alt="Photo ' + p.num + '"><div class="photo-caption"><div class="photo-num">Photo ' + p.num + (p.category ? ' — ' + p.category : '') + '</div>' + (p.caption ? '<div>' + p.caption + '</div>' : '') + '</div></div>';
+    }).join('') : '<p style="color:#aaa;">No photos attached.</p>';
+
     // ── Build final report page ──
     var reportPage = `<!DOCTYPE html>
 <html lang="en">
@@ -10344,6 +10368,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
 </div>
 <div class="report-wrap">
   <div class="cover-band">
+    ${coverPhotoSrc ? `<img src="${coverPhotoSrc}" style="width:calc(100% + 80px);margin:-36px -40px 24px;display:block;height:220px;object-fit:cover;border-radius:8px 8px 0 0;opacity:0.85;">` : ''}
     <div class="tag">N A R R A T I V E &nbsp; I N S P E C T I O N &nbsp; R E P O R T</div>
     <h1>${insuredName}</h1>
     <div class="sub">${city}, ${province} &nbsp;·&nbsp; ${occupancy}</div>
@@ -10365,6 +10390,20 @@ Write in formal insurance inspection language. Be specific with measurements, da
   <div class="section narrative-content">
     ${narrativeHTML}
   </div>
+  ${allPhotos.length > 0 ? `
+  <div class="section">
+    <h3>Photo Documentation</h3>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:12px;">
+      ${allPhotos.map(p => `
+        <div style="break-inside:avoid;">
+          <img src="${p.src}" alt="Photo ${p.num}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;border:1px solid #ddd8d0;">
+          <div style="font-size:9pt;color:#4a6580;margin-top:4px;">
+            <strong>Photo ${p.num}</strong>${p.category ? ' — ' + p.category : ''}
+            ${p.caption ? '<br>' + p.caption : ''}
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>` : ''}
   <div class="disclaimer">
     <strong>Report Disclaimer:</strong> This narrative was generated by the SanketRisk Inspector platform based on structured inspection data entered by the inspector. It is intended as a drafting aid only. The inspector and underwriter are responsible for verifying all factual claims, correcting any inaccuracies, and ensuring the report meets applicable professional and regulatory standards before use.
   </div>
