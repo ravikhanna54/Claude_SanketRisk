@@ -9882,15 +9882,15 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   if (fmt(constructClass)) {
     s2 += 'The ISO Construction Classification is ' + constructClass + '. ';
   }
-  if (fmt(extWall)) {
-    var wallParts = extWall.split(',');
-    s2 += 'Exterior wall construction consists of ' + wallParts.map(function(p){return p.trim().toLowerCase();}).join(', ') + '. ';
-  }
+  if (fmt(extWall)) s2 += 'Exterior wall construction consists of ' + extWall + '. ';
+  if (fmt(extFinish)) s2 += 'The exterior wall finish is ' + extFinish + '. ';
+  if (fmt(structFrame)) s2 += 'The structural frame is ' + structFrame + '. ';
   if (fmt(constNotes)) s2 += constNotes + ' ';
   s2 += NL;
   s2 += 'The roof ';
   if (fmt(roofType)) s2 += 'is of ' + roofType.toLowerCase() + ' design';
   if (fmt(roofCovering)) s2 += (fmt(roofType)?' with ':'features ') + roofCovering.toLowerCase() + ' covering';
+  if (fmt(roofDeck)) s2 += ', with a ' + roofDeck.toLowerCase() + ' deck';
   if (fmt(roofYear)) s2 += ', last replaced in ' + roofYear;
   s2 += '. ';
   if (fmt(electrical)) s2 += 'Electrical service is provided via ' + electrical.toLowerCase() + ' panels. ';
@@ -10032,9 +10032,13 @@ async function generateNarrativeReport() {
   const yearBuilt     = g('year-built')   || '—';
   const stories       = g('stories-above-grade') || '—';
   const totalArea     = g('total-building-area')   || '—';
-  const constructClass= (pills['iso_construction_class'] || []).join(', ') || g('iso-construction-class') || '—';
-  const extWall       = (pills['exterior_wall_construction'] || []).join(', ') || g('exterior-wall-construction') || '—';
-  const roofType      = pctRowSummary(d.pct_rows, 'rooftype-pct-rows') || '—';
+  var isoClassEl = document.querySelector('#iso-class .radio-btn.selected');
+  const constructClass = isoClassEl ? isoClassEl.textContent.trim() : pctRowSummary(d.pct_rows, 'iso-pct-rows') || '—';
+  const extWall     = pctRowSummary(d.pct_rows, 'wall-pct-rows') || (pills['exterior_wall_construction'] || []).join(', ') || '—';
+  const extFinish   = pctRowSummary(d.pct_rows, 'ext-finish-pct-rows') || '—';
+  const structFrame = pctRowSummary(d.pct_rows, 'frame-pct-rows') || '—';
+  const roofDeck    = pctRowSummary(d.pct_rows, 'deck-pct-rows') || '—';
+  const roofType    = pctRowSummary(d.pct_rows, 'rooftype-pct-rows') || '—';
   const roofCovering  = pctRowSummary(d.pct_rows, 'roof-pct-rows') || '—';
   const roofYear      = g('roof-year') || '—';
   const electrical    = g('electrical-panel-type') || (pills['electrical___panel_type'] || []).join(', ') || '—';
