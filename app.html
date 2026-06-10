@@ -3621,22 +3621,29 @@
         </div>
         <div class="section-tag">SUMMARY</div>
       </div>
-      <div class="summary-score-card">
-        <div class="score-tile">
-          <div class="score-val" id="score-construction">—</div>
-          <div class="score-lbl">Construction</div>
-        </div>
-        <div class="score-tile">
-          <div class="score-val" id="score-protection">—</div>
-          <div class="score-lbl">Protection</div>
-        </div>
-        <div class="score-tile">
-          <div class="score-val" id="score-safety">—</div>
-          <div class="score-lbl">Safety</div>
-        </div>
-        <div class="score-tile" style="background:var(--gold)">
-          <div class="score-val" style="color:var(--navy)" id="score-overall">—</div>
-          <div class="score-lbl" style="color:var(--navy-mid)">Overall</div>
+      <div style="margin-bottom:12px;">
+        <button onclick="calculateCOPEScores()" style="padding:8px 20px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">
+          ⚡ Calculate Property Grades
+        </button>
+      </div>
+      <div id="score-card-wrap" style="display:none;">
+        <div class="summary-score-card">
+          <div class="score-tile">
+            <div class="score-val" id="score-construction">—</div>
+            <div class="score-lbl">Construction</div>
+          </div>
+          <div class="score-tile">
+            <div class="score-val" id="score-protection">—</div>
+            <div class="score-lbl">Protection</div>
+          </div>
+          <div class="score-tile">
+            <div class="score-val" id="score-safety">—</div>
+            <div class="score-lbl">Safety</div>
+          </div>
+          <div class="score-tile" style="background:var(--gold)">
+            <div class="score-val" style="color:var(--navy)" id="score-overall">—</div>
+            <div class="score-lbl" style="color:var(--navy-mid)">Overall</div>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -7560,6 +7567,12 @@
         finish_rows: data.finish_rows,
         rec_items:   data.rec_items,
         safety_notes: data.safety_notes,
+        scores: {
+          construction: (document.getElementById('score-construction')||{}).textContent || '',
+          protection:   (document.getElementById('score-protection')||{}).textContent   || '',
+          safety:       (document.getElementById('score-safety')||{}).textContent       || '',
+          overall:      (document.getElementById('score-overall')||{}).textContent      || '',
+        },
       }),
       updated_at: new Date().toISOString()
     };
@@ -8092,6 +8105,19 @@
           if (panel) panel.style.display = btn.classList.contains('selected') ? 'block' : 'none';
         });
       }
+      // ── Restore scores ──
+      var savedScores = fd.scores || {};
+      ['construction','protection','safety','overall'].forEach(function(type) {
+        var val = savedScores[type];
+        if (val && val !== '—') {
+          var tile = document.getElementById('score-' + type);
+          if (tile) tile.textContent = val;
+        }
+      });
+      if (savedScores.overall && savedScores.overall !== '—') {
+        var card = document.getElementById('score-card-wrap');
+        if (card) card.style.display = 'block';
+      }
       // ── Restore rating buttons ──
       const ratings = fd.ratings || fd.rating_values || {};
       document.querySelectorAll('.rating-row').forEach(function(row) {
@@ -8306,6 +8332,67 @@
     }
   }
   // ── NEW INSPECTION ──
+  // ── AUTO COPE SCORING ──
+  function calculateCOPEScores() {
+    var d = collectFormData();
+    var f = d.form_fields || {};
+    var pills = d.pill_selections || {};
+    var ratings = d.rating_values || {};
+    var get = function(id) { return f[id] || ''; };
+
+    // CONSTRUCTION (1-5) based on ISO class + age
+    var cScore = 3.0;
+    var isoBtn = document.querySelector('#iso-class .radio-btn.selected');
+    var conClass = isoBtn ? isoBtn.textContent.trim().toLowerCase() : '';
+    if (conClass.includes('fire resistive') || conClass.includes('class 1')) cScore = 5.0;
+    else if (conClass.includes('non-combustible') || conClass.includes('class 2')) cScore = 4.0;
+    else if (conClass.includes('masonry') || conClass.includes('class 3')) cScore = 3.5;
+    else if (conClass.includes('modified') || conClass.includes('class 4')) cScore = 3.0;
+    else if (conClass.includes('joisted') || conClass.includes('class 5')) cScore = 2.5;
+    else if (conClass.includes('frame') || conClass.includes('class 6')) cScore = 2.0;
+    var yr = parseInt(get('year-built')) || 0;
+    if (yr > 0) {
+      var age = new Date().getFullYear() - yr;
+      if (age > 50) cScore = Math.max(1, cScore - 0.5);
+      else if (age < 15) cScore = Math.min(5, cScore + 0.3);
+    }
+
+    // PROTECTION (1-5) based on sprinkler, alarm, FUS
+    var pScore = 2.5;
+    var spkPills = (pills['sprinkler_coverage'] || []).join('').toLowerCase();
+    var alarmPills = (pills['fire_alarm_type'] || []).join('').toLowerCase();
+    if (spkPills.includes('full') || spkPills.includes('90')) pScore += 1.0;
+    else if (spkPills.includes('partial') || spkPills.includes('50')) pScore += 0.5;
+    else if (spkPills.includes('none')) pScore -= 0.5;
+    if (alarmPills.includes('central') || alarmPills.includes('monitored')) pScore += 0.5;
+    else if (alarmPills.includes('local')) pScore += 0.2;
+    var fusGrade = parseInt(get('fus-grade')) || 0;
+    if (fusGrade >= 1 && fusGrade <= 2) pScore += 0.3;
+    else if (fusGrade >= 5) pScore -= 0.3;
+    pScore = Math.min(5, Math.max(1, pScore));
+
+    // SAFETY (1-5) from rating buttons average
+    var safetyVals = Object.values(ratings).map(function(v){return parseFloat(v);}).filter(function(v){return !isNaN(v)&&v>=1&&v<=5;});
+    var sScore = safetyVals.length ? (safetyVals.reduce(function(a,b){return a+b;},0)/safetyVals.length) : 3.0;
+
+    // OVERALL
+    var oScore = (cScore + pScore + sScore) / 3;
+
+    // Update tiles
+    var sc = document.getElementById('score-construction');
+    var sp = document.getElementById('score-protection');
+    var ss = document.getElementById('score-safety');
+    var so = document.getElementById('score-overall');
+    if (sc) sc.textContent = cScore.toFixed(1);
+    if (sp) sp.textContent = pScore.toFixed(1);
+    if (ss) ss.textContent = sScore.toFixed(1);
+    if (so) so.textContent = oScore.toFixed(1);
+
+    // Show the score card
+    var card = document.getElementById('score-card-wrap');
+    if (card) card.style.display = 'block';
+  }
+
   function newInspection() {
     if (!confirm('Start a new inspection? Any unsaved changes will be lost.')) return;
     currentInspectionId = null;
@@ -9858,7 +9945,7 @@
 <script>
 // ── NARRATIVE REPORT GENERATOR ──
 // Uses Anthropic API to generate a professional written narrative inspection report
-function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,insuredName,inspId,inspDate,city,province,occupancy,inspName,riskQuality,uwRec,execSummary,yearBuilt,stories,totalArea,constructClass,extWall,extFinish,structFrame,roofType,roofCovering,roofDeck,roofYear,electrical,heating,constNotes,occupancyDesc,hazardNotes,sprinklerCoverage,sprinklerType,sprinklerCond,fireAlarm,extPresent,fusDistance,fusDeptType,fusGrade,security,protNotes,northExp,southExp,eastExp,westExp,expRating,floodZone,earthquake,expNotes,totalLosses,totalIncurred,primaryCause,lossComments,safetyText,recText) {
+function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,insuredName,inspId,inspDate,city,province,occupancy,inspName,riskQuality,uwRec,execSummary,yearBuilt,stories,totalArea,constructClass,extWall,roofType,roofCovering,roofYear,electrical,heating,constNotes,occupancyDesc,hazardNotes,sprinklerCoverage,sprinklerType,sprinklerCond,fireAlarm,extPresent,fusDistance,fusDeptType,fusGrade,security,protNotes,northExp,southExp,eastExp,westExp,expRating,floodZone,earthquake,expNotes,totalLosses,totalIncurred,primaryCause,lossComments,safetyText,recText) {
   function fmt(v) { return (v && v !== '\u2014') ? v : null; }
   var loc = city && province ? city + ', ' + province : (city || province || 'the subject location');
   var recItems = d.rec_items || [];
@@ -9882,15 +9969,15 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   if (fmt(constructClass)) {
     s2 += 'The ISO Construction Classification is ' + constructClass + '. ';
   }
-  if (fmt(extWall)) s2 += 'Exterior wall construction consists of ' + extWall + '. ';
-  if (fmt(extFinish)) s2 += 'The exterior wall finish is ' + extFinish + '. ';
-  if (fmt(structFrame)) s2 += 'The structural frame is ' + structFrame + '. ';
+  if (fmt(extWall)) {
+    var wallParts = extWall.split(',');
+    s2 += 'Exterior wall construction consists of ' + wallParts.map(function(p){return p.trim().toLowerCase();}).join(', ') + '. ';
+  }
   if (fmt(constNotes)) s2 += constNotes + ' ';
   s2 += NL;
   s2 += 'The roof ';
   if (fmt(roofType)) s2 += 'is of ' + roofType.toLowerCase() + ' design';
   if (fmt(roofCovering)) s2 += (fmt(roofType)?' with ':'features ') + roofCovering.toLowerCase() + ' covering';
-  if (fmt(roofDeck)) s2 += ', with a ' + roofDeck.toLowerCase() + ' deck';
   if (fmt(roofYear)) s2 += ', last replaced in ' + roofYear;
   s2 += '. ';
   if (fmt(electrical)) s2 += 'Electrical service is provided via ' + electrical.toLowerCase() + ' panels. ';
@@ -10004,15 +10091,15 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   s9+='.'+NL;
   return [s1,s2,s3,s4,s5,s6,s7,s8,s9].join('');
 }
-function pctRowSummary(pctRows, key) {
-  var rows = (pctRows || {})[key] || [];
-  var filled = rows.filter(function(r) { return r.val && r.pct; });
-  if (!filled.length) return '';
-  return filled.map(function(r) { return r.val + ' ' + r.pct + '%'; }).join(', ');
-}
-
 async function generateNarrativeReport() {
   const d = collectFormData();
+  // Helper to summarise pct_rows into readable string e.g. "Gable 90%, Flat 10%"
+  function pctRowSummary(pctRows, key) {
+    var rows = (pctRows || {})[key] || [];
+    var filled = rows.filter(function(r) { return r.val && r.pct; });
+    if (!filled.length) return '';
+    return filled.map(function(r) { return r.val + ' ' + r.pct + '%'; }).join(', ');
+  }
   const f = d.form_fields || {};
   const pills = d.pill_selections || {};
   const ratings = d.rating_values || {};
@@ -10032,13 +10119,9 @@ async function generateNarrativeReport() {
   const yearBuilt     = g('year-built')   || '—';
   const stories       = g('stories-above-grade') || '—';
   const totalArea     = g('total-building-area')   || '—';
-  var isoClassEl = document.querySelector('#iso-class .radio-btn.selected');
-  const constructClass = isoClassEl ? isoClassEl.textContent.trim() : pctRowSummary(d.pct_rows, 'iso-pct-rows') || '—';
-  const extWall     = pctRowSummary(d.pct_rows, 'wall-pct-rows') || (pills['exterior_wall_construction'] || []).join(', ') || '—';
-  const extFinish   = pctRowSummary(d.pct_rows, 'ext-finish-pct-rows') || '—';
-  const structFrame = pctRowSummary(d.pct_rows, 'frame-pct-rows') || '—';
-  const roofDeck    = pctRowSummary(d.pct_rows, 'deck-pct-rows') || '—';
-  const roofType    = pctRowSummary(d.pct_rows, 'rooftype-pct-rows') || '—';
+  const constructClass= (pills['iso_construction_class'] || []).join(', ') || g('iso-construction-class') || '—';
+  const extWall       = (pills['exterior_wall_construction'] || []).join(', ') || g('exterior-wall-construction') || '—';
+  const roofType      = pctRowSummary(d.pct_rows, 'rooftype-pct-rows') || '—';
   const roofCovering  = pctRowSummary(d.pct_rows, 'roof-pct-rows') || '—';
   const roofYear      = g('roof-year') || '—';
   const electrical    = g('electrical-panel-type') || (pills['electrical___panel_type'] || []).join(', ') || '—';
@@ -10192,7 +10275,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
     var narrativeText = generateNarrativeText(d, g, ratings, pills, scoreC, scoreP, scoreS, scoreO,
       insuredName, inspId, inspDate, city, province, occupancy, inspName,
       riskQuality, uwRec, execSummary, yearBuilt, stories, totalArea,
-      constructClass, extWall, extFinish, structFrame, roofType, roofCovering, roofDeck, roofYear,
+      constructClass, extWall, roofType, roofCovering, roofYear,
       electrical, heating, constNotes, occupancyDesc, hazardNotes,
       sprinklerCoverage, sprinklerType, sprinklerCond, fireAlarm,
       extPresent, fusDistance, fusDeptType, fusGrade, security, protNotes,
