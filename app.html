@@ -2258,9 +2258,15 @@
       <div class="card">
         <div class="card-title">Primary Occupancy</div>
         <div class="form-grid">
-          <div class="field">
+          <div class="field" style="position:relative;">
             <label>Primary SIC / NAICS Code</label>
-            <input id="primary-sic-naics-code" type="text" placeholder="e.g. 5411 / 445110">
+            <input id="primary-sic-naics-code" type="text" placeholder="Type to search (e.g. office, retail, warehouse...)"
+              autocomplete="off" spellcheck="false"
+              oninput="filterSICCodes(this.value)"
+              onfocus="filterSICCodes(this.value)"
+              onblur="setTimeout(function(){document.getElementById('sic-dropdown').style.display='none';},200)"
+              style="width:100%;">
+            <div id="sic-dropdown" style="display:none;position:absolute;z-index:999;background:#fff;border:1px solid var(--border);border-radius:8px;max-height:220px;overflow-y:auto;width:100%;box-shadow:0 4px 16px rgba(0,0,0,0.12);top:100%;left:0;"></div>
           </div>
           <div class="field">
             <label>Occupancy Class</label>
@@ -12165,6 +12171,124 @@ ${activeSuppHTML}
     alert('Report error: ' + err.message + '\n\nLine: ' + (err.lineNumber || err.stack));
   }
 }
+
+  // ── SIC / NAICS CODE LOOKUP ──
+  var SIC_NAICS_CODES = [
+    // Office & Professional
+    { code:'6512 / 531120', label:'Office Building Operators' },
+    { code:'7389 / 561499', label:'Office Services' },
+    { code:'8711 / 541330', label:'Engineering Services' },
+    { code:'8712 / 541310', label:'Architectural Services' },
+    { code:'8721 / 541211', label:'Accounting / CPA Firms' },
+    { code:'8742 / 541611', label:'Management Consulting' },
+    { code:'8111 / 541110', label:'Legal Services / Law Office' },
+    { code:'6411 / 524210', label:'Insurance Agents & Brokers' },
+    { code:'6159 / 522292', label:'Mortgage Bankers' },
+    { code:'6022 / 522110', label:'Commercial Banks' },
+    // Retail
+    { code:'5411 / 445110', label:'Grocery Stores / Supermarkets' },
+    { code:'5912 / 446110', label:'Drug Stores / Pharmacies' },
+    { code:'5251 / 444130', label:'Hardware Stores' },
+    { code:'5712 / 442110', label:'Furniture Stores' },
+    { code:'5621 / 448120', label:'Women's Clothing Stores' },
+    { code:'5661 / 448210', label:'Shoe Stores' },
+    { code:'5734 / 443142', label:'Electronics / Computer Stores' },
+    { code:'5311 / 452111', label:'Department Stores' },
+    { code:'5812 / 722513', label:'Limited Service Restaurants' },
+    { code:'5812 / 722511', label:'Full Service Restaurants' },
+    { code:'5813 / 722410', label:'Drinking Establishments / Bars' },
+    { code:'5541 / 447110', label:'Gas Stations with Convenience' },
+    { code:'7542 / 811192', label:'Car Wash' },
+    // Industrial & Warehouse
+    { code:'4213 / 484122', label:'General Freight Trucking' },
+    { code:'4225 / 493110', label:'General Warehousing & Storage' },
+    { code:'4226 / 493190', label:'Cold Storage / Refrigerated' },
+    { code:'5080 / 423830', label:'Industrial Machinery Wholesale' },
+    { code:'2911 / 324110', label:'Petroleum Refining' },
+    { code:'3440 / 332310', label:'Metal Fabrication' },
+    { code:'3559 / 333249', label:'Industrial Machinery Mfg' },
+    { code:'3599 / 333999', label:'General Industrial Mfg' },
+    { code:'3714 / 336350', label:'Auto Parts Manufacturing' },
+    { code:'2650 / 322210', label:'Paperboard Container Mfg' },
+    { code:'2750 / 323111', label:'Commercial Printing' },
+    // Construction
+    { code:'1521 / 236115', label:'General Contractors — Residential' },
+    { code:'1522 / 236116', label:'General Contractors — Commercial' },
+    { code:'1731 / 238210', label:'Electrical Contractors' },
+    { code:'1711 / 238220', label:'Plumbing & HVAC Contractors' },
+    { code:'1741 / 238140', label:'Masonry Contractors' },
+    { code:'1761 / 238160', label:'Roofing Contractors' },
+    // Healthcare
+    { code:'8011 / 621111', label:'Offices of Physicians / Doctors' },
+    { code:'8021 / 621210', label:'Dental Offices' },
+    { code:'8099 / 621399', label:'Other Health Practitioners' },
+    { code:'8049 / 621112', label:'Chiropractic Offices' },
+    { code:'8062 / 622110', label:'General Medical Hospitals' },
+    { code:'8051 / 623110', label:'Nursing Care Facilities' },
+    { code:'5047 / 423450', label:'Medical & Hospital Equipment' },
+    // Hospitality
+    { code:'7011 / 721110', label:'Hotels & Motels' },
+    { code:'7011 / 721120', label:'Casino Hotels' },
+    { code:'7021 / 721191', label:'Bed & Breakfast Inns' },
+    { code:'7041 / 721214', label:'RV Parks & Campgrounds' },
+    // Auto Service
+    { code:'7514 / 532111', label:'Auto Rental' },
+    { code:'7521 / 812930', label:'Parking Lots & Garages' },
+    { code:'7531 / 811121', label:'Auto Body Repair Shops' },
+    { code:'7538 / 811111', label:'Auto Repair — General' },
+    { code:'5511 / 441110', label:'Auto Dealers — New Cars' },
+    { code:'5521 / 441120', label:'Auto Dealers — Used Cars' },
+    // Education
+    { code:'8211 / 611110', label:'Elementary & Secondary Schools' },
+    { code:'8221 / 611310', label:'Colleges & Universities' },
+    { code:'8249 / 611519', label:'Vocational / Trade Schools' },
+    { code:'8299 / 611699', label:'Other Schools & Instruction' },
+    // Religious & Non-Profit
+    { code:'8661 / 813110', label:'Religious Organizations / Churches' },
+    { code:'8641 / 813410', label:'Civic & Social Organizations' },
+    { code:'8699 / 813990', label:'Non-Profit Organizations' },
+    // Recreation
+    { code:'7941 / 711211', label:'Sports Teams & Clubs' },
+    { code:'7991 / 713940', label:'Physical Fitness Facilities / Gyms' },
+    { code:'7999 / 713990', label:'Recreation / Amusement' },
+    { code:'7832 / 512131', label:'Motion Picture Theatres' },
+    // Real Estate
+    { code:'6500 / 531100', label:'Real Estate Lessors' },
+    { code:'6552 / 531312', label:'Property Management' },
+    { code:'6531 / 531210', label:'Real Estate Agents & Managers' },
+    // Mixed Use / Other
+    { code:'6512 / 531110', label:'Lessors of Residential Buildings' },
+    { code:'6798 / 525990', label:'Real Estate Investment Trusts' },
+    { code:'4911 / 221122', label:'Electric Power Distribution' },
+    { code:'4941 / 221310', label:'Water Supply' },
+    { code:'7389 / 561790', label:'Other Services to Buildings' },
+  ];
+
+  function filterSICCodes(query) {
+    var dropdown = document.getElementById('sic-dropdown');
+    if (!query || query.length < 2) { dropdown.style.display = 'none'; return; }
+    var q = query.toLowerCase();
+    var matches = SIC_NAICS_CODES.filter(function(item) {
+      return item.label.toLowerCase().includes(q) || item.code.toLowerCase().includes(q);
+    }).slice(0, 12);
+    if (!matches.length) { dropdown.style.display = 'none'; return; }
+    dropdown.innerHTML = matches.map(function(item) {
+      return '<div onclick="selectSICCode(\'' + item.code.replace(/'/g,"\'") + '\', \'' + item.label.replace(/'/g,"\'") + '\')" ' +
+        'style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0ece6;font-size:13px;" ' +
+        'onmouseover="this.style.background='#f8f5f0'" onmouseout="this.style.background=''">' +
+        '<span style="font-weight:700;color:var(--navy);">' + item.code + '</span>' +
+        '<span style="color:var(--slate);margin-left:10px;">' + item.label + '</span>' +
+        '</div>';
+    }).join('');
+    dropdown.style.display = 'block';
+  }
+
+  function selectSICCode(code, label) {
+    var input = document.getElementById('primary-sic-naics-code');
+    input.value = code + ' — ' + label;
+    document.getElementById('sic-dropdown').style.display = 'none';
+  }
+
 </script>
 </body>
 </html>
