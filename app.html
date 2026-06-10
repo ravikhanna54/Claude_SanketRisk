@@ -10863,8 +10863,8 @@ function generateFormalReport() {
   // Photo for cover
   const photo1 = document.getElementById('photo-1-img');
   const coverPhotoSrc = (photo1 && photo1.classList.contains('loaded') && photo1.src) ? photo1.src : '';
-  // Collect ALL photo data now (before window.open) so we don't need window.opener
-    // Collect ALL photo data now (before window.open) so we do not need window.opener
+  // Collect photo data for report
+  const allPhotos = [];
   let photoIdx = 1;
   while (photoIdx <= 20) {
     const img = document.getElementById('photo-' + photoIdx + '-img');
