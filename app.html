@@ -7281,36 +7281,39 @@
     document.getElementById('pdf-upload-input').click();
   }
 
-  async function handlePDFUpload(input) {
+  function handlePDFUpload(input) {
     var files = Array.from(input.files);
     if (!files.length) return;
-    for (var i = 0; i < files.length; i++) {
-      var file = files[i];
-      if (file.type !== 'application/pdf') { showToast('⚠ Only PDF files accepted'); continue; }
-      if (file.size > 20 * 1024 * 1024) { showToast('⚠ PDF too large (max 20MB): ' + file.name); continue; }
-      await uploadPDFToStorage(file);
+    var i = 0;
+    function uploadNext() {
+      if (i >= files.length) { input.value = ''; return; }
+      var file = files[i++];
+      if (file.type !== 'application/pdf') { showToast('⚠ Only PDF files accepted'); uploadNext(); return; }
+      if (file.size > 52428800) { showToast('⚠ PDF too large (max 50MB): ' + file.name); uploadNext(); return; }
+      uploadPDFToStorage(file, uploadNext);
     }
-    input.value = '';
+    uploadNext();
   }
 
-  async function uploadPDFToStorage(file) {
-    var toastId = showToast('⏳ Uploading ' + file.name + '...');
-    try {
-      if (!currentInspectionId) { showToast('⚠ Please save the inspection first before uploading PDFs.'); return; }
-      var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      var path = 'inspections/' + currentInspectionId + '/pdf-' + Date.now() + '-' + safeName;
-      var res = await _supabase.storage.from('inspection-photos').upload(path, file, { upsert: true, contentType: 'application/pdf' });
-      if (res.error) throw res.error;
-      // Get signed URL for display
-      var urlRes = await _supabase.storage.from('inspection-photos').createSignedUrl(path, 3600 * 24 * 365);
-      var url = urlRes.data ? urlRes.data.signedUrl : '';
-      var pdfObj = { name: file.name, path: path, url: url, size: file.size };
-      attachedPDFs.push(pdfObj);
-      renderPDFList();
-      showToast('✓ PDF uploaded: ' + file.name);
-    } catch(e) {
-      showToast('⚠ PDF upload failed: ' + e.message);
-    }
+  function uploadPDFToStorage(file, callback) {
+    if (!currentInspectionId) { showToast('⚠ Save inspection first before uploading PDFs.'); if(callback) callback(); return; }
+    showToast('⏳ Uploading ' + file.name + '...');
+    var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    var path = 'inspections/' + currentInspectionId + '/pdf-' + Date.now() + '-' + safeName;
+    _supabase.storage.from('inspection-photos')
+      .upload(path, file, { upsert: true, contentType: 'application/pdf' })
+      .then(function(res) {
+        if (res.error) { showToast('⚠ Upload failed: ' + res.error.message); if(callback) callback(); return; }
+        _supabase.storage.from('inspection-photos')
+          .createSignedUrl(path, 3600 * 24 * 365)
+          .then(function(urlRes) {
+            var url = (urlRes.data && urlRes.data.signedUrl) ? urlRes.data.signedUrl : '';
+            attachedPDFs.push({ name: file.name, path: path, url: url, size: file.size });
+            renderPDFList();
+            showToast('✓ PDF uploaded: ' + file.name);
+            if(callback) callback();
+          }).catch(function(e) { showToast('⚠ ' + e.message); if(callback) callback(); });
+      }).catch(function(e) { showToast('⚠ ' + e.message); if(callback) callback(); });
   }
 
   function renderPDFList() {
@@ -10861,7 +10864,7 @@ function generateFormalReport() {
   const photo1 = document.getElementById('photo-1-img');
   const coverPhotoSrc = (photo1 && photo1.classList.contains('loaded') && photo1.src) ? photo1.src : '';
   // Collect ALL photo data now (before window.open) so we don't need window.opener
-  const allPhotos = [];
+    // Collect ALL photo data now (before window.open) so we do not need window.opener
   let photoIdx = 1;
   while (photoIdx <= 20) {
     const img = document.getElementById('photo-' + photoIdx + '-img');
@@ -12436,13 +12439,10 @@ ${activeSuppHTML}
 </div><!-- /report-wrap -->
 </body>
 </html>`;
-  const w = window.open('', '_blank');
-  if (!w) { alert('var blob = new Blob([html], { type: 'text/html' });   var blobUrl = URL.createObjectURL(blob);   var w = window.open(blobUrl, '_blank');   if (!w) { document.open(); document.write(html); document.close(); }.'); return; }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  // Give Edge a moment then send print command via postMessage
-  window._reportWindow = w;
+  var fblob = new Blob([html], { type: 'text/html' });
+  var fblobUrl = URL.createObjectURL(fblob);
+  var w = window.open(fblobUrl, '_blank');
+  if (!w) { document.open(); document.write(html); document.close(); }
   } catch(err) {
     alert('FORMAL REPORT ERROR:\n' + err.message + '\n\n' + (err.stack || err.lineNumber || ''));
   }
@@ -12666,12 +12666,10 @@ ${activeSuppHTML}
     }).slice(0, 15);
     if (!matches.length) { dropdown.style.display = 'none'; return; }
     dropdown.innerHTML = matches.map(function(item) {
-      var escaped = item.label.replace(/'/g,"\'");
-      return '<div onclick="selectSICCode(\'' + item.ibc + '\',\'' + item.sic + '\',\'' + item.naics + '\',\'' + escaped + '\')" ' +
-        'style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0ece6;font-size:12px;line-height:1.6;" ' +
-        'onmouseover="this.style.background='#f8f5f0'" onmouseout="this.style.background=''">' +
+      return '<div onclick="selectSICCode(' + JSON.stringify(item.ibc) + ',' + JSON.stringify(item.sic) + ',' + JSON.stringify(item.naics) + ',' + JSON.stringify(item.label) + ')" ' +
+        'style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0ece6;font-size:12px;line-height:1.6;">' +
         '<div style="font-weight:700;color:var(--navy);">' + item.label + '</div>' +
-        '<div style="color:var(--slate);font-size:11px;">IBC: <b>' + item.ibc + '</b> &nbsp;|&nbsp; SIC: ' + item.sic + ' &nbsp;|&nbsp; NAICS: ' + item.naics + '</div>' +
+        '<div style="color:#4a6580;font-size:11px;">IBC: <b>' + item.ibc + '</b> | SIC: ' + item.sic + ' | NAICS: ' + item.naics + '</div>' +
         '</div>';
     }).join('');
     dropdown.style.display = 'block';
