@@ -10866,10 +10866,11 @@ function generateFormalReport() {
   // Collect photo data for report
   const allPhotos = [];
   let photoIdx = 1;
-  while (photoIdx <= 20) {
+  while (photoIdx <= 40) {
     const img = document.getElementById('photo-' + photoIdx + '-img');
-    if (!img && photoIdx > 10) break;
-    if (img && img.classList.contains('loaded') && img.src) {
+    if (!img && photoIdx > 20) break;
+    // Accept loaded images OR images with a src that looks like a real URL
+    if (img && img.src && img.src.length > 10 && !img.src.startsWith('data:image/gif')) {
       const captionEl = document.getElementById('photo-' + photoIdx + '-caption');
       const categoryEl = document.getElementById('photo-' + photoIdx + '-category');
       allPhotos.push({
@@ -12436,48 +12437,73 @@ ${activeSuppHTML}
     </div>` : '<p style="color:#aaa;font-size:9pt;padding:8px 0;">No photos attached to this inspection.</p>'}
   </div>
 </div>
-  ${attachedPDFs && attachedPDFs.length > 0 ? `
-  <div class="report-section" style="margin-top:32px;page-break-before:always;">
-    <div class="sec-header">
-      <div class="sec-header-left">
-        <span class="sec-icon">📄</span>
-        <span class="sec-title">PDF Attachments</span>
-      </div>
-      <span class="sec-tag">DOCUMENTS</span>
-    </div>
-    <p style="font-size:10pt;color:#4a6580;margin:12px 0;">The following documents are attached to this inspection report. Click the link to open each document.</p>
-    <table style="width:100%;border-collapse:collapse;margin-top:8px;">
-      <thead>
-        <tr style="background:#0d1b2a;color:white;">
-          <th style="padding:8px 12px;text-align:left;font-size:10pt;">#</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10pt;">Document Name</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10pt;">Size</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10pt;">Link</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${attachedPDFs.map(function(pdf, i) {
-          var size = pdf.size > 1024*1024 ? (pdf.size/1024/1024).toFixed(1) + ' MB' : Math.round(pdf.size/1024) + ' KB';
-          var bg = i % 2 === 0 ? '#f8f5f0' : '#ffffff';
-          return '<tr style="background:' + bg + ';border-bottom:1px solid #ddd8d0;">' +
-            '<td style="padding:8px 12px;font-size:10pt;color:#4a6580;">' + (i+1) + '</td>' +
-            '<td style="padding:8px 12px;font-size:10pt;font-weight:600;color:#0d1b2a;">📄 ' + pdf.name + '</td>' +
-            '<td style="padding:8px 12px;font-size:10pt;color:#4a6580;">' + size + '</td>' +
-            '<td style="padding:8px 12px;font-size:10pt;">' +
-              (pdf.url ? '<a href="' + pdf.url + '" target="_blank" style="color:#0d1b2a;font-weight:600;">Open Document ↗</a>' : '—') +
-            '</td>' +
-          '</tr>';
-        }).join('')}
-      </tbody>
-    </table>
-  </div>` : ''}
+  <div id="pdf-pages-section"></div>` 
 </div><!-- /report-wrap -->
 </body>
 </html>`;
   var fblob = new Blob([html], { type: 'text/html' });
   var fblobUrl = URL.createObjectURL(fblob);
   var w = window.open(fblobUrl, '_blank');
-  if (!w) { document.open(); document.write(html); document.close(); }
+  if (!w) { document.open(); document.write(html); document.close(); return; }
+
+  // After report opens, render PDFs as images using PDF.js
+  if (attachedPDFs && attachedPDFs.length > 0) {
+    setTimeout(function() {
+      try {
+        var pdfSection = w.document.getElementById('pdf-pages-section');
+        if (!pdfSection) return;
+        
+        // Load PDF.js in the report window
+        var pdfScript = w.document.createElement('script');
+        pdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        pdfScript.onload = function() {
+          w.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          
+          // Section header
+          pdfSection.innerHTML = '<div style="page-break-before:always;margin-top:32px;">' +
+            '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#0d1b2a;color:white;border-radius:8px 8px 0 0;">' +
+            '<span style="font-size:20px;">📄</span>' +
+            '<span style="font-family:Playfair Display,serif;font-size:14pt;font-weight:700;">PDF Attachments</span>' +
+            '<span style="margin-left:auto;font-size:9pt;letter-spacing:.1em;color:#c8a84b;">DOCUMENTS</span>' +
+            '</div></div>';
+
+          // Render each PDF
+          attachedPDFs.forEach(function(pdf, pdfIdx) {
+            if (!pdf.url) return;
+            var pdfContainer = w.document.createElement('div');
+            pdfContainer.style.cssText = 'margin-top:20px;page-break-before:always;';
+            pdfContainer.innerHTML = '<div style="padding:8px 12px;background:#f8f5f0;border:1px solid #ddd8d0;border-radius:6px;margin-bottom:8px;display:flex;align-items:center;gap:8px;">' +
+              '<span>📄</span><strong style="font-size:11pt;">' + pdf.name + '</strong>' +
+              '<span style="margin-left:auto;font-size:9pt;color:#4a6580;">' + (pdf.size > 1048576 ? (pdf.size/1048576).toFixed(1)+' MB' : Math.round(pdf.size/1024)+' KB') + '</span></div>';
+            pdfSection.appendChild(pdfContainer);
+
+            w.pdfjsLib.getDocument(pdf.url).promise.then(function(pdfDoc) {
+              var numPages = pdfDoc.numPages;
+              var renderPage = function(pageNum) {
+                if (pageNum > numPages) return;
+                pdfDoc.getPage(pageNum).then(function(page) {
+                  var viewport = page.getViewport({ scale: 1.5 });
+                  var canvas = w.document.createElement('canvas');
+                  canvas.width = viewport.width;
+                  canvas.height = viewport.height;
+                  canvas.style.cssText = 'width:100%;page-break-inside:avoid;display:block;margin-bottom:8px;border:1px solid #ddd;';
+                  pdfContainer.appendChild(canvas);
+                  page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise.then(function() {
+                    renderPage(pageNum + 1);
+                  });
+                });
+              };
+              renderPage(1);
+            }).catch(function(e) {
+              pdfContainer.innerHTML += '<p style="color:#c53030;font-size:10pt;">Could not render PDF: ' + e.message + '</p>';
+            });
+          });
+        };
+        w.document.head.appendChild(pdfScript);
+      } catch(e) {}
+    }, 1500);
+  }
+
   } catch(err) {
     alert('FORMAL REPORT ERROR:\n' + err.message + '\n\n' + (err.stack || err.lineNumber || ''));
   }
