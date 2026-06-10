@@ -485,7 +485,7 @@
             '<td><span class="status-badge ' + statusClass + '">' + statusLabel + '</span></td>' +
             adminCell +
             reviewerCell +
-            '<td style="font-size:11px;color:var(--slate-light);font-family:'IBM Plex Mono',monospace;">' + formatDate(r.updated_at) + '</td>' +
+            '<td style="font-size:11px;color:var(--slate-light);font-family:monospace;">' + formatDate(r.updated_at) + '</td>' +
             '<td style="white-space:nowrap;"><button class="btn-open" onclick="event.stopPropagation();openInspection(\'' + r.id + '\')">Open →</button>' + deleteBtn + '</td>' +
             '</tr>';
         }).join('') + '</tbody></table>';
