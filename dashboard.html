@@ -316,6 +316,34 @@
     let currentUserName = '';
     let allInspections  = [];
 
+    var allReviewers = [];
+
+    async function loadReviewers() {
+      try {
+        const { data, error } = await _supabase.from('profiles')
+          .select('full_name, email, role')
+          .in('role', ['admin', 'reviewer'])
+          .order('full_name');
+        if (!error && data) {
+          allReviewers = data.map(function(r) {
+            return { name: r.full_name || r.email, email: r.email };
+          });
+        }
+      } catch(e) {}
+    }
+
+    async function assignReviewer(inspectionId, reviewerName) {
+      if (!reviewerName) return;
+      try {
+        const { error } = await _supabase.from('inspections')
+          .update({ qa_reviewer: reviewerName, report_status: 'inreview' })
+          .eq('id', inspectionId);
+        if (error) throw error;
+        showToast('✓ Assigned to ' + reviewerName);
+        await loadInspections();
+      } catch(e) { showToast('⚠ Failed: ' + e.message); }
+    }
+
     async function init() {
       const { data: { session } } = await _supabase.auth.getSession();
       if (!session) { window.location.replace('/login.html'); return; }
@@ -340,6 +368,7 @@
         document.getElementById('btn-backup').style.display = 'inline-block';
         document.getElementById('btn-scan-one').style.display = 'inline-block';
       }
+      await loadReviewers();
       await loadInspections();
     }
 
@@ -347,7 +376,7 @@
       const isAdmin = currentUserRole === 'admin';
       let query = _supabase
         .from('inspections')
-        .select('id,inspection_id,insured_name,city,province_state,occupancy_class,inspector_name,user_id,report_status,report_published,inspection_date,updated_at')
+        .select('id,inspection_id,insured_name,city,province_state,occupancy_class,inspector_name,user_id,report_status,report_published,inspection_date,updated_at,qa_reviewer')
         .order('updated_at', { ascending: false })
         .limit(300);
       if (isAdmin) {
@@ -429,20 +458,35 @@
         wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">No inspections found</div><div class="empty-sub">Try adjusting your filters</div></div>';
         return;
       }
-      const adminCol = isAdmin ? '<th>Inspector</th>' : '';
+      const adminCol = isAdmin ? '<th>Inspector</th><th>Reviewer</th>' : '';
       wrap.innerHTML = '<table><thead><tr><th>Ref ID</th><th>Insured / Property</th><th>Date</th><th>Status</th>' + adminCol + '<th>Updated</th><th></th></tr></thead><tbody>' +
         rows.map(r => {
           const statusClass = 'status-' + (r.report_status || 'draft');
           const statusLabel = { draft:'Draft', submitted:'Submitted', inreview:'In Review', approved:'Approved', returned:'Returned' }[r.report_status] || (r.report_status || 'Draft');
           const adminCell = isAdmin ? '<td><span style="font-size:12px;">' + (r.inspector_name || '—') + '</span></td>' : '';
           const deleteBtn = isAdmin ? '<button class="btn-open" style="color:#c53030;border-color:#c53030;margin-left:4px;" onclick="event.stopPropagation();deleteInspection(\'' + r.id + '\',\'' + (r.insured_name||'this inspection').replace(/'/g,'') + '\')">🗑</button>' : '';
+          // Reviewer column - only show for submitted/inreview/approved/returned
+          var reviewerCell = '';
+          if (isAdmin) {
+            var canAssign = r.report_status === 'submitted' || r.report_status === 'inreview';
+            if (canAssign) {
+              var reviewerOpts = '<option value="">— Assign —</option>' +
+                allReviewers.map(function(rv) {
+                  return '<option value="' + rv.name + '"' + (r.qa_reviewer === rv.name ? ' selected' : '') + '>' + rv.name + '</option>';
+                }).join('');
+              reviewerCell = '<td onclick="event.stopPropagation()"><select onchange="assignReviewer(\'' + r.id + '\', this.value)" style="font-size:11px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);max-width:130px;">' + reviewerOpts + '</select></td>';
+            } else {
+              reviewerCell = '<td><span style="font-size:11px;color:var(--slate);">' + (r.qa_reviewer || '—') + '</span></td>';
+            }
+          }
           return '<tr onclick="openInspection(\'' + r.id + '\')">' +
             '<td class="td-id">' + (r.inspection_id || r.id?.substring(0,8) || '—') + '</td>' +
             '<td><div class="td-name">' + (r.insured_name || '—') + '</div><div class="td-sub">' + ([r.city, r.province_state].filter(Boolean).join(', ') || r.occupancy_class || '') + '</div></td>' +
             '<td style="font-size:12px;color:var(--slate);">' + formatDate(r.inspection_date) + '</td>' +
             '<td><span class="status-badge ' + statusClass + '">' + statusLabel + '</span></td>' +
             adminCell +
-            '<td style="font-size:11px;color:var(--slate-light);font-family:\'IBM Plex Mono\',monospace;">' + formatDate(r.updated_at) + '</td>' +
+            reviewerCell +
+            '<td style="font-size:11px;color:var(--slate-light);font-family:'IBM Plex Mono',monospace;">' + formatDate(r.updated_at) + '</td>' +
             '<td style="white-space:nowrap;"><button class="btn-open" onclick="event.stopPropagation();openInspection(\'' + r.id + '\')">Open →</button>' + deleteBtn + '</td>' +
             '</tr>';
         }).join('') + '</tbody></table>';
@@ -570,10 +614,7 @@
             tr.querySelector('[data-scan-id]').addEventListener('click', function() { launchScanAnalysis(r.id); });
           }
           if (tr.querySelector('[data-view-id]')) {
-            tr.querySelector('[data-view-id]').addEventListener('click', function() {
-            try { sessionStorage.setItem('scanReport_' + r.id, JSON.stringify(r)); } catch(e) {}
-            window.location.href = '/scan-report.html?id=' + r.id;
-          });
+            tr.querySelector('[data-view-id]').addEventListener('click', function() { window.location.href = '/scan-report.html?id=' + r.id; });
           }
           tr.querySelector('[data-del-id]').addEventListener('click', function() { deleteScanSubmission(r.id, r.insured_name||'this submission'); });
           return tr;
