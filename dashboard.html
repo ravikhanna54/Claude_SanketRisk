@@ -318,30 +318,30 @@
 
     var allReviewers = [];
 
-    async function loadReviewers() {
-      try {
-        const { data, error } = await _supabase.from('profiles')
-          .select('full_name, email, role')
-          .in('role', ['admin', 'reviewer'])
-          .order('full_name');
-        if (!error && data) {
-          allReviewers = data.map(function(r) {
-            return { name: r.full_name || r.email, email: r.email };
-          });
-        }
-      } catch(e) {}
+    function loadReviewers() {
+      return _supabase.from('profiles')
+        .select('full_name, email, role')
+        .in('role', ['admin', 'reviewer'])
+        .order('full_name')
+        .then(function(res) {
+          if (!res.error && res.data) {
+            allReviewers = res.data.map(function(r) {
+              return { name: r.full_name || r.email, email: r.email };
+            });
+          }
+        }).catch(function(){});
     }
 
-    async function assignReviewer(inspectionId, reviewerName) {
+    function assignReviewer(inspectionId, reviewerName) {
       if (!reviewerName) return;
-      try {
-        const { error } = await _supabase.from('inspections')
-          .update({ qa_reviewer: reviewerName, report_status: 'inreview' })
-          .eq('id', inspectionId);
-        if (error) throw error;
-        showToast('✓ Assigned to ' + reviewerName);
-        await loadInspections();
-      } catch(e) { showToast('⚠ Failed: ' + e.message); }
+      _supabase.from('inspections')
+        .update({ qa_reviewer: reviewerName, report_status: 'inreview' })
+        .eq('id', inspectionId)
+        .then(function(res) {
+          if (res.error) { showToast('⚠ Failed: ' + res.error.message); return; }
+          showToast('✓ Assigned to ' + reviewerName);
+          loadInspections();
+        }).catch(function(e) { showToast('⚠ ' + e.message); });
     }
 
     async function init() {
@@ -368,8 +368,7 @@
         document.getElementById('btn-backup').style.display = 'inline-block';
         document.getElementById('btn-scan-one').style.display = 'inline-block';
       }
-      await loadReviewers();
-      await loadInspections();
+      loadReviewers().then(function(){ loadInspections(); });
     }
 
     async function loadInspections() {
