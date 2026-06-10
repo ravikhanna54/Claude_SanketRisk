@@ -3811,8 +3811,15 @@
         <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn-add-row" onclick="addPhotoSlot()">＋ Add Photo</button>
           <button class="btn-add-row" onclick="triggerBulkPhotoUpload()" style="background:#1a3a5c;color:#fff;">📁 Bulk Load Photos</button>
+          <button onclick="triggerPDFUpload()" style="padding:8px 16px;background:#5a2d82;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">📄 Upload PDF</button>
         </div>
         <input type="file" id="bulk-photo-input" accept="image/*" multiple style="display:none" onchange="bulkLoadPhotos(this)">
+        <input type="file" id="pdf-upload-input" accept="application/pdf" multiple style="display:none" onchange="handlePDFUpload(this)">
+        <!-- PDF Document List -->
+        <div id="pdf-list-wrap" style="display:none;margin-top:20px;">
+          <div class="card-title" style="margin-bottom:10px;">📄 Attached PDF Documents</div>
+          <div id="pdf-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
       </div>
     </div>
     <!-- ══ SECTION: SUMMARY ══ -->
@@ -7268,6 +7275,72 @@
     }
   }
   var pendingPhotoUploads = {};
+  var attachedPDFs = []; // { name, path, url, size }
+
+  function triggerPDFUpload() {
+    document.getElementById('pdf-upload-input').click();
+  }
+
+  async function handlePDFUpload(input) {
+    var files = Array.from(input.files);
+    if (!files.length) return;
+    for (var i = 0; i < files.length; i++) {
+      var file = files[i];
+      if (file.type !== 'application/pdf') { showToast('⚠ Only PDF files accepted'); continue; }
+      if (file.size > 20 * 1024 * 1024) { showToast('⚠ PDF too large (max 20MB): ' + file.name); continue; }
+      await uploadPDFToStorage(file);
+    }
+    input.value = '';
+  }
+
+  async function uploadPDFToStorage(file) {
+    var toastId = showToast('⏳ Uploading ' + file.name + '...');
+    try {
+      if (!currentInspectionId) { showToast('⚠ Please save the inspection first before uploading PDFs.'); return; }
+      var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      var path = 'inspections/' + currentInspectionId + '/pdf-' + Date.now() + '-' + safeName;
+      var res = await _supabase.storage.from('inspection-photos').upload(path, file, { upsert: true, contentType: 'application/pdf' });
+      if (res.error) throw res.error;
+      // Get signed URL for display
+      var urlRes = await _supabase.storage.from('inspection-photos').createSignedUrl(path, 3600 * 24 * 365);
+      var url = urlRes.data ? urlRes.data.signedUrl : '';
+      var pdfObj = { name: file.name, path: path, url: url, size: file.size };
+      attachedPDFs.push(pdfObj);
+      renderPDFList();
+      showToast('✓ PDF uploaded: ' + file.name);
+    } catch(e) {
+      showToast('⚠ PDF upload failed: ' + e.message);
+    }
+  }
+
+  function renderPDFList() {
+    var wrap = document.getElementById('pdf-list-wrap');
+    var list = document.getElementById('pdf-list');
+    if (!attachedPDFs.length) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    list.innerHTML = attachedPDFs.map(function(pdf, idx) {
+      var size = pdf.size > 1024*1024 ? (pdf.size/1024/1024).toFixed(1) + ' MB' : Math.round(pdf.size/1024) + ' KB';
+      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8f5f0;border-radius:8px;border:1px solid var(--border);">' +
+        '<span style="font-size:24px;">📄</span>' +
+        '<div style="flex:1;">' +
+          '<div style="font-weight:600;font-size:13px;color:var(--navy);">' + pdf.name + '</div>' +
+          '<div style="font-size:11px;color:var(--slate);">' + size + '</div>' +
+        '</div>' +
+        (pdf.url ? '<a href="' + pdf.url + '" target="_blank" style="font-size:12px;color:var(--navy);font-weight:600;text-decoration:none;padding:4px 10px;border:1px solid var(--navy);border-radius:6px;">View</a>' : '') +
+        '<button onclick="removePDF(' + idx + ')" style="background:none;border:none;color:#c53030;font-size:18px;cursor:pointer;padding:0 4px;">✕</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function removePDF(idx) {
+    if (!confirm('Remove this PDF?')) return;
+    // Delete from storage
+    var path = attachedPDFs[idx].path;
+    _supabase.storage.from('inspection-photos').remove([path]).catch(function(){});
+    attachedPDFs.splice(idx, 1);
+    renderPDFList();
+  }
+
   async function flushPendingPhotoUploads() {
     if (!currentInspectionId) return;
     const pending = Object.entries(pendingPhotoUploads);
@@ -7776,6 +7849,7 @@
           safety:       (document.getElementById('score-safety')||{}).textContent       || '',
           overall:      (document.getElementById('score-overall')||{}).textContent      || '',
         },
+        pdf_attachments: attachedPDFs,
       }),
       updated_at: new Date().toISOString()
     };
@@ -8307,6 +8381,11 @@
           const panel = document.getElementById('haz-detail-' + key);
           if (panel) panel.style.display = btn.classList.contains('selected') ? 'block' : 'none';
         });
+      }
+      // ── Restore PDFs ──
+      if (fd.pdf_attachments && fd.pdf_attachments.length) {
+        attachedPDFs = fd.pdf_attachments;
+        renderPDFList();
       }
       // ── Restore scores ──
       var savedScores = fd.scores || {};
