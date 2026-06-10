@@ -6892,7 +6892,9 @@
 
     // ── CONSTRUCTION SCORE (1-5) ──
     var cScore = 3.0; // default
-    var conClass = (pills['iso_construction_class'] || []).join('').toLowerCase();
+    var isoClassBtn = document.querySelector('#iso-class .radio-btn.selected');
+    var conClass = isoClassBtn ? isoClassBtn.textContent.trim().toLowerCase() : 
+      (pills['iso_construction_class'] || []).join('').toLowerCase();
     if (conClass.includes('1') || conClass.includes('fire resistive')) cScore = 5.0;
     else if (conClass.includes('2') || conClass.includes('non-combustible')) cScore = 4.0;
     else if (conClass.includes('3') || conClass.includes('masonry')) cScore = 3.5;
@@ -9979,15 +9981,22 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   if (fmt(constructClass)) {
     s2 += 'The ISO Construction Classification is ' + constructClass + '. ';
   }
-  if (fmt(extWall)) {
-    var wallParts = extWall.split(',');
-    s2 += 'Exterior wall construction consists of ' + wallParts.map(function(p){return p.trim().toLowerCase();}).join(', ') + '. ';
-  }
+
+  // Additional construction details from pct-rows
+  var extFinish   = pctRowSummary(d.pct_rows, 'ext-finish-pct-rows');
+  var structFrame = pctRowSummary(d.pct_rows, 'frame-pct-rows');
+  var roofDeck    = pctRowSummary(d.pct_rows, 'deck-pct-rows');
+  var wallConst   = pctRowSummary(d.pct_rows, 'wall-pct-rows');
+
+  if (fmt(wallConst)) s2 += 'Exterior wall construction consists of ' + wallConst + '. ';
+  if (fmt(extFinish)) s2 += 'The exterior wall finish is ' + extFinish + '. ';
+  if (fmt(structFrame)) s2 += 'The structural frame is ' + structFrame + '. ';
   if (fmt(constNotes)) s2 += constNotes + ' ';
   s2 += NL;
   s2 += 'The roof ';
   if (fmt(roofType)) s2 += 'is of ' + roofType.toLowerCase() + ' design';
   if (fmt(roofCovering)) s2 += (fmt(roofType)?' with ':'features ') + roofCovering.toLowerCase() + ' covering';
+  if (fmt(roofDeck)) s2 += ', with a ' + roofDeck.toLowerCase() + ' roof deck';
   if (fmt(roofYear)) s2 += ', last replaced in ' + roofYear;
   s2 += '. ';
   if (fmt(electrical)) s2 += 'Electrical service is provided via ' + electrical.toLowerCase() + ' panels. ';
@@ -10129,7 +10138,10 @@ async function generateNarrativeReport() {
   const yearBuilt     = g('year-built')   || '—';
   const stories       = g('stories-above-grade') || '—';
   const totalArea     = g('total-building-area')   || '—';
-  const constructClass= (pills['iso_construction_class'] || []).join(', ') || g('iso-construction-class') || '—';
+  // Read ISO class from selected radio button label (not input value which gives "on")
+  var isoClassEl = document.querySelector('#iso-class .radio-btn.selected');
+  var constructClass = isoClassEl ? isoClassEl.textContent.trim() : 
+    pctRowSummary(d.pct_rows, 'iso-pct-rows') || '—';
   const extWall       = (pills['exterior_wall_construction'] || []).join(', ') || g('exterior-wall-construction') || '—';
   const roofType      = pctRowSummary(d.pct_rows, 'rooftype-pct-rows') || '—';
   const roofCovering  = pctRowSummary(d.pct_rows, 'roof-pct-rows') || '—';
