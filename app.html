@@ -3639,7 +3639,6 @@
           <div class="score-lbl" style="color:var(--navy-mid)">Overall</div>
         </div>
       </div>
-
       <div class="card">
         <div class="card-title">Overall Risk Quality</div>
         <div class="field" style="margin-bottom:16px">
@@ -3734,7 +3733,7 @@
               <textarea id="qa-notes" placeholder="Reviewer comments, deficiencies, approval notes..." style="min-height:80px;"></textarea>
             </div>
           </div>
-          <div id="qa-action-buttons" style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+          <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
             <button id="btn-qa-approve" onclick="approveQA()"
               style="display:none;padding:10px 24px;background:#276749;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
               ✅ Approve Report
@@ -6767,7 +6766,6 @@
 <script>
   // ── NAVIGATION ──
   function showSection(id, el) {
-    if (id === 'summary') { setTimeout(calculateCOPEScores, 200); }
     document.querySelectorAll('.section-panel').forEach(p => {
       p.classList.remove('active');
     });
@@ -6882,79 +6880,13 @@
       updateOverallScore();
     }
   }
-  // ── AUTO COPE SCORING ──
-  function calculateCOPEScores() {
-    var d = collectFormData();
-    var f = d.form_fields || {};
-    var pills = d.pill_selections || {};
-    var ratings = d.rating_values || {};
-    var get = function(id) { return f[id] || ''; };
-
-    // ── CONSTRUCTION SCORE (1-5) ──
-    var cScore = 3.0; // default
-    var isoClassBtn = document.querySelector('#iso-class .radio-btn.selected');
-    var conClass = isoClassBtn ? isoClassBtn.textContent.trim().toLowerCase() : 
-      (pills['iso_construction_class'] || []).join('').toLowerCase();
-    if (conClass.includes('1') || conClass.includes('fire resistive')) cScore = 5.0;
-    else if (conClass.includes('2') || conClass.includes('non-combustible')) cScore = 4.0;
-    else if (conClass.includes('3') || conClass.includes('masonry')) cScore = 3.5;
-    else if (conClass.includes('4') || conClass.includes('modified')) cScore = 3.0;
-    else if (conClass.includes('5') || conClass.includes('joisted')) cScore = 2.5;
-    else if (conClass.includes('6') || conClass.includes('frame')) cScore = 2.0;
-    // Adjust for age
-    var yr = parseInt(get('year-built')) || 0;
-    if (yr > 0) {
-      var age = new Date().getFullYear() - yr;
-      if (age > 50) cScore = Math.max(1, cScore - 0.5);
-      else if (age < 15) cScore = Math.min(5, cScore + 0.3);
-    }
-
-    // ── PROTECTION SCORE (1-5) ──
-    var pScore = 2.5;
-    var spk = (pills['sprinkler_coverage'] || []).join('').toLowerCase();
-    var alarm = (pills['fire_alarm_type'] || []).join('').toLowerCase();
-    if (spk.includes('full') || spk.includes('90')) pScore += 1.0;
-    else if (spk.includes('partial') || spk.includes('50')) pScore += 0.5;
-    else if (spk.includes('none') || spk === '') pScore -= 0.5;
-    if (alarm.includes('central') || alarm.includes('monitored')) pScore += 0.5;
-    else if (alarm.includes('local')) pScore += 0.2;
-    // FUS grade
-    var fusGrade = parseInt(get('fus-grade')) || 0;
-    if (fusGrade === 1 || fusGrade === 2) pScore += 0.3;
-    else if (fusGrade >= 5) pScore -= 0.3;
-    pScore = Math.min(5, Math.max(1, pScore));
-
-    // ── SAFETY SCORE (1-5) from rating buttons ──
-    var safetyRatings = Object.values(ratings).map(function(v) { return parseFloat(v); }).filter(function(v) { return !isNaN(v) && v >= 1 && v <= 5; });
-    var sScore = safetyRatings.length ? (safetyRatings.reduce(function(a,b){return a+b;},0) / safetyRatings.length) : 3.0;
-
-    // ── OVERALL ──
-    var oScore = ((cScore + pScore + sScore) / 3);
-
-    // Update tiles
-    document.getElementById('score-construction').textContent = cScore.toFixed(1);
-    document.getElementById('score-protection').textContent   = pScore.toFixed(1);
-    document.getElementById('score-safety').textContent       = sScore.toFixed(1);
-    document.getElementById('score-overall').textContent      = oScore.toFixed(1);
-  }
-
-  function updateScoreFromInput(type, val) {
-    var num = parseFloat(val);
-    var tile = document.getElementById('score-' + type);
-    var input = document.getElementById('input-score-' + type);
-    if (tile) tile.textContent = (!isNaN(num) && num >= 1 && num <= 5) ? num.toFixed(1) : '—';
-    updateOverallScore();
-  }
-
   function updateOverallScore() {
     const vals = ['score-construction','score-protection','score-safety']
       .map(id => parseFloat(document.getElementById(id).textContent))
       .filter(v => !isNaN(v));
     if (vals.length) {
-      var overall = (vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(1);
-      document.getElementById('score-overall').textContent = overall;
-      var overallInput = document.getElementById('input-score-overall');
-      if (overallInput) overallInput.value = overall;
+      document.getElementById('score-overall').textContent =
+        (vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(1);
     }
   }
   // ── RECOMMENDATIONS ──
@@ -7628,12 +7560,6 @@
         finish_rows: data.finish_rows,
         rec_items:   data.rec_items,
         safety_notes: data.safety_notes,
-        scores: {
-          construction: document.getElementById('score-construction')?.textContent || '',
-          protection:   document.getElementById('score-protection')?.textContent   || '',
-          safety:       document.getElementById('score-safety')?.textContent       || '',
-          overall:      document.getElementById('score-overall')?.textContent      || '',
-        },
       }),
       updated_at: new Date().toISOString()
     };
@@ -8166,17 +8092,6 @@
           if (panel) panel.style.display = btn.classList.contains('selected') ? 'block' : 'none';
         });
       }
-      // ── Restore scores ──
-      var scores = fd.scores || {};
-      ['construction','protection','safety','overall'].forEach(function(type) {
-        var val = scores[type];
-        if (val) {
-          var tile = document.getElementById('score-' + type);
-          var input = document.getElementById('input-score-' + type);
-          if (tile) tile.textContent = val;
-          if (input) input.value = val;
-        }
-      });
       // ── Restore rating buttons ──
       const ratings = fd.ratings || fd.rating_values || {};
       document.querySelectorAll('.rating-row').forEach(function(row) {
@@ -9623,16 +9538,9 @@
       if (qaMsg)  qaMsg.textContent = isReviewer ? 'This report is awaiting QA review. Complete your review below.' : 'Report locked pending QA review.';
       var btnReset = document.getElementById('btn-qa-reset');
       if (btnReset) btnReset.style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
-      var btnApprove1 = document.getElementById('btn-qa-approve');
-      var btnReturn1  = document.getElementById('btn-qa-return');
       if (isReviewer) {
-        if (qaActions)   qaActions.style.display = 'flex';
-        if (btnApprove1) btnApprove1.style.display = 'inline-block';
-        if (btnReturn1)  btnReturn1.style.display  = 'inline-block';
+        if (qaActions) { qaActions.style.display = 'flex'; }
         if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
-      } else {
-        if (btnApprove1) btnApprove1.style.display = 'none';
-        if (btnReturn1)  btnReturn1.style.display  = 'none';
       }
     } else if (currentReportStatus === 'inreview') {
       if (banner) { banner.className = 'qa-status-banner qa-banner-inreview'; banner.textContent = isReviewer ? '🔍 In QA Review — Reviewer: ' + (currentQAReviewer || 'Assigned') + '. Complete your review below.' : '🔍 In QA Review — Reviewer: ' + (currentQAReviewer || 'Assigned') + '. Your report is locked pending review.'; }
@@ -9643,16 +9551,9 @@
       if (qaMsg)  qaMsg.textContent = isReviewer ? 'Review the report and approve or return for correction.' : 'Your report is being reviewed.';
       var btnReset2 = document.getElementById('btn-qa-reset');
       if (btnReset2) btnReset2.style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
-      var btnApprove2 = document.getElementById('btn-qa-approve');
-      var btnReturn2  = document.getElementById('btn-qa-return');
       if (isReviewer) {
-        if (qaActions)   qaActions.style.display = 'flex';
-        if (btnApprove2) btnApprove2.style.display = 'inline-block';
-        if (btnReturn2)  btnReturn2.style.display  = 'inline-block';
+        if (qaActions) { qaActions.style.display = 'flex'; }
         if (dateEl && !dateEl.value) dateEl.value = currentQADate || new Date().toISOString().split('T')[0];
-      } else {
-        if (btnApprove2) btnApprove2.style.display = 'none';
-        if (btnReturn2)  btnReturn2.style.display  = 'none';
       }
     } else if (currentReportStatus === 'returned') {
       if (banner) { banner.className = 'qa-status-banner qa-banner-returned'; banner.textContent = '↩ Returned for Correction — Please review the QA notes and resubmit when ready.'; }
@@ -9957,7 +9858,7 @@
 <script>
 // ── NARRATIVE REPORT GENERATOR ──
 // Uses Anthropic API to generate a professional written narrative inspection report
-function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,insuredName,inspId,inspDate,city,province,occupancy,inspName,riskQuality,uwRec,execSummary,yearBuilt,stories,totalArea,constructClass,extWall,roofType,roofCovering,roofYear,electrical,heating,constNotes,occupancyDesc,hazardNotes,sprinklerCoverage,sprinklerType,sprinklerCond,fireAlarm,extPresent,fusDistance,fusDeptType,fusGrade,security,protNotes,northExp,southExp,eastExp,westExp,expRating,floodZone,earthquake,expNotes,totalLosses,totalIncurred,primaryCause,lossComments,safetyText,recText) {
+function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,insuredName,inspId,inspDate,city,province,occupancy,inspName,riskQuality,uwRec,execSummary,yearBuilt,stories,totalArea,constructClass,extWall,extFinish,structFrame,roofType,roofCovering,roofDeck,roofYear,electrical,heating,constNotes,occupancyDesc,hazardNotes,sprinklerCoverage,sprinklerType,sprinklerCond,fireAlarm,extPresent,fusDistance,fusDeptType,fusGrade,security,protNotes,northExp,southExp,eastExp,westExp,expRating,floodZone,earthquake,expNotes,totalLosses,totalIncurred,primaryCause,lossComments,safetyText,recText) {
   function fmt(v) { return (v && v !== '\u2014') ? v : null; }
   var loc = city && province ? city + ', ' + province : (city || province || 'the subject location');
   var recItems = d.rec_items || [];
@@ -9981,22 +9882,15 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   if (fmt(constructClass)) {
     s2 += 'The ISO Construction Classification is ' + constructClass + '. ';
   }
-
-  // Additional construction details from pct-rows
-  var extFinish   = pctRowSummary(d.pct_rows, 'ext-finish-pct-rows');
-  var structFrame = pctRowSummary(d.pct_rows, 'frame-pct-rows');
-  var roofDeck    = pctRowSummary(d.pct_rows, 'deck-pct-rows');
-  var wallConst   = pctRowSummary(d.pct_rows, 'wall-pct-rows');
-
-  if (fmt(wallConst)) s2 += 'Exterior wall construction consists of ' + wallConst + '. ';
-  if (fmt(extFinish)) s2 += 'The exterior wall finish is ' + extFinish + '. ';
-  if (fmt(structFrame)) s2 += 'The structural frame is ' + structFrame + '. ';
+  if (fmt(extWall)) {
+    var wallParts = extWall.split(',');
+    s2 += 'Exterior wall construction consists of ' + wallParts.map(function(p){return p.trim().toLowerCase();}).join(', ') + '. ';
+  }
   if (fmt(constNotes)) s2 += constNotes + ' ';
   s2 += NL;
   s2 += 'The roof ';
   if (fmt(roofType)) s2 += 'is of ' + roofType.toLowerCase() + ' design';
   if (fmt(roofCovering)) s2 += (fmt(roofType)?' with ':'features ') + roofCovering.toLowerCase() + ' covering';
-  if (fmt(roofDeck)) s2 += ', with a ' + roofDeck.toLowerCase() + ' roof deck';
   if (fmt(roofYear)) s2 += ', last replaced in ' + roofYear;
   s2 += '. ';
   if (fmt(electrical)) s2 += 'Electrical service is provided via ' + electrical.toLowerCase() + ' panels. ';
@@ -10110,15 +10004,15 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   s9+='.'+NL;
   return [s1,s2,s3,s4,s5,s6,s7,s8,s9].join('');
 }
+function pctRowSummary(pctRows, key) {
+  var rows = (pctRows || {})[key] || [];
+  var filled = rows.filter(function(r) { return r.val && r.pct; });
+  if (!filled.length) return '';
+  return filled.map(function(r) { return r.val + ' ' + r.pct + '%'; }).join(', ');
+}
+
 async function generateNarrativeReport() {
   const d = collectFormData();
-  // Helper to summarise pct_rows into readable string e.g. "Gable 90%, Flat 10%"
-  function pctRowSummary(pctRows, key) {
-    var rows = (pctRows || {})[key] || [];
-    var filled = rows.filter(function(r) { return r.val && r.pct; });
-    if (!filled.length) return '';
-    return filled.map(function(r) { return r.val + ' ' + r.pct + '%'; }).join(', ');
-  }
   const f = d.form_fields || {};
   const pills = d.pill_selections || {};
   const ratings = d.rating_values || {};
@@ -10138,10 +10032,7 @@ async function generateNarrativeReport() {
   const yearBuilt     = g('year-built')   || '—';
   const stories       = g('stories-above-grade') || '—';
   const totalArea     = g('total-building-area')   || '—';
-  // Read ISO class from selected radio button label (not input value which gives "on")
-  var isoClassEl = document.querySelector('#iso-class .radio-btn.selected');
-  var constructClass = isoClassEl ? isoClassEl.textContent.trim() : 
-    pctRowSummary(d.pct_rows, 'iso-pct-rows') || '—';
+  const constructClass= (pills['iso_construction_class'] || []).join(', ') || g('iso-construction-class') || '—';
   const extWall       = (pills['exterior_wall_construction'] || []).join(', ') || g('exterior-wall-construction') || '—';
   const roofType      = pctRowSummary(d.pct_rows, 'rooftype-pct-rows') || '—';
   const roofCovering  = pctRowSummary(d.pct_rows, 'roof-pct-rows') || '—';
@@ -10297,7 +10188,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
     var narrativeText = generateNarrativeText(d, g, ratings, pills, scoreC, scoreP, scoreS, scoreO,
       insuredName, inspId, inspDate, city, province, occupancy, inspName,
       riskQuality, uwRec, execSummary, yearBuilt, stories, totalArea,
-      constructClass, extWall, roofType, roofCovering, roofYear,
+      constructClass, extWall, extFinish, structFrame, roofType, roofCovering, roofDeck, roofYear,
       electrical, heating, constNotes, occupancyDesc, hazardNotes,
       sprinklerCoverage, sprinklerType, sprinklerCond, fireAlarm,
       extPresent, fusDistance, fusDeptType, fusGrade, security, protNotes,
@@ -10306,53 +10197,15 @@ Write in formal insurance inspection language. Be specific with measurements, da
     // ── Convert markdown to HTML ──
     function mdToHtml(text) {
       return text
-        // Convert **N. Section Heading** lines to h3 FIRST (before bold conversion)
-        .replace(/^\*\*(\d+\.\s+[^*]+)\*\*$/gm, '<h3>$1</h3>')
-        // Convert ## Heading style
-        .replace(/^#{1,3}\s+(.+)$/gm, '<h3>$1</h3>')
-        // Convert 1. **Heading** style
-        .replace(/^\d+\.\s+\*\*([^*]+)\*\*:?\s*/gm, '<h3>$1</h3>')
-        // Convert remaining **bold** to strong
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-        // Convert paragraphs
+        .replace(/^#{1,3}\s+(.+)$/gm, '<h3>$1</h3>')
+        .replace(/^\d+\.\s+\*\*([^*]+)\*\*:?\s*/gm, '<h3>$1</h3>')
+        .replace(/^\d+\.\s+\*\*([^*]+)\*\*/gm, '<h3>$1</h3>')
         .replace(/\n\n/g, '</p><p>')
         .replace(/^(.)/m, '<p>$1')
         + '</p>';
     }
     var narrativeHTML = mdToHtml(narrativeText);
-
-    // ── Collect photos before building template ──
-    var allImgEls = document.querySelectorAll('[id^="photo-"][id$="-img"]');
-    await Promise.all(Array.from(allImgEls).map(function(img) {
-      if (img.complete) return Promise.resolve();
-      return new Promise(function(resolve) {
-        img.onload = resolve; img.onerror = resolve;
-        setTimeout(resolve, 3000);
-      });
-    }));
-    var photo1 = document.getElementById('photo-1-img');
-    var coverPhotoSrc = (photo1 && photo1.classList.contains('loaded') && photo1.src) ? photo1.src : '';
-    var allPhotos = [];
-    var photoIdx = 1;
-    while (photoIdx <= 40) {
-      var pImg = document.getElementById('photo-' + photoIdx + '-img');
-      if (!pImg && photoIdx > 20) break;
-      if (pImg && pImg.classList.contains('loaded') && pImg.src) {
-        var pCaption = document.getElementById('photo-' + photoIdx + '-caption');
-        var pCategory = document.getElementById('photo-' + photoIdx + '-category');
-        allPhotos.push({
-          num: photoIdx,
-          src: pImg.src,
-          caption: pCaption ? pCaption.value : '',
-          category: pCategory ? pCategory.value : ''
-        });
-      }
-      photoIdx++;
-    }
-    var photosHTML = allPhotos.length ? allPhotos.map(function(p) {
-      return '<div class="photo-item"><img class="photo-img" src="' + p.src + '" alt="Photo ' + p.num + '"><div class="photo-caption"><div class="photo-num">Photo ' + p.num + (p.category ? ' — ' + p.category : '') + '</div>' + (p.caption ? '<div>' + p.caption + '</div>' : '') + '</div></div>';
-    }).join('') : '<p style="color:#aaa;">No photos attached.</p>';
-
     // ── Build final report page ──
     var reportPage = `<!DOCTYPE html>
 <html lang="en">
@@ -10384,7 +10237,6 @@ Write in formal insurance inspection language. Be specific with measurements, da
   .section p { margin-bottom:12px; font-size:11pt; line-height:1.75; color:#1a2433; }
   .section strong { color:var(--navy); }
   .disclaimer { margin-top:40px; padding:14px 18px; background:#f8f5f0; border-left:3px solid var(--gold); border-radius:0 6px 6px 0; font-size:8.5pt; color:var(--slate); line-height:1.6; }
-  .cover-photo { width:calc(100% + 80px); margin:-36px -40px 24px; display:block; height:220px; object-fit:cover; border-radius:8px 8px 0 0; opacity:0.85; }
   @media print {
     .toolbar { display:none; }
     .report-wrap { padding-top:20px; max-width:100%; }
@@ -10403,7 +10255,6 @@ Write in formal insurance inspection language. Be specific with measurements, da
 </div>
 <div class="report-wrap">
   <div class="cover-band">
-    ${coverPhotoSrc ? `<img src="${coverPhotoSrc}" style="width:100%;height:220px;object-fit:cover;border-radius:8px 8px 0 0;margin:-36px -40px 24px;display:block;width:calc(100% + 80px);opacity:0.85;">` : ''}
     <div class="tag">N A R R A T I V E &nbsp; I N S P E C T I O N &nbsp; R E P O R T</div>
     <h1>${insuredName}</h1>
     <div class="sub">${city}, ${province} &nbsp;·&nbsp; ${occupancy}</div>
@@ -10425,20 +10276,6 @@ Write in formal insurance inspection language. Be specific with measurements, da
   <div class="section narrative-content">
     ${narrativeHTML}
   </div>
-  ${allPhotos.length > 0 ? `
-  <div class="section">
-    <h3>Photo Documentation</h3>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:12px;">
-      ${allPhotos.map(p => `
-        <div style="break-inside:avoid;">
-          <img src="${p.src}" alt="Photo ${p.num}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;border:1px solid #ddd8d0;">
-          <div style="font-size:9pt;color:#4a6580;margin-top:4px;padding:0 2px;">
-            <strong>Photo ${p.num}</strong>${p.category ? ' — ' + p.category : ''}
-            ${p.caption ? '<br>' + p.caption : ''}
-          </div>
-        </div>`).join('')}
-    </div>
-  </div>` : ''}
   <div class="disclaimer">
     <strong>Report Disclaimer:</strong> This narrative was generated by the SanketRisk Inspector platform based on structured inspection data entered by the inspector. It is intended as a drafting aid only. The inspector and underwriter are responsible for verifying all factual claims, correcting any inaccuracies, and ensuring the report meets applicable professional and regulatory standards before use.
   </div>
@@ -10459,18 +10296,8 @@ Write in formal insurance inspection language. Be specific with measurements, da
 <script>
 // This will be injected into index.html
 // Formal Report Generator — opens in new tab
-async function generateFormalReport() {
+function generateFormalReport() {
   try {
-  // Wait for photos to load
-  const allImgEls2 = document.querySelectorAll('[id^="photo-"][id$="-img"]');
-  await Promise.all(Array.from(allImgEls2).map(function(img) {
-    if (img.complete) return Promise.resolve();
-    return new Promise(function(resolve) {
-      img.onload = resolve;
-      img.onerror = resolve;
-      setTimeout(resolve, 3000);
-    });
-  }));
   const d = collectFormData();
   const f = d.form_fields || {};
   const pills = d.pill_selections || {};
@@ -10621,25 +10448,14 @@ async function generateFormalReport() {
   var yearPart = (inspDate && inspDate !== '—') ? inspDate.substring(0, 4) : new Date().getFullYear().toString();
   var monPart = (inspDate && inspDate !== '—') ? inspDate.substring(5, 7) : String(new Date().getMonth()+1).padStart(2,'0');
   // Photo for cover
-  // Wait for any in-progress image loads to complete
-  const allImgEls = document.querySelectorAll('[id^="photo-"][id$="-img"]');
-  await Promise.all(Array.from(allImgEls).map(function(img) {
-    if (img.complete) return Promise.resolve();
-    return new Promise(function(resolve) {
-      img.onload = resolve;
-      img.onerror = resolve;
-      setTimeout(resolve, 3000); // max 3s wait per image
-    });
-  }));
-
   const photo1 = document.getElementById('photo-1-img');
   const coverPhotoSrc = (photo1 && photo1.classList.contains('loaded') && photo1.src) ? photo1.src : '';
   // Collect ALL photo data now (before window.open) so we don't need window.opener
   const allPhotos = [];
   let photoIdx = 1;
-  while (photoIdx <= 40) {
+  while (photoIdx <= 20) {
     const img = document.getElementById('photo-' + photoIdx + '-img');
-    if (!img && photoIdx > 20) break;
+    if (!img && photoIdx > 10) break;
     if (img && img.classList.contains('loaded') && img.src) {
       const captionEl = document.getElementById('photo-' + photoIdx + '-caption');
       const categoryEl = document.getElementById('photo-' + photoIdx + '-category');
