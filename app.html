@@ -12437,7 +12437,7 @@ ${activeSuppHTML}
 </body>
 </html>`;
   const w = window.open('', '_blank');
-  if (!w) { alert('Please allow popups for this site to open the formal report.'); return; }
+  if (!w) { alert('var blob = new Blob([html], { type: 'text/html' });   var blobUrl = URL.createObjectURL(blob);   var w = window.open(blobUrl, '_blank');   if (!w) { document.open(); document.write(html); document.close(); }.'); return; }
   w.document.open();
   w.document.write(html);
   w.document.close();
