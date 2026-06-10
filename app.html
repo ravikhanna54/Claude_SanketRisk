@@ -10091,14 +10091,14 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   s9+='.'+NL;
   return [s1,s2,s3,s4,s5,s6,s7,s8,s9].join('');
 }
-async function pctRowSummary(pctRows, key) {
+function pctRowSummary(pctRows, key) {
   var rows = (pctRows || {})[key] || [];
   var filled = rows.filter(function(r) { return r.val && r.pct; });
   if (!filled.length) return '';
   return filled.map(function(r) { return r.val + ' ' + r.pct + '%'; }).join(', ');
 }
 
-function generateNarrativeReport() {
+async function generateNarrativeReport() {
   const d = collectFormData();
   const f = d.form_fields || {};
   const pills = d.pill_selections || {};
