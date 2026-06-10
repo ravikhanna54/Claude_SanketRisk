@@ -12437,7 +12437,7 @@ ${activeSuppHTML}
   </div>
 </div>
   ${attachedPDFs && attachedPDFs.length > 0 ? `
-  <div class="report-section" style="margin-top:32px;">
+  <div class="report-section" style="margin-top:32px;page-break-before:always;">
     <div class="sec-header">
       <div class="sec-header-left">
         <span class="sec-icon">📄</span>
@@ -12445,19 +12445,31 @@ ${activeSuppHTML}
       </div>
       <span class="sec-tag">DOCUMENTS</span>
     </div>
-    ${attachedPDFs.map(function(pdf, i) {
-      var size = pdf.size > 1024*1024 ? (pdf.size/1024/1024).toFixed(1) + ' MB' : Math.round(pdf.size/1024) + ' KB';
-      return '<div style="margin-top:20px;page-break-before:always;">' +
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:#f8f5f0;border-radius:6px;">' +
-          '<span style="font-size:18px;">📄</span>' +
-          '<div style="flex:1;font-weight:700;font-size:12px;color:#0d1b2a;">' + pdf.name + '</div>' +
-          '<div style="font-size:10px;color:#4a6580;">' + size + '</div>' +
-        '</div>' +
-        (pdf.url ? '<embed src="' + pdf.url + '" type="application/pdf" width="100%" height="1100px" style="border:1px solid #ddd8d0;border-radius:6px;">' +
-          '<p style="font-size:10px;color:#4a6580;margin-top:4px;">If PDF does not display, <a href="' + pdf.url + '" target="_blank">click here to open it</a>.</p>' : 
-          '<p style="color:#aaa;font-size:10px;">PDF URL not available.</p>') +
-        '</div>';
-    }).join('')}
+    <p style="font-size:10pt;color:#4a6580;margin:12px 0;">The following documents are attached to this inspection report. Click the link to open each document.</p>
+    <table style="width:100%;border-collapse:collapse;margin-top:8px;">
+      <thead>
+        <tr style="background:#0d1b2a;color:white;">
+          <th style="padding:8px 12px;text-align:left;font-size:10pt;">#</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10pt;">Document Name</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10pt;">Size</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10pt;">Link</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${attachedPDFs.map(function(pdf, i) {
+          var size = pdf.size > 1024*1024 ? (pdf.size/1024/1024).toFixed(1) + ' MB' : Math.round(pdf.size/1024) + ' KB';
+          var bg = i % 2 === 0 ? '#f8f5f0' : '#ffffff';
+          return '<tr style="background:' + bg + ';border-bottom:1px solid #ddd8d0;">' +
+            '<td style="padding:8px 12px;font-size:10pt;color:#4a6580;">' + (i+1) + '</td>' +
+            '<td style="padding:8px 12px;font-size:10pt;font-weight:600;color:#0d1b2a;">📄 ' + pdf.name + '</td>' +
+            '<td style="padding:8px 12px;font-size:10pt;color:#4a6580;">' + size + '</td>' +
+            '<td style="padding:8px 12px;font-size:10pt;">' +
+              (pdf.url ? '<a href="' + pdf.url + '" target="_blank" style="color:#0d1b2a;font-weight:600;">Open Document ↗</a>' : '—') +
+            '</td>' +
+          '</tr>';
+        }).join('')}
+      </tbody>
+    </table>
   </div>` : ''}
 </div><!-- /report-wrap -->
 </body>
