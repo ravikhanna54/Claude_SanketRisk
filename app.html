@@ -9538,9 +9538,16 @@
       if (qaMsg)  qaMsg.textContent = isReviewer ? 'This report is awaiting QA review. Complete your review below.' : 'Report locked pending QA review.';
       var btnReset = document.getElementById('btn-qa-reset');
       if (btnReset) btnReset.style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
+      var btnApprove1 = document.getElementById('btn-qa-approve');
+      var btnReturn1  = document.getElementById('btn-qa-return');
       if (isReviewer) {
-        if (qaActions) { qaActions.style.display = 'flex'; }
+        if (qaActions)   qaActions.style.display = 'flex';
+        if (btnApprove1) btnApprove1.style.display = 'inline-block';
+        if (btnReturn1)  btnReturn1.style.display  = 'inline-block';
         if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+      } else {
+        if (btnApprove1) btnApprove1.style.display = 'none';
+        if (btnReturn1)  btnReturn1.style.display  = 'none';
       }
     } else if (currentReportStatus === 'inreview') {
       if (banner) { banner.className = 'qa-status-banner qa-banner-inreview'; banner.textContent = isReviewer ? '🔍 In QA Review — Reviewer: ' + (currentQAReviewer || 'Assigned') + '. Complete your review below.' : '🔍 In QA Review — Reviewer: ' + (currentQAReviewer || 'Assigned') + '. Your report is locked pending review.'; }
@@ -9551,9 +9558,16 @@
       if (qaMsg)  qaMsg.textContent = isReviewer ? 'Review the report and approve or return for correction.' : 'Your report is being reviewed.';
       var btnReset2 = document.getElementById('btn-qa-reset');
       if (btnReset2) btnReset2.style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
+      var btnApprove2 = document.getElementById('btn-qa-approve');
+      var btnReturn2  = document.getElementById('btn-qa-return');
       if (isReviewer) {
-        if (qaActions) { qaActions.style.display = 'flex'; }
+        if (qaActions)   qaActions.style.display = 'flex';
+        if (btnApprove2) btnApprove2.style.display = 'inline-block';
+        if (btnReturn2)  btnReturn2.style.display  = 'inline-block';
         if (dateEl && !dateEl.value) dateEl.value = currentQADate || new Date().toISOString().split('T')[0];
+      } else {
+        if (btnApprove2) btnApprove2.style.display = 'none';
+        if (btnReturn2)  btnReturn2.style.display  = 'none';
       }
     } else if (currentReportStatus === 'returned') {
       if (banner) { banner.className = 'qa-status-banner qa-banner-returned'; banner.textContent = '↩ Returned for Correction — Please review the QA notes and resubmit when ready.'; }
