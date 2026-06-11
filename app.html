@@ -10476,6 +10476,8 @@ async function generateNarrativeReport() {
   const inspDate      = d.inspection_date|| g('inspection-date') || '—';
   const city          = d.city           || g('city')            || '—';
   const province      = d.province_state || g('province')        || '—';
+  const fullAddress   = [g('street-address'), d.city || g('city'), d.province_state || g('province'), g('postal-code')]
+    .filter(v => v && String(v).trim()).join(', ') || '—';
   const occupancy     = d.occupancy_class|| g('occupancy-class') || '—';
   const inspName      = d.inspector_name || g('inspector-name')  || '—';
   const riskQuality   = g('risk-quality') || (pills['risk_quality_rating'] || []).join(', ')  || '—';
@@ -10737,7 +10739,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
     ${coverPhotoSrc ? `<img src="${coverPhotoSrc}" style="width:calc(100% + 80px);margin:-36px -40px 24px;display:block;height:220px;object-fit:cover;border-radius:8px 8px 0 0;opacity:0.85;">` : ''}
     <div class="tag">N A R R A T I V E &nbsp; I N S P E C T I O N &nbsp; R E P O R T</div>
     <h1>${insuredName}</h1>
-    <div class="sub">${city}, ${province} &nbsp;·&nbsp; ${occupancy}</div>
+    <div class="sub">${fullAddress} &nbsp;·&nbsp; ${occupancy}</div>
     <div class="meta-grid">
       <div class="meta-item"><label>Inspection ID</label><span>${inspId}</span></div>
       <div class="meta-item"><label>Date of Inspection</label><span>${inspDate}</span></div>
@@ -10935,6 +10937,8 @@ function generateFormalReport() {
   const insuredName = d.insured_name || g('legal-entity') || '—';
   const city = d.city || g('city') || '—';
   const province = d.province_state || g('province') || '—';
+  const fullAddress = [g('street-address'), d.city || g('city'), d.province_state || g('province'), g('postal-code')]
+    .filter(v => v && String(v).trim()).join(', ') || '—';
   const occupancy = d.occupancy_class || g('occupancy-class') || '—';
   const inspName = d.inspector_name || g('inspector-name') || '—';
   const inspOrg = g('inspector-org') || 'Sanket Risk Consultants';
@@ -11957,7 +11961,7 @@ function generateFormalReport() {
     <div class="cover-meta-item"><label>Inspection ID</label><span>${inspId}</span></div>
     <div class="cover-meta-item"><label>Date of Inspection</label><span>${inspDate}</span></div>
     <div class="cover-meta-item"><label>Insured</label><span>${insuredName}</span></div>
-    <div class="cover-meta-item"><label>Location</label><span>${city}${province ? ', ' + province : ''}</span></div>
+    <div class="cover-meta-item"><label>Location</label><span>${fullAddress}</span></div>
     <div class="cover-meta-item"><label>Occupancy</label><span>${occupancy}</span></div>
     <div class="cover-meta-item"><label>Inspector</label><span>${inspName}</span></div>
     ${sprGrade ? `<div class="cover-meta-item"><label>Sprinkler Grade</label><span>${sprGradeLabel}</span></div>` : ''}
