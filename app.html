@@ -2262,7 +2262,9 @@
             <label>IBC / SIC / NAICS Code</label>
             <select id="primary-sic-naics-code" style="width:100%;">
                 <option value=''>— Select Occupancy Code —</option>
-                <optgroup label='─── APARTMENTS & RESIDENTIAL ───'>
+
+              <optgroup label='─── APARTMENTS & RESIDENTIAL ───'>
+                <option value='N/A — Not Applicable'>N/A — Not Applicable</option>
                 <option value='IBC:1110 / SIC:6512 / NAICS:531110 — Apartment Buildings — Low Rise (1-3 Storeys)'>IBC 1110 — Apartment Buildings — Low Rise (1-3 Storeys)</option>
                 <option value='IBC:1120 / SIC:6512 / NAICS:531110 — Apartment Buildings — High Rise (4+ Storeys)'>IBC 1120 — Apartment Buildings — High Rise (4+ Storeys)</option>
                 <option value='IBC:1130 / SIC:6512 / NAICS:531110 — Condominium Buildings — Residential'>IBC 1130 — Condominium Buildings — Residential</option>
@@ -6978,6 +6980,7 @@
   <button class="btn-secondary" onclick="generateNarrativeReport()" style="background:var(--navy);color:var(--gold);border-color:var(--navy);">📖 Narrative</button>
   <button class="btn-secondary" id="btn-save-db" onclick="saveInspection()">☁️ Save to DB</button>
   <button class="btn-secondary" onclick="saveAndDownload()">💾 Save + Download</button>
+  <button class="btn-secondary" onclick="copyToNewFile()" style="background:var(--gold);color:var(--navy);border-color:var(--gold);font-weight:700;">📑 Copy to New File</button>
   <button class="btn-danger" id="btn-clear-form" onclick="if(confirm('Clear all data and start fresh?')) location.reload()">✕ Clear</button>
 </div>
 <script>
@@ -7897,6 +7900,49 @@
     await saveInspection();
     const data = collectFormData();
     downloadLocalBackup(data.inspection_id);
+  }
+// ── COPY TO NEW FILE ──
+  async function copyToNewFile() {
+    if (!currentInspectionId) {
+      showToast('⚠ Load a saved file first, then copy it', 'warn');
+      return;
+    }
+    var oldId = (document.getElementById('inspection-id') || {}).value || 'this file';
+    var ok = confirm('Create a copy of ' + oldId + ' as a new file?\n\n• All form data will be copied\n• Photos will NOT be copied\n• Address and inspection date will be cleared\n• The new file starts as a Draft');
+    if (!ok) return;
+    // 1. Detach from the original record so the next save inserts a NEW row
+    currentInspectionId = null;
+    // 2. Generate a new inspection ID
+    var now = new Date();
+    var newId = 'INS-' + now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0') + '-' +
+      String(Math.floor(Math.random() * 900) + 100);
+    var idEl = document.getElementById('inspection-id');
+    if (idEl) idEl.value = newId;
+    var badge = document.getElementById('inspection-id-badge');
+    if (badge) badge.textContent = newId;
+    // 3. Clear the photo log — photos stay with the original file only
+    pendingPhotoUploads = {};
+    var grid = document.getElementById('photo-grid');
+    if (grid) grid.innerHTML = '';
+    photoCount = 0;
+    for (var i = 0; i < 4; i++) addPhotoSlot();
+    // 4. Clear the inspection date and address — new visit, new location
+    var dateEl = document.getElementById('inspection-date');
+    if (dateEl) dateEl.value = '';
+    ['street-address', 'city', 'province', 'postal-code', 'location-address'].forEach(function(fid) {
+      var el = document.getElementById(fid);
+      if (el) el.value = '';
+    });
+    // 5. Reset the QA workflow back to Draft
+    currentQAReviewer = '';
+    currentQANotes = '';
+    currentQADate = '';
+    applyQAState('draft');
+    // 6. Save immediately so the new file exists in the database
+    await saveInspection();
+    showToast('✓ Copied to new file — ' + newId);
   }
   // ── LOCAL HTML BACKUP (existing behaviour) ──
   function downloadLocalBackup(inspId) {
