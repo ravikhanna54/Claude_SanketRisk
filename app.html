@@ -10920,13 +10920,7 @@ function generateFormalReport() {
   } // end DOM fallback
   // Keep recommendations in original entry order to preserve inspector numbering
   // Priority is shown via colour badges — no need to re-sort
-  // Auto-fill refnum for items missing one (also cleans bad legacy values)
-  recItems.forEach(function(r, i) {
-    if (r.title === undefined || r.title === null || r.title === 'undefined' || r.title === 'null') r.title = '';
-    if (!r.refnum || r.refnum === 'undefined' || r.refnum === 'null') {
-      r.refnum = yearPart + '-' + monPart + '-' + String(i + 1).padStart(3, '0');
-    }
-  });
+  // (refnum auto-fill happens below, after the date parts are computed)
   function priorityBadge(p) {
     const cls = p === 'High' ? 'badge-high' : p === 'Medium' ? 'badge-med' : p === 'Low' ? 'badge-low' : 'badge-default';
     return `<span class="priority-badge ${cls}">${p || '—'}</span>`;
@@ -10957,6 +10951,13 @@ function generateFormalReport() {
   // Auto-fill refnum if blank: YYYY-MM-NNN from inspection date
   var yearPart = (inspDate && inspDate !== '—') ? inspDate.substring(0, 4) : new Date().getFullYear().toString();
   var monPart = (inspDate && inspDate !== '—') ? inspDate.substring(5, 7) : String(new Date().getMonth()+1).padStart(2,'0');
+  // Auto-fill refnum for items missing one (also cleans bad legacy values)
+  recItems.forEach(function(r, i) {
+    if (r.title === undefined || r.title === null || r.title === 'undefined' || r.title === 'null') r.title = '';
+    if (!r.refnum || r.refnum === 'undefined' || r.refnum === 'null') {
+      r.refnum = yearPart + '-' + monPart + '-' + String(i + 1).padStart(3, '0');
+    }
+  });
   // Photo for cover
   const photo1 = document.getElementById('photo-1-img');
   const coverPhotoSrc = (photo1 && photo1.classList.contains('loaded') && photo1.src) ? photo1.src : '';
