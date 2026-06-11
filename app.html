@@ -1403,7 +1403,7 @@
   <div class="header-meta">
     <div class="db-status"><div class="db-dot" id="db-dot"></div><span id="db-label">Connecting...</span></div>
     <div class="header-badge">COMMERCIAL INSPECTION PLATFORM &nbsp;·&nbsp; v20260403-1018</div>
-    <div class="header-badge" id="inspection-id-badge">INS-2026-0001</div>
+    <div class="header-badge" id="inspection-id-badge">NEW</div>
     <div class="header-badge" id="account-badge" style="display:none;border-color:var(--gold);color:var(--gold);">ACC</div>
     <div class="user-badge" id="user-badge" style="display:none;">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -1501,7 +1501,7 @@
         <div class="form-grid">
           <div class="field">
             <label>Inspection ID <span class="req">*</span></label>
-            <input type="text" value="INS-2026-0001" id="inspection-id" oninput="document.getElementById('inspection-id-badge').textContent=this.value">
+            <input type="text" value="NEW" id="inspection-id" oninput="document.getElementById('inspection-id-badge').textContent=this.value">
           </div>
           <div class="field">
             <label>Account Number</label>
@@ -7552,19 +7552,6 @@
     showToast('✓ Welcome, ' + name + ' (' + currentUserRole + ')');
     // Load reviewer list for QA dropdown
     loadReviewerList();
-    // Fetch next SRC file number for a fresh form (category 100 = Inspection)
-    if (!currentInspectionId) {
-      _supabase.rpc('get_next_file_number', { p_category: 100 }).then(function(res) {
-        if (!res.error && res.data) {
-          var idEl = document.getElementById('inspection-id');
-          var idBadge = document.getElementById('inspection-id-badge');
-          if (idEl && (!idEl.value || idEl.value === 'INS-2026-0001')) {
-            idEl.value = res.data;
-            if (idBadge) idBadge.textContent = res.data;
-          }
-        }
-      });
-    }
     // Only reset QA state to draft if no inspection is currently loaded
     if (!currentInspectionId) {
       applyQAState('draft');
@@ -7866,6 +7853,30 @@
   }
     async function saveInspection() {
     setDbStatus('saving', 'Saving...');
+    // Assign the next SRC file number on FIRST save only,
+    // so opening the form without saving never consumes a number
+    if (!currentInspectionId) {
+      var idField = document.getElementById('inspection-id');
+      var curId = idField ? idField.value.trim() : '';
+      if (!curId || curId === 'NEW' || curId === 'INS-2026-0001') {
+        var newNum = '';
+        try {
+          var rpcRes = await _supabase.rpc('get_next_file_number', { p_category: 100 });
+          if (rpcRes && rpcRes.data) newNum = rpcRes.data;
+        } catch (e) {}
+        if (!newNum) {
+          // Fallback if the RPC is unavailable
+          var nd = new Date();
+          newNum = 'INS-' + nd.getFullYear() + '-' +
+            String(nd.getMonth() + 1).padStart(2, '0') +
+            String(nd.getDate()).padStart(2, '0') + '-' +
+            String(Math.floor(Math.random() * 900) + 100);
+        }
+        if (idField) idField.value = newNum;
+        var numBadge = document.getElementById('inspection-id-badge');
+        if (numBadge) numBadge.textContent = newNum;
+      }
+    }
     const data = collectFormData();
     // Build payload FIRST before any async calls
     const payload = {
@@ -7952,28 +7963,24 @@
       return;
     }
     var oldId = (document.getElementById('inspection-id') || {}).value || 'this file';
-    var ok = confirm('Create a copy of ' + oldId + ' as a new file?\n\n• All form data will be copied\n• Photos will NOT be copied\n• Address and inspection date will be cleared\n• The new file starts as a Draft');
+    var ok = confirm('Create a copy of ' + oldId + ' as a new file?\n\n• All form data will be copied\n• Photos and attached PDFs will NOT be copied\n• Address and inspection date will be cleared\n• The new file starts as a Draft');
     if (!ok) return;
     // 1. Detach from the original record so the next save inserts a NEW row
     currentInspectionId = null;
-    // 2. Get a new SRC file number from the database (category 100 = Inspection)
-    var newId = '';
-    try {
-      var res = await _supabase.rpc('get_next_file_number', { p_category: 100 });
-      if (res && res.data) newId = res.data;
-    } catch (e) {}
-    if (!newId) {
-      // Fallback if the RPC is unavailable
-      var now = new Date();
-      newId = 'INS-' + now.getFullYear() + '-' +
-        String(now.getMonth() + 1).padStart(2, '0') +
-        String(now.getDate()).padStart(2, '0') + '-' +
-        String(Math.floor(Math.random() * 900) + 100);
-    }
+    // 2. New SRC file number is assigned automatically at save
     var idEl = document.getElementById('inspection-id');
-    if (idEl) idEl.value = newId;
+    if (idEl) idEl.value = 'NEW';
     var badge = document.getElementById('inspection-id-badge');
-    if (badge) badge.textContent = newId;
+    if (badge) badge.textContent = 'NEW';
+    // 3. Clear the photo log — photos stay with the original file only
+    pendingPhotoUploads = {};
+    var grid = document.getElementById('photo-grid');
+    if (grid) grid.innerHTML = '';
+    photoCount = 0;
+    for (var i = 0; i < 4; i++) addPhotoSlot();
+    // 3b. Clear attached PDFs — they stay with the original file only
+    attachedPDFs = [];
+    renderPDFList();
     // 3. Clear the photo log — photos stay with the original file only
     pendingPhotoUploads = {};
     var grid = document.getElementById('photo-grid');
@@ -7992,9 +7999,10 @@
     currentQANotes = '';
     currentQADate = '';
     applyQAState('draft');
-    // 6. Save immediately so the new file exists in the database
+    // 6. Save immediately — this assigns the new SRC number and creates the record
     await saveInspection();
-    showToast('✓ Copied to new file — ' + newId);
+    var finalId = idEl ? idEl.value : '';
+    showToast('✓ Copied to new file — ' + finalId);
   }
   // ── LOCAL HTML BACKUP (existing behaviour) ──
   function downloadLocalBackup(inspId) {
