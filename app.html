@@ -10470,6 +10470,17 @@ async function generateNarrativeReport() {
   const pills = d.pill_selections || {};
   const ratings = d.rating_values || {};
   const g = (id) => f[id] || '';
+  // ── Normalise recommendation numbering (same scheme as Formal Report) ──
+  if (d.rec_items && d.rec_items.length) {
+    var _yp = (d.inspection_date || '').substring(0, 4) || new Date().getFullYear().toString();
+    var _mp = (d.inspection_date || '').substring(5, 7) || String(new Date().getMonth() + 1).padStart(2, '0');
+    d.rec_items.forEach(function(r, ri) {
+      if (r.title === undefined || r.title === null || r.title === 'undefined' || r.title === 'null') r.title = '';
+      if (!r.refnum || r.refnum === 'undefined' || r.refnum === 'null') {
+        r.refnum = _yp + '-' + _mp + '-' + String(ri + 1).padStart(3, '0');
+      }
+    });
+  }
   // ── Build inspection data summary for the AI prompt ──
   const insuredName   = d.insured_name   || g('legal-entity')    || '—';
   const inspId        = d.inspection_id  || g('inspection-id')   || '—';
@@ -10909,9 +10920,10 @@ function generateFormalReport() {
   } // end DOM fallback
   // Keep recommendations in original entry order to preserve inspector numbering
   // Priority is shown via colour badges — no need to re-sort
-  // Auto-fill refnum only for items that have no reference number
+  // Auto-fill refnum for items missing one (also cleans bad legacy values)
   recItems.forEach(function(r, i) {
-    if (!r.refnum) {
+    if (r.title === undefined || r.title === null || r.title === 'undefined' || r.title === 'null') r.title = '';
+    if (!r.refnum || r.refnum === 'undefined' || r.refnum === 'null') {
       r.refnum = yearPart + '-' + monPart + '-' + String(i + 1).padStart(3, '0');
     }
   });
