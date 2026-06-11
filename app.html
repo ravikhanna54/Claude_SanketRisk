@@ -808,6 +808,7 @@
   @media print {
     /* ── Hide all UI chrome ── */
     .sidebar, .app-header, .action-bar,
+    .section-nav-row,
     .login-overlay, .modal-overlay,
     .btn-save, .btn-logout, .btn-add-rec,
     .btn-remove-area, .btn-collapse-area,
@@ -2262,9 +2263,8 @@
             <label>IBC / SIC / NAICS Code</label>
             <select id="primary-sic-naics-code" style="width:100%;">
                 <option value=''>— Select Occupancy Code —</option>
-
-              <optgroup label='─── APARTMENTS & RESIDENTIAL ───'>
                 <option value='N/A — Not Applicable'>N/A — Not Applicable</option>
+              <optgroup label='─── APARTMENTS & RESIDENTIAL ───'>
                 <option value='IBC:1110 / SIC:6512 / NAICS:531110 — Apartment Buildings — Low Rise (1-3 Storeys)'>IBC 1110 — Apartment Buildings — Low Rise (1-3 Storeys)</option>
                 <option value='IBC:1120 / SIC:6512 / NAICS:531110 — Apartment Buildings — High Rise (4+ Storeys)'>IBC 1120 — Apartment Buildings — High Rise (4+ Storeys)</option>
                 <option value='IBC:1130 / SIC:6512 / NAICS:531110 — Condominium Buildings — Residential'>IBC 1130 — Condominium Buildings — Residential</option>
@@ -7002,6 +7002,36 @@
       if (first) first.focus();
     }, 50);
   }
+  // ── SECTION NAVIGATION BUTTONS (Save & Next) ──
+  var SECTION_FLOW = ['intro','insured','construction','occupancy','protection','exposure','loss','safety','recommendations','photos','summary'];
+  function navToSection(id) {
+    showSection(id, document.querySelector('[data-section="' + id + '"]'));
+  }
+  async function saveAndNext(nextId) {
+    await saveInspection();
+    navToSection(nextId);
+  }
+  function initSectionNavButtons() {
+    SECTION_FLOW.forEach(function(id, idx) {
+      var panel = document.getElementById('section-' + id);
+      if (!panel) return;
+      var row = document.createElement('div');
+      row.className = 'section-nav-row';
+      row.style.cssText = 'display:flex;justify-content:space-between;gap:12px;margin-top:28px;padding-top:18px;border-top:1px solid var(--border);';
+      var left = '';
+      if (idx > 0) {
+        left = '<button type="button" class="btn-secondary" onclick="navToSection(\'' + SECTION_FLOW[idx - 1] + '\')">← Previous</button>';
+      }
+      var right = '';
+      if (idx < SECTION_FLOW.length - 1) {
+        right = '<button type="button" class="btn-primary" onclick="saveAndNext(\'' + SECTION_FLOW[idx + 1] + '\')" style="background:var(--gold);color:var(--navy);font-weight:700;">💾 Save &amp; Next →</button>';
+      } else {
+        right = '<button type="button" class="btn-primary" onclick="saveInspection()" style="background:var(--gold);color:var(--navy);font-weight:700;">💾 Save</button>';
+      }
+      row.innerHTML = '<div>' + left + '</div><div>' + right + '</div>';
+      panel.appendChild(row);
+    });
+  }
   // ── RADIO BUTTONS ──
   function selectRadio(el, groupId) {
     const group = document.getElementById(groupId) || el.closest('.radio-group');
@@ -7521,6 +7551,19 @@
     showToast('✓ Welcome, ' + name + ' (' + currentUserRole + ')');
     // Load reviewer list for QA dropdown
     loadReviewerList();
+    // Fetch next SRC file number for a fresh form (category 100 = Inspection)
+    if (!currentInspectionId) {
+      _supabase.rpc('get_next_file_number', { p_category: 100 }).then(function(res) {
+        if (!res.error && res.data) {
+          var idEl = document.getElementById('inspection-id');
+          var idBadge = document.getElementById('inspection-id-badge');
+          if (idEl && (!idEl.value || idEl.value === 'INS-2026-0001')) {
+            idEl.value = res.data;
+            if (idBadge) idBadge.textContent = res.data;
+          }
+        }
+      });
+    }
     // Only reset QA state to draft if no inspection is currently loaded
     if (!currentInspectionId) {
       applyQAState('draft');
@@ -7912,12 +7955,20 @@
     if (!ok) return;
     // 1. Detach from the original record so the next save inserts a NEW row
     currentInspectionId = null;
-    // 2. Generate a new inspection ID
-    var now = new Date();
-    var newId = 'INS-' + now.getFullYear() + '-' +
-      String(now.getMonth() + 1).padStart(2, '0') +
-      String(now.getDate()).padStart(2, '0') + '-' +
-      String(Math.floor(Math.random() * 900) + 100);
+    // 2. Get a new SRC file number from the database (category 100 = Inspection)
+    var newId = '';
+    try {
+      var res = await _supabase.rpc('get_next_file_number', { p_category: 100 });
+      if (res && res.data) newId = res.data;
+    } catch (e) {}
+    if (!newId) {
+      // Fallback if the RPC is unavailable
+      var now = new Date();
+      newId = 'INS-' + now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') + '-' +
+        String(Math.floor(Math.random() * 900) + 100);
+    }
     var idEl = document.getElementById('inspection-id');
     if (idEl) idEl.value = newId;
     var badge = document.getElementById('inspection-id-badge');
@@ -10237,6 +10288,7 @@
   updateProgress();
   initDesignAreas();
   initKeyboardNav();
+  initSectionNavButtons();
   // Initialise photo grid with 4 default slots
   for (let i = 0; i < 4; i++) addPhotoSlot();
   // ── AUTO SESSION RESTORE ──
