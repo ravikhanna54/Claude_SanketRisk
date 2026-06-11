@@ -1656,7 +1656,7 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-title">Mailing Address</div>
+        <div class="card-title">Property Address</div>
         <div class="form-grid">
           <div class="field form-full">
             <label>Street Address</label>
@@ -1689,33 +1689,8 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-title">Inspection Location (if different from mailing)</div>
-        <div class="notice info">ℹ️ Complete this section for each location using the location switcher in the sidebar.</div>
+        <div class="card-title">Location Details</div>
         <div class="form-grid">
-          <div class="field form-full">
-            <label>Location Address</label>
-            <input id="location-address" type="text" placeholder="Physical address of inspected property">
-          </div>
-          <div class="field">
-            <label>City</label>
-            <input id="city-1" type="text">
-          </div>
-          <div class="field">
-            <label>State / Province</label>
-            <input id="state-province" type="text" placeholder="State / Province" maxlength="3" style="text-transform:uppercase">
-          </div>
-          <div class="field">
-            <label>ZIP / Postal Code</label>
-            <input id="zip-postal-code" type="text" placeholder="e.g. 00000 or A1A 1A1">
-          </div>
-          <div class="field">
-            <label>Country</label>
-            <select id="country-location" onchange="syncCountry(this.value)">
-              <option value="">— Select —</option>
-              <option value="US">United States</option>
-              <option value="CA">Canada</option>
-            </select>
-          </div>
           <div class="field">
             <label>GPS Coordinates (optional)</label>
             <input id="gps-coordinates" type="text" placeholder="lat, long">
@@ -7680,9 +7655,9 @@
       policy_number:  get('policy-number') || '',
       inspection_date: get('inspection-date'),
       insured_name:   get('insured-name') || get('legal-entity') || '',
-      location:       get('location-address') || get('street-address') || '',
-      city:           get('city-location') || get('city') || '',
-      province_state: get('province-location') || get('province') || '',
+      location:       get('street-address') || '',
+      city:           get('city') || '',
+      province_state: get('province') || '',
       occupancy_class: document.getElementById('occupancy-class-select')?.value || '',
       uw_recommendation: get('uw-recommendation') || '',
       risk_quality:   get('risk-quality-rating') || '',
@@ -7788,9 +7763,10 @@
       : val(data.form_fields['legal-entity']);
     document.getElementById('pdf-location').textContent  = (() => {
       const parts = [
-        data.form_fields['street-address'] || data.form_fields['location-address'] || '',
-        data.city || data.form_fields['city'] || '',
-        data.province_state || data.form_fields['province'] || ''
+        data.form_fields['street-address'] || '',
+        data.form_fields['city'] || '',
+        data.form_fields['province'] || '',
+        data.form_fields['postal-code'] || ''
       ].filter(v => v && v.trim());
       return parts.length ? parts.join(', ') : '—';
     })();
@@ -7990,7 +7966,7 @@
     // 4. Clear the inspection date and address — new visit, new location
     var dateEl = document.getElementById('inspection-date');
     if (dateEl) dateEl.value = '';
-    ['street-address', 'city', 'province', 'postal-code', 'location-address'].forEach(function(fid) {
+    ['street-address', 'city', 'province', 'postal-code', 'county-region', 'gps-coordinates', 'location-description'].forEach(function(fid) {
       var el = document.getElementById(fid);
       if (el) el.value = '';
     });
@@ -8816,9 +8792,7 @@
   }
     // ── COUNTRY / OSHA VISIBILITY ──
   function syncCountry(val) {
-    // Keep both dropdowns in sync
     document.getElementById('country-mailing').value = val;
-    document.getElementById('country-location').value = val;
     const oshaCard = document.getElementById('osha-card');
     if (val === 'US') {
       oshaCard.style.display = 'block';
@@ -12060,7 +12034,7 @@ function generateFormalReport() {
       ${field2('Annual Revenue (Approx.)', val('annual-revenue'))}
     </div>
     <hr class="sec-divider">
-    <div class="sub-heading">Mailing Address</div>
+    <div class="sub-heading">Property Address</div>
     <div class="field-grid">
       ${field2('Street Address', val('street-address'))}
       ${field2('City', val('city'))}
@@ -12069,11 +12043,8 @@ function generateFormalReport() {
       ${field2('Country', val('country-mailing'))}
     </div>
     <hr class="sec-divider">
-    <div class="sub-heading">Inspection Location</div>
+    <div class="sub-heading">Location Details</div>
     <div class="field-grid">
-      ${field2('Location Address', val('location-address'))}
-      ${field2('City', val('city'))}
-      ${field2('Province / State', val('province'))}
       ${field2('GPS Coordinates', val('gps-coordinates'))}
       ${field2('Location Description', val('location-description'))}
     </div>
