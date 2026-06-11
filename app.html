@@ -280,6 +280,19 @@
   textarea { resize: vertical; min-height: 80px; }
   select { cursor: pointer; }
   /* ── RADIO / CHECK GROUPS ── */
+  .cdd-wrap { position: relative; }
+  .cdd-results {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 60;
+    background: #fff; border: 1px solid var(--border, #d8d2c4);
+    border-radius: 8px; box-shadow: 0 8px 24px rgba(15,30,60,.18);
+    max-height: 260px; overflow-y: auto; display: none;
+  }
+  .cdd-results.open { display: block; }
+  .cdd-result-item { padding: 10px 14px; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f0ece2; }
+  .cdd-result-item:hover, .cdd-result-item.active { background: #f5f1e6; }
+  .cdd-result-item .cdd-prov { color: #8a8472; font-size: 12px; margin-left: 6px; }
+  .cdd-value-grid input[readonly] { background: #faf8f2; color: var(--navy, #14233c); font-weight: 600; }
+  .cdd-tier { font-weight: 700; }
   .radio-group, .check-group {
     display: flex;
     flex-wrap: wrap;
@@ -974,6 +987,7 @@
     #section-occupancy,
     #section-protection,
     #section-exposure,
+    #section-natcat,
     #section-loss,
     #section-safety,
     #section-recommendations,
@@ -1457,6 +1471,9 @@
     </div>
     <div class="nav-item" data-section="exposure" onclick="showSection('exposure', this)">
       <div class="nav-dot"></div> E — Exposure
+    </div>
+    <div class="nav-item" data-section="natcat" onclick="showSection('natcat', this)">
+      <div class="nav-dot"></div> Natural Catastrophe
     </div>
     <div class="sidebar-section-label">Additional Modules</div>
     <div class="nav-item" data-section="loss" onclick="showSection('loss', this)">
@@ -3432,6 +3449,280 @@
           <div class="field form-full">
             <label>Exposure Notes</label>
             <textarea spellcheck="true" id="exposure-notes" placeholder="Additional context on neighboring businesses, shared walls, topography, drainage issues, etc."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ══ SECTION: NATURAL CATASTROPHE ══ -->
+    <div class="section-panel" id="section-natcat">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Natural Catastrophe Exposure</div>
+          <div class="section-subtitle">Earthquake, wind and flood exposure — NBC 2025 climatic &amp; seismic design data with inspector site observations</div>
+        </div>
+        <div class="section-tag">NAT-CAT</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Climatic &amp; Seismic Design Data — NBC 2025 Appendix C</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Province Filter (optional)</label>
+            <select id="cdd-prov-filter">
+              <option value="">All provinces</option>
+              <option>British Columbia</option>
+              <option>Alberta</option>
+              <option>Saskatchewan</option>
+              <option>Manitoba</option>
+              <option>Ontario</option>
+              <option>Québec</option>
+              <option>New Brunswick</option>
+              <option>Nova Scotia</option>
+              <option>Prince Edward Island</option>
+              <option>Newfoundland and Labrador</option>
+              <option>Yukon</option>
+              <option>Northwest Territories</option>
+              <option>Nunavut</option>
+            </select>
+          </div>
+          <div class="field cdd-wrap">
+            <label>Search Reference Location</label>
+            <input id="cdd-search" type="text" autocomplete="off" placeholder="Start typing a city/town, e.g. Hope" oninput="cddSearch(this.value)" onfocus="cddSearch(this.value)">
+            <div class="cdd-results" id="cdd-results"></div>
+          </div>
+          <div class="field">
+            <label>Selected NBC Location</label>
+            <input id="cdd-location" type="text" readonly placeholder="— none selected —">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button type="button" class="btn-secondary" onclick="cddClear()">✕ Clear Selection</button>
+          </div>
+        </div>
+        <div class="form-grid cdd-value-grid">
+          <div class="field"><label>Elevation (m)</label><input id="cdd-elev" type="text" readonly></div>
+          <div class="field"><label>Ground Snow Load Ss 1/50 (kPa)</label><input id="cdd-snow-ss" type="text" readonly></div>
+          <div class="field"><label>Rain Snow Load Sr 1/50 (kPa)</label><input id="cdd-snow-sr" type="text" readonly></div>
+          <div class="field"><label>Wind Pressure q 1/10 (kPa)</label><input id="cdd-wind-q10" type="text" readonly></div>
+          <div class="field"><label>Wind Pressure q 1/50 (kPa)</label><input id="cdd-wind-q50" type="text" readonly></div>
+          <div class="field"><label>Wind Pressure q 1/500 (kPa)</label><input id="cdd-wind-q500" type="text" readonly></div>
+          <div class="field"><label>15-min Rain (mm)</label><input id="cdd-rain-15min" type="text" readonly></div>
+          <div class="field"><label>One-Day Rain 1/50 (mm)</label><input id="cdd-rain-1day" type="text" readonly></div>
+          <div class="field"><label>Annual Precipitation (mm)</label><input id="cdd-ann-precip" type="text" readonly></div>
+          <div class="field"><label>Driving Rain Wind Pressure (Pa, 1/5)</label><input id="cdd-driving-rain" type="text" readonly></div>
+          <div class="field"><label>Seismic Smax (Site Class Unknown)</label><input id="cdd-smax" type="text" readonly></div>
+          <div class="field"><label>Seismic Hazard Tier</label><input id="cdd-seismic-tier" class="cdd-tier" type="text" readonly></div>
+          <div class="field form-full">
+            <label>Climatic Data Notes</label>
+            <textarea spellcheck="true" id="cdd-notes" placeholder="e.g. Nearest NBC reference location is 22 km from risk address; local topography may increase wind exposure."></textarea>
+          </div>
+        </div>
+        <input id="cdd-json" type="hidden">
+        <div style="font-size:12px;color:#8a8472;margin-top:6px;">Source: National Building Code of Canada 2025, Appendix C, Tables C-2 and C-3 (NRC). Values apply to the listed reference location and elevation. Seismic tier derived from Smax thresholds in NBC Parts 4/9 — verify for binding design decisions.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Earthquake — Site &amp; Building Observations</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Construction Era vs. Seismic Code</label>
+            <select id="eq-construction-era">
+              <option value="">— Select —</option>
+              <option>Post-2005 — modern seismic provisions</option>
+              <option>1990–2005 — moderate seismic provisions</option>
+              <option>1970–1990 — limited seismic provisions</option>
+              <option>Pre-1970 — minimal/no seismic design</option>
+              <option>Unknown</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Structural Vulnerability</label>
+            <select id="eq-vulnerability">
+              <option value="">— Select —</option>
+              <option>Low — engineered, ductile system</option>
+              <option>Moderate — conventional construction, no obvious weakness</option>
+              <option>Elevated — soft storey / large openings / heavy roof</option>
+              <option>High — unreinforced masonry (URM) bearing walls</option>
+              <option>Unknown — requires engineering review</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Equipment &amp; Racking Anchorage</label>
+            <select id="eq-anchorage">
+              <option value="">— Select —</option>
+              <option>Anchored/braced throughout</option>
+              <option>Partially anchored</option>
+              <option>Not anchored</option>
+              <option>Not applicable — no significant racking/equipment</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Sprinkler System Seismic Bracing</label>
+            <select id="eq-sprinkler-bracing">
+              <option value="">— Select —</option>
+              <option>Braced to NFPA 13 seismic requirements</option>
+              <option>Partial bracing observed</option>
+              <option>No seismic bracing observed</option>
+              <option>Not applicable — no sprinkler system</option>
+              <option>Unable to verify</option>
+            </select>
+          </div>
+          <div class="field form-full">
+            <label>Earthquake Notes</label>
+            <textarea spellcheck="true" id="eq-notes" placeholder="Soil conditions, slope stability, masonry parapets/chimneys, contents vulnerability, business interruption considerations…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Wind / Storm — Site &amp; Building Observations</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Roof Age (years)</label>
+            <input id="wind-roof-age" type="text" placeholder="e.g. 12">
+          </div>
+          <div class="field">
+            <label>Roof Covering Condition</label>
+            <select id="wind-roof-condition">
+              <option value="">— Select —</option>
+              <option>Excellent — recently replaced/well maintained</option>
+              <option>Good — minor wear only</option>
+              <option>Fair — localized deterioration</option>
+              <option>Poor — visible damage, ponding, or end-of-life</option>
+              <option>Unable to inspect</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Roof Deck Attachment / Uplift Resistance</label>
+            <select id="wind-roof-attachment">
+              <option value="">— Select —</option>
+              <option>Engineered/mechanically fastened — good uplift resistance</option>
+              <option>Conventional — adequate</option>
+              <option>Ballasted or aged adhesion — uplift concern</option>
+              <option>Unknown</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Cladding &amp; Flashing Condition</label>
+            <select id="wind-cladding">
+              <option value="">— Select —</option>
+              <option>Secure and well maintained</option>
+              <option>Minor deficiencies noted</option>
+              <option>Loose/damaged cladding or flashing observed</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Large Openings / Overhead Doors</label>
+            <select id="wind-openings">
+              <option value="">— Select —</option>
+              <option>None / small openings only</option>
+              <option>Overhead doors — wind-rated or reinforced</option>
+              <option>Overhead doors — standard, not wind-rated</option>
+              <option>Large unprotected glazing areas</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tree / Debris Exposure</label>
+            <select id="wind-exposure-debris">
+              <option value="">— Select —</option>
+              <option>Minimal — clear surroundings</option>
+              <option>Moderate — some mature trees or loose yard storage</option>
+              <option>Significant — overhanging trees or substantial debris sources</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Wind / Hail Loss History</label>
+            <select id="wind-loss-history">
+              <option value="">— Select —</option>
+              <option>No known losses</option>
+              <option>Minor loss(es) — repaired</option>
+              <option>Significant loss(es) — see notes</option>
+              <option>Unknown</option>
+            </select>
+          </div>
+          <div class="field form-full">
+            <label>Wind / Storm Notes</label>
+            <textarea spellcheck="true" id="wind-notes" placeholder="Rooftop equipment securement, parapet condition, snow drift exposure on lower roofs, hail vulnerability of roof covering…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Flood / Water — Site Observations</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Site Elevation vs. Surroundings</label>
+            <select id="flood-site-elevation">
+              <option value="">— Select —</option>
+              <option>Elevated — above surrounding grade</option>
+              <option>Level with surroundings</option>
+              <option>Low-lying — below surrounding grade</option>
+              <option>In mapped floodplain (confirmed/suspected)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Proximity to Watercourse / Water Body</label>
+            <select id="flood-watercourse">
+              <option value="">— Select —</option>
+              <option>None within ~1 km</option>
+              <option>Watercourse 100 m – 1 km</option>
+              <option>Watercourse within 100 m</option>
+              <option>Adjacent to river/lake/coastal water</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Site Drainage</label>
+            <select id="flood-drainage">
+              <option value="">— Select —</option>
+              <option>Good — positive grading, catch basins clear</option>
+              <option>Adequate</option>
+              <option>Poor — ponding evident, blocked drains</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Lowest Level Use</label>
+            <select id="flood-lowest-level">
+              <option value="">— Select —</option>
+              <option>Slab on grade — no basement</option>
+              <option>Basement — mechanical/storage only</option>
+              <option>Basement — stock or critical equipment</option>
+              <option>Below-grade loading dock or ramp</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Stock Storage Height</label>
+            <select id="flood-stock-height">
+              <option value="">— Select —</option>
+              <option>All stock ≥ 10 cm off floor (skids/racking)</option>
+              <option>Mixed — some floor-level storage</option>
+              <option>Substantial floor-level storage</option>
+              <option>Not applicable</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Sump Pump / Backflow Protection</label>
+            <select id="flood-protection">
+              <option value="">— Select —</option>
+              <option>Sump with backup power + backflow valve</option>
+              <option>Sump pump only</option>
+              <option>Backflow valve only</option>
+              <option>None observed</option>
+              <option>Unable to verify</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Water / Flood Loss History</label>
+            <select id="flood-loss-history">
+              <option value="">— Select —</option>
+              <option>No known losses</option>
+              <option>Minor loss(es) — resolved</option>
+              <option>Significant loss(es) — see notes</option>
+              <option>Unknown</option>
+            </select>
+          </div>
+          <div class="field form-full">
+            <label>Flood / Water Notes</label>
+            <textarea spellcheck="true" id="flood-notes" placeholder="Overland flow paths, history of sewer backup in area, roof drainage discharge, seasonal snowmelt exposure…"></textarea>
           </div>
         </div>
       </div>
@@ -6979,7 +7270,7 @@
     }, 50);
   }
   // ── SECTION NAVIGATION BUTTONS (Save & Next) ──
-  var SECTION_FLOW = ['intro','insured','construction','occupancy','protection','exposure','loss','safety','recommendations','photos','summary'];
+  var SECTION_FLOW = ['intro','insured','construction','occupancy','protection','exposure','natcat','loss','safety','recommendations','photos','summary'];
   function navToSection(id) {
     showSection(id, document.querySelector('[data-section="' + id + '"]'));
   }
@@ -7427,7 +7718,7 @@
     });
   }
   // ── PROGRESS ──
-  const sectionOrder = ['intro','insured','construction','occupancy','protection','exposure','loss','safety','recommendations','photos','summary','supp-manager','supp-restaurant','supp-woodworking','supp-warehouse','supp-autoservice','supp-sprinkler','supp-apartments','supp-addbuilding','gl-manager','gl-premises','gl-products','gl-fleet'];
+  const sectionOrder = ['intro','insured','construction','occupancy','protection','exposure','natcat','loss','safety','recommendations','photos','summary','supp-manager','supp-restaurant','supp-woodworking','supp-warehouse','supp-autoservice','supp-sprinkler','supp-apartments','supp-addbuilding','gl-manager','gl-premises','gl-products','gl-fleet'];
   function updateProgress() {
     const current = document.querySelector('.nav-item.active');
     if (!current) return;
@@ -7619,6 +7910,85 @@
     if (lbl) lbl.textContent = label;
   }
   // ── COLLECT ALL FORM DATA ──
+
+  /* ══ NAT-CAT: NBC 2025 climatic_design_data lookup ══ */
+  var cddDebounce = null;
+  function cddTier(smax) {
+    var v = parseFloat(smax);
+    if (isNaN(v)) return '';
+    if (v < 0.2) return 'Low';
+    if (v < 0.47) return 'Moderate';
+    if (v <= 0.75) return 'High';
+    return 'Very High';
+  }
+  function cddSearch(term) {
+    var box = document.getElementById('cdd-results');
+    if (cddDebounce) clearTimeout(cddDebounce);
+    term = (term || '').trim();
+    if (term.length < 2) { box.classList.remove('open'); box.innerHTML = ''; return; }
+    cddDebounce = setTimeout(function() {
+      var prov = document.getElementById('cdd-prov-filter').value;
+      var q = _supabase.from('climatic_design_data').select('*').ilike('location', '%' + term + '%').order('location').limit(8);
+      if (prov) q = q.eq('province', prov);
+      q.then(function(res) {
+        if (res.error) { console.error('CDD lookup error:', res.error); return; }
+        var rows = res.data || [];
+        if (!rows.length) {
+          box.innerHTML = '<div class="cdd-result-item" style="cursor:default;color:#8a8472;">No NBC location matches — try a nearby larger town</div>';
+          box.classList.add('open');
+          return;
+        }
+        box.innerHTML = '';
+        rows.forEach(function(r) {
+          var div = document.createElement('div');
+          div.className = 'cdd-result-item';
+          div.innerHTML = r.location + '<span class="cdd-prov">' + r.province + '</span>';
+          div.onclick = function() { cddSelect(r); };
+          box.appendChild(div);
+        });
+        box.classList.add('open');
+      });
+    }, 250);
+  }
+  function cddSelect(r) {
+    var set = function(id, val) {
+      var el = document.getElementById(id);
+      if (el) el.value = (val === null || val === undefined) ? '' : String(val);
+    };
+    set('cdd-location', r.location + ', ' + r.province);
+    set('cdd-elev', r.elev_m);
+    set('cdd-snow-ss', r.snow_ss_1_50_kpa);
+    set('cdd-snow-sr', r.snow_sr_1_50_kpa);
+    set('cdd-wind-q10', r.wind_q_1_10_kpa);
+    set('cdd-wind-q50', r.wind_q_1_50_kpa);
+    set('cdd-wind-q500', r.wind_q_1_500_kpa);
+    set('cdd-rain-15min', r.rain_15min_mm);
+    set('cdd-rain-1day', r.rain_1day_1_50_mm);
+    set('cdd-ann-precip', r.ann_precip_mm);
+    set('cdd-driving-rain', r.driving_rain_pa_1_5);
+    set('cdd-smax', r.smax_unknown);
+    set('cdd-seismic-tier', cddTier(r.smax_unknown));
+    set('cdd-json', JSON.stringify(r));
+    var box = document.getElementById('cdd-results');
+    box.classList.remove('open'); box.innerHTML = '';
+    var search = document.getElementById('cdd-search');
+    if (search) search.value = r.location;
+  }
+  function cddClear() {
+    ['cdd-search','cdd-location','cdd-elev','cdd-snow-ss','cdd-snow-sr','cdd-wind-q10','cdd-wind-q50',
+     'cdd-wind-q500','cdd-rain-15min','cdd-rain-1day','cdd-ann-precip','cdd-driving-rain','cdd-smax',
+     'cdd-seismic-tier','cdd-json'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    var box = document.getElementById('cdd-results');
+    if (box) { box.classList.remove('open'); box.innerHTML = ''; }
+  }
+  document.addEventListener('click', function(e) {
+    var box = document.getElementById('cdd-results');
+    if (box && !e.target.closest('.cdd-wrap')) { box.classList.remove('open'); }
+  });
+
   function collectFormData() {
     const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
     var panels = document.querySelectorAll('.section-panel');
