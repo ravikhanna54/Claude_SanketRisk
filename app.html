@@ -814,6 +814,7 @@
     .photo-placeholder { display: none !important; }
     .photo-remove-btn { display: none !important; }
     .btn-add-row { display: none !important; }
+    #site-map-card { display: none !important; }
   }
   .print-only { display: none; }
   .pdf-cover { display: none; }
@@ -3458,6 +3459,28 @@
             <label>Exposure Notes</label>
             <textarea spellcheck="true" id="exposure-notes" placeholder="Additional context on neighboring businesses, shared walls, topography, drainage issues, etc."></textarea>
           </div>
+        </div>
+      </div>
+
+      <div class="card" id="site-map-card" style="border-top:3px solid var(--gold);">
+        <div class="card-title" style="display:flex;align-items:center;gap:10px;">
+          <span>📍 Site Location Map</span>
+          <span style="font-size:11px;font-weight:400;color:var(--text-light);">Uses the address from the Insured section (or GPS coordinates if entered)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;">
+          <div class="field" style="margin-bottom:0;min-width:180px;">
+            <label>Map View</label>
+            <select id="site-map-view">
+              <option value="satellite">Satellite / Aerial</option>
+              <option value="roadmap">Road Map</option>
+            </select>
+          </div>
+          <button type="button" onclick="loadSiteMap()" style="background:var(--navy);color:var(--gold);border:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">🗺 Load Map</button>
+          <a id="site-map-external" href="#" target="_blank" rel="noopener" style="display:none;font-size:13px;color:var(--navy);font-weight:600;padding:10px 4px;">↗ Open in Google Maps</a>
+        </div>
+        <div id="site-map-wrap" style="display:none;">
+          <iframe id="site-map-frame" style="width:100%;height:420px;border:1px solid var(--border);border-radius:8px;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          <div style="font-size:11px;color:var(--slate);margin-top:6px;">Interactive map for on-site exposure review. The Formal Report includes printable aerial and road-map images automatically.</div>
         </div>
       </div>
     </div>
@@ -7937,6 +7960,9 @@
   // ══════════════════════════════════════════
   // PHASE 2 — SUPABASE DATABASE INTEGRATION
   // ══════════════════════════════════════════
+  // ── GOOGLE MAPS API KEY — paste your key between the quotes below ──
+  // Restrict it in Google Cloud Console to your Netlify domain (HTTP referrer)
+  const GOOGLE_MAPS_API_KEY = 'PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE';
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const HEADERS = {
@@ -8070,6 +8096,33 @@
     var m = document.getElementById('reports-menu');
     if (m && m.style.display === 'block' && !e.target.closest('#reports-menu-wrap')) { m.style.display = 'none'; }
   });
+  // ── Site location map (Google Maps Embed API) ──
+  function buildMapQuery() {
+    var gps = (document.getElementById('gps-coordinates') || {}).value || '';
+    if (gps.trim()) return gps.trim();
+    var parts = ['street-address','city','province','postal-code'].map(function(id){
+      var el = document.getElementById(id); return el ? String(el.value).trim() : '';
+    }).filter(function(v){ return v !== ''; });
+    return parts.join(', ');
+  }
+  function loadSiteMap() {
+    if (typeof GOOGLE_MAPS_API_KEY === 'undefined' || !GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY.indexOf('PASTE_') === 0) {
+      showToast('\u26a0 Google Maps API key not configured yet \u2014 see GOOGLE_MAPS_API_KEY in the script.', 'warn');
+      return;
+    }
+    var q = buildMapQuery();
+    if (!q) {
+      showToast('\u26a0 Enter the street address (Insured section) or GPS coordinates first.', 'warn');
+      return;
+    }
+    var view = (document.getElementById('site-map-view') || {}).value || 'satellite';
+    var iframe = document.getElementById('site-map-frame');
+    if (iframe) iframe.src = 'https://www.google.com/maps/embed/v1/place?key=' + GOOGLE_MAPS_API_KEY + '&q=' + encodeURIComponent(q) + '&maptype=' + view + '&zoom=18';
+    var wrap = document.getElementById('site-map-wrap');
+    if (wrap) wrap.style.display = 'block';
+    var link = document.getElementById('site-map-external');
+    if (link) { link.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q); link.style.display = 'inline'; }
+  }
 
   function collectFormData() {
     const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
@@ -11522,6 +11575,17 @@ function generateFormalReport() {
     const v = f[id];
     return v && v !== '' ? v : '—';
   }
+  // Site location static maps (printable)
+  var mapQ = (function() {
+    var gps = (f['gps-coordinates'] || '').trim();
+    if (gps) return gps;
+    return [f['street-address'], f['city'], f['province'], f['postal-code']]
+      .map(function(v){ return v ? String(v).trim() : ''; })
+      .filter(function(v){ return v !== ''; }).join(', ');
+  })();
+  var hasMapKey = (typeof GOOGLE_MAPS_API_KEY !== 'undefined') && GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY.indexOf('PASTE_') !== 0;
+  var mapAerialUrl = (hasMapKey && mapQ) ? 'https://maps.googleapis.com/maps/api/staticmap?center=' + encodeURIComponent(mapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=color:red%7C' + encodeURIComponent(mapQ) + '&key=' + GOOGLE_MAPS_API_KEY : '';
+  var mapRoadUrl = (hasMapKey && mapQ) ? 'https://maps.googleapis.com/maps/api/staticmap?center=' + encodeURIComponent(mapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=color:red%7C' + encodeURIComponent(mapQ) + '&key=' + GOOGLE_MAPS_API_KEY : '';
   // Nat-Cat demerit breakdown (stored by the grade calculator)
   var ncDem = {};
   try { ncDem = JSON.parse(f['nc-demerits-json'] || '{}') || {}; } catch(e) { ncDem = {}; }
@@ -13043,6 +13107,19 @@ function generateFormalReport() {
       ${field2('Environmental Concerns', val('environmental-concerns'))}
     </div>
     ${fieldFull('Exposure Notes', val('exposure-notes'))}
+    ${mapAerialUrl ? `<hr class="sec-divider">
+    <div class="sub-heading">Site Location Maps</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div style="break-inside:avoid;">
+        <img src="${mapAerialUrl}" alt="Aerial view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
+        <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Aerial / Hybrid View</strong> — site, roof, and immediate exposures</div>
+      </div>
+      <div style="break-inside:avoid;">
+        <img src="${mapRoadUrl}" alt="Area road map" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
+        <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Area Context</strong> — surrounding streets and district</div>
+      </div>
+    </div>
+    <div style="font-size:8pt;color:#8a8472;margin-top:4px;">Location: ${mapQ} · Imagery and map data © Google</div>` : ''}
   </div>
 </div>
 <!-- ══ 7. NATURAL CATASTROPHE ══ -->
