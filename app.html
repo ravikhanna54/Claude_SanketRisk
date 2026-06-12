@@ -11056,6 +11056,11 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   var ncGradeTxt = (ncGradeSel && ncGradeSel.value) ? ncGradeSel.options[ncGradeSel.selectedIndex].text : '';
   if (ncGradeTxt) {
     s6b += 'Based on the SRC demerit assessment, the overall natural catastrophe exposure is graded as **' + ncGradeTxt.split(' (')[0] + '**' + (ncv('nc-score') ? ' (calculated score ' + ncv('nc-score') + ' out of 100)' : '') + '. ';
+    var ncDemN = {};
+    try { ncDemN = JSON.parse((document.getElementById('nc-demerits-json') || {}).value || '{}') || {}; } catch(e) { ncDemN = {}; }
+    if (ncDemN.total !== undefined) {
+      s6b += 'Demerits were assessed at ' + ncDemN.total + ' in total: earthquake ' + ncDemN.eq + (ncDemN.tier ? ' (raw demerits weighted \u00d7' + ncDemN.tierMult + ' for the ' + ncDemN.tier + ' seismic tier)' : '') + ', wind/storm ' + ncDemN.wind + ', and flood/water ' + ncDemN.flood + '. ';
+    }
     if (ncv('nc-override-reason')) s6b += 'The inspector has applied an override to the calculated grade: ' + lcf(ncv('nc-override-reason')) + '. ';
     if (ncv('nc-grade-narrative')) s6b += ncv('nc-grade-narrative') + ' ';
     s6b += NL;
@@ -11517,6 +11522,10 @@ function generateFormalReport() {
     const v = f[id];
     return v && v !== '' ? v : '—';
   }
+  // Nat-Cat demerit breakdown (stored by the grade calculator)
+  var ncDem = {};
+  try { ncDem = JSON.parse(f['nc-demerits-json'] || '{}') || {}; } catch(e) { ncDem = {}; }
+  function ncd(k) { return (ncDem[k] !== undefined && ncDem[k] !== null && ncDem[k] !== '') ? String(ncDem[k]) : '—'; }
   function secHeader(icon, title, tag) {
     return `<div class="sec-header">
       <div class="sec-header-left">
@@ -13094,6 +13103,11 @@ function generateFormalReport() {
     <hr class="sec-divider">
     <div class="sub-heading">Natural Catastrophe Grading — SRC Demerit Assessment</div>
     <div class="field-grid">
+      ${field2('Earthquake Demerits (tier-weighted)', ncd('eq'))}
+      ${field2('Wind / Storm Demerits', ncd('wind'))}
+      ${field2('Flood / Water Demerits', ncd('flood'))}
+      ${field2('Total Demerits', ncd('total'))}
+      ${field2('Seismic Tier Weighting', ncDem.tier ? ncDem.tier + ' (EQ demerits ×' + ncDem.tierMult + ')' : '—')}
       ${field2('Calculated Score (out of 100)', val('nc-score'))}
       ${field2('Final Assigned Nat-Cat Grade', selText('nc-final-grade') !== '—' ? '<strong>' + selText('nc-final-grade') + '</strong>' : '—')}
       ${field2('Inspector Override Reason', val('nc-override-reason'))}
