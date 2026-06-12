@@ -7243,7 +7243,7 @@
 <div class="action-bar" id="action-bar">
   <button class="btn-primary" onclick="showSection('summary', document.querySelector('[data-section=summary]'))">→ Go to Summary</button>
   <button class="btn-secondary" onclick="exportPDF()" style="background:var(--navy);color:var(--gold);border-color:var(--navy);">🖨 Screen Print</button>
-  <button class="btn-secondary" onclick=onclick="alert('button works')" style="background:var(--navy);color:var(--gold);border-color:var(--navy);">📋 Formal Report</button>
+  <button class="btn-secondary" onclick="generateFormalReport()" style="background:var(--navy);color:var(--gold);border-color:var(--navy);">📋 Formal Report</button>
   <button class="btn-secondary" onclick="generateNarrativeReport()" style="background:var(--navy);color:var(--gold);border-color:var(--navy);">📖 Narrative</button>
   <button class="btn-secondary" id="btn-save-db" onclick="saveInspection()">☁️ Save to DB</button>
   <button class="btn-secondary" onclick="saveAndDownload()">💾 Save + Download</button>
@@ -10812,20 +10812,75 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   if(fmt(floodZone)&&floodZone.toLowerCase().indexOf('no')===-1) s6+='The property is located within '+floodZone+'. ';
   if(fmt(earthquake)) s6+='Seismic exposure is classified as '+earthquake.toLowerCase()+'. ';
   s6 += NL;
+  var s6b = '**7. Natural Catastrophe Assessment**' + NL;
+  function ncv(id){ var el=document.getElementById(id); var v=el?String(el.value).trim():''; return (v && v!=='\u2014') ? v : null; }
+  var ncLoc = ncv('cdd-location');
+  if (ncLoc) {
+    s6b += 'Climatic and seismic design data were referenced from the National Building Code of Canada 2025, Appendix C, for the nearest reference location of ' + ncLoc + (ncv('cdd-elev') ? ' (elevation ' + ncv('cdd-elev') + ' m)' : '') + '. ';
+    var climBits = [];
+    if (ncv('cdd-snow-ss')) climBits.push('a ground snow load (Ss 1/50) of ' + ncv('cdd-snow-ss') + ' kPa');
+    if (ncv('cdd-wind-q50')) climBits.push('a 1-in-50-year hourly wind pressure of ' + ncv('cdd-wind-q50') + ' kPa');
+    if (ncv('cdd-rain-1day')) climBits.push('a 1-in-50-year one-day rainfall of ' + ncv('cdd-rain-1day') + ' mm');
+    if (climBits.length) s6b += 'Design values for this location include ' + climBits.join(', ') + '. ';
+    if (ncv('cdd-seismic-tier')) s6b += 'The seismic hazard tier for the location is assessed as **' + ncv('cdd-seismic-tier') + '**' + (ncv('cdd-smax') ? ' (Smax ' + ncv('cdd-smax') + ', site class unknown)' : '') + '. ';
+    s6b += NL;
+  } else {
+    s6b += 'No NBC 2025 reference location was selected for this inspection; climatic and seismic design data were not recorded.' + NL;
+  }
+  if (ncv('cdd-notes')) s6b += ncv('cdd-notes') + NL;
+  var eqBits = [];
+  if (ncv('eq-construction-era')) eqBits.push('the construction era relative to seismic code provisions is ' + ncv('eq-construction-era').toLowerCase());
+  if (ncv('eq-vulnerability')) eqBits.push('structural vulnerability is assessed as ' + ncv('eq-vulnerability').toLowerCase());
+  if (ncv('eq-anchorage')) eqBits.push('equipment and racking anchorage is ' + ncv('eq-anchorage').toLowerCase());
+  if (ncv('eq-sprinkler-bracing')) eqBits.push('sprinkler system seismic bracing is ' + ncv('eq-sprinkler-bracing').toLowerCase());
+  if (eqBits.length || ncv('eq-notes')) {
+    s6b += 'With respect to earthquake exposure, ' + (eqBits.length ? eqBits.join('; ') + '. ' : '');
+    if (ncv('eq-notes')) s6b += ncv('eq-notes') + ' ';
+    s6b += NL;
+  }
+  var wBits = [];
+  if (ncv('wind-roof-age')) wBits.push('the roof is approximately ' + ncv('wind-roof-age') + ' years old');
+  if (ncv('wind-roof-condition')) wBits.push('roof covering condition is ' + ncv('wind-roof-condition').toLowerCase());
+  if (ncv('wind-roof-attachment')) wBits.push('roof deck attachment and uplift resistance is ' + ncv('wind-roof-attachment').toLowerCase());
+  if (ncv('wind-cladding')) wBits.push('cladding and flashing condition is ' + ncv('wind-cladding').toLowerCase());
+  if (ncv('wind-openings')) wBits.push('large openings and overhead doors are ' + ncv('wind-openings').toLowerCase());
+  if (ncv('wind-exposure-debris')) wBits.push('tree and debris exposure is ' + ncv('wind-exposure-debris').toLowerCase());
+  if (ncv('wind-loss-history')) wBits.push('wind/hail loss history is ' + ncv('wind-loss-history').toLowerCase());
+  if (wBits.length || ncv('wind-notes')) {
+    s6b += 'With respect to wind and storm exposure, ' + (wBits.length ? wBits.join('; ') + '. ' : '');
+    if (ncv('wind-notes')) s6b += ncv('wind-notes') + ' ';
+    s6b += NL;
+  }
+  var flBits = [];
+  if (ncv('flood-site-elevation')) flBits.push('the site elevation relative to its surroundings is ' + ncv('flood-site-elevation').toLowerCase());
+  if (ncv('flood-watercourse')) flBits.push('proximity to a watercourse or water body is ' + ncv('flood-watercourse').toLowerCase());
+  if (ncv('flood-drainage')) flBits.push('site drainage is ' + ncv('flood-drainage').toLowerCase());
+  if (ncv('flood-lowest-level')) flBits.push('the lowest level is used for ' + ncv('flood-lowest-level').toLowerCase());
+  if (ncv('flood-stock-height')) flBits.push('stock storage height is ' + ncv('flood-stock-height').toLowerCase());
+  if (ncv('flood-protection')) flBits.push('sump pump / backflow protection is ' + ncv('flood-protection').toLowerCase());
+  if (ncv('flood-loss-history')) flBits.push('water/flood loss history is ' + ncv('flood-loss-history').toLowerCase());
+  if (flBits.length || ncv('flood-notes')) {
+    s6b += 'With respect to flood and water exposure, ' + (flBits.length ? flBits.join('; ') + '. ' : '');
+    if (ncv('flood-notes')) s6b += ncv('flood-notes') + ' ';
+    s6b += NL;
+  }
+  if (!eqBits.length && !wBits.length && !flBits.length && !ncv('eq-notes') && !ncv('wind-notes') && !ncv('flood-notes')) {
+    s6b += 'No site-specific natural catastrophe observations were recorded during this inspection.' + NL;
+  }
   var noLoss = !fmt(totalLosses)||totalLosses==='0'||totalLosses==='\u2014';
-  var s7 = '**7. Loss History**' + NL;
+  var s7 = '**8. Loss History**' + NL;
   if(noLoss){s7+='A review of the five-year loss history indicates no prior claims or losses on record for this risk. This is a positive underwriting indicator reflecting a well-managed property with no significant historical loss experience.'+NL;}
   else{s7+='The five-year loss history reflects '+totalLosses+' recorded loss'+(totalLosses!=='1'?'es':'')+' with a total incurred amount of $'+(fmt(totalIncurred)||'0')+'. ';if(fmt(primaryCause)&&primaryCause!=='No prior losses')s7+='The primary cause of loss is identified as '+primaryCause.toLowerCase()+'. ';if(fmt(lossComments)&&lossComments!=='N/A')s7+=lossComments+' ';s7+=NL;}
-  var s8 = '**8. Recommendations & Requirements**' + NL;
+  var s8 = '**9. Recommendations & Requirements**' + NL;
   if(recItems.length===0){s8+='No recommendations or requirements were identified during this inspection. The property is maintained in satisfactory condition with no immediate corrective actions required.'+NL;}
   else{s8+='The following recommendations and requirements were identified during this inspection:'+NL;recItems.forEach(function(r){if(r.desc||r.title){s8+='**'+(r.refnum||'')+(r.refnum&&r.title?' \u2014 ':'')+(r.title||'')+'** ['+(r.priority||'Advisory')+(r.type?' '+r.type:'')+'] '+(r.desc||'')+NL;}});}
-  var s9 = '**9. Underwriter Conclusions**' + NL;
+  var s9 = '**10. Underwriter Conclusions**' + NL;
   s9+='Based on the findings of this inspection, '+insuredName+' represents a '+(fmt(riskQuality)||'standard').toLowerCase()+' risk. ';
   s9+='The property is '+(noLoss?'free of prior loss history and ':'')+(recItems.length===0?'well maintained with no outstanding recommendations.':'subject to '+recItems.length+' recommendation'+(recItems.length>1?'s':'')+' as detailed above.')+' ';
   s9+='The underwriting recommendation is to **'+(fmt(uwRec)||'review')+'**';
   if(highRecs.length>0)s9+=', subject to satisfactory resolution of the '+highRecs.length+' high-priority item'+(highRecs.length>1?'s':'')+' within the specified timeframes';
   s9+='.'+NL;
-  return [s1,s2,s3,s4,s5,s6,s7,s8,s9].join('');
+  return [s1,s2,s3,s4,s5,s6,s6b,s7,s8,s9].join('');
 }
 function pctRowSummary(pctRows, key) {
   var rows = (pctRows || {})[key] || [];
@@ -11378,12 +11433,13 @@ function generateFormalReport() {
     { num: 4, title: 'Occupancy (COPE — O)', id: 'sec-occupancy' },
     { num: 5, title: 'Protection (COPE — P)', id: 'sec-protection' },
     { num: 6, title: 'Exposure (COPE — E)', id: 'sec-exposure' },
-    { num: 7, title: 'Loss History', id: 'sec-loss' },
-    { num: 8, title: 'Safety & Compliance', id: 'sec-safety' },
-    { num: 9, title: 'Recommendations & Requirements', id: 'sec-recommendations' },
-    { num: 10, title: 'Underwriter Summary', id: 'sec-summary' },
+    { num: 7, title: 'Natural Catastrophe Assessment', id: 'sec-natcat' },
+    { num: 8, title: 'Loss History', id: 'sec-loss' },
+    { num: 9, title: 'Safety & Compliance', id: 'sec-safety' },
+    { num: 10, title: 'Recommendations & Requirements', id: 'sec-recommendations' },
+    { num: 11, title: 'Underwriter Summary', id: 'sec-summary' },
   ];
-  let tocNum = 11;
+  let tocNum = 12;
   const suppDisplayNames = {
     'restaurant': 'Restaurant / Food Service',
     'woodworking': 'Woodworking / Lumber',
@@ -12735,7 +12791,64 @@ function generateFormalReport() {
     ${fieldFull('Exposure Notes', val('exposure-notes'))}
   </div>
 </div>
-<!-- ══ 7. LOSS HISTORY ══ -->
+<!-- ══ 7. NATURAL CATASTROPHE ══ -->
+<div class="report-section" id="sec-natcat">
+  ${secHeader('🌐', 'Natural Catastrophe Assessment', 'NAT-CAT')}
+  <div class="sec-body">
+    <div class="sub-heading">Climatic &amp; Seismic Design Data — NBC 2025 Appendix C</div>
+    <div class="field-grid">
+      ${field2('NBC Reference Location', val('cdd-location'))}
+      ${field2('Elevation (m)', val('cdd-elev'))}
+      ${field2('Ground Snow Load Ss 1/50 (kPa)', val('cdd-snow-ss'))}
+      ${field2('Rain Snow Load Sr 1/50 (kPa)', val('cdd-snow-sr'))}
+      ${field2('Wind Pressure q 1/10 (kPa)', val('cdd-wind-q10'))}
+      ${field2('Wind Pressure q 1/50 (kPa)', val('cdd-wind-q50'))}
+      ${field2('Wind Pressure q 1/500 (kPa)', val('cdd-wind-q500'))}
+      ${field2('15-min Rain (mm)', val('cdd-rain-15min'))}
+      ${field2('One-Day Rain 1/50 (mm)', val('cdd-rain-1day'))}
+      ${field2('Annual Precipitation (mm)', val('cdd-ann-precip'))}
+      ${field2('Driving Rain Wind Pressure (Pa, 1/5)', val('cdd-driving-rain'))}
+      ${field2('Seismic Smax (Site Class Unknown)', val('cdd-smax'))}
+      ${field2('Seismic Hazard Tier', val('cdd-seismic-tier') !== '—' ? '<strong>' + val('cdd-seismic-tier') + '</strong>' : '—')}
+    </div>
+    ${fieldFull('Climatic Data Notes', val('cdd-notes'))}
+    <div style="font-size:10px;color:#8a8472;margin-top:4px;">Source: National Building Code of Canada 2025, Appendix C, Tables C-2 and C-3 (NRC). Values apply to the listed reference location and elevation. Seismic tier derived from Smax thresholds in NBC Parts 4/9 — verify for binding design decisions.</div>
+    <hr class="sec-divider">
+    <div class="sub-heading">Earthquake — Site &amp; Building Observations</div>
+    <div class="field-grid">
+      ${field2('Construction Era vs. Seismic Code', val('eq-construction-era'))}
+      ${field2('Structural Vulnerability', val('eq-vulnerability'))}
+      ${field2('Equipment &amp; Racking Anchorage', val('eq-anchorage'))}
+      ${field2('Sprinkler System Seismic Bracing', val('eq-sprinkler-bracing'))}
+    </div>
+    ${fieldFull('Earthquake Notes', val('eq-notes'))}
+    <hr class="sec-divider">
+    <div class="sub-heading">Wind / Storm — Site &amp; Building Observations</div>
+    <div class="field-grid">
+      ${field2('Roof Age (years)', val('wind-roof-age'))}
+      ${field2('Roof Covering Condition', val('wind-roof-condition'))}
+      ${field2('Roof Deck Attachment / Uplift Resistance', val('wind-roof-attachment'))}
+      ${field2('Cladding &amp; Flashing Condition', val('wind-cladding'))}
+      ${field2('Large Openings / Overhead Doors', val('wind-openings'))}
+      ${field2('Tree / Debris Exposure', val('wind-exposure-debris'))}
+      ${field2('Wind / Hail Loss History', val('wind-loss-history'))}
+    </div>
+    ${fieldFull('Wind / Storm Notes', val('wind-notes'))}
+    <hr class="sec-divider">
+    <div class="sub-heading">Flood / Water — Site Observations</div>
+    <div class="field-grid">
+      ${field2('Site Elevation vs. Surroundings', val('flood-site-elevation'))}
+      ${field2('Proximity to Watercourse / Water Body', val('flood-watercourse'))}
+      ${field2('Site Drainage', val('flood-drainage'))}
+      ${field2('Lowest Level Use', val('flood-lowest-level'))}
+      ${field2('Stock Storage Height', val('flood-stock-height'))}
+      ${field2('Sump Pump / Backflow Protection', val('flood-protection'))}
+      ${field2('Water / Flood Loss History', val('flood-loss-history'))}
+    </div>
+    ${fieldFull('Flood / Water Notes', val('flood-notes'))}
+  </div>
+</div>
+<!-- ══ 8. LOSS HISTORY ══ -->
 <div class="report-section" id="sec-loss">
   ${secHeader('📊', 'Loss History', 'MODULE')}
   <div class="sec-body">
@@ -12754,7 +12867,7 @@ function generateFormalReport() {
     ${fieldFull('Loss Analysis Comments', val('loss-analysis-comments'))}
   </div>
 </div>
-<!-- ══ 8. SAFETY & COMPLIANCE ══ -->
+<!-- ══ 9. SAFETY & COMPLIANCE ══ -->
 <div class="report-section" id="sec-safety">
   ${secHeader('⚠️', 'Safety & Compliance', 'MODULE')}
   <div class="sec-body">
@@ -12780,7 +12893,7 @@ function generateFormalReport() {
     </table>
   </div>
 </div>
-<!-- ══ 9. RECOMMENDATIONS ══ -->
+<!-- ══ 10. RECOMMENDATIONS ══ -->
 <div class="report-section" id="sec-recommendations">
   ${secHeader('📋', 'Recommendations & Requirements', 'MODULE')}
   <div class="sec-body">
@@ -12828,7 +12941,7 @@ function generateFormalReport() {
     ` : `<div class="notice notice-info">No recommendations recorded for this inspection.</div>`}
   </div>
 </div>
-<!-- ══ 10. UNDERWRITER SUMMARY ══ -->
+<!-- ══ 11. UNDERWRITER SUMMARY ══ -->
 <div class="report-section" id="sec-summary">
   ${secHeader('📝', 'Underwriter Summary', 'SUMMARY')}
   <div class="sec-body">
