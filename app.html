@@ -7963,7 +7963,7 @@
   // ══════════════════════════════════════════
   // ── GOOGLE MAPS API KEY — paste your key between the quotes below ──
   // Restrict it in Google Cloud Console to your Netlify domain (HTTP referrer)
-  const GOOGLE_MAPS_API_KEY = 'AIzaSyDAHNS9_C-NLzVhAUDhD9HfSP-7X-xTVkI';
+  const GOOGLE_MAPS_API_KEY = 'PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE';
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const HEADERS = {
@@ -11183,6 +11183,11 @@ async function generateNarrativeReport() {
   const province      = d.province_state || g('province')        || '—';
   const fullAddress   = [g('street-address'), d.city || g('city'), d.province_state || g('province'), g('postal-code')]
     .filter(v => v && String(v).trim()).join(', ') || '—';
+  // Site location static maps (printable)
+  const nMapQ = (typeof buildMapQuery === 'function') ? buildMapQuery() : '';
+  const nHasKey = (typeof GOOGLE_MAPS_API_KEY !== 'undefined') && GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY.indexOf('PASTE_') !== 0;
+  const nMapAerial = (nHasKey && nMapQ) ? 'https://maps.googleapis.com/maps/api/staticmap?center=' + encodeURIComponent(nMapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=color:red%7C' + encodeURIComponent(nMapQ) + '&key=' + GOOGLE_MAPS_API_KEY : '';
+  const nMapRoad = (nHasKey && nMapQ) ? 'https://maps.googleapis.com/maps/api/staticmap?center=' + encodeURIComponent(nMapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=color:red%7C' + encodeURIComponent(nMapQ) + '&key=' + GOOGLE_MAPS_API_KEY : '';
   const occupancy     = d.occupancy_class|| g('occupancy-class') || '—';
   const inspName      = d.inspector_name || g('inspector-name')  || '—';
   const riskQuality   = g('risk-quality') || (pills['risk_quality_rating'] || []).join(', ')  || '—';
@@ -11398,6 +11403,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="origin">
 <title>Narrative Report — ${insuredName}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -11463,6 +11469,21 @@ Write in formal insurance inspection language. Be specific with measurements, da
   <div class="section narrative-content">
     ${narrativeHTML}
   </div>
+  ${nMapAerial ? `
+  <div class="section" style="break-inside:avoid;">
+    <h3>Site Location</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px;">
+      <div style="break-inside:avoid;">
+        <img src="${nMapAerial}" alt="Aerial view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
+        <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Aerial / Hybrid View</strong> — site, roof, and immediate exposures</div>
+      </div>
+      <div style="break-inside:avoid;">
+        <img src="${nMapRoad}" alt="Area road map" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
+        <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Area Context</strong> — surrounding streets and district</div>
+      </div>
+    </div>
+    <div style="font-size:8pt;color:#8a8472;margin-top:4px;">Location: ${nMapQ} · Imagery and map data © Google</div>
+  </div>` : ''}
   ${allPhotos.length > 0 ? `
   <div class="section">
     <h3>Photo Documentation</h3>
@@ -11594,13 +11615,7 @@ function generateFormalReport() {
     return v && v !== '' ? v : '—';
   }
   // Site location static maps (printable)
-  var mapQ = (function() {
-    var gps = (f['gps-coordinates'] || '').trim();
-    if (gps) return gps;
-    return [f['street-address'], f['city'], f['province'], f['postal-code']]
-      .map(function(v){ return v ? String(v).trim() : ''; })
-      .filter(function(v){ return v !== ''; }).join(', ');
-  })();
+  var mapQ = (typeof buildMapQuery === 'function') ? buildMapQuery() : '';
   var hasMapKey = (typeof GOOGLE_MAPS_API_KEY !== 'undefined') && GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY.indexOf('PASTE_') !== 0;
   var mapAerialUrl = (hasMapKey && mapQ) ? 'https://maps.googleapis.com/maps/api/staticmap?center=' + encodeURIComponent(mapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=color:red%7C' + encodeURIComponent(mapQ) + '&key=' + GOOGLE_MAPS_API_KEY : '';
   var mapRoadUrl = (hasMapKey && mapQ) ? 'https://maps.googleapis.com/maps/api/staticmap?center=' + encodeURIComponent(mapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=color:red%7C' + encodeURIComponent(mapQ) + '&key=' + GOOGLE_MAPS_API_KEY : '';
@@ -12111,6 +12126,7 @@ function generateFormalReport() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="origin">
 <title>Inspection Report — ${insuredName}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
