@@ -13102,14 +13102,39 @@ function generateFormalReport() {
     ${fieldFull('Flood / Water Notes', val('flood-notes'))}
     <hr class="sec-divider">
     <div class="sub-heading">Natural Catastrophe Grading — SRC Demerit Assessment</div>
+    <div class="score-row">
+      <div class="score-tile overall" style="grid-column:span 2;">
+        <span class="score-val" style="font-size:15pt;">${selText('nc-final-grade') !== '—' ? selText('nc-final-grade').split(' (')[0] : '—'}</span>
+        <div class="score-lbl">Final Assigned Nat-Cat Grade</div>
+      </div>
+      <div class="score-tile">
+        <span class="score-val">${val('nc-score')}</span>
+        <div class="score-lbl">Score / 100</div>
+      </div>
+      <div class="score-tile">
+        <span class="score-val">${ncd('total')}</span>
+        <div class="score-lbl">Total Demerits</div>
+      </div>
+    </div>
+    <div class="score-row">
+      <div class="score-tile">
+        <span class="score-val">${ncd('eq')}</span>
+        <div class="score-lbl">Earthquake Demerits</div>
+      </div>
+      <div class="score-tile">
+        <span class="score-val">${ncd('wind')}</span>
+        <div class="score-lbl">Wind / Storm Demerits</div>
+      </div>
+      <div class="score-tile">
+        <span class="score-val">${ncd('flood')}</span>
+        <div class="score-lbl">Flood / Water Demerits</div>
+      </div>
+      <div class="score-tile">
+        <span class="score-val" style="font-size:14pt;">${ncDem.tier ? ncDem.tier + ' ×' + ncDem.tierMult : '—'}</span>
+        <div class="score-lbl">NBC Seismic Tier Weighting</div>
+      </div>
+    </div>
     <div class="field-grid">
-      ${field2('Earthquake Demerits (tier-weighted)', ncd('eq'))}
-      ${field2('Wind / Storm Demerits', ncd('wind'))}
-      ${field2('Flood / Water Demerits', ncd('flood'))}
-      ${field2('Total Demerits', ncd('total'))}
-      ${field2('Seismic Tier Weighting', ncDem.tier ? ncDem.tier + ' (EQ demerits ×' + ncDem.tierMult + ')' : '—')}
-      ${field2('Calculated Score (out of 100)', val('nc-score'))}
-      ${field2('Final Assigned Nat-Cat Grade', selText('nc-final-grade') !== '—' ? '<strong>' + selText('nc-final-grade') + '</strong>' : '—')}
       ${field2('Inspector Override Reason', val('nc-override-reason'))}
     </div>
     ${fieldFull('Nat-Cat Grading Narrative', val('nc-grade-narrative'))}
