@@ -3734,6 +3734,70 @@
           </div>
         </div>
       </div>
+
+      <div class="card" id="nc-grading-card" style="border-top:3px solid var(--gold);">
+        <div class="card-title" style="display:flex;align-items:center;gap:10px;">
+          <span>⭐ Natural Catastrophe — Overall Grade</span>
+          <span style="font-size:11px;font-weight:400;color:var(--text-light);">SRC Demerit Assessment — NBC 2025 Tier-Weighted</span>
+        </div>
+        <div class="notice info" style="margin-bottom:16px;">
+          ℹ️ Demerits are derived automatically from the observation cards above — complete all dropdowns first. Earthquake demerits are weighted by the NBC seismic hazard tier (Low ×0.25 · Moderate ×0.5 · High ×0.75 · Very High ×1.0), so an NBC reference location must be selected. A starting score of 100 is reduced by accumulated demerits. Grade boundaries: 90–100 = Grade 1 | 75–89 = Grade 2 | 55–74 = Grade 3 | 35–54 = Grade 4 | Below 35 = Grade 5.
+        </div>
+        <div style="background:var(--gold-pale);border:1.5px solid var(--gold);border-radius:8px;padding:16px;margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:12px;">📊 Nat-Cat Grade Calculator</div>
+          <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;">
+            <div>
+              <div style="font-size:11px;color:var(--slate);margin-bottom:4px;font-weight:600;">EARTHQUAKE</div>
+              <div id="nc-demerit-eq" style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--navy);">0</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--slate);margin-bottom:4px;font-weight:600;">WIND/STORM</div>
+              <div id="nc-demerit-wind" style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--navy);">0</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--slate);margin-bottom:4px;font-weight:600;">FLOOD/WATER</div>
+              <div id="nc-demerit-flood" style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--navy);">0</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--slate);margin-bottom:4px;font-weight:600;">SCORE (out of 100)</div>
+              <div id="nc-score-display" style="font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:700;color:var(--navy);">100</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--slate);margin-bottom:4px;font-weight:600;">NAT-CAT GRADE</div>
+              <div id="nc-grade-display" style="font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:700;color:var(--gold);">—</div>
+            </div>
+            <div style="flex:1;min-width:200px;">
+              <div id="nc-grade-desc" style="font-size:13px;color:var(--slate);line-height:1.5;padding:8px 12px;background:white;border-radius:6px;border:1px solid var(--border);"></div>
+            </div>
+          </div>
+          <button onclick="calculateNatCatGrade()" style="background:var(--navy);color:var(--gold);border:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+            🔄 Calculate Grade
+          </button>
+          <input id="nc-score" type="hidden">
+          <input id="nc-demerits-json" type="hidden">
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Final Assigned Nat-Cat Grade</label>
+            <select id="nc-final-grade">
+              <option value="">— Assign Grade —</option>
+              <option value="1">Grade 1 — Minimal Nat-Cat Exposure (Score 90–100)</option>
+              <option value="2">Grade 2 — Low Nat-Cat Exposure (Score 75–89)</option>
+              <option value="3">Grade 3 — Moderate Nat-Cat Exposure (Score 55–74)</option>
+              <option value="4">Grade 4 — Elevated Nat-Cat Exposure (Score 35–54)</option>
+              <option value="5">Grade 5 — Severe Nat-Cat Exposure (Score below 35)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Inspector Override Reason (if grade differs from calculator)</label>
+            <input type="text" id="nc-override-reason" placeholder="e.g. Seismic retrofit completed but era selection reflects original construction">
+          </div>
+          <div class="field form-full">
+            <label>Nat-Cat Grading Narrative</label>
+            <textarea spellcheck="true" id="nc-grade-narrative" rows="4" placeholder="Summarize the key factors that determined this grade — seismic tier vs. building vulnerability, wind resilience of the roof system, flood siting and protection, and loss history..."></textarea>
+          </div>
+        </div>
+      </div>
     </div>
     <!-- ══ SECTION: LOSS HISTORY ══ -->
     <div class="section-panel" id="section-loss">
@@ -9840,6 +9904,108 @@
   // Based on SRC methodology + NFPA 25 deficiency scoring
   // Starting score = 100, demerits reduce score, score maps to Grade 1-5
   // ══════════════════════════════════════════════════════
+  function calculateNatCatGrade() {
+    // Demerit maps — matched by distinctive prefix of the selected option text
+    function dm(id, map, label, incomplete) {
+      var el = document.getElementById(id);
+      var v = el ? String(el.value).trim() : '';
+      if (v === '') { incomplete.push(label); return 0; }
+      for (var key in map) { if (v.indexOf(key) === 0) return map[key]; }
+      return 0;
+    }
+    var incomplete = [];
+
+    // ── Seismic tier multiplier (requires NBC lookup) ──
+    var tierEl = document.getElementById('cdd-seismic-tier');
+    var tier = tierEl ? String(tierEl.value).trim() : '';
+    if (tier === '') {
+      showToast('⚠ Select an NBC reference location first — the seismic tier weights the earthquake demerits.', 'warn');
+      return;
+    }
+    var tierMult = 0.5;
+    if (tier === 'Low') tierMult = 0.25;
+    else if (tier === 'Moderate') tierMult = 0.5;
+    else if (tier === 'High') tierMult = 0.75;
+    else tierMult = 1.0; // Very High
+
+    // ── EARTHQUAKE (raw, then tier-weighted) ──
+    var eqRaw = 0;
+    eqRaw += dm('eq-construction-era', { 'Post-2005': 0, '1990': 4, '1970': 9, 'Pre-1970': 14, 'Unknown': 7 }, 'Construction Era vs. Seismic Code', incomplete);
+    eqRaw += dm('eq-vulnerability', { 'Low': 0, 'Moderate': 4, 'Elevated': 12, 'High': 20, 'Unknown': 8 }, 'Structural Vulnerability', incomplete);
+    eqRaw += dm('eq-anchorage', { 'Anchored': 0, 'Partially': 4, 'Not anchored': 8, 'Not applicable': 0 }, 'Equipment & Racking Anchorage', incomplete);
+    eqRaw += dm('eq-sprinkler-bracing', { 'Braced': 0, 'Partial': 3, 'No seismic': 6, 'Not applicable': 0, 'Unable': 3 }, 'Sprinkler System Seismic Bracing', incomplete);
+    var eqDem = Math.round(eqRaw * tierMult * 10) / 10;
+
+    // ── WIND / STORM ──
+    var windDem = 0;
+    windDem += dm('wind-roof-condition', { 'Excellent': 0, 'Good': 1, 'Fair': 4, 'Poor': 9, 'Unable': 4 }, 'Roof Covering Condition', incomplete);
+    windDem += dm('wind-roof-attachment', { 'Engineered': 0, 'Conventional': 2, 'Ballasted': 7, 'Unknown': 3 }, 'Roof Deck Attachment / Uplift', incomplete);
+    windDem += dm('wind-cladding', { 'Secure': 0, 'Minor': 2, 'Loose': 6 }, 'Cladding & Flashing Condition', incomplete);
+    windDem += dm('wind-openings', { 'None': 0, 'Overhead doors — wind-rated': 1, 'Overhead doors — standard': 4, 'Large': 6 }, 'Large Openings / Overhead Doors', incomplete);
+    windDem += dm('wind-exposure-debris', { 'Minimal': 0, 'Moderate': 2, 'Significant': 5 }, 'Tree / Debris Exposure', incomplete);
+    windDem += dm('wind-loss-history', { 'No known': 0, 'Minor': 2, 'Significant': 6, 'Unknown': 2 }, 'Wind / Hail Loss History', incomplete);
+    var roofAge = parseInt((document.getElementById('wind-roof-age') || {}).value) || 0;
+    if (roofAge > 25) windDem += 4; else if (roofAge >= 15) windDem += 2;
+
+    // ── FLOOD / WATER ──
+    var floodDem = 0;
+    floodDem += dm('flood-site-elevation', { 'Elevated': 0, 'Level': 2, 'Low-lying': 7, 'In mapped': 12 }, 'Site Elevation vs. Surroundings', incomplete);
+    floodDem += dm('flood-watercourse', { 'None': 0, 'Watercourse 100': 2, 'Watercourse within': 5, 'Adjacent': 8 }, 'Proximity to Watercourse', incomplete);
+    floodDem += dm('flood-drainage', { 'Good': 0, 'Adequate': 1, 'Poor': 5 }, 'Site Drainage', incomplete);
+    floodDem += dm('flood-lowest-level', { 'Slab': 0, 'Basement — mechanical': 2, 'Basement — stock': 6, 'Below-grade': 5 }, 'Lowest Level Use', incomplete);
+    floodDem += dm('flood-stock-height', { 'All stock': 0, 'Mixed': 2, 'Substantial': 5, 'Not applicable': 0 }, 'Stock Storage Height', incomplete);
+    floodDem += dm('flood-protection', { 'Sump with': 0, 'Sump pump only': 2, 'Backflow': 2, 'None': 5, 'Unable': 2 }, 'Sump Pump / Backflow Protection', incomplete);
+    floodDem += dm('flood-loss-history', { 'No known': 0, 'Minor': 3, 'Significant': 8, 'Unknown': 2 }, 'Water / Flood Loss History', incomplete);
+
+    if (incomplete.length > 0) {
+      showToast('⚠ Please complete all observation dropdowns before calculating: ' + incomplete.slice(0,3).join(', ') + (incomplete.length > 3 ? ' + ' + (incomplete.length-3) + ' more' : ''), 'warn');
+      return;
+    }
+
+    var totalDem = Math.min(Math.round((eqDem + windDem + floodDem) * 10) / 10, 100);
+    var score = Math.max(0, Math.round((100 - totalDem) * 10) / 10);
+
+    var grade, gradeDesc, gradeColor;
+    if (score >= 90) {
+      grade = 1;
+      gradeDesc = 'Grade 1 — Minimal Nat-Cat Exposure: Building and site are well suited to the local hazard environment. No significant vulnerabilities observed. Standard terms applicable.';
+      gradeColor = '#276749';
+    } else if (score >= 75) {
+      grade = 2;
+      gradeDesc = 'Grade 2 — Low Nat-Cat Exposure: Minor vulnerabilities relative to local hazards. Standard terms with recommendations noted.';
+      gradeColor = '#7B5E00';
+    } else if (score >= 55) {
+      grade = 3;
+      gradeDesc = 'Grade 3 — Moderate Nat-Cat Exposure: Notable vulnerabilities relative to the local hazard tier. Recommendations required — review Nat-Cat deductibles and sublimits.';
+      gradeColor = '#C05621';
+    } else if (score >= 35) {
+      grade = 4;
+      gradeDesc = 'Grade 4 — Elevated Nat-Cat Exposure: Significant vulnerabilities across one or more perils. Refer to underwriter — consider peril-specific deductibles, sublimits, or engineering review.';
+      gradeColor = '#C53030';
+    } else {
+      grade = 5;
+      gradeDesc = 'Grade 5 — Severe Nat-Cat Exposure: Building poorly suited to the local hazard environment or major unresolved vulnerabilities. Detailed engineering review required — consider restrictive terms or declination.';
+      gradeColor = '#C53030';
+    }
+
+    var set = function(id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
+    set('nc-demerit-eq', eqDem);
+    set('nc-demerit-wind', windDem);
+    set('nc-demerit-flood', floodDem);
+    set('nc-score-display', score);
+    var gd = document.getElementById('nc-grade-display');
+    if (gd) { gd.textContent = 'Grade ' + grade; gd.style.color = gradeColor; }
+    var dsc = document.getElementById('nc-grade-desc');
+    if (dsc) { dsc.textContent = gradeDesc + ' (Seismic tier: ' + tier + ' — EQ demerits ×' + tierMult + ')'; }
+    var sv = document.getElementById('nc-score');
+    if (sv) sv.value = score;
+    var dj = document.getElementById('nc-demerits-json');
+    if (dj) dj.value = JSON.stringify({ eq: eqDem, wind: windDem, flood: floodDem, total: totalDem, tier: tier, tierMult: tierMult, grade: grade });
+    var fg = document.getElementById('nc-final-grade');
+    if (fg && fg.value === '') fg.value = String(grade);
+    showToast('✓ Nat-Cat grade calculated: Grade ' + grade + ' (score ' + score + ')', 'ok');
+  }
+
   function calculateSprinklerGrade() {
     const demeritFields = [
       'spk-hazard-class', 'spk-design-match', 'spk-qod',
@@ -10885,6 +11051,14 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   }
   if (!eqBits.length && !wBits.length && !flBits.length && !ncv('eq-notes') && !ncv('wind-notes') && !ncv('flood-notes')) {
     s6b += 'No site-specific natural catastrophe observations were recorded during this inspection.' + NL;
+  }
+  var ncGradeSel = document.getElementById('nc-final-grade');
+  var ncGradeTxt = (ncGradeSel && ncGradeSel.value) ? ncGradeSel.options[ncGradeSel.selectedIndex].text : '';
+  if (ncGradeTxt) {
+    s6b += 'Based on the SRC demerit assessment, the overall natural catastrophe exposure is graded as **' + ncGradeTxt.split(' (')[0] + '**' + (ncv('nc-score') ? ' (calculated score ' + ncv('nc-score') + ' out of 100)' : '') + '. ';
+    if (ncv('nc-override-reason')) s6b += 'The inspector has applied an override to the calculated grade: ' + lcf(ncv('nc-override-reason')) + '. ';
+    if (ncv('nc-grade-narrative')) s6b += ncv('nc-grade-narrative') + ' ';
+    s6b += NL;
   }
   var noLoss = !fmt(totalLosses)||totalLosses==='0'||totalLosses==='\u2014';
   var s7 = '**8. Loss History**' + NL;
@@ -12917,6 +13091,14 @@ function generateFormalReport() {
       ${field2('Water / Flood Loss History', val('flood-loss-history'))}
     </div>
     ${fieldFull('Flood / Water Notes', val('flood-notes'))}
+    <hr class="sec-divider">
+    <div class="sub-heading">Natural Catastrophe Grading — SRC Demerit Assessment</div>
+    <div class="field-grid">
+      ${field2('Calculated Score (out of 100)', val('nc-score'))}
+      ${field2('Final Assigned Nat-Cat Grade', selText('nc-final-grade') !== '—' ? '<strong>' + selText('nc-final-grade') + '</strong>' : '—')}
+      ${field2('Inspector Override Reason', val('nc-override-reason'))}
+    </div>
+    ${fieldFull('Nat-Cat Grading Narrative', val('nc-grade-narrative'))}
   </div>
 </div>
 <!-- ══ 8. LOSS HISTORY ══ -->
