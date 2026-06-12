@@ -3480,7 +3480,8 @@
         </div>
         <div id="site-map-wrap" style="display:none;">
           <iframe id="site-map-frame" style="width:100%;height:420px;border:1px solid var(--border);border-radius:8px;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
-          <div style="font-size:11px;color:var(--slate);margin-top:6px;">Interactive map for on-site exposure review. The Formal Report includes printable aerial and road-map images automatically.</div>
+          <div id="site-map-query" style="font-size:11px;color:var(--navy);font-weight:600;margin-top:6px;"></div>
+          <div style="font-size:11px;color:var(--slate);margin-top:2px;">Interactive map for on-site exposure review. The Formal Report includes printable aerial and road-map images automatically.</div>
         </div>
       </div>
     </div>
@@ -7962,7 +7963,7 @@
   // ══════════════════════════════════════════
   // ── GOOGLE MAPS API KEY — paste your key between the quotes below ──
   // Restrict it in Google Cloud Console to your Netlify domain (HTTP referrer)
-  const GOOGLE_MAPS_API_KEY = 'AIzaSyDAHNS9_C-NLzVhAUDhD9HfSP-7X-xTVkI';
+  const GOOGLE_MAPS_API_KEY = 'PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE';
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const HEADERS = {
@@ -8099,7 +8100,22 @@
   // ── Site location map (Google Maps Embed API) ──
   function buildMapQuery() {
     var gps = (document.getElementById('gps-coordinates') || {}).value || '';
-    if (gps.trim()) return gps.trim();
+    gps = gps.trim();
+    if (gps) {
+      // Plain "lat, long" decimal pair
+      var m = gps.match(/^(-?\d{1,3}\.?\d*)\s*,\s*(-?\d{1,3}\.?\d*)$/);
+      if (m) return m[1] + ',' + m[2];
+      // Degree-notation formats e.g. 49.3858\u00b0 N, 121.4406\u00b0 W
+      var nums = gps.match(/-?\d{1,3}\.\d+|-?\d{1,3}/g);
+      if (nums && nums.length >= 2) {
+        var lat = Math.abs(parseFloat(nums[0]));
+        var lng = Math.abs(parseFloat(nums[1]));
+        if (/s/i.test(gps)) lat = -lat;
+        if (/w/i.test(gps)) lng = -lng;
+        if (lat <= 90 && lng <= 180) return lat + ',' + lng;
+      }
+      // Unintelligible GPS entry — fall through to the address instead
+    }
     var parts = ['street-address','city','province','postal-code'].map(function(id){
       var el = document.getElementById(id); return el ? String(el.value).trim() : '';
     }).filter(function(v){ return v !== ''; });
@@ -8120,6 +8136,8 @@
     if (iframe) iframe.src = 'https://www.google.com/maps/embed/v1/place?key=' + GOOGLE_MAPS_API_KEY + '&q=' + encodeURIComponent(q) + '&maptype=' + view + '&zoom=18';
     var wrap = document.getElementById('site-map-wrap');
     if (wrap) wrap.style.display = 'block';
+    var cap = document.getElementById('site-map-query');
+    if (cap) cap.textContent = 'Map query sent to Google: ' + q;
     var link = document.getElementById('site-map-external');
     if (link) { link.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q); link.style.display = 'inline'; }
   }
