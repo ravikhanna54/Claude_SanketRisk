@@ -10813,7 +10813,8 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   if(fmt(earthquake)) s6+='Seismic exposure is classified as '+earthquake.toLowerCase()+'. ';
   s6 += NL;
   var s6b = '**7. Natural Catastrophe Assessment**' + NL;
-  function ncv(id){ var el=document.getElementById(id); var v=el?String(el.value).trim():''; return (v && v!=='\u2014') ? v : null; }
+  function ncv(id){ var el=document.getElementById(id); var v=el?String(el.value).trim():''; var skip=['','\u2014','-','none','n/a','na','nil']; return (skip.indexOf(v.toLowerCase())===-1) ? v : null; }
+  function lcf(s){ return s ? s.charAt(0).toLowerCase() + s.slice(1) : s; }
   var ncLoc = ncv('cdd-location');
   if (ncLoc) {
     s6b += 'Climatic and seismic design data were referenced from the National Building Code of Canada 2025, Appendix C, for the nearest reference location of ' + ncLoc + (ncv('cdd-elev') ? ' (elevation ' + ncv('cdd-elev') + ' m)' : '') + '. ';
@@ -10829,10 +10830,10 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   }
   if (ncv('cdd-notes')) s6b += ncv('cdd-notes') + NL;
   var eqBits = [];
-  if (ncv('eq-construction-era')) eqBits.push('the construction era relative to seismic code provisions is ' + ncv('eq-construction-era').toLowerCase());
-  if (ncv('eq-vulnerability')) eqBits.push('structural vulnerability is assessed as ' + ncv('eq-vulnerability').toLowerCase());
-  if (ncv('eq-anchorage')) eqBits.push('equipment and racking anchorage is ' + ncv('eq-anchorage').toLowerCase());
-  if (ncv('eq-sprinkler-bracing')) eqBits.push('sprinkler system seismic bracing is ' + ncv('eq-sprinkler-bracing').toLowerCase());
+  if (ncv('eq-construction-era')) eqBits.push('the construction era relative to seismic code provisions is ' + lcf(ncv('eq-construction-era')));
+  if (ncv('eq-vulnerability')) eqBits.push('structural vulnerability is assessed as ' + lcf(ncv('eq-vulnerability')));
+  if (ncv('eq-anchorage')) eqBits.push('equipment and racking anchorage is ' + lcf(ncv('eq-anchorage')));
+  if (ncv('eq-sprinkler-bracing')) eqBits.push('sprinkler system seismic bracing is ' + lcf(ncv('eq-sprinkler-bracing')));
   if (eqBits.length || ncv('eq-notes')) {
     s6b += 'With respect to earthquake exposure, ' + (eqBits.length ? eqBits.join('; ') + '. ' : '');
     if (ncv('eq-notes')) s6b += ncv('eq-notes') + ' ';
@@ -10840,25 +10841,25 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   }
   var wBits = [];
   if (ncv('wind-roof-age')) wBits.push('the roof is approximately ' + ncv('wind-roof-age') + ' years old');
-  if (ncv('wind-roof-condition')) wBits.push('roof covering condition is ' + ncv('wind-roof-condition').toLowerCase());
-  if (ncv('wind-roof-attachment')) wBits.push('roof deck attachment and uplift resistance is ' + ncv('wind-roof-attachment').toLowerCase());
-  if (ncv('wind-cladding')) wBits.push('cladding and flashing condition is ' + ncv('wind-cladding').toLowerCase());
-  if (ncv('wind-openings')) wBits.push('large openings and overhead doors are ' + ncv('wind-openings').toLowerCase());
-  if (ncv('wind-exposure-debris')) wBits.push('tree and debris exposure is ' + ncv('wind-exposure-debris').toLowerCase());
-  if (ncv('wind-loss-history')) wBits.push('wind/hail loss history is ' + ncv('wind-loss-history').toLowerCase());
+  if (ncv('wind-roof-condition')) wBits.push('roof covering condition is ' + lcf(ncv('wind-roof-condition')));
+  if (ncv('wind-roof-attachment')) wBits.push('roof deck attachment and uplift resistance is ' + lcf(ncv('wind-roof-attachment')));
+  if (ncv('wind-cladding')) wBits.push('cladding and flashing condition is ' + lcf(ncv('wind-cladding')));
+  if (ncv('wind-openings')) wBits.push('large openings and overhead doors are ' + lcf(ncv('wind-openings')));
+  if (ncv('wind-exposure-debris')) wBits.push('tree and debris exposure is ' + lcf(ncv('wind-exposure-debris')));
+  if (ncv('wind-loss-history')) wBits.push('wind/hail loss history is ' + lcf(ncv('wind-loss-history')));
   if (wBits.length || ncv('wind-notes')) {
     s6b += 'With respect to wind and storm exposure, ' + (wBits.length ? wBits.join('; ') + '. ' : '');
     if (ncv('wind-notes')) s6b += ncv('wind-notes') + ' ';
     s6b += NL;
   }
   var flBits = [];
-  if (ncv('flood-site-elevation')) flBits.push('the site elevation relative to its surroundings is ' + ncv('flood-site-elevation').toLowerCase());
-  if (ncv('flood-watercourse')) flBits.push('proximity to a watercourse or water body is ' + ncv('flood-watercourse').toLowerCase());
-  if (ncv('flood-drainage')) flBits.push('site drainage is ' + ncv('flood-drainage').toLowerCase());
-  if (ncv('flood-lowest-level')) flBits.push('the lowest level is used for ' + ncv('flood-lowest-level').toLowerCase());
-  if (ncv('flood-stock-height')) flBits.push('stock storage height is ' + ncv('flood-stock-height').toLowerCase());
-  if (ncv('flood-protection')) flBits.push('sump pump / backflow protection is ' + ncv('flood-protection').toLowerCase());
-  if (ncv('flood-loss-history')) flBits.push('water/flood loss history is ' + ncv('flood-loss-history').toLowerCase());
+  if (ncv('flood-site-elevation')) flBits.push('the site elevation relative to its surroundings is ' + lcf(ncv('flood-site-elevation')));
+  if (ncv('flood-watercourse')) flBits.push('proximity to a watercourse or water body is ' + lcf(ncv('flood-watercourse')));
+  if (ncv('flood-drainage')) flBits.push('site drainage is ' + lcf(ncv('flood-drainage')));
+  if (ncv('flood-lowest-level')) flBits.push('the lowest level is used for ' + lcf(ncv('flood-lowest-level')));
+  if (ncv('flood-stock-height')) flBits.push('stock storage height is ' + lcf(ncv('flood-stock-height')));
+  if (ncv('flood-protection')) flBits.push('sump pump / backflow protection is ' + lcf(ncv('flood-protection')));
+  if (ncv('flood-loss-history')) flBits.push('water/flood loss history is ' + lcf(ncv('flood-loss-history')));
   if (flBits.length || ncv('flood-notes')) {
     s6b += 'With respect to flood and water exposure, ' + (flBits.length ? flBits.join('; ') + '. ' : '');
     if (ncv('flood-notes')) s6b += ncv('flood-notes') + ' ';
