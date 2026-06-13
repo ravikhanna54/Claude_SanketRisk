@@ -4178,7 +4178,7 @@
           <button class="btn-add-row" onclick="triggerBulkPhotoUpload()" style="background:#1a3a5c;color:#fff;">📁 Bulk Load Photos</button>
           <button onclick="triggerPDFUpload()" style="padding:8px 16px;background:#5a2d82;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;" title="Each page of the PDF is converted to a JPEG and added as its own photo">📄 PDF → Photos</button>
         </div>
-        <div style="font-size:11px;color:var(--slate);margin-top:6px;">Uploading a PDF here converts each page into its own photo below — captioned with the file name and page number — the same way SCAN ONE handles PDF submissions.</div>
+        <div style="font-size:11px;color:var(--slate);margin-top:6px;">Each photo embedded in the PDF is extracted individually and placed in its own photo box below — captioned with the file name, page number, and position on the page (e.g. "page 2 — photo 3/4"). Pages can contain any number of photos; pages with no photos (cover sheets, text pages) are skipped automatically.</div>
         <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
           <button onclick="triggerPDFAttach()" style="padding:8px 16px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;" title="Attach a PDF as a supporting document — printed as its own pages at the end of the report">📎 Attach Supporting PDF</button>
         </div>
@@ -7726,28 +7726,113 @@
   // Converts every page of a PDF into a JPEG image and drops each one into
   // the next available photo slot — same destination as Bulk Load Photos,
   // matching the SCAN ONE workflow of photo-only documentation.
+  // ── Extract each embedded photo from a PDF and place it in its own photo box ──
+  var PDF_MIN_IMG_DIM = 150; // px (at PDF.js decode resolution) — filters out logos/icons/lines
+
+  function pdfImageObjToCanvas(imgObj) {
+    var w = imgObj.width, h = imgObj.height;
+    if (!w || !h) return null;
+    var canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    if (imgObj.bitmap) {
+      ctx.drawImage(imgObj.bitmap, 0, 0, w, h);
+      return canvas;
+    }
+    var src = imgObj.data;
+    if (!src) return null;
+    var IK = (typeof pdfjsLib !== 'undefined' && pdfjsLib.ImageKind) || { GRAYSCALE_1BPP: 1, RGB_24BPP: 2, RGBA_32BPP: 3 };
+    var imageData = ctx.createImageData(w, h);
+    var dst = imageData.data;
+    var kind = imgObj.kind;
+    if (kind === IK.RGBA_32BPP || (!kind && src.length === w * h * 4)) {
+      dst.set(src.subarray ? src.subarray(0, dst.length) : src);
+    } else if (kind === IK.RGB_24BPP || (!kind && src.length === w * h * 3)) {
+      for (var i = 0, j = 0; j < dst.length; i += 3, j += 4) { dst[j] = src[i]; dst[j+1] = src[i+1]; dst[j+2] = src[i+2]; dst[j+3] = 255; }
+    } else if (kind === IK.GRAYSCALE_1BPP) {
+      var rowBytes = (w + 7) >> 3;
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          var byte = src[y * rowBytes + (x >> 3)];
+          var v = (byte & (128 >> (x & 7))) ? 255 : 0;
+          var idx = (y * w + x) * 4;
+          dst[idx] = v; dst[idx+1] = v; dst[idx+2] = v; dst[idx+3] = 255;
+        }
+      }
+    } else {
+      return null; // unrecognized packing — skip rather than render garbage
+    }
+    ctx.putImageData(imageData, 0, 0);
+    return canvas;
+  }
+
   function convertPdfToPhotos(file, onDone) {
     var baseName = file.name.replace(/\.pdf$/i, '');
-    showToast('⏳ Converting ' + file.name + '…');
+    var placed = 0, skippedPages = 0;
+    showToast('⏳ Extracting photos from ' + file.name + '…');
     var reader = new FileReader();
     reader.onload = function(evt) {
       pdfjsLib.getDocument({ data: evt.target.result }).promise.then(function(pdfDoc) {
         var numPages = pdfDoc.numPages;
         var p = 1;
         function nextPage() {
-          if (p > numPages) { showToast('✓ ' + file.name + ' — ' + numPages + ' page' + (numPages>1?'s':'') + ' added to photos'); onDone(); return; }
+          if (p > numPages) {
+            var msg = '✓ ' + file.name + ' — ' + placed + ' photo' + (placed !== 1 ? 's' : '') + ' extracted';
+            if (skippedPages) msg += ' (' + skippedPages + ' page' + (skippedPages !== 1 ? 's' : '') + ' had no photos)';
+            showToast(msg);
+            onDone();
+            return;
+          }
           var pageNum = p++;
           pdfDoc.getPage(pageNum).then(function(page) {
-            var viewport = page.getViewport({ scale: 2.0 });
+            // Render at modest scale first — this resolves all image XObjects into page.objs
+            var viewport = page.getViewport({ scale: 1.5 });
             var canvas = document.createElement('canvas');
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
+            canvas.width = viewport.width; canvas.height = viewport.height;
             page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise.then(function() {
-              canvas.toBlob(function(blob) {
-                var imgFile = new File([blob], baseName + ' - page ' + pageNum + '.jpg', { type: 'image/jpeg' });
-                placePdfPageInPhotoSlot(imgFile, baseName, pageNum, numPages);
-                nextPage();
-              }, 'image/jpeg', 0.85);
+              page.getOperatorList().then(function(opList) {
+                var OPS = pdfjsLib.OPS;
+                var seen = [];
+                var rawImages = [];
+                for (var i = 0; i < opList.fnArray.length; i++) {
+                  var fn = opList.fnArray[i];
+                  if (fn === OPS.paintImageXObject || fn === OPS.paintImageXObjectRepeat) {
+                    var nm = opList.argsArray[i][0];
+                    if (typeof nm === 'string' && seen.indexOf(nm) === -1) {
+                      seen.push(nm);
+                      if (page.objs.has(nm)) {
+                        try { rawImages.push(page.objs.get(nm)); } catch(e) {}
+                      }
+                    }
+                  } else if (fn === OPS.paintInlineImageXObject || fn === OPS.paintInlineImageXObjectGroup) {
+                    var imgArg = opList.argsArray[i][0];
+                    if (imgArg && imgArg.width) rawImages.push(imgArg);
+                  }
+                }
+                // Convert + size-filter
+                var found = [];
+                rawImages.forEach(function(imgObj) {
+                  if (!imgObj || imgObj.width < PDF_MIN_IMG_DIM || imgObj.height < PDF_MIN_IMG_DIM) return;
+                  var c = pdfImageObjToCanvas(imgObj);
+                  if (c) found.push(c);
+                });
+                if (!found.length) { skippedPages++; nextPage(); return; }
+                var qi = 0;
+                function nextImg() {
+                  if (qi >= found.length) { nextPage(); return; }
+                  var imgCanvas = found[qi++];
+                  imgCanvas.toBlob(function(blob) {
+                    if (!blob) { nextImg(); return; }
+                    var suffix = found.length > 1 ? (' #' + qi) : '';
+                    var imgFile = new File([blob], baseName + ' - p' + pageNum + suffix + '.jpg', { type: 'image/jpeg' });
+                    var posLabel = found.length > 1 ? (qi + '/' + found.length) : null;
+                    placePdfPageInPhotoSlot(imgFile, baseName, pageNum, numPages, posLabel);
+                    placed++;
+                    nextImg();
+                  }, 'image/jpeg', 0.9);
+                }
+                nextImg();
+              });
             });
           });
         }
@@ -7760,73 +7845,7 @@
     reader.readAsArrayBuffer(file);
   }
 
-  // ── Attach a PDF as-is (printed intact in the report appendix) ──
-  function triggerPDFAttach() {
-    document.getElementById('pdf-attach-input').click();
-  }
-  function handlePDFAttach(input) {
-    var files = Array.from(input.files);
-    if (!files.length) return;
-    var i = 0;
-    function uploadNext() {
-      if (i >= files.length) { input.value = ''; return; }
-      var file = files[i++];
-      if (file.type !== 'application/pdf') { showToast('⚠ Only PDF files accepted'); uploadNext(); return; }
-      if (file.size > 52428800) { showToast('⚠ PDF too large (max 50MB): ' + file.name); uploadNext(); return; }
-      uploadPDFToStorage(file, uploadNext);
-    }
-    uploadNext();
-  }
-
-  function uploadPDFToStorage(file, callback) {
-    if (!currentInspectionId) { showToast('⚠ Save inspection first before attaching PDFs.'); if(callback) callback(); return; }
-    showToast('⏳ Uploading ' + file.name + '...');
-    var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    var path = 'inspections/' + currentInspectionId + '/pdf-' + Date.now() + '-' + safeName;
-    _supabase.storage.from('inspection-photos')
-      .upload(path, file, { upsert: true, contentType: 'application/pdf' })
-      .then(function(res) {
-        if (res.error) { showToast('⚠ Upload failed: ' + res.error.message); if(callback) callback(); return; }
-        _supabase.storage.from('inspection-photos')
-          .createSignedUrl(path, 3600 * 24 * 365)
-          .then(function(urlRes) {
-            var url = (urlRes.data && urlRes.data.signedUrl) ? urlRes.data.signedUrl : '';
-            attachedPDFs.push({ name: file.name, path: path, url: url, size: file.size });
-            renderPDFList();
-            showToast('✓ Attached: ' + file.name);
-            if(callback) callback();
-          }).catch(function(e) { showToast('⚠ ' + e.message); if(callback) callback(); });
-      }).catch(function(e) { showToast('⚠ ' + e.message); if(callback) callback(); });
-  }
-
-  function renderPDFList() {
-    var wrap = document.getElementById('pdf-list-wrap');
-    var list = document.getElementById('pdf-list');
-    if (!attachedPDFs.length) { wrap.style.display = 'none'; return; }
-    wrap.style.display = 'block';
-    list.innerHTML = attachedPDFs.map(function(pdf, idx) {
-      var size = pdf.size > 1024*1024 ? (pdf.size/1024/1024).toFixed(1) + ' MB' : Math.round(pdf.size/1024) + ' KB';
-      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8f5f0;border-radius:8px;border:1px solid var(--border);">' +
-        '<span style="font-size:24px;">📎</span>' +
-        '<div style="flex:1;">' +
-          '<div style="font-weight:600;font-size:13px;color:var(--navy);">' + pdf.name + '</div>' +
-          '<div style="font-size:11px;color:var(--slate);">' + size + '</div>' +
-        '</div>' +
-        (pdf.url ? '<a href="' + pdf.url + '" target="_blank" style="font-size:12px;color:var(--navy);font-weight:600;text-decoration:none;padding:4px 10px;border:1px solid var(--navy);border-radius:6px;">View</a>' : '') +
-        '<button onclick="removePDF(' + idx + ')" style="background:none;border:none;color:#c53030;font-size:18px;cursor:pointer;padding:0 4px;">✕</button>' +
-        '</div>';
-    }).join('');
-  }
-
-  function removePDF(idx) {
-    if (!confirm('Remove this attached PDF?')) return;
-    var path = attachedPDFs[idx].path;
-    _supabase.storage.from('inspection-photos').remove([path]).catch(function(){});
-    attachedPDFs.splice(idx, 1);
-    renderPDFList();
-  }
-
-  function placePdfPageInPhotoSlot(file, baseName, pageNum, numPages) {
+  function placePdfPageInPhotoSlot(file, baseName, pageNum, numPages, posLabel) {
     var grid = document.getElementById('photo-grid');
     var num = null;
     for (var i = 1; i <= photoCount; i++) {
@@ -7849,7 +7868,11 @@
       }
       if (placeholder) placeholder.style.display = 'none';
       var cap = document.getElementById('photo-' + num + '-caption');
-      if (cap && !cap.value) cap.value = baseName + (numPages > 1 ? ' (page ' + pageNum + ' of ' + numPages + ')' : '');
+      if (cap && !cap.value) {
+        var capText = baseName + (numPages > 1 ? ' (page ' + pageNum + ' of ' + numPages + ')' : '');
+        if (posLabel) capText += ' — photo ' + posLabel;
+        cap.value = capText;
+      }
     };
     reader.readAsDataURL(file);
     uploadPhotoToStorage(num, file);
