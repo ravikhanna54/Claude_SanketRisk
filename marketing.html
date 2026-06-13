@@ -12,7 +12,7 @@
       --navy:#0a1628;--navy-mid:#162236;--navy-light:#1e3050;
       --gold:#c9a84c;--gold-light:#e2c97e;--gold-pale:#f5ecd4;--gold-dim:rgba(201,168,76,.15);
       --slate:#4a6580;--slate-light:#7a9ab5;--border:#d0c9bb;--bg:#f8f5f0;
-      --vision:#3a86c8;--lidar:#38a169;--valuation:#9b59b6;--ir:#e05c3a;--scan:#0891b2;
+      --vision:#3a86c8;--lidar:#38a169;--valuation:#9b59b6;--ir:#e05c3a;--scan:#0891b2;--natcat:#0d9488;
     }
     html{scroll-behavior:smooth}
     body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--navy);overflow-x:hidden}
@@ -115,6 +115,14 @@
     .feature-icon{font-size:26px;margin-bottom:12px;display:block}
     .feature-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--navy);margin-bottom:8px}
     .feature-desc{font-size:12px;color:var(--slate);line-height:1.65;font-weight:300}
+    .uw-grading-row{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:8px}
+    .grading-eyebrow-wrap{margin-bottom:24px}
+    .grading-tile-grid{margin-top:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .grading-tile{background:rgba(255,255,255,.06);border:1px solid;border-radius:6px;padding:8px;text-align:center}
+    .grading-tile-val{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;line-height:1}
+    .grading-tile-lbl{font-size:9px;color:rgba(255,255,255,.4);margin-top:3px;font-family:'DM Mono',monospace}
+    .grading-suite-note{grid-column:1/-1;margin-top:8px;padding:16px 20px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.3);border-radius:10px;font-size:13px;color:var(--slate);line-height:1.7;font-weight:300;text-align:center}
+    .grading-suite-note strong{color:var(--navy)}
     .suppl-callout{background:var(--navy);border-radius:12px;padding:32px 36px;display:grid;grid-template-columns:auto 1fr auto;gap:28px;align-items:center;border:1px solid rgba(201,168,76,.2);margin-top:8px}
     .suppl-icon{font-size:48px}
     .suppl-title{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:#fff;margin-bottom:6px}
@@ -259,7 +267,7 @@
     @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 
     /* RESPONSIVE */
-    @media(max-width:1200px){.suite-grid{grid-template-columns:repeat(3,1fr)}.feature-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:1200px){.suite-grid{grid-template-columns:repeat(3,1fr)}.feature-grid{grid-template-columns:1fr 1fr}.uw-grading-row{grid-template-columns:1fr}}
     @media(max-width:1024px){nav{padding:0 24px}.nav-links{display:none}.hero{padding:110px 24px 80px}.audiences,.features,.coming-soon,.workflow,.showcases,.contact{padding:72px 24px}.audience-grid{grid-template-columns:1fr;max-width:480px}.features-header{grid-template-columns:1fr}.cs-grid{grid-template-columns:1fr}.showcase,.showcase.reverse{grid-template-columns:1fr;direction:ltr}.workflow-steps{grid-template-columns:1fr 1fr}.workflow-steps::before{display:none}.contact-grid{grid-template-columns:1fr;gap:48px}.suppl-callout{grid-template-columns:auto 1fr}.suppl-stat{display:none}footer{flex-direction:column;text-align:center}}
     @media(max-width:600px){.suite-grid{grid-template-columns:1fr 1fr}.feature-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.workflow-steps{grid-template-columns:1fr}.dash-stats-row{grid-template-columns:1fr 1fr}.suppl-callout{grid-template-columns:1fr;text-align:center}}
   </style>
@@ -284,7 +292,7 @@
 <!-- HERO -->
 <section class="hero">
   <div class="hero-content">
-    <div class="hero-kicker">Commercial Property Risk Intelligence</div>
+    <div class="hero-kicker">Sanket Risk Intelligence &mdash; Commercial Property Suite</div>
     <div class="hero-wordmark">Sanket<span>Risk</span></div>
     <div class="hero-one">_ O N E</div>
     <div class="hero-tagline">One Platform. One Vision. One Standard.</div>
@@ -441,7 +449,12 @@
     <div class="feature-item"><span class="feature-icon">&#x1F6E1;&#xFE0F;</span><div class="feature-title">Secure Cloud Architecture</div><p class="feature-desc">Built on Supabase PostgreSQL with row-level security, role-based access, Netlify edge delivery, and full database export and backup tools.</p></div>
   </div>
   <!-- UW Intelligence highlight row -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px" class="reveal">
+  <div class="grading-eyebrow-wrap reveal">
+    <div class="section-eyebrow">Quantitative Risk Grading</div>
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:clamp(22px,3vw,32px);font-weight:600;color:var(--navy);margin-bottom:10px">Three Independent Scoring Systems &mdash; One Underwriting File</h3>
+    <p class="section-sub" style="max-width:680px">Every SanketRisk ONE report carries quantitative, defensible grades for the building, its sprinkler protection, and its natural catastrophe exposure &mdash; each one breaking down into the component factors that produced it.</p>
+  </div>
+  <div class="uw-grading-row reveal">
 
     <div class="feature-item" style="border-color:rgba(201,168,76,.4);background:linear-gradient(135deg,#0a1628,#1a2e42);">
       <span class="feature-icon">&#x1F4CA;</span>
@@ -473,6 +486,25 @@
         <div style="display:flex;align-items:center;gap:10px"><div style="width:26px;height:26px;background:rgba(197,48,48,.3);border:1px solid rgba(197,48,48,.6);border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:700;color:#fc8181;flex-shrink:0">5</div><div style="font-size:11px;color:rgba(255,255,255,.6)"><strong style="color:#fc8181">Ineffective / Compromised</strong> &mdash; No credit &mdash; treat as unprotected (&lt;35)</div></div>
       </div>
     </div>
+
+    <div class="feature-item" style="border-color:rgba(13,148,136,.4);background:linear-gradient(135deg,#0a1628,#1a2e42);">
+      <span class="feature-icon">&#x1F30D;</span>
+      <div class="feature-title" style="color:#5eead4">Natural Catastrophe Grading</div>
+      <p class="feature-desc" style="color:rgba(255,255,255,.65)">A tier-weighted SRC demerit assessment covering earthquake, wind/storm, and flood/water exposure &mdash; referenced against National Building Code of Canada 2025 (Appendix C) climatic and seismic design data for the property&rsquo;s location. Earthquake demerits scale with the site&rsquo;s NBC seismic hazard tier, so the same structural vulnerability carries more weight in a high-seismicity zone than a low one.</p>
+      <div class="grading-tile-grid">
+        <div class="grading-tile" style="border-color:rgba(13,148,136,.25)"><div class="grading-tile-val" style="color:#5eead4">EQ</div><div class="grading-tile-lbl">Earthquake</div></div>
+        <div class="grading-tile" style="border-color:rgba(13,148,136,.25)"><div class="grading-tile-val" style="color:#5eead4">WS</div><div class="grading-tile-lbl">Wind / Storm</div></div>
+        <div class="grading-tile" style="border-color:rgba(13,148,136,.25)"><div class="grading-tile-val" style="color:#5eead4">FW</div><div class="grading-tile-lbl">Flood / Water</div></div>
+        <div class="grading-tile" style="border-color:rgba(13,148,136,.4);background:rgba(13,148,136,.15)"><div class="grading-tile-val" style="color:#5eead4">&#x2211;</div><div class="grading-tile-lbl">Score / Grade</div></div>
+      </div>
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">
+        <span style="font-size:10px;padding:3px 9px;background:rgba(39,103,73,.3);border:1px solid rgba(39,103,73,.5);border-radius:20px;color:#68d391;font-family:'DM Mono',monospace">Grade 1&ndash;2 &mdash; Minimal / Low</span>
+        <span style="font-size:10px;padding:3px 9px;background:rgba(13,148,136,.15);border:1px solid rgba(13,148,136,.3);border-radius:20px;color:#5eead4;font-family:'DM Mono',monospace">Grade 3 &mdash; Moderate</span>
+        <span style="font-size:10px;padding:3px 9px;background:rgba(197,48,48,.2);border:1px solid rgba(197,48,48,.4);border-radius:20px;color:#fc8181;font-family:'DM Mono',monospace">Grade 4&ndash;5 &mdash; Elevated / Severe</span>
+      </div>
+    </div>
+
+    <div class="grading-suite-note">Every grade is fully traceable &mdash; the Formal Report shows each score&rsquo;s component breakdown alongside the inspector&rsquo;s narrative justification. As <strong>Sanket Risk Intelligence</strong> expands, these scoring systems will draw on additional third-party data sources &mdash; including Dun &amp; Bradstreet business intelligence and CGI / ISO loss history &mdash; to further sharpen the underwriting picture.</div>
 
   </div>
   <div class="suppl-callout reveal">
@@ -588,6 +620,20 @@
         <div class="cs-feature"><div class="cs-feat-icon">&#x2699;&#xFE0F;</div>Mechanical equipment hotspot detection &mdash; motors, bearings, HVAC components</div>
         <div class="cs-feature"><div class="cs-feat-icon">&#x1F4F7;</div>Thermal images paired with visible-light photos and linked to inspection findings</div>
         <div class="cs-feature"><div class="cs-feat-icon">&#x1F4C4;</div>Thermography report integrated directly into the SanketRisk ONE formal report</div>
+      </div>
+    </div>
+    <div class="cs-card">
+      <div class="cs-card-top" style="background:linear-gradient(135deg,#0a1628,#0d9488)">
+        <div class="cs-badge">Roadmap</div>
+        <div class="cs-product-name">Sanket Risk <span class="one">_INTELLIGENCE</span></div>
+        <div class="cs-title">Third-Party Data Integration Layer</div>
+        <p class="cs-sub">Enriching every SanketRisk ONE report &mdash; and every SRC grading score &mdash; with external business and loss data, automatically matched to the inspected property.</p>
+      </div>
+      <div class="cs-card-body">
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F3E2;</div>Dun &amp; Bradstreet business intelligence &mdash; financial stability, years in business, and corporate structure linked to the named insured</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4C9;</div>CGI / ISO loss history data &mdash; prior claims and loss trends incorporated directly into Loss History and the Nat-Cat and Sprinkler grading narratives</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F5FA;&#xFE0F;</div>Geospatial hazard layers &mdash; flood zone, wildfire interface, and catastrophe model data supplementing the NBC 2025 climatic and seismic lookup</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F517;</div>All sources surface as additional fields and narrative context within the existing report formats &mdash; no new workflow for the inspector</div>
       </div>
     </div>
   </div>
@@ -792,6 +838,7 @@
   <div>
     <div class="footer-logo">Sanket<span>Risk</span><span class="footer-one">_ONE</span></div>
     <div style="font-size:11px;color:rgba(255,255,255,.2);margin-top:4px;font-family:'DM Mono',monospace">&copy; 2026 Sanket Risk Consultants. All rights reserved.</div>
+    <div style="font-size:11px;color:rgba(201,168,76,.35);margin-top:2px;font-family:'DM Mono',monospace;letter-spacing:.08em">Part of the Sanket Risk Intelligence suite</div>
   </div>
   <div class="footer-copy">Commercial Property Risk Intelligence Suite</div>
   <div class="footer-links">
