@@ -11640,8 +11640,8 @@ Write in formal insurance inspection language. Be specific with measurements, da
   <div class="section">
     <h3>Photo Documentation</h3>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:12px;">
-      ${allPhotos.map(p => `
-        <div style="break-inside:avoid;">
+      ${allPhotos.map((p, idx) => `
+        <div style="break-inside:avoid;${(idx + 1) % 4 === 0 ? 'page-break-after:always;' : ''}">
           <img src="${p.src}" alt="Photo ${p.num}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;border:1px solid #ddd8d0;">
           <div style="font-size:9pt;color:#4a6580;margin-top:4px;">
             <strong>Photo ${p.num}</strong>${p.category ? ' — ' + p.category : ''}
@@ -12776,6 +12776,10 @@ function generateFormalReport() {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin-bottom: 2px;
+  }
+  /* Cap printed photo pages at 4 photos (2x2) per page */
+  .photo-item:nth-of-type(4n) {
+    page-break-after: always;
   }
   /* ── PAGE FOOTER ── */
   @page {
