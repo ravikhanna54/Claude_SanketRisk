@@ -10612,37 +10612,42 @@
   function applyQAState(status) {
     currentReportStatus = status || 'draft';
     var isReviewer = (currentUserRole === 'admin' || currentUserRole === 'reviewer');
-    var summaryPanel = document.getElementById('section-summary');
-    var banner      = document.getElementById('qa-status-banner');
-    var pill        = document.getElementById('qa-status-pill');
-    var btnSubmit   = document.getElementById('btn-submit-qa');
-    var btnExport   = document.getElementById('report-btn-group');
-    var btnSave     = document.getElementById('btn-save-db');
-    var qaMsg       = document.getElementById('qa-status-message');
-    var qaActions   = document.getElementById('qa-action-buttons');
-    var qaApproved  = document.getElementById('qa-approved-section');
-    var qaReturned  = document.getElementById('qa-returned-section');
-    var nameEl      = document.getElementById('qa-reviewer-name');
-    var dateEl      = document.getElementById('qa-review-date');
-    var notesEl     = document.getElementById('qa-notes');
-    var returnNotes = document.getElementById('qa-return-notes-display');
-    var approvedBy  = document.getElementById('qa-approved-by-label');
-    // Hide conditional sections by default
-    if (qaApproved) qaApproved.style.display = 'none';
-    if (qaReturned) qaReturned.style.display = 'none';
+    var banner       = document.getElementById('qa-status-banner');
+    var pill         = document.getElementById('qa-status-pill');
+    var btnSubmit    = document.getElementById('btn-submit-qa');
+    var btnSave      = document.getElementById('btn-save-db');
+    var nameEl       = document.getElementById('qa-reviewer-name');
+    var dateEl       = document.getElementById('qa-review-date');
+    var notesEl      = document.getElementById('qa-notes');
+    var returnNotes  = document.getElementById('qa-return-notes-display');
+    var approvedBy   = document.getElementById('qa-approved-by-label');
+    var btnApprove   = document.getElementById('btn-qa-approve');
+    var btnReturn    = document.getElementById('btn-qa-return');
+    var btnReset     = document.getElementById('btn-qa-reset');
+    var approvedBadge = document.getElementById('qa-approved-badge');
+    var returnedBadge = document.getElementById('qa-returned-badge');
+
+    // Hide conditional sections by default — re-shown per state below
+    if (btnApprove)    btnApprove.style.display = 'none';
+    if (btnReturn)     btnReturn.style.display = 'none';
+    if (btnReset)      btnReset.style.display = 'none';
+    if (approvedBadge) approvedBadge.style.display = 'none';
+    if (returnedBadge) returnedBadge.style.display = 'none';
+    if (returnNotes)   returnNotes.style.display = 'none';
+
     // Populate reviewer fields
     if (nameEl) nameEl.value = currentQAReviewer || '';
     if (notesEl && currentQANotes) notesEl.value = currentQANotes;
+
     if (currentReportStatus === 'draft') {
       if (banner) { banner.className = 'qa-status-banner'; banner.textContent = ''; }
       if (pill)   { pill.className = 'qa-status-pill qa-pill-draft'; pill.textContent = 'Draft'; }
-      if (btnSubmit) btnSubmit.disabled = false;
-      if (btnSave)   btnSave.style.display = 'inline-block';
-      if (btnExport) btnExport.style.display = 'flex';
-      if (qaMsg)  qaMsg.textContent = 'Submit the report for QA review when complete.';
-      if (qaActions) qaActions.style.display = 'none';
-      var btnReset0 = document.getElementById('btn-qa-reset');
-      if (btnReset0) btnReset0.style.display = 'none';
+      if (btnSubmit) {
+        btnSubmit.disabled = false; btnSubmit.textContent = '📋 Submit for QA Review';
+        btnSubmit.style.background = 'var(--gold)'; btnSubmit.style.color = 'var(--navy)';
+        btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer';
+      }
+      if (btnSave) btnSave.style.display = 'inline-block';
       // Pre-fill reviewer name with logged-in user if they are a reviewer
       if (isReviewer && nameEl && !nameEl.value) {
         var found = qaReviewerList.find(function(r) { return r.email === currentUserEmail; });
@@ -10652,53 +10657,43 @@
       if (banner) { banner.className = 'qa-status-banner qa-banner-submitted'; banner.textContent = isReviewer ? '⏳ Submitted — Assign from dashboard or complete review below.' : '⏳ Submitted for QA Review. You will be notified when complete.'; }
       if (pill)   { pill.className = 'qa-status-pill qa-pill-submitted'; pill.textContent = 'Submitted'; }
       if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = '⏳ Under QA Review'; btnSubmit.style.background = '#b8962f'; btnSubmit.style.opacity = '0.7'; btnSubmit.style.cursor = 'not-allowed'; }
-      if (btnSave)   btnSave.style.display = isReviewer ? 'inline-block' : 'none';
-      if (btnExport) btnExport.style.display = 'flex';
-      if (qaMsg)  qaMsg.textContent = isReviewer ? 'This report is awaiting QA review. Complete your review below.' : 'Report locked pending QA review.';
-      var btnReset = document.getElementById('btn-qa-reset');
+      if (btnSave) btnSave.style.display = isReviewer ? 'inline-block' : 'none';
       if (btnReset) btnReset.style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
       if (isReviewer) {
-        if (qaActions) { qaActions.style.display = 'flex'; }
+        if (btnApprove) btnApprove.style.display = 'inline-block';
+        if (btnReturn)  btnReturn.style.display = 'inline-block';
         if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
       }
     } else if (currentReportStatus === 'inreview') {
       if (banner) { banner.className = 'qa-status-banner qa-banner-inreview'; banner.textContent = isReviewer ? '🔍 In QA Review — Reviewer: ' + (currentQAReviewer || 'Assigned') + '. Complete your review below.' : '🔍 In QA Review — Reviewer: ' + (currentQAReviewer || 'Assigned') + '. Your report is locked pending review.'; }
       if (pill)   { pill.className = 'qa-status-pill qa-pill-inreview'; pill.textContent = 'In Review'; }
       if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = '🔍 Under QA Review'; btnSubmit.style.background = '#7c6fb5'; btnSubmit.style.color = 'white'; btnSubmit.style.opacity = '0.7'; btnSubmit.style.cursor = 'not-allowed'; }
-      if (btnSave)   btnSave.style.display = isReviewer ? 'inline-block' : 'none';
-      if (btnExport) btnExport.style.display = 'flex';
-      if (qaMsg)  qaMsg.textContent = isReviewer ? 'Review the report and approve or return for correction.' : 'Your report is being reviewed.';
-      var btnReset2 = document.getElementById('btn-qa-reset');
-      if (btnReset2) btnReset2.style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
+      if (btnSave) btnSave.style.display = isReviewer ? 'inline-block' : 'none';
+      if (btnReset) btnReset.style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
       if (isReviewer) {
-        if (qaActions) { qaActions.style.display = 'flex'; }
+        if (btnApprove) btnApprove.style.display = 'inline-block';
+        if (btnReturn)  btnReturn.style.display = 'inline-block';
         if (dateEl && !dateEl.value) dateEl.value = currentQADate || new Date().toISOString().split('T')[0];
       }
     } else if (currentReportStatus === 'returned') {
       if (banner) { banner.className = 'qa-status-banner qa-banner-returned'; banner.textContent = '↩ Returned for Correction — Please review the QA notes and resubmit when ready.'; }
       if (pill)   { pill.className = 'qa-status-pill qa-pill-returned'; pill.textContent = 'Returned'; }
-      if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = '📋 Submit for QA Review'; btnSubmit.style.background = 'var(--gold)'; btnSubmit.style.color = 'var(--navy)'; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; btnSubmit.textContent = '📋 Resubmit for QA Review'; }
-      if (btnSave)   btnSave.style.display = 'inline-block';
-      if (btnExport) btnExport.style.display = 'flex';
-      if (qaMsg)  qaMsg.textContent = 'This report has been returned. Review the notes below and resubmit.';
-      if (qaReturned) {
-        qaReturned.style.display = 'block';
-        if (returnNotes) returnNotes.textContent = currentQANotes || 'No specific notes provided.';
+      if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.style.background = 'var(--gold)'; btnSubmit.style.color = 'var(--navy)'; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'pointer'; btnSubmit.textContent = '📋 Resubmit for QA Review'; }
+      if (btnSave) btnSave.style.display = 'inline-block';
+      if (returnNotes) {
+        returnNotes.style.display = 'block';
+        returnNotes.textContent = currentQANotes || 'No specific notes provided.';
       }
     } else if (currentReportStatus === 'approved') {
       if (banner) { banner.className = 'qa-status-banner qa-banner-approved'; banner.textContent = '✅ QA Approved — Report is approved and ready for printing.'; }
       if (pill)   { pill.className = 'qa-status-pill qa-pill-approved'; pill.textContent = 'Approved'; }
       if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = '✅ Review Completed'; btnSubmit.style.background = '#276749'; btnSubmit.style.color = 'white'; btnSubmit.style.opacity = '1'; btnSubmit.style.cursor = 'not-allowed'; }
-      // Show reset button for admin even in approved state
-      var btnResetApproved = document.getElementById('btn-qa-reset');
-      if (btnResetApproved) btnResetApproved.style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
-      if (btnSave)   btnSave.style.display = isReviewer ? 'inline-block' : 'none';
-      if (btnExport) btnExport.style.display = 'flex';
-      if (qaMsg)  qaMsg.textContent = 'This report has been approved.';
-      if (qaActions) qaActions.style.display = 'none';
-      if (qaApproved) {
-        qaApproved.style.display = 'block';
-        if (approvedBy) approvedBy.textContent = 'Approved by ' + (currentQAReviewer || '—') + ' on ' + (currentQADate || '—');
+      if (btnReset) btnReset.style.display = (currentUserRole === 'admin') ? 'inline-block' : 'none';
+      if (btnSave) btnSave.style.display = isReviewer ? 'inline-block' : 'none';
+      if (approvedBadge) {
+        approvedBadge.style.display = 'inline-block';
+        var abLabel = document.getElementById('qa-approved-by-label');
+        if (abLabel) abLabel.textContent = 'Approved by ' + (currentQAReviewer || '—') + ' on ' + (currentQADate || '—');
       }
     }
   }
