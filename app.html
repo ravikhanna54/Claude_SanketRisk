@@ -3821,6 +3821,51 @@
             <textarea spellcheck="true" id="nc-grade-narrative" rows="4" placeholder="Summarize the key factors that determined this grade — seismic tier vs. building vulnerability, wind resilience of the roof system, flood siting and protection, and loss history..."></textarea>
           </div>
         </div>
+        <div class="sub-heading" style="margin-top:18px;">Grading Scale Reference</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:var(--navy);color:white;">
+                <th style="padding:6px 10px;text-align:left;">Grade</th>
+                <th style="padding:6px 10px;text-align:left;">Score</th>
+                <th style="padding:6px 10px;text-align:left;">Description</th>
+                <th style="padding:6px 10px;text-align:left;">Underwriting Implication</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="background:#e6f7ee;">
+                <td style="padding:5px 10px;font-weight:700;color:#276749;">Grade 1</td>
+                <td style="padding:5px 10px;color:#276749;">90–100</td>
+                <td style="padding:5px 10px;">Minimal Nat-Cat exposure — building and site well suited to the local hazard environment, no significant vulnerabilities observed</td>
+                <td style="padding:5px 10px;">Standard terms applicable</td>
+              </tr>
+              <tr style="background:#f5edd6;">
+                <td style="padding:5px 10px;font-weight:700;color:#7B5E00;">Grade 2</td>
+                <td style="padding:5px 10px;color:#7B5E00;">75–89</td>
+                <td style="padding:5px 10px;">Low Nat-Cat exposure — minor vulnerabilities relative to local hazards</td>
+                <td style="padding:5px 10px;">Standard terms, recommendations noted</td>
+              </tr>
+              <tr style="background:#fff3e0;">
+                <td style="padding:5px 10px;font-weight:700;color:#C05621;">Grade 3</td>
+                <td style="padding:5px 10px;color:#C05621;">55–74</td>
+                <td style="padding:5px 10px;">Moderate Nat-Cat exposure — notable vulnerabilities relative to the local hazard profile</td>
+                <td style="padding:5px 10px;">Recommendations required — review Nat-Cat deductibles and sublimits</td>
+              </tr>
+              <tr style="background:#fee2e2;">
+                <td style="padding:5px 10px;font-weight:700;color:#C53030;">Grade 4</td>
+                <td style="padding:5px 10px;color:#C53030;">35–54</td>
+                <td style="padding:5px 10px;">Elevated Nat-Cat exposure — significant vulnerabilities across one or more perils</td>
+                <td style="padding:5px 10px;">Refer to underwriter — consider peril-specific deductibles or sublimits</td>
+              </tr>
+              <tr style="background:#fee2e2;">
+                <td style="padding:5px 10px;font-weight:700;color:#C53030;">Grade 5</td>
+                <td style="padding:5px 10px;color:#C53030;">Below 35</td>
+                <td style="padding:5px 10px;">Severe Nat-Cat exposure — building poorly suited to the local hazard environment or major unresolved vulnerabilities</td>
+                <td style="padding:5px 10px;">Detailed engineering review required — consider restrictive terms or declination</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
     <!-- ══ SECTION: LOSS HISTORY ══ -->
@@ -13547,6 +13592,24 @@ function generateFormalReport() {
       ${field2('Inspector Override Reason', val('nc-override-reason'))}
     </div>
     ${fieldFull('Nat-Cat Grading Narrative', val('nc-grade-narrative'))}
+    <div class="sub-heading">Grading Scale Reference</div>
+    <div style="overflow-x:auto;margin-bottom:8px;">
+    <table style="width:100%;border-collapse:collapse;font-size:9pt;">
+      <thead><tr style="background:var(--navy);color:white;">
+        <th style="padding:6px 8px;text-align:left;">Grade</th>
+        <th style="padding:6px 8px;text-align:left;">Score</th>
+        <th style="padding:6px 8px;text-align:left;">Description</th>
+        <th style="padding:6px 8px;text-align:left;">Underwriting Implication</th>
+      </tr></thead>
+      <tbody>
+        <tr style="background:#e6f7ee;"><td style="padding:5px 8px;font-weight:700;color:#276749;">Grade 1</td><td style="padding:5px 8px;color:#276749;">90–100</td><td style="padding:5px 8px;">Minimal Nat-Cat exposure — building and site well suited to the local hazard environment, no significant vulnerabilities observed</td><td style="padding:5px 8px;">Standard terms applicable</td></tr>
+        <tr style="background:#f5edd6;"><td style="padding:5px 8px;font-weight:700;color:#7B5E00;">Grade 2</td><td style="padding:5px 8px;color:#7B5E00;">75–89</td><td style="padding:5px 8px;">Low Nat-Cat exposure — minor vulnerabilities relative to local hazards</td><td style="padding:5px 8px;">Standard terms, recommendations noted</td></tr>
+        <tr style="background:#fff3e0;"><td style="padding:5px 8px;font-weight:700;color:#C05621;">Grade 3</td><td style="padding:5px 8px;color:#C05621;">55–74</td><td style="padding:5px 8px;">Moderate Nat-Cat exposure — notable vulnerabilities relative to the local hazard profile</td><td style="padding:5px 8px;">Recommendations required — review Nat-Cat deductibles and sublimits</td></tr>
+        <tr style="background:#fee2e2;"><td style="padding:5px 8px;font-weight:700;color:#C53030;">Grade 4</td><td style="padding:5px 8px;color:#C53030;">35–54</td><td style="padding:5px 8px;">Elevated Nat-Cat exposure — significant vulnerabilities across one or more perils</td><td style="padding:5px 8px;">Refer to underwriter — consider peril-specific deductibles or sublimits</td></tr>
+        <tr style="background:#fee2e2;"><td style="padding:5px 8px;font-weight:700;color:#C53030;">Grade 5</td><td style="padding:5px 8px;color:#C53030;">Below 35</td><td style="padding:5px 8px;">Severe Nat-Cat exposure — building poorly suited to the local hazard environment or major unresolved vulnerabilities</td><td style="padding:5px 8px;">Detailed engineering review required — consider restrictive terms or declination</td></tr>
+      </tbody>
+    </table>
+    </div>
   </div>
 </div>
 <!-- ══ 8. LOSS HISTORY ══ -->
