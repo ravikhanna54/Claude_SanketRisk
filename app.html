@@ -4176,15 +4176,11 @@
         <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn-add-row" onclick="addPhotoSlot()">＋ Add Photo</button>
           <button class="btn-add-row" onclick="triggerBulkPhotoUpload()" style="background:#1a3a5c;color:#fff;">📁 Bulk Load Photos</button>
-          <button onclick="triggerPDFUpload()" style="padding:8px 16px;background:#5a2d82;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">📄 Upload PDF</button>
+          <button onclick="triggerPDFUpload()" style="padding:8px 16px;background:#5a2d82;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;" title="Each page of the PDF is converted to a JPEG and added as its own photo">📄 PDF → Photos</button>
         </div>
+        <div style="font-size:11px;color:var(--slate);margin-top:6px;">Uploading a PDF here converts each page into its own photo below — captioned with the file name and page number — the same way SCAN ONE handles PDF submissions.</div>
         <input type="file" id="bulk-photo-input" accept="image/*" multiple style="display:none" onchange="bulkLoadPhotos(this)">
         <input type="file" id="pdf-upload-input" accept="application/pdf" multiple style="display:none" onchange="handlePDFUpload(this)">
-        <!-- PDF Document List -->
-        <div id="pdf-list-wrap" style="display:none;margin-top:20px;">
-          <div class="card-title" style="margin-bottom:10px;">📄 Attached PDF Documents</div>
-          <div id="pdf-list" style="display:flex;flex-direction:column;gap:8px;"></div>
-        </div>
       </div>
     </div>
     <!-- ══ SECTION: SUMMARY ══ -->
@@ -7680,64 +7676,107 @@
   function handlePDFUpload(input) {
     var files = Array.from(input.files);
     if (!files.length) return;
-    var i = 0;
-    function uploadNext() {
-      if (i >= files.length) { input.value = ''; return; }
-      var file = files[i++];
-      if (file.type !== 'application/pdf') { showToast('⚠ Only PDF files accepted'); uploadNext(); return; }
-      if (file.size > 52428800) { showToast('⚠ PDF too large (max 50MB): ' + file.name); uploadNext(); return; }
-      uploadPDFToStorage(file, uploadNext);
+    var pdfFiles = files.filter(function(f){ return f.type === 'application/pdf'; });
+    if (pdfFiles.length < files.length) showToast('⚠ Only PDF files accepted — non-PDF files skipped');
+    var oversized = pdfFiles.filter(function(f){ return f.size > 52428800; });
+    if (oversized.length) showToast('⚠ Skipped (max 50MB): ' + oversized.map(function(f){return f.name;}).join(', '));
+    pdfFiles = pdfFiles.filter(function(f){ return f.size <= 52428800; });
+    if (!pdfFiles.length) { input.value = ''; return; }
+
+    ensurePdfJsLoaded().then(function() {
+      var i = 0;
+      function nextPdf() {
+        if (i >= pdfFiles.length) { input.value = ''; return; }
+        convertPdfToPhotos(pdfFiles[i++], nextPdf);
+      }
+      nextPdf();
+    }).catch(function(e) {
+      showToast('⚠ Could not load PDF engine: ' + e.message);
+      input.value = '';
+    });
+  }
+
+  var _pdfJsLoadPromise = null;
+  function ensurePdfJsLoaded() {
+    if (typeof pdfjsLib !== 'undefined') return Promise.resolve();
+    if (_pdfJsLoadPromise) return _pdfJsLoadPromise;
+    _pdfJsLoadPromise = new Promise(function(resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = function() {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolve();
+      };
+      s.onerror = function() { reject(new Error('failed to load pdf.js')); };
+      document.head.appendChild(s);
+    });
+    return _pdfJsLoadPromise;
+  }
+
+  // Converts every page of a PDF into a JPEG image and drops each one into
+  // the next available photo slot — same destination as Bulk Load Photos,
+  // matching the SCAN ONE workflow of photo-only documentation.
+  function convertPdfToPhotos(file, onDone) {
+    var baseName = file.name.replace(/\.pdf$/i, '');
+    showToast('⏳ Converting ' + file.name + '…');
+    var reader = new FileReader();
+    reader.onload = function(evt) {
+      pdfjsLib.getDocument({ data: evt.target.result }).promise.then(function(pdfDoc) {
+        var numPages = pdfDoc.numPages;
+        var p = 1;
+        function nextPage() {
+          if (p > numPages) { showToast('✓ ' + file.name + ' — ' + numPages + ' page' + (numPages>1?'s':'') + ' added to photos'); onDone(); return; }
+          var pageNum = p++;
+          pdfDoc.getPage(pageNum).then(function(page) {
+            var viewport = page.getViewport({ scale: 2.0 });
+            var canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise.then(function() {
+              canvas.toBlob(function(blob) {
+                var imgFile = new File([blob], baseName + ' - page ' + pageNum + '.jpg', { type: 'image/jpeg' });
+                placePdfPageInPhotoSlot(imgFile, baseName, pageNum, numPages);
+                nextPage();
+              }, 'image/jpeg', 0.85);
+            });
+          });
+        }
+        nextPage();
+      }).catch(function(e) {
+        showToast('⚠ Could not read ' + file.name + ': ' + e.message);
+        onDone();
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function placePdfPageInPhotoSlot(file, baseName, pageNum, numPages) {
+    var grid = document.getElementById('photo-grid');
+    var num = null;
+    for (var i = 1; i <= photoCount; i++) {
+      var img = document.getElementById('photo-' + i + '-img');
+      if (img && !img.classList.contains('loaded')) { num = i; break; }
     }
-    uploadNext();
-  }
-
-  function uploadPDFToStorage(file, callback) {
-    if (!currentInspectionId) { showToast('⚠ Save inspection first before uploading PDFs.'); if(callback) callback(); return; }
-    showToast('⏳ Uploading ' + file.name + '...');
-    var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    var path = 'inspections/' + currentInspectionId + '/pdf-' + Date.now() + '-' + safeName;
-    _supabase.storage.from('inspection-photos')
-      .upload(path, file, { upsert: true, contentType: 'application/pdf' })
-      .then(function(res) {
-        if (res.error) { showToast('⚠ Upload failed: ' + res.error.message); if(callback) callback(); return; }
-        _supabase.storage.from('inspection-photos')
-          .createSignedUrl(path, 3600 * 24 * 365)
-          .then(function(urlRes) {
-            var url = (urlRes.data && urlRes.data.signedUrl) ? urlRes.data.signedUrl : '';
-            attachedPDFs.push({ name: file.name, path: path, url: url, size: file.size });
-            renderPDFList();
-            showToast('✓ PDF uploaded: ' + file.name);
-            if(callback) callback();
-          }).catch(function(e) { showToast('⚠ ' + e.message); if(callback) callback(); });
-      }).catch(function(e) { showToast('⚠ ' + e.message); if(callback) callback(); });
-  }
-
-  function renderPDFList() {
-    var wrap = document.getElementById('pdf-list-wrap');
-    var list = document.getElementById('pdf-list');
-    if (!attachedPDFs.length) { wrap.style.display = 'none'; return; }
-    wrap.style.display = 'block';
-    list.innerHTML = attachedPDFs.map(function(pdf, idx) {
-      var size = pdf.size > 1024*1024 ? (pdf.size/1024/1024).toFixed(1) + ' MB' : Math.round(pdf.size/1024) + ' KB';
-      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8f5f0;border-radius:8px;border:1px solid var(--border);">' +
-        '<span style="font-size:24px;">📄</span>' +
-        '<div style="flex:1;">' +
-          '<div style="font-weight:600;font-size:13px;color:var(--navy);">' + pdf.name + '</div>' +
-          '<div style="font-size:11px;color:var(--slate);">' + size + '</div>' +
-        '</div>' +
-        (pdf.url ? '<a href="' + pdf.url + '" target="_blank" style="font-size:12px;color:var(--navy);font-weight:600;text-decoration:none;padding:4px 10px;border:1px solid var(--navy);border-radius:6px;">View</a>' : '') +
-        '<button onclick="removePDF(' + idx + ')" style="background:none;border:none;color:#c53030;font-size:18px;cursor:pointer;padding:0 4px;">✕</button>' +
-        '</div>';
-    }).join('');
-  }
-
-  function removePDF(idx) {
-    if (!confirm('Remove this PDF?')) return;
-    // Delete from storage
-    var path = attachedPDFs[idx].path;
-    _supabase.storage.from('inspection-photos').remove([path]).catch(function(){});
-    attachedPDFs.splice(idx, 1);
-    renderPDFList();
+    if (num === null) {
+      photoCount++;
+      grid.appendChild(makePhotoSlot(photoCount));
+      num = photoCount;
+    }
+    var reader = new FileReader();
+    reader.onload = function(evt) {
+      var img = document.getElementById('photo-' + num + '-img');
+      var placeholder = document.getElementById('photo-' + num + '-placeholder');
+      if (img) {
+        img.src = evt.target.result;
+        img.classList.add('loaded');
+        img.setAttribute('data-local', '1');
+      }
+      if (placeholder) placeholder.style.display = 'none';
+      var cap = document.getElementById('photo-' + num + '-caption');
+      if (cap && !cap.value) cap.value = baseName + (numPages > 1 ? ' (page ' + pageNum + ' of ' + numPages + ')' : '');
+    };
+    reader.readAsDataURL(file);
+    uploadPhotoToStorage(num, file);
   }
 
   async function flushPendingPhotoUploads() {
@@ -7963,7 +8002,7 @@
   // ══════════════════════════════════════════
   // ── GOOGLE MAPS API KEY — paste your key between the quotes below ──
   // Restrict it in Google Cloud Console to your Netlify domain (HTTP referrer)
-  const GOOGLE_MAPS_API_KEY = 'AIzaSyDAHNS9_C-NLzVhAUDhD9HfSP-7X-xTVkI';
+  const GOOGLE_MAPS_API_KEY = 'PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE';
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const HEADERS = {
