@@ -804,6 +804,89 @@
         </div>
       </div>
 
+      <div class="esi-section" id="guide-natcat">
+        <div class="esi-section-title">Natural Catastrophe <span class="esi-section-tag">NAT-CAT</span></div>
+        <p class="esi-sub">This section combines reference climatic and seismic data from the National Building Code of Canada (NBC) 2025, Appendix C, with your on-site observations of earthquake, wind/storm, and flood/water exposure. Together these produce a quantitative Nat-Cat grade for the property — a third independent SRC grading alongside the Property (COPE) and Sprinkler grades.</p>
+
+        <div class="esi-card">
+          <div class="esi-card-title">NBC 2025 Reference Location Lookup</div>
+          <p>Select the NBC reference location nearest the inspected property. This auto-populates the climatic design data table — ground snow load, wind pressures (1-in-10, 1-in-50, and 1-in-500-year), rainfall, annual precipitation, and driving rain wind pressure — along with the property's <strong>seismic hazard tier</strong> (Low, Moderate, High, or Very High), derived from the location's Smax value.</p>
+          <p>Choose the location based on geography, not administrative boundaries — a property on the coast should use a coastal reference point even if its mailing address lists an inland city. The reference location and elevation also appear in the Formal and Narrative reports, with the NRC source citation.</p>
+        </div>
+        <div class="callout callout-warn"><strong>Required for Grading:</strong> The seismic hazard tier from this lookup is used to weight the earthquake demerits in the grade calculator. A reference location must be selected before the Nat-Cat grade can be calculated — if you tap Calculate Grade without one, the calculator will prompt you to select a location first.</div>
+
+        <div class="esi-card">
+          <div class="esi-card-title">Earthquake — Site &amp; Building Observations</div>
+          <table class="field-table">
+            <thead><tr><th>Field</th><th>Guidance</th></tr></thead>
+            <tbody>
+              <tr><td class="field-name">Construction Era vs. Seismic Code</td><td>Compare the building's construction or major retrofit date to when modern seismic provisions were adopted in the applicable code. Buildings built or substantially retrofitted to post-2005 standards generally carry the lowest demerit; pre-1970 construction with no seismic upgrade carries the highest.</td></tr>
+              <tr><td class="field-name">Structural Vulnerability</td><td>Assess the structural system itself — unreinforced masonry (URM) bearing walls, soft-story conditions, or unbraced parapets indicate elevated vulnerability regardless of age. Conventional, well-maintained construction with no obvious weaknesses rates as low or moderate.</td></tr>
+              <tr><td class="field-name">Equipment &amp; Racking Anchorage</td><td>Note whether storage racking, rooftop units, tanks, and heavy equipment are anchored or braced. Unanchored racking and equipment are a common source of post-earthquake loss even when the building structure performs well.</td></tr>
+              <tr><td class="field-name">Sprinkler System Seismic Bracing</td><td>Check for seismic bracing on sprinkler mains and branch lines per NFPA 13 — flexible couplings at floor/wall penetrations, sway bracing, and clearance around piping. Where not applicable (no sprinklers), select the not-applicable option.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="esi-card">
+          <div class="esi-card-title">Wind / Storm — Site &amp; Building Observations</div>
+          <table class="field-table">
+            <thead><tr><th>Field</th><th>Guidance</th></tr></thead>
+            <tbody>
+              <tr><td class="field-name">Roof Age</td><td>Enter the age in years since installation or last full replacement. Roofs over 15 years old begin to accumulate a demerit; over 25 years the demerit increases further, reflecting reduced wind and hail resilience regardless of visible condition.</td></tr>
+              <tr><td class="field-name">Roof Covering Condition</td><td>Visual condition of the membrane, shingles, or metal panels — blistering, granule loss, lifted edges, ponding. If access is not possible, select "Unable to inspect" rather than guessing.</td></tr>
+              <tr><td class="field-name">Roof Deck Attachment / Uplift Resistance</td><td>Engineered uplift-rated systems rate best. Conventional fastening is acceptable for most occupancies. Ballasted systems (loose stone/pavers) carry a higher demerit due to wind-borne debris risk.</td></tr>
+              <tr><td class="field-name">Cladding &amp; Flashing Condition</td><td>Note loose siding, damaged flashing at parapets and penetrations, and any areas of visible water staining suggesting envelope failure.</td></tr>
+              <tr><td class="field-name">Large Openings / Overhead Doors</td><td>Wind-rated overhead doors rate best. Standard (non-rated) overhead doors are common and acceptable but carry a small demerit; large unprotected openings carry more, as failure under wind pressure can lead to internal pressurization and roof loss.</td></tr>
+              <tr><td class="field-name">Tree / Debris Exposure</td><td>Note overhanging trees, neighbouring structures with loose materials, or storage that could become wind-borne debris and strike the building.</td></tr>
+              <tr><td class="field-name">Wind / Hail Loss History</td><td>Reflect the insured's stated history for this peril specifically — separate from the general Loss History section, this feeds the Nat-Cat narrative directly.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="esi-card">
+          <div class="esi-card-title">Flood / Water — Site Observations</div>
+          <table class="field-table">
+            <thead><tr><th>Field</th><th>Guidance</th></tr></thead>
+            <tbody>
+              <tr><td class="field-name">Site Elevation vs. Surroundings</td><td>Is the building pad elevated above, level with, or below the surrounding grade? Elevated sites shed water away from the building and rate best.</td></tr>
+              <tr><td class="field-name">Proximity to Watercourse / Water Body</td><td>Note distance to the nearest river, creek, lake, or drainage channel. Properties within 100 m carry a demerit; immediately adjacent properties carry more.</td></tr>
+              <tr><td class="field-name">Site Drainage</td><td>Positive grading away from the building with clear catch basins rates best. Poor drainage — ponding against foundations, blocked catch basins — is a meaningful demerit even far from any watercourse.</td></tr>
+              <tr><td class="field-name">Lowest Level Use</td><td>Slab-on-grade with no basement rates best. A basement used for mechanical equipment only is a moderate concern; a basement used for stock or inventory storage is a significant concern, as flood losses there are typically total losses.</td></tr>
+              <tr><td class="field-name">Stock Storage Height</td><td>Stock kept on skids or racking at least 10 cm off the floor reduces flood loss severity. Stock stored directly on the floor — especially in a basement — increases it.</td></tr>
+              <tr><td class="field-name">Sump Pump / Backflow Protection</td><td>A sump pump with backflow protection on floor drains rates best. A sump pump alone, with no backflow protection on sewer connections, is a common gap.</td></tr>
+              <tr><td class="field-name">Water / Flood Loss History</td><td>As with wind/hail, this is specific to water/flood losses and feeds the Nat-Cat narrative.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="esi-card">
+          <div class="esi-card-title">Nat-Cat Grade Calculator</div>
+          <p>Once the NBC reference location is selected and all twelve observation dropdowns above are completed, tap <strong>Calculate Grade</strong>. The calculator displays separate demerit subtotals for Earthquake, Wind/Storm, and Flood/Water, the seismic tier weighting applied to the earthquake subtotal, an overall score out of 100, and the resulting grade (1–5).</p>
+          <p>The Final Assigned Grade auto-fills from the calculation but can be changed by the inspector — if you do so, enter a brief reason in the Override field (e.g. a seismic retrofit completed after the construction-era selection was made). Add a short narrative summarizing the key factors behind the grade; this appears in both the Formal and Narrative reports alongside the demerit breakdown.</p>
+        </div>
+        <div class="callout callout-tip"><strong>Recalculate After Edits:</strong> If you change any observation dropdown after calculating, tap Calculate Grade again before submitting. The reports print whatever was last calculated — they do not detect stale results.</div>
+
+        <div class="esi-card">
+          <div class="esi-card-title">Grading Scale Reference</div>
+          <table class="field-table">
+            <thead><tr><th>Grade</th><th>Score</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td class="field-name">Grade 1</td><td class="field-note">90–100</td><td>Minimal Nat-Cat exposure — building and site well suited to the local hazard environment, no significant vulnerabilities observed. Standard terms applicable.</td></tr>
+              <tr><td class="field-name">Grade 2</td><td class="field-note">75–89</td><td>Low Nat-Cat exposure — minor vulnerabilities relative to local hazards. Standard terms, recommendations noted.</td></tr>
+              <tr><td class="field-name">Grade 3</td><td class="field-note">55–74</td><td>Moderate Nat-Cat exposure — notable vulnerabilities relative to the local hazard profile. Recommendations required; review Nat-Cat deductibles and sublimits.</td></tr>
+              <tr><td class="field-name">Grade 4</td><td class="field-note">35–54</td><td>Elevated Nat-Cat exposure — significant vulnerabilities across one or more perils. Refer to underwriter; consider peril-specific deductibles or sublimits.</td></tr>
+              <tr><td class="field-name">Grade 5</td><td class="field-note">Below 35</td><td>Severe Nat-Cat exposure — building poorly suited to the local hazard environment or major unresolved vulnerabilities. Detailed engineering review required; consider restrictive terms or declination.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="esi-card">
+          <div class="esi-card-title">Site Location Map</div>
+          <p>Use the Site Location Map card (in the Exposure section) to confirm the address resolves to the correct property — select Satellite or Road Map view and tap Load Map. The Formal and Narrative reports include printable aerial and area maps automatically once a key is configured.</p>
+        </div>
+      </div>
+
       <div class="esi-section" id="guide-loss">
         <div class="esi-section-title">Loss History <span class="esi-section-tag">LOSS</span></div>
         <p class="esi-sub">Loss history is a critical underwriting data point. Your role is to accurately record what is presented and to note any inconsistencies or concerns.</p>
@@ -1816,6 +1899,7 @@ create policy "Admins only can delete bulletins"
         { id: 'guide-occupancy',        label: '🏭 Occupancy' },
         { id: 'guide-protection',       label: '🔒 Protection' },
         { id: 'guide-exposure',         label: '🌍 Exposure' },
+        { id: 'guide-natcat',           label: '🌐 Natural Catastrophe' },
         { id: 'guide-loss',             label: '📉 Loss History' },
         { id: 'guide-safety',           label: '⚠️ Safety & Compliance' },
         { id: 'guide-recommendations',  label: '✅ Recommendations' },
