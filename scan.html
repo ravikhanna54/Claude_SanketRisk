@@ -604,13 +604,14 @@
       </div>
     </div>
 
-    <!-- DRAFT SAVE BUTTON + STATUS -->
+    <!-- DRAFT SAVE -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
       <button id="btn-save-draft" onclick="saveDraft(false)"
-        style="padding:11px 22px;background:#fff;color:var(--navy);border:1.5px solid var(--border);border-radius:8px;
-               font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;
-               display:flex;align-items:center;gap:8px;flex-shrink:0;"
-        onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'">
+        style="padding:11px 22px;background:#fff;color:var(--navy);border:1.5px solid var(--border);
+               border-radius:8px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;
+               cursor:pointer;display:flex;align-items:center;gap:8px;flex-shrink:0;"
+        onmouseover="this.style.borderColor='var(--navy)'"
+        onmouseout="this.style.borderColor='var(--border)'">
         <span>&#x1F4BE;</span><span id="btn-save-draft-text">Save Draft</span>
       </button>
       <div id="draft-status" style="font-size:11px;color:var(--slate);font-family:'IBM Plex Mono',monospace;font-style:italic;"></div>
@@ -972,9 +973,8 @@
       // Hazard checkboxes — re-select any that were checked
       if (fd.hazards && fd.hazards.length) {
         document.querySelectorAll('#hazard-checks .check-item').forEach(function(el) {
-          if (fd.hazards.indexOf(el.textContent.trim()) !== -1) {
-            el.classList.add('selected');
-          }
+          var key = (el.dataset && el.dataset.hazard) ? el.dataset.hazard : el.textContent.trim();
+          if (fd.hazards.indexOf(key) !== -1) el.classList.add('selected');
         });
       }
     }
@@ -1554,33 +1554,35 @@
 
       // ── Wait for DOM then restore everything ──
       setTimeout(function() {
-        // 1. Set _reviewId so saveToDashboard updates rather than inserts,
-        //    and so uploadPhotos() lazy-fetch is available for re-run
+        // 1. Set _reviewId so saveToDashboard updates the row and
+        //    uploadPhotos() lazy-fetch is available for re-run
         _reviewId = viewId;
 
-        // 2. Restore form fields directly (don't call preloadSubmission —
-        //    that function uses reviewId URL param and marks status as 'reviewing')
+        // 2. Restore ALL form fields directly — no preloadSubmission
+        //    (that function uses reviewId URL param and calls status update)
         (function() {
-          var s = function(id, val) { var el = document.getElementById(id); if (el && val !== undefined && val !== null && val !== '') el.value = val; };
+          var s = function(id, val) {
+            var el = document.getElementById(id);
+            if (el && val !== undefined && val !== null && val !== '') el.value = val;
+          };
           s('s-insured',        sub.insured_name);
           s('s-address',        sub.address);
           s('s-city',           sub.city);
           s('s-province',       sub.province);
           s('s-occupancy',      sub.occupancy);
-          if (sub.year_built)    s('s-year-built',   sub.year_built);
-          if (sub.building_area) s('s-area',          sub.building_area);
+          if (sub.year_built)    s('s-year-built',    sub.year_built);
+          if (sub.building_area) s('s-area',           sub.building_area);
           if (fd) {
-            s('s-storeys',          fd.storeys);
-            s('s-construction',     fd.construction);
-            s('s-fire-protection',  fd.fireProtection);
-            s('s-tenure',           fd.tenure);
-            s('s-context',          fd.context);
-            s('s-losses',           fd.losses);
-            s('s-loss-cause',       fd.lossCause);
-            s('s-loss-amt',         fd.lossAmt);
-            s('s-submitter-name',   fd.submitterName);
-            s('s-submitter-company',fd.submitterCompany);
-            // Upgrade dates
+            s('s-storeys',           fd.storeys);
+            s('s-construction',      fd.construction);
+            s('s-fire-protection',   fd.fireProtection);
+            s('s-tenure',            fd.tenure);
+            s('s-context',           fd.context);
+            s('s-losses',            fd.losses);
+            s('s-loss-cause',        fd.lossCause);
+            s('s-loss-amt',          fd.lossAmt);
+            s('s-submitter-name',    fd.submitterName);
+            s('s-submitter-company', fd.submitterCompany);
             if (fd.upgrades) {
               ['roof','elec','plmb','hvac','spk','env'].forEach(function(k) {
                 var val = fd.upgrades[k];
@@ -1592,10 +1594,9 @@
                 }
               });
             }
-            // Hazard checkboxes
             if (fd.hazards && fd.hazards.length) {
               document.querySelectorAll('#hazard-checks .check-item').forEach(function(el) {
-                var key = el.dataset ? (el.dataset.hazard || el.textContent.trim()) : el.textContent.trim();
+                var key = (el.dataset && el.dataset.hazard) ? el.dataset.hazard : el.textContent.trim();
                 if (fd.hazards.indexOf(key) !== -1) el.classList.add('selected');
               });
             }
@@ -1647,10 +1648,10 @@
           renderResults(savedResult, formData);
           document.getElementById('results-wrap').style.display = 'block';
           document.getElementById('progress-wrap').style.display = 'none';
-          // Render photos from storage — uploadedPhotos is empty in view mode
-          var allStoragePaths = photoPaths.concat(docPaths);
-          if (allStoragePaths.length > 0) {
-            setTimeout(function() { renderStoragePhotosIntoGrid(allStoragePaths); }, 300);
+          // Render photos from Supabase storage (uploadedPhotos is empty in view mode)
+          var allPaths = photoPaths.concat(docPaths);
+          if (allPaths.length > 0) {
+            setTimeout(function() { renderStoragePhotosIntoGrid(allPaths); }, 300);
           }
         }
 
@@ -1902,7 +1903,7 @@
 
     // Fetch matching library recommendations
     document.getElementById('btn-analyse-text').textContent = 'Loading recommendations…';
-    // fetchMatchingRecs defined here so it is available before its call
+    // fetchMatchingRecs defined before use
         async function fetchMatchingRecs(promptText) {
       try {
         var res = await fetch(
@@ -2000,7 +2001,7 @@
   let _storagePaths = [];
   let _reviewId = null;  // set when opened from dashboard — enables lazy photo fetch
   let _draftId  = null;  // Supabase row ID of current draft
-  let _autosaveTimer = null;
+  let _autosaveTimer = null;  // debounce handle for autosave
 
   async function uploadPhotos() {
     // ── Lazy-fetch photos from Supabase if opened from dashboard review ──
@@ -2891,92 +2892,75 @@
     if (rw) rw.insertBefore(cover, rw.firstChild);
   }
 
-  // ── DRAFT STATUS ──
+  // ── DRAFT: status display ──
   function updateDraftStatus(msg) {
     var el = document.getElementById('draft-status');
     if (!el) return;
     if (!msg) { el.textContent = ''; return; }
-    var time = new Date().toLocaleTimeString('en-CA', { hour:'2-digit', minute:'2-digit' });
-    el.textContent = '✓ ' + msg + ' at ' + time;
+    var t = new Date().toLocaleTimeString('en-CA', {hour:'2-digit', minute:'2-digit'});
+    el.textContent = '✓ ' + msg + ' at ' + t;
   }
 
-  // ── SAVE DRAFT ──
+  // ── DRAFT: save ──
   async function saveDraft(silent) {
     if (typeof submitCode !== 'undefined' && submitCode) return;
     var data = collectFormData();
     if (!data.insured && !data.address) {
-      if (!silent) showToast('⚠ Enter at least a property name or address before saving.');
+      if (!silent) showToast('⚠ Enter a property name or address first.');
       return;
     }
     var btn = document.getElementById('btn-save-draft');
     var btnT = document.getElementById('btn-save-draft-text');
     if (!silent && btn) { btn.disabled = true; if (btnT) btnT.textContent = 'Saving…'; }
     try {
-      var photoP = (_storagePaths || []).filter(function(p){ return !p.includes('/doc-'); });
-      var docP   = (_storagePaths || []).filter(function(p){ return p.includes('/doc-'); });
+      var photoP = (_storagePaths||[]).filter(function(p){return !p.includes('/doc-');});
+      var docP   = (_storagePaths||[]).filter(function(p){return p.includes('/doc-');});
       var payload = {
-        insured_name:   data.insured   || 'Draft',
-        address:        data.address   || '',
-        city:           data.city      || '',
-        province:       data.province  || '',
-        occupancy:      data.occupancy || '',
-        year_built:     data.yearBuilt || null,
-        building_area:  data.area      || null,
-        photo_count:    uploadedPhotos.length || 0,
-        status:         'draft',
-        form_data:      JSON.stringify({
-          insured: data.insured, address: data.address, city: data.city,
-          province: data.province, occupancy: data.occupancy, tenure: data.tenure,
-          yearBuilt: data.yearBuilt, storeys: data.storeys, area: data.area,
-          construction: data.construction, fireProtection: data.fireProtection,
-          context: data.context, submitterName: data.submitterName,
-          submitterCompany: data.submitterCompany, losses: data.losses,
-          lossCause: data.lossCause, lossAmt: data.lossAmt,
-          upgrades: data.upgrades, hazards: data.hazards,
-          additionalDocs: uploadedDocs.map(function(d){ return { name: d.name, storagePath: d._storagePath || '' }; }),
+        insured_name: data.insured||'Draft', address: data.address||'',
+        city: data.city||'', province: data.province||'',
+        occupancy: data.occupancy||'', year_built: data.yearBuilt||null,
+        building_area: data.area||null, photo_count: uploadedPhotos.length||0,
+        status: 'draft',
+        form_data: JSON.stringify({
+          insured:data.insured, address:data.address, city:data.city,
+          province:data.province, occupancy:data.occupancy, tenure:data.tenure,
+          yearBuilt:data.yearBuilt, storeys:data.storeys, area:data.area,
+          construction:data.construction, fireProtection:data.fireProtection,
+          context:data.context, submitterName:data.submitterName,
+          submitterCompany:data.submitterCompany, losses:data.losses,
+          lossCause:data.lossCause, lossAmt:data.lossAmt,
+          upgrades:data.upgrades, hazards:data.hazards,
+          additionalDocs:uploadedDocs.map(function(d){return {name:d.name,storagePath:d._storagePath||''};}),
         }),
-        storage_paths:  JSON.stringify(photoP),
-        doc_paths:      JSON.stringify(docP),
-        submitted_at:   new Date().toISOString(),
+        storage_paths: JSON.stringify(photoP),
+        doc_paths:     JSON.stringify(docP),
+        submitted_at:  new Date().toISOString(),
       };
       if (_draftId) {
-        var { error } = await _supabase.from('scan_submissions').update(payload).eq('id', _draftId);
-        if (error) throw error;
+        var r1 = await _supabase.from('scan_submissions').update(payload).eq('id', _draftId);
+        if (r1.error) throw r1.error;
       } else {
-        var insertResult = await _supabase.from('scan_submissions').insert(payload).select('id').single();
-        if (insertResult.error) throw insertResult.error;
-        if (insertResult.data && insertResult.data.id) {
-          _draftId  = insertResult.data.id;
-          _reviewId = _draftId;
-        }
+        var r2 = await _supabase.from('scan_submissions').insert(payload).select('id').single();
+        if (r2.error) throw r2.error;
+        if (r2.data && r2.data.id) { _draftId = r2.data.id; _reviewId = _draftId; }
       }
       updateDraftStatus('Draft saved');
-      if (!silent) showToast('✓ Draft saved — return to this from the dashboard any time.');
+      if (!silent) showToast('✓ Draft saved — resume any time from the dashboard.');
     } catch(e) {
       if (!silent) showToast('⚠ Draft save failed: ' + e.message);
+      console.warn('saveDraft:', e);
     } finally {
       if (!silent && btn) { btn.disabled = false; if (btnT) btnT.textContent = 'Save Draft'; }
     }
   }
 
-  // ── AUTOSAVE (30s debounce) ──
+  // ── DRAFT: autosave debounce ──
   function scheduleAutosave() {
     if (_autosaveTimer) clearTimeout(_autosaveTimer);
     _autosaveTimer = setTimeout(function() {
-      var data = collectFormData();
-      if (data.insured || data.address) { updateDraftStatus('Autosaving…'); saveDraft(true); }
+      var d = collectFormData();
+      if (d.insured || d.address) { updateDraftStatus('Autosaving…'); saveDraft(true); }
     }, 30000);
-  }
-
-  // ── UPDATE DRAFT STORAGE PATHS AFTER UPLOAD ──
-  // Called from uploadPhotos() after files are stored
-  function updateDraftWithPaths(photoPaths, docPaths) {
-    if (!_draftId) { saveDraft(true); return; }
-    _supabase.from('scan_submissions').update({
-      storage_paths: JSON.stringify(photoPaths),
-      doc_paths:     JSON.stringify(docPaths),
-      photo_count:   photoPaths.length,
-    }).eq('id', _draftId).then(function() { updateDraftStatus('Photos saved to draft'); });
   }
 
   // ── RENDER STORAGE PHOTOS INTO GRID (saved report view) ──
@@ -2986,62 +2970,57 @@
     if (!photoSection || !photoGrid || !storagePaths || !storagePaths.length) return;
     photoGrid.innerHTML = '';
     photoSection.style.display = 'block';
-    var photoPaths = storagePaths.filter(function(p){ return !p.includes('/doc-'); });
-    var docPaths   = storagePaths.filter(function(p){ return p.includes('/doc-'); });
-    var imgPaths   = photoPaths.filter(function(p){ return !p.endsWith('.pdf'); });
-    var pdfPaths   = photoPaths.filter(function(p){ return p.endsWith('.pdf'); });
-    // Images
+    var photoPaths = storagePaths.filter(function(p){return !p.includes('/doc-');});
+    var docPaths   = storagePaths.filter(function(p){return p.includes('/doc-');});
+    var imgPaths   = photoPaths.filter(function(p){return !p.endsWith('.pdf');});
+    var pdfPaths   = photoPaths.filter(function(p){return p.endsWith('.pdf');});
+    // Individual images
     imgPaths.forEach(function(path, i) {
-      fetch(SUPABASE_URL + '/storage/v1/object/scan-uploads/' + path,
-        { headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY } })
-        .then(function(r){ return r.ok ? r.blob() : null; })
-        .then(function(blob) {
+      fetch(SUPABASE_URL+'/storage/v1/object/scan-uploads/'+path,
+        {headers:{'Authorization':'Bearer '+SUPABASE_KEY,'apikey':SUPABASE_KEY}})
+        .then(function(r){return r.ok?r.blob():null;})
+        .then(function(blob){
           if (!blob) return;
           var wrap = document.createElement('div');
-          wrap.style.cssText = 'border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f8f9fb;display:flex;flex-direction:column;';
+          wrap.style.cssText='border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f8f9fb;display:flex;flex-direction:column;';
           var img = document.createElement('img');
           img.src = URL.createObjectURL(blob);
-          img.style.cssText = 'width:100%;aspect-ratio:4/3;object-fit:cover;display:block;';
+          img.style.cssText='width:100%;aspect-ratio:4/3;object-fit:cover;display:block;';
           var cap = document.createElement('div');
-          cap.style.cssText = "padding:5px 7px;background:#f8f9fb;border-top:1px solid var(--border);font-size:10px;font-weight:700;color:var(--slate);font-family:'IBM Plex Mono',monospace;";
-          cap.textContent = 'Photo ' + (i + 1);
+          cap.style.cssText="padding:5px 7px;background:#f8f9fb;border-top:1px solid var(--border);font-size:10px;font-weight:700;color:var(--slate);font-family:'IBM Plex Mono',monospace;";
+          cap.textContent='Photo '+(i+1);
           wrap.appendChild(img); wrap.appendChild(cap);
           photoGrid.appendChild(wrap);
         }).catch(function(){});
     });
-    // PDFs — extract photos using extractPhotosFromPdf
-    if (pdfPaths.length) {
-      pdfPaths.forEach(function(path) {
-        fetch(SUPABASE_URL + '/storage/v1/object/scan-uploads/' + path,
-          { headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY } })
-          .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
-          .then(function(buf) {
-            // Convert to base64 data URL for extractPhotosFromPdf
-            var bytes = new Uint8Array(buf);
-            var binary = '';
-            bytes.forEach(function(b){ binary += String.fromCharCode(b); });
-            var dataUrl = 'data:application/pdf;base64,' + btoa(binary);
-            extractPhotosFromPdf(dataUrl, photoGrid);
-          }).catch(function(e) {
-            var errDiv = document.createElement('div');
-            errDiv.style.cssText = 'grid-column:1/-1;padding:8px;font-size:11px;color:#888;';
-            errDiv.textContent = 'Could not load PDF: ' + e.message;
-            photoGrid.appendChild(errDiv);
-          });
-      });
-    }
-    // Support docs — name cards only
+    // PDFs — extract individual photos
+    pdfPaths.forEach(function(path) {
+      fetch(SUPABASE_URL+'/storage/v1/object/scan-uploads/'+path,
+        {headers:{'Authorization':'Bearer '+SUPABASE_KEY,'apikey':SUPABASE_KEY}})
+        .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer();})
+        .then(function(buf){
+          var bytes=new Uint8Array(buf), bin='';
+          bytes.forEach(function(b){bin+=String.fromCharCode(b);});
+          extractPhotosFromPdf('data:application/pdf;base64,'+btoa(bin), photoGrid);
+        }).catch(function(e){
+          var d=document.createElement('div');
+          d.style.cssText='grid-column:1/-1;padding:8px;font-size:11px;color:#888;';
+          d.textContent='Could not load PDF: '+e.message;
+          photoGrid.appendChild(d);
+        });
+    });
+    // Support docs — name cards
     if (docPaths.length) {
-      var docSec = document.createElement('div');
-      docSec.style.cssText = 'grid-column:1/-1;margin-top:16px;';
-      docSec.innerHTML = '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);">Additional Supporting Documents</div>';
-      docPaths.forEach(function(path) {
-        var dc = document.createElement('div');
-        dc.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:12px;';
-        dc.innerHTML = '<span style="font-size:18px;">&#x1F4C4;</span><span style="font-weight:600;color:var(--navy);">' + path.split('/').pop() + '</span><span style="font-size:11px;color:var(--slate);margin-left:4px;">— AI reference document</span>';
-        docSec.appendChild(dc);
+      var sec=document.createElement('div');
+      sec.style.cssText='grid-column:1/-1;margin-top:16px;';
+      sec.innerHTML='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);">Additional Supporting Documents</div>';
+      docPaths.forEach(function(path){
+        var dc=document.createElement('div');
+        dc.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:12px;';
+        dc.innerHTML='<span style="font-size:18px;">&#x1F4C4;</span><span style="font-weight:600;color:var(--navy);">'+path.split('/').pop()+'</span>';
+        sec.appendChild(dc);
       });
-      photoGrid.appendChild(docSec);
+      photoGrid.appendChild(sec);
     }
   }
 
@@ -3339,7 +3318,7 @@
     });
   })();
 
-  // ── AUTOSAVE WIRING — all form text/select/textarea fields ──
+  // ── AUTOSAVE FIELD WIRING ──
   (function() {
     var fields = document.querySelectorAll(
       '#inspector-mode input[type=text], #inspector-mode input[type=number], ' +
