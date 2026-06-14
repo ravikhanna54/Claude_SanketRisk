@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 240 — 2026-06-14 -->
+<!-- SanketRisk SCAN ONE — Deploy 241 — 2026-06-14 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sanket SCAN ONE [240] — AI Photo Assessment v4</title>
+  <title>Sanket SCAN ONE [241] — AI Photo Assessment v4</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -1593,6 +1593,13 @@
           renderResults(savedResult, formData);
           document.getElementById('results-wrap').style.display = 'block';
           document.getElementById('progress-wrap').style.display = 'none';
+
+          // ── Render photos from storage (uploadedPhotos is empty in view mode) ──
+          // Combine photo paths + doc paths for the grid renderer
+          var allStoragePaths = photoPaths.concat(docPaths);
+          if (allStoragePaths.length > 0) {
+            renderStoragePhotosIntoGrid(allStoragePaths);
+          }
         }
 
         // 6. Update banner to final state
@@ -2491,38 +2498,7 @@
           var pW = document.createElement('div');
           pW.style.cssText = 'display:grid;grid-template-columns:1fr;gap:12px;padding:12px;background:#f8f9fb;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;margin-bottom:12px;';
           pdfSec.appendChild(pW);
-          if (p.dataUrl && typeof pdfjsLib !== 'undefined') {
-            pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-            var b64=p.dataUrl.split(',')[1], bin=atob(b64), ba=new Uint8Array(bin.length);
-            for(var bi=0;bi<bin.length;bi++) ba[bi]=bin.charCodeAt(bi);
-            pdfjsLib.getDocument({data:ba}).promise.then(function(pdDoc){
-              for(var pg=1;pg<=pdDoc.numPages;pg++){
-                (function(pn,pd){
-                  pd.getPage(pn).then(function(page){
-                    var vp=page.getViewport({scale:1.2});
-                    var cv=document.createElement('canvas');
-                    cv.width=vp.width; cv.height=vp.height;
-                    cv.style.cssText='width:100%;border-radius:4px;border:1px solid var(--border);display:block;';
-                    page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise.then(function(){
-                      // Convert canvas to img so pages print correctly (canvas doesn't print in most browsers)
-                      var img=document.createElement('img');
-                      img.src=cv.toDataURL('image/jpeg',0.92);
-                      img.style.cssText='width:100%;border-radius:4px;border:1px solid var(--border);display:block;';
-                      var w=document.createElement('div');
-                      var cap=document.createElement('div');
-                      cap.style.cssText='font-size:9px;text-align:center;color:var(--slate);padding:2px 0;';
-                      cap.textContent='Page '+pn;
-                      w.appendChild(img); w.appendChild(cap); pW.appendChild(w);
-                    });
-                  });
-                })(pg,pdDoc);
-              }
-            }).catch(function(e){
-              pW.innerHTML='<div style="grid-column:1/-1;padding:8px;font-size:11px;color:#888;">Preview unavailable: '+e.message+'</div>';
-            });
-          } else {
-            pW.innerHTML='<div style="grid-column:1/-1;padding:8px;font-size:11px;color:#888;text-align:center;">📄 PDF preview loading...</div>';
-          }
+          renderPdfPages(pW, p.dataUrl || null, null);
         });
         photoGrid.appendChild(pdfSec);
       }
@@ -2537,6 +2513,156 @@
     const btn = document.getElementById('btn-analyse');
     btn.disabled = false;
     document.getElementById('btn-analyse-text').textContent = 'Analyse with AI \u2014 Generate COPE Assessment';
+  }
+
+  // ── PDF PAGE RENDERER — shared by live session and saved report view ──
+  // containerEl: DOM element to append pages into
+  // dataUrl: base64 data URL (live session) — OR null if storagePath provided
+  // storagePath: Supabase storage path (saved report view) — OR null if dataUrl provided
+  function renderPdfPages(containerEl, dataUrl, storagePath) {
+    if (typeof pdfjsLib === 'undefined') {
+      containerEl.innerHTML = '<div style="padding:8px;font-size:11px;color:#888;text-align:center;">PDF.js not loaded — cannot render pages.</div>';
+      return;
+    }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    function renderFromArrayBuffer(buf) {
+      pdfjsLib.getDocument({ data: buf }).promise.then(function(pdDoc) {
+        for (var pg = 1; pg <= pdDoc.numPages; pg++) {
+          (function(pn, pd) {
+            pd.getPage(pn).then(function(page) {
+              var vp = page.getViewport({ scale: 1.2 });
+              var cv = document.createElement('canvas');
+              cv.width = vp.width; cv.height = vp.height;
+              cv.style.cssText = 'width:100%;border-radius:4px;border:1px solid var(--border);display:block;';
+              page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise.then(function() {
+                var img = document.createElement('img');
+                img.src = cv.toDataURL('image/jpeg', 0.92);
+                img.style.cssText = 'width:100%;border-radius:4px;border:1px solid var(--border);display:block;';
+                var w = document.createElement('div');
+                var cap = document.createElement('div');
+                cap.style.cssText = 'font-size:9px;text-align:center;color:var(--slate);padding:2px 0;';
+                cap.textContent = 'Page ' + pn;
+                w.appendChild(img); w.appendChild(cap); containerEl.appendChild(w);
+              });
+            });
+          })(pg, pdDoc);
+        }
+      }).catch(function(e) {
+        containerEl.innerHTML = '<div style="padding:8px;font-size:11px;color:#888;">Preview unavailable: ' + e.message + '</div>';
+      });
+    }
+
+    if (dataUrl) {
+      // Live session — decode base64
+      var b64 = dataUrl.split(',')[1];
+      var bin = atob(b64);
+      var ba  = new Uint8Array(bin.length);
+      for (var bi = 0; bi < bin.length; bi++) ba[bi] = bin.charCodeAt(bi);
+      renderFromArrayBuffer(ba);
+    } else if (storagePath) {
+      // Saved report view — fetch from Supabase Storage
+      containerEl.innerHTML = '<div style="padding:8px;font-size:11px;color:#aaa;text-align:center;">⏳ Loading PDF from storage…</div>';
+      fetch(SUPA_URL + '/storage/v1/object/scan-uploads/' + storagePath, {
+        headers: { 'Authorization': 'Bearer ' + SUPA_KEY, 'apikey': SUPA_KEY }
+      }).then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.arrayBuffer();
+      }).then(function(buf) {
+        containerEl.innerHTML = '';
+        renderFromArrayBuffer(new Uint8Array(buf));
+      }).catch(function(e) {
+        containerEl.innerHTML = '<div style="padding:8px;font-size:11px;color:#888;">Could not load PDF: ' + e.message + '</div>';
+      });
+    } else {
+      containerEl.innerHTML = '<div style="padding:8px;font-size:11px;color:#888;text-align:center;">📄 No PDF source available.</div>';
+    }
+  }
+
+  // ── RENDER STORAGE PHOTOS INTO GRID (used when viewing saved report) ──
+  // Called after renderResults() when uploadedPhotos is empty but we have storage paths.
+  // Fetches each file from Supabase Storage and renders images or PDF pages.
+  async function renderStoragePhotosIntoGrid(storagePaths) {
+    var photoSection = document.getElementById('res-photo-section');
+    var photoGrid    = document.getElementById('res-photo-grid');
+    if (!photoSection || !photoGrid || !storagePaths || !storagePaths.length) return;
+
+    photoGrid.innerHTML = '';
+    photoSection.style.display = 'block';
+
+    // Separate photo paths from doc paths
+    var photoPaths = storagePaths.filter(function(p) { return !p.includes('/doc-'); });
+    var docPaths   = storagePaths.filter(function(p) { return p.includes('/doc-'); });
+
+    // ── Image files ──
+    var imgIdx = 0;
+    for (var i = 0; i < photoPaths.length; i++) {
+      var path = photoPaths[i];
+      var isPdf = path.endsWith('.pdf');
+      if (isPdf) continue; // handled separately below
+      (function(p, n) {
+        fetch(SUPA_URL + '/storage/v1/object/scan-uploads/' + p, {
+          headers: { 'Authorization': 'Bearer ' + SUPA_KEY, 'apikey': SUPA_KEY }
+        }).then(function(r) { return r.ok ? r.blob() : null; })
+        .then(function(blob) {
+          if (!blob) return;
+          var url = URL.createObjectURL(blob);
+          var wrap = document.createElement('div');
+          wrap.style.cssText = 'border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f8f9fb;display:flex;flex-direction:column;';
+          var img = document.createElement('img');
+          img.src = url;
+          img.style.cssText = 'width:100%;aspect-ratio:4/3;object-fit:cover;display:block;';
+          var cap = document.createElement('div');
+          cap.style.cssText = 'padding:5px 7px;background:#f8f9fb;border-top:1px solid var(--border);font-size:10px;font-weight:700;color:var(--slate);font-family:'IBM Plex Mono',monospace;';
+          cap.textContent = 'Photo ' + n;
+          wrap.appendChild(img); wrap.appendChild(cap);
+          photoGrid.appendChild(wrap);
+        }).catch(function() {});
+      })(path, ++imgIdx);
+    }
+
+    // ── PDF files — render all pages ──
+    var pdfPaths = photoPaths.filter(function(p) { return p.endsWith('.pdf'); });
+    if (pdfPaths.length > 0) {
+      var pdfSec = document.createElement('div');
+      pdfSec.style.cssText = 'grid-column:1/-1;margin-top:' + (imgIdx > 0 ? '16px' : '0') + ';';
+      var pdfHdr = document.createElement('div');
+      pdfHdr.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);';
+      pdfHdr.textContent = 'PDF Documents — Submitted Photographs';
+      pdfSec.appendChild(pdfHdr);
+      pdfPaths.forEach(function(path, pi) {
+        var iC = document.createElement('div');
+        iC.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f0f4f8;border:1px solid var(--border);border-radius:8px 8px 0 0;';
+        var iSp = document.createElement('span'); iSp.textContent = '📄'; iSp.style.fontSize = '18px';
+        var iNm = document.createElement('div');
+        iNm.style.cssText = 'font-size:12px;font-weight:700;color:var(--navy);';
+        iNm.textContent = path.split('/').pop() || ('PDF ' + (pi + 1));
+        iC.appendChild(iSp); iC.appendChild(iNm);
+        pdfSec.appendChild(iC);
+        var pW = document.createElement('div');
+        pW.style.cssText = 'display:grid;grid-template-columns:1fr;gap:12px;padding:12px;background:#f8f9fb;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;margin-bottom:12px;';
+        pdfSec.appendChild(pW);
+        renderPdfPages(pW, null, path);  // fetch from storage
+      });
+      photoGrid.appendChild(pdfSec);
+    }
+
+    // ── Additional support documents — just show name cards, not rendered ──
+    if (docPaths.length > 0) {
+      var docSec = document.createElement('div');
+      docSec.style.cssText = 'grid-column:1/-1;margin-top:16px;';
+      var docHdr = document.createElement('div');
+      docHdr.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);';
+      docHdr.textContent = 'Additional Supporting Documents';
+      docSec.appendChild(docHdr);
+      docPaths.forEach(function(path) {
+        var dc = document.createElement('div');
+        dc.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:12px;color:var(--navy);';
+        dc.innerHTML = '<span style="font-size:18px;">📄</span><span style="font-weight:600;">' + (path.split('/').pop() || path) + '</span><span style="font-size:11px;color:var(--slate);margin-left:4px;">— passed to AI as context</span>';
+        docSec.appendChild(dc);
+      });
+      photoGrid.appendChild(docSec);
+    }
   }
 
   // ── PRINT REPORT ──
