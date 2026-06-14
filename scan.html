@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 245 — 2026-06-14 -->
+<!-- SanketRisk SCAN ONE — Deploy 246 — 2026-06-14 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -440,15 +440,15 @@
       </div>
       <div class="card-body">
         <div class="check-grid" id="hazard-checks">
-          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1F525;</span>Cooking / Open Flame</label>
-          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x26A1;</span>Welding / Hot Work</label>
-          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1F3A8;</span>Spray Painting / Coating</label>
-          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x2697;&#xFE0F;</span>Chemical Mixing / Storage</label>
-          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1FAA5;</span>Woodworking / Dust</label>
-          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1F6E2;&#xFE0F;</span>Flammable Liquid Storage</label>
-          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1F4E6;</span>Compressed Gas Cylinders</label>
-          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1F9CA;</span>Cryogenic Materials</label>
-          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1F5A8;&#xFE0F;</span>Printing / Ink Operations</label>
+          <div class="check-item" data-hazard="Cooking / Open Flame"><span class="check-icon">&#x1F525;</span>Cooking / Open Flame</div>
+          <div class="check-item" data-hazard="Welding / Hot Work"><span class="check-icon">&#x26A1;</span>Welding / Hot Work</div>
+          <div class="check-item" data-hazard="Spray Painting / Coating"><span class="check-icon">&#x1F3A8;</span>Spray Painting / Coating</div>
+          <div class="check-item" data-hazard="Chemical Mixing / Storage"><span class="check-icon">&#x2697;&#xFE0F;</span>Chemical Mixing / Storage</div>
+          <div class="check-item" data-hazard="Woodworking / Dust"><span class="check-icon">&#x1FAA5;</span>Woodworking / Dust</div>
+          <div class="check-item" data-hazard="Flammable Liquid Storage"><span class="check-icon">&#x1F6E2;&#xFE0F;</span>Flammable Liquid Storage</div>
+          <div class="check-item" data-hazard="Compressed Gas Cylinders"><span class="check-icon">&#x1F4E6;</span>Compressed Gas Cylinders</div>
+          <div class="check-item" data-hazard="Cryogenic Materials"><span class="check-icon">&#x1F9CA;</span>Cryogenic Materials</div>
+          <div class="check-item" data-hazard="Printing / Ink Operations"><span class="check-icon">&#x1F5A8;&#xFE0F;</span>Printing / Ink Operations</div>
         </div>
       </div>
     </div>
@@ -602,6 +602,18 @@
           <div id="doc-count-badge" class="photo-count-badge" style="background:var(--slate);margin-top:8px;"></div>
         </div>
       </div>
+    </div>
+
+    <!-- DRAFT SAVE BUTTON + STATUS -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <button id="btn-save-draft" onclick="saveDraft(false)"
+        style="padding:11px 22px;background:#fff;color:var(--navy);border:1.5px solid var(--border);border-radius:8px;
+               font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;
+               display:flex;align-items:center;gap:8px;flex-shrink:0;"
+        onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'">
+        <span>&#x1F4BE;</span><span id="btn-save-draft-text">Save Draft</span>
+      </button>
+      <div id="draft-status" style="font-size:11px;color:var(--slate);font-family:'IBM Plex Mono',monospace;font-style:italic;"></div>
     </div>
 
     <!-- ANALYSE BUTTON -->
@@ -1201,7 +1213,7 @@
       upgrades[k] = unk ? 'Unknown' : (document.getElementById('upg-' + k).value || 'Not provided');
     });
     const hazards = Array.from(document.querySelectorAll('#hazard-checks .check-item.selected'))
-      .map(el => el.textContent.trim());
+      .map(function(el){ return (el.dataset && el.dataset.hazard) ? el.dataset.hazard : el.textContent.trim(); });
     return {
       insured:    document.getElementById('s-insured').value.trim(),
       address:    document.getElementById('s-address').value.trim(),
@@ -1542,15 +1554,53 @@
 
       // ── Wait for DOM then restore everything ──
       setTimeout(function() {
-        // 1. Restore full form using preloadSubmission
-        preloadSubmission(sub);
+        // 1. Set _reviewId so saveToDashboard updates rather than inserts,
+        //    and so uploadPhotos() lazy-fetch is available for re-run
+        _reviewId = viewId;
 
-        // 2. Restore submitter fields from form_data (not in top-level columns)
-        if (fd) {
-          var set = function(id, val) { var el = document.getElementById(id); if (el && val) el.value = val; };
-          set('s-submitter-name',    fd.submitterName);
-          set('s-submitter-company', fd.submitterCompany);
-        }
+        // 2. Restore form fields directly (don't call preloadSubmission —
+        //    that function uses reviewId URL param and marks status as 'reviewing')
+        (function() {
+          var s = function(id, val) { var el = document.getElementById(id); if (el && val !== undefined && val !== null && val !== '') el.value = val; };
+          s('s-insured',        sub.insured_name);
+          s('s-address',        sub.address);
+          s('s-city',           sub.city);
+          s('s-province',       sub.province);
+          s('s-occupancy',      sub.occupancy);
+          if (sub.year_built)    s('s-year-built',   sub.year_built);
+          if (sub.building_area) s('s-area',          sub.building_area);
+          if (fd) {
+            s('s-storeys',          fd.storeys);
+            s('s-construction',     fd.construction);
+            s('s-fire-protection',  fd.fireProtection);
+            s('s-tenure',           fd.tenure);
+            s('s-context',          fd.context);
+            s('s-losses',           fd.losses);
+            s('s-loss-cause',       fd.lossCause);
+            s('s-loss-amt',         fd.lossAmt);
+            s('s-submitter-name',   fd.submitterName);
+            s('s-submitter-company',fd.submitterCompany);
+            // Upgrade dates
+            if (fd.upgrades) {
+              ['roof','elec','plmb','hvac','spk','env'].forEach(function(k) {
+                var val = fd.upgrades[k];
+                if (val === 'Unknown') {
+                  var unkEl = document.getElementById('upg-' + k + '-unk');
+                  if (unkEl) { unkEl.checked = true; unkEl.dispatchEvent(new Event('change')); }
+                } else if (val && val !== 'Not provided') {
+                  s('upg-' + k, val);
+                }
+              });
+            }
+            // Hazard checkboxes
+            if (fd.hazards && fd.hazards.length) {
+              document.querySelectorAll('#hazard-checks .check-item').forEach(function(el) {
+                var key = el.dataset ? (el.dataset.hazard || el.textContent.trim()) : el.textContent.trim();
+                if (fd.hazards.indexOf(key) !== -1) el.classList.add('selected');
+              });
+            }
+          }
+        })();
 
         // 3. Restore storage paths so Step 1 is skipped and re-analysis works
         if (photoPaths.length || docPaths.length) {
@@ -1597,6 +1647,11 @@
           renderResults(savedResult, formData);
           document.getElementById('results-wrap').style.display = 'block';
           document.getElementById('progress-wrap').style.display = 'none';
+          // Render photos from storage — uploadedPhotos is empty in view mode
+          var allStoragePaths = photoPaths.concat(docPaths);
+          if (allStoragePaths.length > 0) {
+            setTimeout(function() { renderStoragePhotosIntoGrid(allStoragePaths); }, 300);
+          }
         }
 
         // 6. Update banner to final state
@@ -1847,6 +1902,28 @@
 
     // Fetch matching library recommendations
     document.getElementById('btn-analyse-text').textContent = 'Loading recommendations…';
+    // fetchMatchingRecs defined here so it is available before its call
+        async function fetchMatchingRecs(promptText) {
+      try {
+        var res = await fetch(
+          SUPABASE_URL + '/rest/v1/recommendations?select=rec_id,title,rec_text,priority,category&active=eq.true&limit=100',
+          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+        );
+        if (!res.ok) return [];
+        var recs = await res.json();
+        if (!recs || !recs.length) return [];
+        var words = promptText.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(' ').filter(function(w){ return w.length > 3; });
+        var scored = recs.map(function(r) {
+          var hay = ((r.title||'') + ' ' + (r.rec_text||'') + ' ' + (r.category||'')).toLowerCase();
+          var sc = words.reduce(function(n,w){ return n + (hay.indexOf(w) >= 0 ? 1 : 0); }, 0);
+          return { sc: sc, r: r };
+        }).filter(function(x){ return x.sc > 0; })
+          .sort(function(a,b){ return b.sc - a.sc; })
+          .slice(0, 15);
+        return scored.map(function(x){ return x.r; });
+      } catch(e) { console.warn('Recs:', e.message); return []; }
+    }
+
     var recMatches = await fetchMatchingRecs(prompt);
     if (recMatches.length > 0) {
       prompt += '\n\nRECOMMENDATION LIBRARY MATCHES (use exact rec_id and wording where applicable):\n' +
@@ -1885,26 +1962,6 @@
     }
 
     // Fetch matching recommendations from library
-    async function fetchMatchingRecs(promptText) {
-      try {
-        var res = await fetch(
-          SUPABASE_URL + '/rest/v1/recommendations?select=rec_id,title,rec_text,priority,category&active=eq.true&limit=100',
-          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-        );
-        if (!res.ok) return [];
-        var recs = await res.json();
-        if (!recs || !recs.length) return [];
-        var words = promptText.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(' ').filter(function(w){ return w.length > 3; });
-        var scored = recs.map(function(r) {
-          var hay = ((r.title||'') + ' ' + (r.rec_text||'') + ' ' + (r.category||'')).toLowerCase();
-          var sc = words.reduce(function(n,w){ return n + (hay.indexOf(w) >= 0 ? 1 : 0); }, 0);
-          return { sc: sc, r: r };
-        }).filter(function(x){ return x.sc > 0; })
-          .sort(function(a,b){ return b.sc - a.sc; })
-          .slice(0, 15);
-        return scored.map(function(x){ return x.r; });
-      } catch(e) { console.warn('Recs:', e.message); return []; }
-    }
 
     // Poll scan_jobs table in Supabase every 6 seconds (up to 5 minutes)
     var pollStart = Date.now();
@@ -1942,10 +1999,12 @@
   let _sessionId = null;
   let _storagePaths = [];
   let _reviewId = null;  // set when opened from dashboard — enables lazy photo fetch
+  let _draftId  = null;  // Supabase row ID of current draft
+  let _autosaveTimer = null;
 
   async function uploadPhotos() {
     // ── Lazy-fetch photos from Supabase if opened from dashboard review ──
-    if (_reviewId && uploadedPhotos.length === 0) {
+    if (_reviewId && !_draftId && uploadedPhotos.length === 0) {
       const btn = document.getElementById('btn-upload');
       const statusDiv = document.getElementById('upload-status');
       btn.disabled = true;
@@ -2832,6 +2891,160 @@
     if (rw) rw.insertBefore(cover, rw.firstChild);
   }
 
+  // ── DRAFT STATUS ──
+  function updateDraftStatus(msg) {
+    var el = document.getElementById('draft-status');
+    if (!el) return;
+    if (!msg) { el.textContent = ''; return; }
+    var time = new Date().toLocaleTimeString('en-CA', { hour:'2-digit', minute:'2-digit' });
+    el.textContent = '✓ ' + msg + ' at ' + time;
+  }
+
+  // ── SAVE DRAFT ──
+  async function saveDraft(silent) {
+    if (typeof submitCode !== 'undefined' && submitCode) return;
+    var data = collectFormData();
+    if (!data.insured && !data.address) {
+      if (!silent) showToast('⚠ Enter at least a property name or address before saving.');
+      return;
+    }
+    var btn = document.getElementById('btn-save-draft');
+    var btnT = document.getElementById('btn-save-draft-text');
+    if (!silent && btn) { btn.disabled = true; if (btnT) btnT.textContent = 'Saving…'; }
+    try {
+      var photoP = (_storagePaths || []).filter(function(p){ return !p.includes('/doc-'); });
+      var docP   = (_storagePaths || []).filter(function(p){ return p.includes('/doc-'); });
+      var payload = {
+        insured_name:   data.insured   || 'Draft',
+        address:        data.address   || '',
+        city:           data.city      || '',
+        province:       data.province  || '',
+        occupancy:      data.occupancy || '',
+        year_built:     data.yearBuilt || null,
+        building_area:  data.area      || null,
+        photo_count:    uploadedPhotos.length || 0,
+        status:         'draft',
+        form_data:      JSON.stringify({
+          insured: data.insured, address: data.address, city: data.city,
+          province: data.province, occupancy: data.occupancy, tenure: data.tenure,
+          yearBuilt: data.yearBuilt, storeys: data.storeys, area: data.area,
+          construction: data.construction, fireProtection: data.fireProtection,
+          context: data.context, submitterName: data.submitterName,
+          submitterCompany: data.submitterCompany, losses: data.losses,
+          lossCause: data.lossCause, lossAmt: data.lossAmt,
+          upgrades: data.upgrades, hazards: data.hazards,
+          additionalDocs: uploadedDocs.map(function(d){ return { name: d.name, storagePath: d._storagePath || '' }; }),
+        }),
+        storage_paths:  JSON.stringify(photoP),
+        doc_paths:      JSON.stringify(docP),
+        submitted_at:   new Date().toISOString(),
+      };
+      if (_draftId) {
+        var { error } = await _supabase.from('scan_submissions').update(payload).eq('id', _draftId);
+        if (error) throw error;
+      } else {
+        var insertResult = await _supabase.from('scan_submissions').insert(payload).select('id').single();
+        if (insertResult.error) throw insertResult.error;
+        if (insertResult.data && insertResult.data.id) {
+          _draftId  = insertResult.data.id;
+          _reviewId = _draftId;
+        }
+      }
+      updateDraftStatus('Draft saved');
+      if (!silent) showToast('✓ Draft saved — return to this from the dashboard any time.');
+    } catch(e) {
+      if (!silent) showToast('⚠ Draft save failed: ' + e.message);
+    } finally {
+      if (!silent && btn) { btn.disabled = false; if (btnT) btnT.textContent = 'Save Draft'; }
+    }
+  }
+
+  // ── AUTOSAVE (30s debounce) ──
+  function scheduleAutosave() {
+    if (_autosaveTimer) clearTimeout(_autosaveTimer);
+    _autosaveTimer = setTimeout(function() {
+      var data = collectFormData();
+      if (data.insured || data.address) { updateDraftStatus('Autosaving…'); saveDraft(true); }
+    }, 30000);
+  }
+
+  // ── UPDATE DRAFT STORAGE PATHS AFTER UPLOAD ──
+  // Called from uploadPhotos() after files are stored
+  function updateDraftWithPaths(photoPaths, docPaths) {
+    if (!_draftId) { saveDraft(true); return; }
+    _supabase.from('scan_submissions').update({
+      storage_paths: JSON.stringify(photoPaths),
+      doc_paths:     JSON.stringify(docPaths),
+      photo_count:   photoPaths.length,
+    }).eq('id', _draftId).then(function() { updateDraftStatus('Photos saved to draft'); });
+  }
+
+  // ── RENDER STORAGE PHOTOS INTO GRID (saved report view) ──
+  function renderStoragePhotosIntoGrid(storagePaths) {
+    var photoSection = document.getElementById('res-photo-section');
+    var photoGrid    = document.getElementById('res-photo-grid');
+    if (!photoSection || !photoGrid || !storagePaths || !storagePaths.length) return;
+    photoGrid.innerHTML = '';
+    photoSection.style.display = 'block';
+    var photoPaths = storagePaths.filter(function(p){ return !p.includes('/doc-'); });
+    var docPaths   = storagePaths.filter(function(p){ return p.includes('/doc-'); });
+    var imgPaths   = photoPaths.filter(function(p){ return !p.endsWith('.pdf'); });
+    var pdfPaths   = photoPaths.filter(function(p){ return p.endsWith('.pdf'); });
+    // Images
+    imgPaths.forEach(function(path, i) {
+      fetch(SUPABASE_URL + '/storage/v1/object/scan-uploads/' + path,
+        { headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY } })
+        .then(function(r){ return r.ok ? r.blob() : null; })
+        .then(function(blob) {
+          if (!blob) return;
+          var wrap = document.createElement('div');
+          wrap.style.cssText = 'border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f8f9fb;display:flex;flex-direction:column;';
+          var img = document.createElement('img');
+          img.src = URL.createObjectURL(blob);
+          img.style.cssText = 'width:100%;aspect-ratio:4/3;object-fit:cover;display:block;';
+          var cap = document.createElement('div');
+          cap.style.cssText = "padding:5px 7px;background:#f8f9fb;border-top:1px solid var(--border);font-size:10px;font-weight:700;color:var(--slate);font-family:'IBM Plex Mono',monospace;";
+          cap.textContent = 'Photo ' + (i + 1);
+          wrap.appendChild(img); wrap.appendChild(cap);
+          photoGrid.appendChild(wrap);
+        }).catch(function(){});
+    });
+    // PDFs — extract photos using extractPhotosFromPdf
+    if (pdfPaths.length) {
+      pdfPaths.forEach(function(path) {
+        fetch(SUPABASE_URL + '/storage/v1/object/scan-uploads/' + path,
+          { headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY } })
+          .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+          .then(function(buf) {
+            // Convert to base64 data URL for extractPhotosFromPdf
+            var bytes = new Uint8Array(buf);
+            var binary = '';
+            bytes.forEach(function(b){ binary += String.fromCharCode(b); });
+            var dataUrl = 'data:application/pdf;base64,' + btoa(binary);
+            extractPhotosFromPdf(dataUrl, photoGrid);
+          }).catch(function(e) {
+            var errDiv = document.createElement('div');
+            errDiv.style.cssText = 'grid-column:1/-1;padding:8px;font-size:11px;color:#888;';
+            errDiv.textContent = 'Could not load PDF: ' + e.message;
+            photoGrid.appendChild(errDiv);
+          });
+      });
+    }
+    // Support docs — name cards only
+    if (docPaths.length) {
+      var docSec = document.createElement('div');
+      docSec.style.cssText = 'grid-column:1/-1;margin-top:16px;';
+      docSec.innerHTML = '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);">Additional Supporting Documents</div>';
+      docPaths.forEach(function(path) {
+        var dc = document.createElement('div');
+        dc.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:12px;';
+        dc.innerHTML = '<span style="font-size:18px;">&#x1F4C4;</span><span style="font-weight:600;color:var(--navy);">' + path.split('/').pop() + '</span><span style="font-size:11px;color:var(--slate);margin-left:4px;">— AI reference document</span>';
+        docSec.appendChild(dc);
+      });
+      photoGrid.appendChild(docSec);
+    }
+  }
+
   // ── PRINT REPORT ──
   function printScanReport() {
     window.print();
@@ -2929,6 +3142,8 @@
     uploadedPhotos = [];
     uploadedDocs   = [];
     lastResult     = null;
+    _draftId       = null;
+    if (_autosaveTimer) { clearTimeout(_autosaveTimer); _autosaveTimer = null; }
     document.getElementById('results-wrap').style.display  = 'none';
     document.getElementById('progress-wrap').style.display = 'none';
     document.getElementById('photo-preview-wrap').style.display = 'none';
@@ -3113,6 +3328,30 @@
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 4000);
   }
+
+  // ── HAZARD CLICK WIRING ──
+  (function() {
+    document.querySelectorAll('#hazard-checks .check-item').forEach(function(el) {
+      el.addEventListener('click', function() {
+        el.classList.toggle('selected');
+        scheduleAutosave();
+      });
+    });
+  })();
+
+  // ── AUTOSAVE WIRING — all form text/select/textarea fields ──
+  (function() {
+    var fields = document.querySelectorAll(
+      '#inspector-mode input[type=text], #inspector-mode input[type=number], ' +
+      '#inspector-mode select, #inspector-mode textarea'
+    );
+    fields.forEach(function(el) {
+      if (el.type === 'file' || el.type === 'radio' || el.type === 'checkbox') return;
+      el.addEventListener('input',  scheduleAutosave);
+      el.addEventListener('change', scheduleAutosave);
+    });
+  })();
+
 </script>
 </body>
 </html>
