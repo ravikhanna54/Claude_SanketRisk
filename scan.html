@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 247 — 2026-06-14 -->
+<!-- SanketRisk SCAN ONE — Deploy 248 — 2026-06-14 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -251,7 +251,7 @@
     </div>
   </div>
   <div class="nav-right">
-    <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:rgba(255,255,255,.35);margin-right:8px;">v247</span>
+    <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:rgba(255,255,255,.35);margin-right:8px;">v248</span>
     <a href="/dashboard.html" class="btn-nav">&#x2190; Dashboard</a>
     <a href="/app.html" class="btn-nav">Inspection Form</a>
   </div>
@@ -904,7 +904,8 @@
       return;
     }
     // Inspector mode — require login
-    const { data: { session } } = await _supabase.auth.getSession();
+    var _authRes = await _supabase.auth.getSession();
+    var session = _authRes.data && _authRes.data.session ? _authRes.data.session : null;
     if (!session) { window.location.replace('/index.html'); return; }
     currentUser = session.user;
 
