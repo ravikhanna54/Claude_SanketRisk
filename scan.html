@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 248 — 2026-06-14 -->
+<!-- SanketRisk SCAN ONE — Deploy 249 — 2026-06-14 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -251,7 +251,7 @@
     </div>
   </div>
   <div class="nav-right">
-    <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:rgba(255,255,255,.35);margin-right:8px;">v248</span>
+    <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:rgba(255,255,255,.35);margin-right:8px;">v249</span>
     <a href="/dashboard.html" class="btn-nav">&#x2190; Dashboard</a>
     <a href="/app.html" class="btn-nav">Inspection Form</a>
   </div>
@@ -1118,25 +1118,11 @@
     }
     grid.innerHTML = uploadedPhotos.map((p, i) => {
       const preview = p.type === 'pdf'
-        ? '<div style="width:100%;height:100%;background:linear-gradient(135deg,#1a2e42,#0d1b2a);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
-             <div style="font-size:24px">&#x1F4C4;</div>
-             <div style="font-size:8px;color:var(--gold);font-family:\'IBM Plex Mono\',monospace;font-weight:700">PDF</div>
-             <div style="font-size:7px;color:rgba(255,255,255,.5);text-align:center;padding:0 4px">' + p.file.name.substring(0,20) + '</div>
-           </div>'
+        ? '<div style="width:100%;height:100%;background:linear-gradient(135deg,#1a2e42,#0d1b2a);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><div style="font-size:24px">&#x1F4C4;</div><div style="font-size:8px;color:var(--gold);font-family:\'IBM Plex Mono\',monospace;font-weight:700">PDF</div><div style="font-size:7px;color:rgba(255,255,255,.5);text-align:center;padding:0 4px">' + p.file.name.substring(0,20) + '</div></div>'
         : '<img src="' + p.dataUrl + '" alt="Photo ' + i+1 + '">';
       const label = p.type === 'pdf' ? 'PDF Doc ' + (i+1) : 'Photo ' + (i+1);
       var desc = (uploadedPhotos[i] && uploadedPhotos[i].description) ? uploadedPhotos[i].description : '';
-      return '<div class="photo-thumb" id="thumb-' + i + '">
-        <div class="photo-thumb-img-wrap">
-          ' + preview + '
-          <button class="photo-thumb-remove" onclick="removePhoto(' + i + ')">&#x2715;</button>
-          <label style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;display:flex;align-items:center;gap:3px;cursor:pointer;z-index:2;">
-            <input type="checkbox" class="photo-chk" data-idx="' + i + '" checked style="width:13px;height:13px;cursor:pointer;" onchange="updateSelectedCount()">
-          </label>
-        </div>
-        <div class="photo-thumb-label">' + label + '</div>
-        <textarea class="photo-thumb-desc" data-idx="' + i + '" placeholder="Add description (e.g. Front elevation, Sprinkler riser, Electrical panel...)" rows="2" onchange="savePhotoDesc(' + i + ',this.value)" oninput="savePhotoDesc(' + i + ',this.value)">' + desc + '</textarea>
-      </div>';
+      return '<div class="photo-thumb" id="thumb-' + i + '"><div class="photo-thumb-img-wrap">' + preview + '<button class="photo-thumb-remove" onclick="removePhoto(' + i + ')">&#x2715;</button><label style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;display:flex;align-items:center;gap:3px;cursor:pointer;z-index:2;"><input type="checkbox" class="photo-chk" data-idx="' + i + '" checked style="width:13px;height:13px;cursor:pointer;" onchange="updateSelectedCount()"></label></div><div class="photo-thumb-label">' + label + '</div><textarea class="photo-thumb-desc" data-idx="' + i + '" placeholder="Add description (e.g. Front elevation, Sprinkler riser, Electrical panel...)" rows="2" onchange="savePhotoDesc(' + i + ',this.value)" oninput="savePhotoDesc(' + i + ',this.value)">' + desc + '</textarea></div>';
     }).join('');
   }
 
@@ -2796,107 +2782,108 @@
   }
 
   // ── COVER PAGE ──
-  // Injected at top of results-wrap before report content when printing
   function buildCoverPage(data) {
     var existing = document.getElementById('scan-cover-page');
     if (existing) existing.remove();
 
     var cover = document.createElement('div');
     cover.id = 'scan-cover-page';
-    cover.style.cssText = [
-      'display:none',                          // hidden on screen
-      'width:100%',
-      'min-height:100vh',
-      'background:var(--navy)',
-      'flex-direction:column',
-      'align-items:center',
-      'justify-content:center',
-      'padding:60px 48px',
-      'box-sizing:border-box',
-      'page-break-after:always',
-      'color:#fff',
-    ].join(';');
+    cover.style.cssText = 'display:none;width:100%;min-height:100vh;background:#0d1b2a;flex-direction:column;align-items:center;justify-content:center;padding:60px 48px;box-sizing:border-box;page-break-after:always;color:#fff;';
 
-    // Logo + title strip
+    // Logo strip
     var topStrip = document.createElement('div');
     topStrip.style.cssText = 'display:flex;align-items:center;gap:16px;margin-bottom:60px;align-self:flex-start;';
-    topStrip.innerHTML = [
-      '<div style="width:54px;height:54px;background:var(--scan);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">&#x1F3E2;</div>',
-      '<div>',
-        '<div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:#fff;letter-spacing:.01em;">SanketRisk <span style="color:#38bdf8;">ONE</span></div>',
-        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--gold-light);">AI-Powered Property Risk Intelligence</div>',
-      '</div>',
-    ].join('');
 
-    // Cover photo (if any)
+    var logoMark = document.createElement('div');
+    logoMark.style.cssText = 'width:54px;height:54px;background:#0891b2;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;';
+    logoMark.innerHTML = '&#x1F3E2;';
+
+    var logoText = document.createElement('div');
+    var logoTitle = document.createElement('div');
+    logoTitle.style.cssText = 'font-size:26px;font-weight:700;color:#fff;';
+    logoTitle.innerHTML = 'SanketRisk <span style="color:#38bdf8;">ONE</span>';
+    var logoSub = document.createElement('div');
+    logoSub.style.cssText = 'font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:#b8860b;';
+    logoSub.textContent = 'AI-Powered Property Risk Intelligence';
+    logoText.appendChild(logoTitle);
+    logoText.appendChild(logoSub);
+    topStrip.appendChild(logoMark);
+    topStrip.appendChild(logoText);
+    cover.appendChild(topStrip);
+
+    // Cover photo
     var coverPhotoEl = document.getElementById('res-cover-photo');
     if (coverPhotoEl && coverPhotoEl.src && coverPhotoEl.src.length > 50) {
       var cpWrap = document.createElement('div');
-      cpWrap.style.cssText = 'width:100%;max-height:320px;overflow:hidden;border-radius:12px;margin-bottom:48px;position:relative;';
+      cpWrap.style.cssText = 'width:100%;max-height:280px;overflow:hidden;border-radius:12px;margin-bottom:40px;';
       var cpImg = document.createElement('img');
       cpImg.src = coverPhotoEl.src;
-      cpImg.style.cssText = 'width:100%;object-fit:cover;max-height:320px;opacity:.85;display:block;';
-      var cpOverlay = document.createElement('div');
-      cpOverlay.style.cssText = 'position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(13,27,42,.7));border-radius:12px;';
-      cpWrap.appendChild(cpImg); cpWrap.appendChild(cpOverlay);
-      cover.appendChild(topStrip);
+      cpImg.style.cssText = 'width:100%;object-fit:cover;max-height:280px;opacity:.85;display:block;';
+      cpWrap.appendChild(cpImg);
       cover.appendChild(cpWrap);
-    } else {
-      cover.appendChild(topStrip);
     }
 
     // Gold divider
     var divider = document.createElement('div');
-    divider.style.cssText = 'width:80px;height:3px;background:var(--gold);border-radius:2px;margin-bottom:36px;align-self:flex-start;';
+    divider.style.cssText = 'width:80px;height:3px;background:#b8860b;border-radius:2px;margin-bottom:28px;align-self:flex-start;';
+    cover.appendChild(divider);
 
-    // Report type badge
+    // Badge
     var badge = document.createElement('div');
-    badge.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:24px;align-self:flex-start;';
+    badge.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:20px;align-self:flex-start;';
     badge.innerHTML = '&#x1F4F8; SCAN ONE Assessment';
+    cover.appendChild(badge);
 
     // Property name
     var propName = document.createElement('div');
-    propName.style.cssText = 'font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:12px;align-self:flex-start;';
+    propName.style.cssText = 'font-size:34px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:10px;align-self:flex-start;';
     propName.textContent = data.insured || data.address || 'Subject Property';
+    cover.appendChild(propName);
 
     // Address
-    var addr = document.createElement('div');
-    addr.style.cssText = 'font-size:16px;color:rgba(255,255,255,.7);margin-bottom:8px;align-self:flex-start;';
-    addr.textContent = [data.address, data.city, data.province].filter(Boolean).join(', ');
+    var addrParts = [data.address, data.city, data.province].filter(Boolean).join(', ');
+    if (addrParts) {
+      var addr = document.createElement('div');
+      addr.style.cssText = 'font-size:16px;color:rgba(255,255,255,.65);margin-bottom:8px;align-self:flex-start;';
+      addr.textContent = addrParts;
+      cover.appendChild(addr);
+    }
 
     // Occupancy
-    var occ = document.createElement('div');
-    occ.style.cssText = 'font-size:14px;color:rgba(255,255,255,.55);margin-bottom:48px;align-self:flex-start;';
-    occ.textContent = data.occupancy || '';
+    if (data.occupancy) {
+      var occ = document.createElement('div');
+      occ.style.cssText = 'font-size:13px;color:rgba(255,255,255,.45);margin-bottom:48px;align-self:flex-start;';
+      occ.textContent = data.occupancy;
+      cover.appendChild(occ);
+    }
 
-    // Meta table
+    // Meta footer
     var metaWrap = document.createElement('div');
-    metaWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:32px;margin-top:auto;';
+    metaWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:28px;margin-top:auto;';
     var metaItems = [
       ['Assessment Date', new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'})],
-      ['Prepared By', (data.submitterName || 'Sanket Risk Consultants') + (data.submitterCompany ? ' — ' + data.submitterCompany : '')],
+      ['Prepared By',     (data.submitterName || 'Sanket Risk Consultants') + (data.submitterCompany ? ' — ' + data.submitterCompany : '')],
       ['Assessment Type', 'Photo-Based Preliminary'],
     ];
     metaItems.forEach(function(m) {
       var cell = document.createElement('div');
-      cell.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.4);margin-bottom:6px;">' + m[0] + '</div>' +
-        '<div style="font-size:13px;font-weight:600;color:#fff;">' + m[1] + '</div>';
+      var cellLabel = document.createElement('div');
+      cellLabel.style.cssText = 'font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.4);margin-bottom:6px;';
+      cellLabel.textContent = m[0];
+      var cellVal = document.createElement('div');
+      cellVal.style.cssText = 'font-size:12px;font-weight:600;color:#fff;';
+      cellVal.textContent = m[1];
+      cell.appendChild(cellLabel);
+      cell.appendChild(cellVal);
       metaWrap.appendChild(cell);
     });
-
-    cover.appendChild(divider);
-    cover.appendChild(badge);
-    cover.appendChild(propName);
-    if (addr.textContent) cover.appendChild(addr);
-    if (occ.textContent) cover.appendChild(occ);
     cover.appendChild(metaWrap);
 
-    // Insert as first child of results-wrap
     var rw = document.getElementById('results-wrap');
     if (rw) rw.insertBefore(cover, rw.firstChild);
   }
 
-  // ── DRAFT: status display ──
+    // ── DRAFT: status display ──
   function updateDraftStatus(msg) {
     var el = document.getElementById('draft-status');
     if (!el) return;
@@ -2917,24 +2904,26 @@
     var btnT = document.getElementById('btn-save-draft-text');
     if (!silent && btn) { btn.disabled = true; if (btnT) btnT.textContent = 'Saving…'; }
     try {
-      var photoP = (_storagePaths||[]).filter(function(p){return !p.includes('/doc-');});
-      var docP   = (_storagePaths||[]).filter(function(p){return p.includes('/doc-');});
+      var photoP = (_storagePaths || []).filter(function(p){ return !p.includes('/doc-'); });
+      var docP   = (_storagePaths || []).filter(function(p){ return  p.includes('/doc-'); });
       var payload = {
-        insured_name: data.insured||'Draft', address: data.address||'',
-        city: data.city||'', province: data.province||'',
-        occupancy: data.occupancy||'', year_built: data.yearBuilt||null,
-        building_area: data.area||null, photo_count: uploadedPhotos.length||0,
+        insured_name: data.insured || 'Draft', address: data.address || '',
+        city: data.city || '', province: data.province || '',
+        occupancy: data.occupancy || '', year_built: data.yearBuilt || null,
+        building_area: data.area || null, photo_count: uploadedPhotos.length || 0,
         status: 'draft',
         form_data: JSON.stringify({
-          insured:data.insured, address:data.address, city:data.city,
-          province:data.province, occupancy:data.occupancy, tenure:data.tenure,
-          yearBuilt:data.yearBuilt, storeys:data.storeys, area:data.area,
-          construction:data.construction, fireProtection:data.fireProtection,
-          context:data.context, submitterName:data.submitterName,
-          submitterCompany:data.submitterCompany, losses:data.losses,
-          lossCause:data.lossCause, lossAmt:data.lossAmt,
-          upgrades:data.upgrades, hazards:data.hazards,
-          additionalDocs:uploadedDocs.map(function(d){return {name:d.name,storagePath:d._storagePath||''};}),
+          insured: data.insured, address: data.address, city: data.city,
+          province: data.province, occupancy: data.occupancy, tenure: data.tenure,
+          yearBuilt: data.yearBuilt, storeys: data.storeys, area: data.area,
+          construction: data.construction, fireProtection: data.fireProtection,
+          context: data.context, submitterName: data.submitterName,
+          submitterCompany: data.submitterCompany, losses: data.losses,
+          lossCause: data.lossCause, lossAmt: data.lossAmt,
+          upgrades: data.upgrades, hazards: data.hazards,
+          additionalDocs: uploadedDocs.map(function(d) {
+            return { name: d.name, storagePath: d._storagePath || '' };
+          }),
         }),
         storage_paths: JSON.stringify(photoP),
         doc_paths:     JSON.stringify(docP),
@@ -2949,7 +2938,7 @@
         if (r2.data && r2.data.id) { _draftId = r2.data.id; _reviewId = _draftId; }
       }
       updateDraftStatus('Draft saved');
-      if (!silent) showToast('✓ Draft saved — resume any time from the dashboard.');
+      if (!silent) showToast('✓ Draft saved — resume from the dashboard any time.');
     } catch(e) {
       if (!silent) showToast('⚠ Draft save failed: ' + e.message);
       console.warn('saveDraft:', e);
@@ -2958,7 +2947,7 @@
     }
   }
 
-  // ── DRAFT: autosave debounce ──
+  // ── DRAFT: autosave debounce (30s) ──
   function scheduleAutosave() {
     if (_autosaveTimer) clearTimeout(_autosaveTimer);
     _autosaveTimer = setTimeout(function() {
