@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 243 — 2026-06-14 -->
+<!-- SanketRisk SCAN ONE — Deploy 244 — 2026-06-14 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1852,6 +1852,28 @@
     var jobId = 'job-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
     console.log('v3 job:', jobId, 'paths:', storagePaths.length);
 
+    // ── Fetch matching recommendations — defined here so it's available before use ──
+    async function fetchMatchingRecs(promptText) {
+      try {
+        var res = await fetch(
+          SUPABASE_URL + '/rest/v1/recommendations?select=rec_id,title,rec_text,priority,category&active=eq.true&limit=100',
+          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+        );
+        if (!res.ok) return [];
+        var recs = await res.json();
+        if (!recs || !recs.length) return [];
+        var words = promptText.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(' ').filter(function(w){ return w.length > 3; });
+        var scored = recs.map(function(r) {
+          var hay = ((r.title||'')+' '+(r.rec_text||'')+' '+(r.category||'')).toLowerCase();
+          var sc = words.reduce(function(n,w){ return n + (hay.indexOf(w) >= 0 ? 1 : 0); }, 0);
+          return { sc: sc, r: r };
+        }).filter(function(x){ return x.sc > 0; })
+          .sort(function(a,b){ return b.sc - a.sc; })
+          .slice(0, 15);
+        return scored.map(function(x){ return x.r; });
+      } catch(e) { console.warn('Recs:', e.message); return []; }
+    }
+
     // Fetch matching library recommendations
     document.getElementById('btn-analyse-text').textContent = 'Loading recommendations…';
     var recMatches = await fetchMatchingRecs(prompt);
@@ -1889,28 +1911,6 @@
       // Connection drop / timeout is expected for long jobs — fall through to polling
       // Only hard-fail if it's clearly a network-unreachable error
       console.log('Fetch ended:', fetchErr.message);
-    }
-
-    // Fetch matching recommendations from library
-    async function fetchMatchingRecs(promptText) {
-      try {
-        var res = await fetch(
-          SUPABASE_URL + '/rest/v1/recommendations?select=rec_id,title,rec_text,priority,category&active=eq.true&limit=100',
-          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-        );
-        if (!res.ok) return [];
-        var recs = await res.json();
-        if (!recs || !recs.length) return [];
-        var words = promptText.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(' ').filter(function(w){ return w.length > 3; });
-        var scored = recs.map(function(r) {
-          var hay = ((r.title||'') + ' ' + (r.rec_text||'') + ' ' + (r.category||'')).toLowerCase();
-          var sc = words.reduce(function(n,w){ return n + (hay.indexOf(w) >= 0 ? 1 : 0); }, 0);
-          return { sc: sc, r: r };
-        }).filter(function(x){ return x.sc > 0; })
-          .sort(function(a,b){ return b.sc - a.sc; })
-          .slice(0, 15);
-        return scored.map(function(x){ return x.r; });
-      } catch(e) { console.warn('Recs:', e.message); return []; }
     }
 
     // Poll scan_jobs table in Supabase every 6 seconds (up to 5 minutes)
@@ -1954,7 +1954,7 @@
 
   async function uploadPhotos() {
     // ── Lazy-fetch photos from Supabase if opened from dashboard review ──
-    if (_reviewId && uploadedPhotos.length === 0) {
+    if (_reviewId && !_draftId && uploadedPhotos.length === 0) {  // only lazy-fetch when opened from dashboard, not from a new draft session
       const btn = document.getElementById('btn-upload');
       const statusDiv = document.getElementById('upload-status');
       btn.disabled = true;
@@ -2644,8 +2644,9 @@
         if (error) throw error;
       } else {
         // Insert new draft row
-        var { data: inserted, error } = await _supabase.from('scan_submissions').insert(payload).select('id').single();
-        if (error) throw error;
+        var insertResult = await _supabase.from('scan_submissions').insert(payload).select('id').single();
+        if (insertResult.error) throw insertResult.error;
+        var inserted = insertResult.data;
         if (inserted && inserted.id) {
           _draftId = inserted.id;
           _reviewId = _draftId; // treat as review so saveToDashboard updates rather than inserts
