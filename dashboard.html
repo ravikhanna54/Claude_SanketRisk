@@ -604,19 +604,21 @@
             '<td style="text-align:center;font-size:13px;font-weight:600;color:var(--slate)">' + (r.photo_count||0) + '</td>' +
             '<td style="text-align:center;white-space:nowrap">' +
               (r.status === 'analysed' && r.scan_result
-                ? '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;font-size:11px;margin-bottom:3px" data-view-id="' + r.id + '">📋 View Report</button><br>'
+                ? '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;font-size:11px;display:block;width:100%;margin-bottom:3px" data-view-id="' + r.id + '">📋 View Report</button>'
                 : '') +
-              '<button class="btn-open" style="background:#0891b2;color:#fff;border-color:#0891b2;font-size:11px;margin-bottom:3px" data-scan-id="' + r.id + '">📂 Open Submission</button><br>' +
-              '<button class="btn-open" style="color:#c53030;border-color:#c53030;font-size:11px" data-del-id="' + r.id + '">🗑 Delete</button>' +
+              '<button class="btn-open" style="background:#0891b2;color:#fff;border-color:#0891b2;font-size:11px;display:block;width:100%;margin-bottom:3px" data-scan-id="' + r.id + '">📂 Open Submission</button>' +
+              '<button class="btn-open" style="color:#c53030;border-color:#c53030;font-size:11px;display:block;width:100%;" data-del-id="' + r.id + '">🗑 Delete</button>' +
             '</td>';
 
-          // View Report button (analysed records only)
+          // View Report — opens the formatted scan-report viewer
           if (tr.querySelector('[data-view-id]')) {
-            tr.querySelector('[data-view-id]').addEventListener('click', function() { window.location.href = '/scan-report.html?id=' + r.id; });
+            tr.querySelector('[data-view-id]').addEventListener('click', function() {
+              window.location.href = '/scan-report.html?id=' + r.id;
+            });
           }
-          // Open Submission button — always present; opens scan.html restoring ALL original data
-          // For analysed records: ?view_report=ID restores form + shows saved report + re-run enabled
-          // For pending/reviewing: ?review=ID loads submission for first-time analysis
+          // Open Submission — opens scan.html restoring ALL original form data + photos
+          // Analysed records use ?view_report= (full restore + saved report shown)
+          // Pending/draft records use ?review= (load for first-time analysis)
           if (tr.querySelector('[data-scan-id]')) {
             tr.querySelector('[data-scan-id]').addEventListener('click', function() {
               if (r.status === 'analysed' && r.scan_result) {
