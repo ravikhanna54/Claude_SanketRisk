@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 244 — 2026-06-14 -->
+<!-- SanketRisk SCAN ONE — Deploy 245 — 2026-06-14 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -225,8 +225,12 @@
     #res-cover-photo-wrap { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     #res-profile-section { display: block !important; }
     #results-wrap { display: block !important; }
-    /* Report body starts on a fresh page after the cover header */
+    /* Cover page — shown only in print */
+    #scan-cover-page { display:flex !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    /* Report body starts on a fresh page after the cover */
     .result-header { page-break-before: always; }
+    /* Supporting docs section */
+    #res-support-docs-section { display:block !important; page-break-inside:avoid; }
     #structured-cope-panel { display: block !important; page-break-inside: avoid; }
     .result-section { display: block !important; page-break-inside: avoid; }
     body { background: #fff; }
@@ -436,15 +440,15 @@
       </div>
       <div class="card-body">
         <div class="check-grid" id="hazard-checks">
-          <div class="check-item" data-hazard="Cooking / Open Flame"><span class="check-icon">&#x1F525;</span>Cooking / Open Flame</div>
-          <div class="check-item" data-hazard="Welding / Hot Work"><span class="check-icon">&#x26A1;</span>Welding / Hot Work</div>
-          <div class="check-item" data-hazard="Spray Painting / Coating"><span class="check-icon">&#x1F3A8;</span>Spray Painting / Coating</div>
-          <div class="check-item" data-hazard="Chemical Mixing / Storage"><span class="check-icon">&#x2697;&#xFE0F;</span>Chemical Mixing / Storage</div>
-          <div class="check-item" data-hazard="Woodworking / Dust"><span class="check-icon">&#x1FAA5;</span>Woodworking / Dust</div>
-          <div class="check-item" data-hazard="Flammable Liquid Storage"><span class="check-icon">&#x1F6E2;&#xFE0F;</span>Flammable Liquid Storage</div>
-          <div class="check-item" data-hazard="Compressed Gas Cylinders"><span class="check-icon">&#x1F4E6;</span>Compressed Gas Cylinders</div>
-          <div class="check-item" data-hazard="Cryogenic Materials"><span class="check-icon">&#x1F9CA;</span>Cryogenic Materials</div>
-          <div class="check-item" data-hazard="Printing / Ink Operations"><span class="check-icon">&#x1F5A8;&#xFE0F;</span>Printing / Ink Operations</div>
+          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1F525;</span>Cooking / Open Flame</label>
+          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x26A1;</span>Welding / Hot Work</label>
+          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1F3A8;</span>Spray Painting / Coating</label>
+          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x2697;&#xFE0F;</span>Chemical Mixing / Storage</label>
+          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1FAA5;</span>Woodworking / Dust</label>
+          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1F6E2;&#xFE0F;</span>Flammable Liquid Storage</label>
+          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1F4E6;</span>Compressed Gas Cylinders</label>
+          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1F9CA;</span>Cryogenic Materials</label>
+          <label class="check-item" onclick="toggleCheck(this)"><span class="check-icon">&#x1F5A8;&#xFE0F;</span>Printing / Ink Operations</label>
         </div>
       </div>
     </div>
@@ -598,18 +602,6 @@
           <div id="doc-count-badge" class="photo-count-badge" style="background:var(--slate);margin-top:8px;"></div>
         </div>
       </div>
-    </div>
-
-    <!-- DRAFT SAVE BUTTON + STATUS -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-      <button id="btn-save-draft" onclick="saveDraft(false)"
-        style="padding:11px 22px;background:#fff;color:var(--navy);border:1.5px solid var(--border);border-radius:8px;
-               font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;
-               display:flex;align-items:center;gap:8px;transition:all .2s;flex-shrink:0;"
-        onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'">
-        <span>&#x1F4BE;</span><span id="btn-save-draft-text">Save Draft</span>
-      </button>
-      <div id="draft-status" style="font-size:11px;color:var(--slate);font-family:'IBM Plex Mono',monospace;font-style:italic;"></div>
     </div>
 
     <!-- ANALYSE BUTTON -->
@@ -968,8 +960,9 @@
       // Hazard checkboxes — re-select any that were checked
       if (fd.hazards && fd.hazards.length) {
         document.querySelectorAll('#hazard-checks .check-item').forEach(function(el) {
-          var key = el.dataset.hazard || el.textContent.trim();
-          if (fd.hazards.indexOf(key) !== -1) el.classList.add('selected');
+          if (fd.hazards.indexOf(el.textContent.trim()) !== -1) {
+            el.classList.add('selected');
+          }
         });
       }
     }
@@ -1208,7 +1201,7 @@
       upgrades[k] = unk ? 'Unknown' : (document.getElementById('upg-' + k).value || 'Not provided');
     });
     const hazards = Array.from(document.querySelectorAll('#hazard-checks .check-item.selected'))
-      .map(function(el){ return el.dataset.hazard || el.textContent.trim(); });
+      .map(el => el.textContent.trim());
     return {
       insured:    document.getElementById('s-insured').value.trim(),
       address:    document.getElementById('s-address').value.trim(),
@@ -1852,28 +1845,6 @@
     var jobId = 'job-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
     console.log('v3 job:', jobId, 'paths:', storagePaths.length);
 
-    // ── Fetch matching recommendations — defined here so it's available before use ──
-    async function fetchMatchingRecs(promptText) {
-      try {
-        var res = await fetch(
-          SUPABASE_URL + '/rest/v1/recommendations?select=rec_id,title,rec_text,priority,category&active=eq.true&limit=100',
-          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-        );
-        if (!res.ok) return [];
-        var recs = await res.json();
-        if (!recs || !recs.length) return [];
-        var words = promptText.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(' ').filter(function(w){ return w.length > 3; });
-        var scored = recs.map(function(r) {
-          var hay = ((r.title||'')+' '+(r.rec_text||'')+' '+(r.category||'')).toLowerCase();
-          var sc = words.reduce(function(n,w){ return n + (hay.indexOf(w) >= 0 ? 1 : 0); }, 0);
-          return { sc: sc, r: r };
-        }).filter(function(x){ return x.sc > 0; })
-          .sort(function(a,b){ return b.sc - a.sc; })
-          .slice(0, 15);
-        return scored.map(function(x){ return x.r; });
-      } catch(e) { console.warn('Recs:', e.message); return []; }
-    }
-
     // Fetch matching library recommendations
     document.getElementById('btn-analyse-text').textContent = 'Loading recommendations…';
     var recMatches = await fetchMatchingRecs(prompt);
@@ -1913,6 +1884,28 @@
       console.log('Fetch ended:', fetchErr.message);
     }
 
+    // Fetch matching recommendations from library
+    async function fetchMatchingRecs(promptText) {
+      try {
+        var res = await fetch(
+          SUPABASE_URL + '/rest/v1/recommendations?select=rec_id,title,rec_text,priority,category&active=eq.true&limit=100',
+          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+        );
+        if (!res.ok) return [];
+        var recs = await res.json();
+        if (!recs || !recs.length) return [];
+        var words = promptText.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(' ').filter(function(w){ return w.length > 3; });
+        var scored = recs.map(function(r) {
+          var hay = ((r.title||'') + ' ' + (r.rec_text||'') + ' ' + (r.category||'')).toLowerCase();
+          var sc = words.reduce(function(n,w){ return n + (hay.indexOf(w) >= 0 ? 1 : 0); }, 0);
+          return { sc: sc, r: r };
+        }).filter(function(x){ return x.sc > 0; })
+          .sort(function(a,b){ return b.sc - a.sc; })
+          .slice(0, 15);
+        return scored.map(function(x){ return x.r; });
+      } catch(e) { console.warn('Recs:', e.message); return []; }
+    }
+
     // Poll scan_jobs table in Supabase every 6 seconds (up to 5 minutes)
     var pollStart = Date.now();
     var pollMax   = 300000; // 5 minutes
@@ -1949,12 +1942,10 @@
   let _sessionId = null;
   let _storagePaths = [];
   let _reviewId = null;  // set when opened from dashboard — enables lazy photo fetch
-  let _draftId  = null;  // Supabase row ID of the current draft — set on first saveDraft()
-  let _autosaveTimer = null;  // debounce timer for autosave
 
   async function uploadPhotos() {
     // ── Lazy-fetch photos from Supabase if opened from dashboard review ──
-    if (_reviewId && !_draftId && uploadedPhotos.length === 0) {  // only lazy-fetch when opened from dashboard, not from a new draft session
+    if (_reviewId && uploadedPhotos.length === 0) {
       const btn = document.getElementById('btn-upload');
       const statusDiv = document.getElementById('upload-status');
       btn.disabled = true;
@@ -2056,18 +2047,6 @@
       const analyseBtn = document.getElementById('btn-analyse');
       if (analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
       showToast('✓ ' + paths.length + ' files uploaded! Click Step 2 to analyse.');
-      // Update draft with storage paths — preserves photos even if browser closes before analysis
-      var photoP = paths.filter(function(p){ return !p.includes('/doc-'); });
-      var docP   = paths.filter(function(p){ return p.includes('/doc-'); });
-      if (_draftId) {
-        _supabase.from('scan_submissions').update({
-          storage_paths: JSON.stringify(photoP),
-          doc_paths:     JSON.stringify(docP),
-          photo_count:   photoP.length,
-        }).eq('id', _draftId).then(function(){ updateDraftStatus('Photos saved to draft'); });
-      } else {
-        saveDraft(true); // auto-save draft now that photos are uploaded
-      }
     } catch(e) {
       btn.disabled = false;
       document.getElementById('btn-upload-text').textContent = 'Step 1 — Upload Photos to Secure Storage';
@@ -2296,7 +2275,10 @@
         coverWrap.style.display = 'none';
       }
     })();
-    document.getElementById('res-sub').textContent   = 'Photo-Based Preliminary Assessment \u00B7 ' + new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'}) + ' \u00B7 ' + (data.photoCount || uploadedPhotos.length || 0) + ' photos analyzed';
+    // Build cover page (print only)
+    buildCoverPage(data);
+
+    var _pc = (data.photoCount || uploadedPhotos.length || 0); document.getElementById('res-sub').textContent = 'Photo-Based Preliminary Assessment \u00B7 ' + new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'}) + ' \u00B7 ' + _pc + ' photo' + (_pc !== 1 ? 's' : '') + ' analyzed';
 
     // Populate brand header date and submitter
     var prepDate = document.getElementById('res-prepared-date');
@@ -2322,7 +2304,7 @@
         ['Year Built', data.yearBuilt],
         ['Building Area', data.buildingArea ? data.buildingArea + ' sq ft' : null],
         ['Assessment Date', new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})],
-        ['Photos Analysed', (data.photoCount || uploadedPhotos.length) + ' photos'],
+        ['Photos Analysed', (data.photoCount || uploadedPhotos.length) + ' photo' + ((data.photoCount || uploadedPhotos.length) !== 1 ? 's' : '')],
         ['Submitted By', data.submitterName || null],
         ['Company / Broker', data.submitterCompany || null],
       ].filter(function(f){ return f[1]; });
@@ -2514,39 +2496,12 @@
           iC.appendChild(iSp); iC.appendChild(iInf);
           pdfSec.appendChild(iC);
           var pW = document.createElement('div');
-          pW.style.cssText = 'display:grid;grid-template-columns:1fr;gap:12px;padding:12px;background:#f8f9fb;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;margin-bottom:12px;';
+          pW.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:12px;background:#f8f9fb;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;margin-bottom:12px;';
           pdfSec.appendChild(pW);
           if (p.dataUrl && typeof pdfjsLib !== 'undefined') {
-            pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-            var b64=p.dataUrl.split(',')[1], bin=atob(b64), ba=new Uint8Array(bin.length);
-            for(var bi=0;bi<bin.length;bi++) ba[bi]=bin.charCodeAt(bi);
-            pdfjsLib.getDocument({data:ba}).promise.then(function(pdDoc){
-              for(var pg=1;pg<=pdDoc.numPages;pg++){
-                (function(pn,pd){
-                  pd.getPage(pn).then(function(page){
-                    var vp=page.getViewport({scale:1.2});
-                    var cv=document.createElement('canvas');
-                    cv.width=vp.width; cv.height=vp.height;
-                    cv.style.cssText='width:100%;border-radius:4px;border:1px solid var(--border);display:block;';
-                    page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise.then(function(){
-                      // Convert canvas to img so pages print correctly (canvas doesn't print in most browsers)
-                      var img=document.createElement('img');
-                      img.src=cv.toDataURL('image/jpeg',0.92);
-                      img.style.cssText='width:100%;border-radius:4px;border:1px solid var(--border);display:block;';
-                      var w=document.createElement('div');
-                      var cap=document.createElement('div');
-                      cap.style.cssText='font-size:9px;text-align:center;color:var(--slate);padding:2px 0;';
-                      cap.textContent='Page '+pn;
-                      w.appendChild(img); w.appendChild(cap); pW.appendChild(w);
-                    });
-                  });
-                })(pg,pdDoc);
-              }
-            }).catch(function(e){
-              pW.innerHTML='<div style="grid-column:1/-1;padding:8px;font-size:11px;color:#888;">Preview unavailable: '+e.message+'</div>';
-            });
-          } else {
-            pW.innerHTML='<div style="grid-column:1/-1;padding:8px;font-size:11px;color:#888;text-align:center;">📄 PDF preview loading...</div>';
+            extractPhotosFromPdf(p.dataUrl, photoGrid);
+          } else if (p.dataUrl) {
+            pW.innerHTML = '<div style="padding:8px;font-size:11px;color:#888;text-align:center;">PDF.js not loaded — cannot preview.</div>';
           }
         });
         photoGrid.appendChild(pdfSec);
@@ -2556,6 +2511,42 @@
       photoSection.style.display = 'none';
     }
 
+    // ── Additional Supporting Documents section ──
+    // Show any docs from uploadedDocs that were passed as AI context
+    (function() {
+      var existingDocSec = document.getElementById('res-support-docs-section');
+      if (existingDocSec) existingDocSec.remove();
+      var docsToShow = uploadedDocs && uploadedDocs.length ? uploadedDocs : [];
+      if (!docsToShow.length) return;
+      var docSec = document.createElement('div');
+      docSec.id = 'res-support-docs-section';
+      docSec.className = 'result-section';
+      docSec.innerHTML = [
+        '<div class="result-section-header">',
+          '<div class="result-section-icon">&#x1F4CE;</div>',
+          '<div class="result-section-title">Supporting Documents Submitted</div>',
+        '</div>',
+        '<div class="result-section-body">',
+          '<p style="font-size:12px;color:var(--slate);margin:0 0 12px;">The following documents were submitted as reference context alongside the photographs and are included in the AI analysis.</p>',
+          '<div id="res-doc-list" style="display:flex;flex-direction:column;gap:8px;"></div>',
+        '</div>',
+      ].join('');
+      var photoSecEl = document.getElementById('res-photo-section');
+      if (photoSecEl && photoSecEl.parentNode) {
+        photoSecEl.parentNode.insertBefore(docSec, photoSecEl.nextSibling);
+      }
+      var docList = document.getElementById('res-doc-list');
+      docsToShow.forEach(function(doc) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;';
+        var sizeMB = doc.file && doc.file.size ? (doc.file.size / 1024 / 1024).toFixed(1) + ' MB' : '';
+        row.innerHTML = '<span style="font-size:22px;">&#x1F4C4;</span>' +
+          '<div><div style="font-size:13px;font-weight:700;color:var(--navy);">' + (doc.name || 'Document') + '</div>' +
+          (sizeMB ? '<div style="font-size:11px;color:var(--slate);">' + sizeMB + ' &#x2014; passed to AI as context</div>' : '') + '</div>';
+        docList.appendChild(row);
+      });
+    })();
+
     document.getElementById('results-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
     showToast('\u2713 AI analysis complete \u2014 review results below');
 
@@ -2564,118 +2555,289 @@
     document.getElementById('btn-analyse-text').textContent = 'Analyse with AI \u2014 Generate COPE Assessment';
   }
 
+  // ── EXTRACT INDIVIDUAL PHOTOS FROM PDF PAGES ──
+  // Renders each page at high scale, detects non-white photo regions, crops and
+  // inserts each photo as an individual card in the photo grid.
+  // Handles Aviva-style 2x2 grid layout AND any other multi-photo-per-page PDFs.
+  function extractPhotosFromPdf(dataUrl, targetGrid) {
+    if (typeof pdfjsLib === 'undefined') return;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    var b64 = dataUrl.split(',')[1], bin = atob(b64), ba = new Uint8Array(bin.length);
+    for (var bi = 0; bi < bin.length; bi++) ba[bi] = bin.charCodeAt(bi);
+
+    var photoCounter = 0;
+
+    pdfjsLib.getDocument({ data: ba }).promise.then(function(pdDoc) {
+      var pagePromises = [];
+      for (var pg = 1; pg <= pdDoc.numPages; pg++) {
+        pagePromises.push(pdDoc.getPage(pg));
+      }
+      return Promise.all(pagePromises);
+    }).then(function(pages) {
+      // Process pages sequentially so photos appear in order
+      return pages.reduce(function(chain, page) {
+        return chain.then(function() {
+          return extractPhotosFromPage(page, targetGrid, function(n) { photoCounter = n; return photoCounter; }, photoCounter);
+        }).then(function(count) { photoCounter = count; });
+      }, Promise.resolve());
+    }).catch(function(e) {
+      var errDiv = document.createElement('div');
+      errDiv.style.cssText = 'grid-column:1/-1;padding:8px;font-size:11px;color:#888;';
+      errDiv.textContent = 'PDF extraction error: ' + e.message;
+      targetGrid.appendChild(errDiv);
+    });
+  }
+
+  function extractPhotosFromPage(page, targetGrid, counterFn, currentCount) {
+    // Render at 2x for detail — sufficient for photo extraction
+    var vp = page.getViewport({ scale: 2.0 });
+    var cv = document.createElement('canvas');
+    cv.width = vp.width; cv.height = vp.height;
+    return page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise.then(function() {
+      var ctx = cv.getContext('2d');
+      var W = cv.width, H = cv.height;
+      var px = ctx.getImageData(0, 0, W, H).data;
+
+      // ── Find photo bounding boxes using connected non-white region detection ──
+      // Strategy: scan for large rectangular regions that are mostly non-white.
+      // Use a coarse grid (every 8px) to find candidate photo centres, 
+      // then expand each to a tight bounding box.
+
+      var GRID = 8; // coarse scan step
+      var WHITE_THRESH = 240; // pixels above this are "white"
+      var MIN_PHOTO_PX = W * 0.12; // min photo width = 12% of page width
+
+      function isWhite(x, y) {
+        if (x < 0 || y < 0 || x >= W || y >= H) return true;
+        var i = (y * W + x) * 4;
+        return px[i] > WHITE_THRESH && px[i+1] > WHITE_THRESH && px[i+2] > WHITE_THRESH;
+      }
+
+      // Build coarse occupancy map
+      var cols = Math.floor(W / GRID), rows = Math.floor(H / GRID);
+      var occ = new Uint8Array(cols * rows);
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          // Sample 4 pixels in this cell
+          var nonWhite = 0;
+          for (var dy = 0; dy < GRID; dy += 2) {
+            for (var dx = 0; dx < GRID; dx += 2) {
+              if (!isWhite(c * GRID + dx, r * GRID + dy)) nonWhite++;
+            }
+          }
+          occ[r * cols + c] = nonWhite > 2 ? 1 : 0;
+        }
+      }
+
+      // Flood-fill to find connected regions in occ map
+      var visited = new Uint8Array(cols * rows);
+      var regions = [];
+
+      for (var sr = 0; sr < rows; sr++) {
+        for (var sc = 0; sc < cols; sc++) {
+          if (!occ[sr * cols + sc] || visited[sr * cols + sc]) continue;
+          // BFS
+          var queue = [[sc, sr]], minC = sc, maxC = sc, minR = sr, maxR = sr;
+          visited[sr * cols + sc] = 1;
+          var qi = 0;
+          while (qi < queue.length) {
+            var cur = queue[qi++], cc = cur[0], cr = cur[1];
+            if (cc < minC) minC = cc; if (cc > maxC) maxC = cc;
+            if (cr < minR) minR = cr; if (cr > maxR) maxR = cr;
+            var nbrs = [[cc-1,cr],[cc+1,cr],[cc,cr-1],[cc,cr+1]];
+            for (var ni = 0; ni < nbrs.length; ni++) {
+              var nc = nbrs[ni][0], nr = nbrs[ni][1];
+              if (nc >= 0 && nc < cols && nr >= 0 && nr < rows && occ[nr*cols+nc] && !visited[nr*cols+nc]) {
+                visited[nr*cols+nc] = 1;
+                queue.push([nc, nr]);
+              }
+            }
+          }
+          var rw = (maxC - minC) * GRID, rh = (maxR - minR) * GRID;
+          // Must be large enough to be a photo (not text or logo)
+          if (rw > MIN_PHOTO_PX && rh > MIN_PHOTO_PX * 0.6) {
+            regions.push({ x: minC * GRID, y: minR * GRID, w: rw, h: rh });
+          }
+        }
+      }
+
+      // Sort top-to-bottom, left-to-right
+      regions.sort(function(a, b) { return (a.y !== b.y ? a.y - b.y : a.x - b.x); });
+
+      // Merge overlapping/adjacent regions (captions under photos, etc.)
+      var merged = [];
+      regions.forEach(function(reg) {
+        var found = false;
+        for (var mi = 0; mi < merged.length; mi++) {
+          var m = merged[mi];
+          var overlapX = Math.min(m.x + m.w, reg.x + reg.w) - Math.max(m.x, reg.x);
+          var overlapY = Math.min(m.y + m.h, reg.y + reg.h) - Math.max(m.y, reg.y);
+          if (overlapX > 0 && overlapY > -GRID * 4) {
+            merged[mi] = {
+              x: Math.min(m.x, reg.x), y: Math.min(m.y, reg.y),
+              w: Math.max(m.x + m.w, reg.x + reg.w) - Math.min(m.x, reg.x),
+              h: Math.max(m.y + m.h, reg.y + reg.h) - Math.min(m.y, reg.y)
+            };
+            found = true; break;
+          }
+        }
+        if (!found) merged.push({ x: reg.x, y: reg.y, w: reg.w, h: reg.h });
+      });
+
+      // Re-filter after merging — must still be photo-sized
+      merged = merged.filter(function(r) { return r.w > MIN_PHOTO_PX && r.h > MIN_PHOTO_PX * 0.5; });
+
+      if (merged.length === 0) {
+        // Fallback: no distinct regions found — render full page (minus top 15% header & bottom 8% footer)
+        var PAD = Math.floor(H * 0.02);
+        var cropY = Math.floor(H * 0.15), cropH = Math.floor(H * 0.77);
+        var fallbackCv = document.createElement('canvas');
+        fallbackCv.width = W - PAD * 2; fallbackCv.height = cropH;
+        fallbackCv.getContext('2d').putImageData(
+          ctx.getImageData(PAD, cropY, W - PAD * 2, cropH), 0, 0
+        );
+        appendPhotoCard(fallbackCv, 'Page', targetGrid, currentCount + 1);
+        return currentCount + 1;
+      }
+
+      // Add a small margin around each detected region
+      var MARGIN = GRID * 1;
+      merged.forEach(function(reg) {
+        var cx = Math.max(0, reg.x - MARGIN);
+        var cy = Math.max(0, reg.y - MARGIN);
+        var cw = Math.min(W - cx, reg.w + MARGIN * 2);
+        var ch = Math.min(H - cy, reg.h + MARGIN * 2);
+        var cropCv = document.createElement('canvas');
+        cropCv.width = cw; cropCv.height = ch;
+        cropCv.getContext('2d').putImageData(ctx.getImageData(cx, cy, cw, ch), 0, 0);
+        currentCount++;
+        appendPhotoCard(cropCv, 'Photo', targetGrid, currentCount);
+      });
+      return currentCount;
+    });
+  }
+
+  function appendPhotoCard(canvas, label, grid, num) {
+    var img = document.createElement('img');
+    img.src = canvas.toDataURL('image/jpeg', 0.92);
+    img.style.cssText = 'width:100%;aspect-ratio:4/3;object-fit:cover;display:block;';
+    var cap = document.createElement('div');
+    cap.style.cssText = "padding:5px 7px;background:#f8f9fb;border-top:1px solid var(--border);font-size:10px;font-weight:700;color:var(--slate);font-family:'IBM Plex Mono',monospace;";
+    cap.textContent = label + ' ' + num;
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f8f9fb;display:flex;flex-direction:column;';
+    wrap.appendChild(img); wrap.appendChild(cap);
+    grid.appendChild(wrap);
+  }
+
+  // ── COVER PAGE ──
+  // Injected at top of results-wrap before report content when printing
+  function buildCoverPage(data) {
+    var existing = document.getElementById('scan-cover-page');
+    if (existing) existing.remove();
+
+    var cover = document.createElement('div');
+    cover.id = 'scan-cover-page';
+    cover.style.cssText = [
+      'display:none',                          // hidden on screen
+      'width:100%',
+      'min-height:100vh',
+      'background:var(--navy)',
+      'flex-direction:column',
+      'align-items:center',
+      'justify-content:center',
+      'padding:60px 48px',
+      'box-sizing:border-box',
+      'page-break-after:always',
+      'color:#fff',
+    ].join(';');
+
+    // Logo + title strip
+    var topStrip = document.createElement('div');
+    topStrip.style.cssText = 'display:flex;align-items:center;gap:16px;margin-bottom:60px;align-self:flex-start;';
+    topStrip.innerHTML = [
+      '<div style="width:54px;height:54px;background:var(--scan);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">&#x1F3E2;</div>',
+      '<div>',
+        '<div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:#fff;letter-spacing:.01em;">SanketRisk <span style="color:#38bdf8;">ONE</span></div>',
+        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--gold-light);">AI-Powered Property Risk Intelligence</div>',
+      '</div>',
+    ].join('');
+
+    // Cover photo (if any)
+    var coverPhotoEl = document.getElementById('res-cover-photo');
+    if (coverPhotoEl && coverPhotoEl.src && coverPhotoEl.src.length > 50) {
+      var cpWrap = document.createElement('div');
+      cpWrap.style.cssText = 'width:100%;max-height:320px;overflow:hidden;border-radius:12px;margin-bottom:48px;position:relative;';
+      var cpImg = document.createElement('img');
+      cpImg.src = coverPhotoEl.src;
+      cpImg.style.cssText = 'width:100%;object-fit:cover;max-height:320px;opacity:.85;display:block;';
+      var cpOverlay = document.createElement('div');
+      cpOverlay.style.cssText = 'position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(13,27,42,.7));border-radius:12px;';
+      cpWrap.appendChild(cpImg); cpWrap.appendChild(cpOverlay);
+      cover.appendChild(topStrip);
+      cover.appendChild(cpWrap);
+    } else {
+      cover.appendChild(topStrip);
+    }
+
+    // Gold divider
+    var divider = document.createElement('div');
+    divider.style.cssText = 'width:80px;height:3px;background:var(--gold);border-radius:2px;margin-bottom:36px;align-self:flex-start;';
+
+    // Report type badge
+    var badge = document.createElement('div');
+    badge.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:24px;align-self:flex-start;';
+    badge.innerHTML = '&#x1F4F8; SCAN ONE Assessment';
+
+    // Property name
+    var propName = document.createElement('div');
+    propName.style.cssText = 'font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:12px;align-self:flex-start;';
+    propName.textContent = data.insured || data.address || 'Subject Property';
+
+    // Address
+    var addr = document.createElement('div');
+    addr.style.cssText = 'font-size:16px;color:rgba(255,255,255,.7);margin-bottom:8px;align-self:flex-start;';
+    addr.textContent = [data.address, data.city, data.province].filter(Boolean).join(', ');
+
+    // Occupancy
+    var occ = document.createElement('div');
+    occ.style.cssText = 'font-size:14px;color:rgba(255,255,255,.55);margin-bottom:48px;align-self:flex-start;';
+    occ.textContent = data.occupancy || '';
+
+    // Meta table
+    var metaWrap = document.createElement('div');
+    metaWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:32px;margin-top:auto;';
+    var metaItems = [
+      ['Assessment Date', new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'})],
+      ['Prepared By', (data.submitterName || 'Sanket Risk Consultants') + (data.submitterCompany ? ' — ' + data.submitterCompany : '')],
+      ['Assessment Type', 'Photo-Based Preliminary'],
+    ];
+    metaItems.forEach(function(m) {
+      var cell = document.createElement('div');
+      cell.innerHTML = '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.4);margin-bottom:6px;">' + m[0] + '</div>' +
+        '<div style="font-size:13px;font-weight:600;color:#fff;">' + m[1] + '</div>';
+      metaWrap.appendChild(cell);
+    });
+
+    cover.appendChild(divider);
+    cover.appendChild(badge);
+    cover.appendChild(propName);
+    if (addr.textContent) cover.appendChild(addr);
+    if (occ.textContent) cover.appendChild(occ);
+    cover.appendChild(metaWrap);
+
+    // Insert as first child of results-wrap
+    var rw = document.getElementById('results-wrap');
+    if (rw) rw.insertBefore(cover, rw.firstChild);
+  }
+
   // ── PRINT REPORT ──
   function printScanReport() {
     window.print();
   }
 
   // ── SAVE TO DASHBOARD ──
-  // ── DRAFT STATUS DISPLAY ──
-  function updateDraftStatus(msg) {
-    var el = document.getElementById('draft-status');
-    if (!el) return;
-    if (!msg) { el.textContent = ''; return; }
-    var time = new Date().toLocaleTimeString('en-CA', { hour:'2-digit', minute:'2-digit' });
-    el.textContent = '✓ ' + msg + ' at ' + time;
-  }
-
-  // ── SAVE DRAFT ──
-  // silent=true: no toast, no button state change (used for autosave)
-  // silent=false: user clicked the button — show feedback
-  async function saveDraft(silent) {
-    // Don't save in public submission mode or review mode
-    if (typeof submitCode !== 'undefined' && submitCode) return;
-
-    var data = collectFormData();
-    // Require at least insured name or address to bother saving
-    if (!data.insured && !data.address) {
-      if (!silent) showToast('⚠ Enter at least a property name or address before saving.');
-      return;
-    }
-
-    var btn  = document.getElementById('btn-save-draft');
-    var btnT = document.getElementById('btn-save-draft-text');
-    if (!silent && btn) { btn.disabled = true; if (btnT) btnT.textContent = 'Saving…'; }
-
-    try {
-      var photoStoragePaths = (_storagePaths || []).filter(function(p){ return !p.includes('/doc-'); });
-      var docStoragePaths   = (_storagePaths || []).filter(function(p){ return p.includes('/doc-'); });
-
-      var payload = {
-        insured_name:   data.insured   || 'Draft',
-        address:        data.address   || '',
-        city:           data.city      || '',
-        province:       data.province  || '',
-        occupancy:      data.occupancy || '',
-        year_built:     data.yearBuilt || null,
-        building_area:  data.area      || null,
-        photo_count:    uploadedPhotos.length || 0,
-        status:         'draft',
-        form_data:      JSON.stringify({
-          insured:          data.insured,
-          address:          data.address,
-          city:             data.city,
-          province:         data.province,
-          occupancy:        data.occupancy,
-          tenure:           data.tenure,
-          yearBuilt:        data.yearBuilt,
-          storeys:          data.storeys,
-          area:             data.area,
-          construction:     data.construction,
-          fireProtection:   data.fireProtection,
-          context:          data.context,
-          submitterName:    data.submitterName,
-          submitterCompany: data.submitterCompany,
-          losses:           data.losses,
-          lossCause:        data.lossCause,
-          lossAmt:          data.lossAmt,
-          upgrades:         data.upgrades,
-          hazards:          data.hazards,
-          additionalDocs:   uploadedDocs.map(function(d){ return { name: d.name, storagePath: d._storagePath || '' }; }),
-        }),
-        storage_paths:  JSON.stringify(photoStoragePaths),
-        doc_paths:      JSON.stringify(docStoragePaths),
-        submitted_at:   new Date().toISOString(),
-      };
-
-      if (_draftId) {
-        // Update existing draft row
-        var { error } = await _supabase.from('scan_submissions').update(payload).eq('id', _draftId);
-        if (error) throw error;
-      } else {
-        // Insert new draft row
-        var insertResult = await _supabase.from('scan_submissions').insert(payload).select('id').single();
-        if (insertResult.error) throw insertResult.error;
-        var inserted = insertResult.data;
-        if (inserted && inserted.id) {
-          _draftId = inserted.id;
-          _reviewId = _draftId; // treat as review so saveToDashboard updates rather than inserts
-        }
-      }
-
-      updateDraftStatus('Draft saved');
-      if (!silent) showToast('✓ Draft saved — you can return to this submission from the dashboard.');
-
-    } catch(e) {
-      if (!silent) showToast('⚠ Draft save failed: ' + e.message);
-      console.warn('saveDraft error:', e.message);
-    } finally {
-      if (!silent && btn) { btn.disabled = false; if (btnT) btnT.textContent = 'Save Draft'; }
-    }
-  }
-
-  // ── AUTOSAVE DRAFT — fires 30s after any form field change ──
-  function scheduleAutosave() {
-    if (_autosaveTimer) clearTimeout(_autosaveTimer);
-    _autosaveTimer = setTimeout(function() {
-      var data = collectFormData();
-      if (data.insured || data.address) {
-        updateDraftStatus('Autosaving…');
-        saveDraft(true);
-      }
-    }, 30000); // 30 seconds
-  }
-
   async function saveToDashboard() {
     if (!lastResult) return;
     showToast('\u23F3 Saving assessment to dashboard\u2026');
@@ -2767,11 +2929,6 @@
     uploadedPhotos = [];
     uploadedDocs   = [];
     lastResult     = null;
-    _draftId       = null;
-    _storagePaths  = [];
-    _sessionId     = null;
-    if (_autosaveTimer) { clearTimeout(_autosaveTimer); _autosaveTimer = null; }
-    updateDraftStatus('');
     document.getElementById('results-wrap').style.display  = 'none';
     document.getElementById('progress-wrap').style.display = 'none';
     document.getElementById('photo-preview-wrap').style.display = 'none';
@@ -2956,31 +3113,6 @@
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 4000);
   }
-
-  // ── HAZARD BUTTON CLICK WIRING ──
-  // Runs after all JS parsed. Uses click on div elements — no label double-fire on mobile.
-  (function() {
-    document.querySelectorAll('#hazard-checks .check-item').forEach(function(el) {
-      el.addEventListener('click', function() {
-        el.classList.toggle('selected');
-        scheduleAutosave();
-      });
-    });
-  })();
-
-  // ── AUTOSAVE WIRING — attach scheduleAutosave to all form inputs ──
-  (function() {
-    var fields = document.querySelectorAll(
-      '#inspector-mode input[type=text], #inspector-mode input[type=number], ' +
-      '#inspector-mode select, #inspector-mode textarea'
-    );
-    fields.forEach(function(el) {
-      if (el.type === 'file' || el.type === 'radio' || el.type === 'checkbox') return;
-      el.addEventListener('input',  scheduleAutosave);
-      el.addEventListener('change', scheduleAutosave);
-    });
-  })();
-
 </script>
 </body>
 </html>
