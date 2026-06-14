@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 239 — 2026-06-14 -->
+<!-- SanketRisk SCAN ONE — Deploy 240 — 2026-06-14 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sanket SCAN ONE [239] — AI Photo Assessment v4</title>
+  <title>Sanket SCAN ONE [240] — AI Photo Assessment v4</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -1487,36 +1487,133 @@
   }
 
     // ── VIEW REPORT MODE — load stored result from URL param ──
-  (function checkViewReportMode() {
+  // ── VIEW SAVED REPORT MODE ──
+  // Triggered when dashboard opens a saved report: scan.html?view_report={id}
+  // Loads EVERYTHING from Supabase — form data, storage paths, doc paths, scan result.
+  // Restores the full form so the inspector can re-run the analysis with original data.
+  (async function checkViewReportMode() {
     var params = new URLSearchParams(window.location.search);
-    var resultParam = params.get('result');
     var viewId = params.get('view_report');
-    if (!resultParam || !viewId) return;
+    if (!viewId) return;
+
+    // Show loading banner immediately
+    var modebar = document.getElementById('mode-bar');
+    var loadBanner = document.createElement('div');
+    loadBanner.id = 'view-report-banner';
+    loadBanner.style.cssText = 'background:linear-gradient(135deg,#065f73,#0891b2);color:#fff;padding:12px 24px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;';
+    loadBanner.innerHTML = '<div class="spinner" style="width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>' +
+      '<span>&#x1F4CB; Loading saved SCAN ONE report…</span>';
+    if (modebar) modebar.after(loadBanner);
+
     try {
-      var result = JSON.parse(decodeURIComponent(resultParam));
-      // Wait for DOM then render
+      // ── Fetch the full record from Supabase ──
+      var res = await fetch(
+        SUPABASE_URL + '/rest/v1/scan_submissions?id=eq.' + encodeURIComponent(viewId) +
+        '&select=id,insured_name,address,city,province,occupancy,year_built,building_area,' +
+        'photo_count,form_data,storage_paths,doc_paths,scan_result,inspection_id,status',
+        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+      );
+      if (!res.ok) throw new Error('Could not fetch report (HTTP ' + res.status + ')');
+      var rows = await res.json();
+      if (!rows || !rows.length) throw new Error('Report not found: ' + viewId);
+      var sub = rows[0];
+
+      // ── Parse stored result ──
+      var savedResult = null;
+      if (sub.scan_result) {
+        try {
+          savedResult = typeof sub.scan_result === 'string' ? JSON.parse(sub.scan_result) : sub.scan_result;
+        } catch(e) { console.warn('scan_result parse error:', e.message); }
+      }
+
+      // ── Parse storage paths — restore so re-analysis works ──
+      var photoPaths = [];
+      var docPaths   = [];
+      try { photoPaths = sub.storage_paths ? (typeof sub.storage_paths === 'string' ? JSON.parse(sub.storage_paths) : sub.storage_paths) : []; } catch(e) {}
+      try { docPaths   = sub.doc_paths     ? (typeof sub.doc_paths     === 'string' ? JSON.parse(sub.doc_paths)     : sub.doc_paths)     : []; } catch(e) {}
+
+      // ── Parse form_data ──
+      var fd = null;
+      try { fd = sub.form_data ? (typeof sub.form_data === 'string' ? JSON.parse(sub.form_data) : sub.form_data) : null; } catch(e) {}
+
+      // ── Wait for DOM then restore everything ──
       setTimeout(function() {
-        // Pull form data from result if saved
-        var fd = result.formData || {};
-        if (fd.insured) { var el = document.getElementById('s-insured'); if(el) el.value = fd.insured; }
-        if (fd.address) { var el = document.getElementById('s-address'); if(el) el.value = fd.address; }
-        if (fd.city)    { var el = document.getElementById('s-city');    if(el) el.value = fd.city; }
-        if (fd.province){ var el = document.getElementById('s-province');if(el) el.value = fd.province; }
-        // Show results
-        lastResult = result;
-        renderResult(result, fd, result.photoCount || 0);
-        document.getElementById('results-wrap').style.display = 'block';
-        document.getElementById('progress-wrap').style.display = 'none';
-        // Add banner
-        var banner = document.getElementById('scan-banner');
-        if (banner) {
-          banner.style.display = 'block';
-          banner.innerHTML = '&#x1F4CB; Viewing saved SCAN ONE report &mdash; <a href="/dashboard.html" style="color:var(--scan-light);">← Back to Dashboard</a>';
+        // 1. Restore full form using preloadSubmission
+        preloadSubmission(sub);
+
+        // 2. Restore submitter fields from form_data (not in top-level columns)
+        if (fd) {
+          var set = function(id, val) { var el = document.getElementById(id); if (el && val) el.value = val; };
+          set('s-submitter-name',    fd.submitterName);
+          set('s-submitter-company', fd.submitterCompany);
         }
-        window.scrollTo({ top: document.getElementById('results-wrap').offsetTop - 20, behavior: 'smooth' });
+
+        // 3. Restore storage paths so Step 1 is skipped and re-analysis works
+        if (photoPaths.length || docPaths.length) {
+          var syntheticSessionId = photoPaths.length ? photoPaths[0].split('/')[0] : ('view-' + viewId);
+          _sessionId    = syntheticSessionId;
+          _storagePaths = photoPaths.concat(docPaths);
+          // Show upload button as already done
+          var uploadBtn  = document.getElementById('btn-upload');
+          var uploadText = document.getElementById('btn-upload-text');
+          var statusDiv  = document.getElementById('upload-status');
+          var analyseBtn = document.getElementById('btn-analyse');
+          if (uploadText) uploadText.textContent = '✓ Photos on file — Upload Again to refresh';
+          if (uploadBtn)  uploadBtn.disabled = false;
+          if (analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
+          if (statusDiv) {
+            statusDiv.style.display = 'block';
+            statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
+            statusDiv.textContent = '✓ ' + photoPaths.length + ' photo' + (photoPaths.length !== 1 ? 's' : '') +
+              (docPaths.length ? ' + ' + docPaths.length + ' document' + (docPaths.length !== 1 ? 's' : '') : '') +
+              ' on file from original submission. Click Step 2 to re-run analysis, or view saved report below.';
+          }
+        }
+
+        // 4. Restore doc list display (names from form_data.additionalDocs)
+        if (fd && fd.additionalDocs && fd.additionalDocs.length) {
+          uploadedDocs = fd.additionalDocs.map(function(d) {
+            return { file: { name: d.name, size: 0 }, dataUrl: '', name: d.name, _storagePath: d.storagePath };
+          });
+          renderDocPreview();
+        }
+
+        // 5. Show saved report if available
+        if (savedResult) {
+          var formData = savedResult.formData || fd || {};
+          // Merge top-level sub fields into formData for renderResults
+          if (!formData.insured && sub.insured_name) formData.insured = sub.insured_name;
+          if (!formData.address && sub.address)      formData.address = sub.address;
+          if (!formData.city    && sub.city)         formData.city    = sub.city;
+          if (!formData.province && sub.province)    formData.province = sub.province;
+          if (!formData.occupancy && sub.occupancy)  formData.occupancy = sub.occupancy;
+          if (!formData.yearBuilt && sub.year_built) formData.yearBuilt = sub.year_built;
+          if (!formData.photoCount) formData.photoCount = sub.photo_count || 0;
+          lastResult = savedResult;
+          renderResults(savedResult, formData);
+          document.getElementById('results-wrap').style.display = 'block';
+          document.getElementById('progress-wrap').style.display = 'none';
+        }
+
+        // 6. Update banner to final state
+        loadBanner.innerHTML =
+          '&#x1F4CB; Saved SCAN ONE Report' +
+          (sub.inspection_id ? ' &mdash; ' + sub.inspection_id : '') +
+          ' &mdash; All form data restored.' +
+          (savedResult ? ' Saved report shown below.' : ' No saved report yet — click Analyse with AI.') +
+          ' <a href="/dashboard.html" style="color:rgba(255,255,255,.8);margin-left:auto;font-size:12px;text-decoration:none;">&#x2190; Back to Dashboard</a>';
+
+        if (savedResult) {
+          window.scrollTo({ top: document.getElementById('results-wrap').offsetTop - 20, behavior: 'smooth' });
+        }
+
       }, 400);
+
     } catch(e) {
-      console.warn('view_report parse error:', e.message);
+      console.warn('view_report load error:', e.message);
+      loadBanner.style.background = 'linear-gradient(135deg,#c53030,#e53e3e)';
+      loadBanner.innerHTML = '⚠️ Could not load saved report: ' + e.message +
+        ' <a href="/dashboard.html" style="color:rgba(255,255,255,.8);margin-left:auto;font-size:12px;text-decoration:none;">&#x2190; Back to Dashboard</a>';
     }
   })();
 
