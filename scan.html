@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 246 — 2026-06-14 -->
+<!-- SanketRisk SCAN ONE — Deploy 247 — 2026-06-14 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -251,6 +251,7 @@
     </div>
   </div>
   <div class="nav-right">
+    <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:rgba(255,255,255,.35);margin-right:8px;">v247</span>
     <a href="/dashboard.html" class="btn-nav">&#x2190; Dashboard</a>
     <a href="/app.html" class="btn-nav">Inspection Form</a>
   </div>
@@ -913,10 +914,11 @@
         showToast('\u23F3 Loading submission\u2026');
         // Fetch WITHOUT photos column first — photos can be 20MB+ for 40-photo submissions
         // and cause timeouts. We lazy-load them only when Step 1 upload runs.
-        const { data: sub, error } = await _supabase
+        var _qr0 = await _supabase
           .from('scan_submissions')
           .select('id, insured_name, address, city, province, occupancy, year_built, building_area, form_data, photo_count, submitted_at, status')
           .eq('id', reviewId).single();
+        var sub = _qr0.data, error = _qr0.error;
         if (error) throw error;
         sessionStorage.removeItem('scanSubmission');
         preloadSubmission(sub);
@@ -1115,25 +1117,25 @@
     }
     grid.innerHTML = uploadedPhotos.map((p, i) => {
       const preview = p.type === 'pdf'
-        ? `<div style="width:100%;height:100%;background:linear-gradient(135deg,#1a2e42,#0d1b2a);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+        ? '<div style="width:100%;height:100%;background:linear-gradient(135deg,#1a2e42,#0d1b2a);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
              <div style="font-size:24px">&#x1F4C4;</div>
-             <div style="font-size:8px;color:var(--gold);font-family:'IBM Plex Mono',monospace;font-weight:700">PDF</div>
-             <div style="font-size:7px;color:rgba(255,255,255,.5);text-align:center;padding:0 4px">${p.file.name.substring(0,20)}</div>
-           </div>`
-        : `<img src="${p.dataUrl}" alt="Photo ${i+1}">`;
+             <div style="font-size:8px;color:var(--gold);font-family:\'IBM Plex Mono\',monospace;font-weight:700">PDF</div>
+             <div style="font-size:7px;color:rgba(255,255,255,.5);text-align:center;padding:0 4px">' + p.file.name.substring(0,20) + '</div>
+           </div>'
+        : '<img src="' + p.dataUrl + '" alt="Photo ' + i+1 + '">';
       const label = p.type === 'pdf' ? 'PDF Doc ' + (i+1) : 'Photo ' + (i+1);
       var desc = (uploadedPhotos[i] && uploadedPhotos[i].description) ? uploadedPhotos[i].description : '';
-      return `<div class="photo-thumb" id="thumb-${i}">
+      return '<div class="photo-thumb" id="thumb-' + i + '">
         <div class="photo-thumb-img-wrap">
-          ${preview}
-          <button class="photo-thumb-remove" onclick="removePhoto(${i})">&#x2715;</button>
+          ' + preview + '
+          <button class="photo-thumb-remove" onclick="removePhoto(' + i + ')">&#x2715;</button>
           <label style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;display:flex;align-items:center;gap:3px;cursor:pointer;z-index:2;">
-            <input type="checkbox" class="photo-chk" data-idx="${i}" checked style="width:13px;height:13px;cursor:pointer;" onchange="updateSelectedCount()">
+            <input type="checkbox" class="photo-chk" data-idx="' + i + '" checked style="width:13px;height:13px;cursor:pointer;" onchange="updateSelectedCount()">
           </label>
         </div>
-        <div class="photo-thumb-label">${label}</div>
-        <textarea class="photo-thumb-desc" data-idx="${i}" placeholder="Add description (e.g. Front elevation, Sprinkler riser, Electrical panel...)" rows="2" onchange="savePhotoDesc(${i},this.value)" oninput="savePhotoDesc(${i},this.value)">${desc}</textarea>
-      </div>`;
+        <div class="photo-thumb-label">' + label + '</div>
+        <textarea class="photo-thumb-desc" data-idx="' + i + '" placeholder="Add description (e.g. Front elevation, Sprinkler riser, Electrical panel...)" rows="2" onchange="savePhotoDesc(' + i + ',this.value)" oninput="savePhotoDesc(' + i + ',this.value)">' + desc + '</textarea>
+      </div>';
     }).join('');
   }
 
@@ -2013,8 +2015,9 @@
       statusDiv.style.display = 'block';
       statusDiv.textContent = 'Downloading photos from submission\u2026';
       try {
-        const { data: sub, error } = await _supabase
+        var _r1 = await _supabase
           .from('scan_submissions').select('storage_paths, photos').eq('id', _reviewId).single();
+        var sub = _r1.data, error = _r1.error;
         if (error) throw error;
 
         // Prefer storage_paths (new format — paths only, no base64)
@@ -2271,7 +2274,7 @@
           }
         }
       }
-      lastResult = { ...finalResult, formData: data, photoCount: allPhotos.length, date: new Date().toISOString() };
+      lastResult = Object.assign({}, finalResult, { formData: data, photoCount: allPhotos.length, date: new Date().toISOString() });
       await delay(400);
       // Wait for profile search to complete before rendering (runs in parallel, so little extra delay)
       await _profilePromise;
@@ -3078,7 +3081,7 @@
 
       // Save or update scan_submissions
       if (_reviewId) {
-        const { error } = await _supabase.from('scan_submissions').update({
+        var _er2 = await _supabase.from('scan_submissions').update({
           status:         'analysed',
           scan_result:    JSON.stringify(lastResult),
           inspection_id:  inspId,
@@ -3087,9 +3090,10 @@
           storage_paths:  JSON.stringify(photoStoragePaths),
           doc_paths:      JSON.stringify(docStoragePaths),
         }).eq('id', _reviewId);
+        var error = _er2.error;
         if (error) throw error;
       } else {
-        const { error } = await _supabase.from('scan_submissions').insert({
+        var _er1 = await _supabase.from('scan_submissions').insert({
           inspection_id:  inspId,
           file_number:    inspId,
           insured_name:   d.insured   || 'Unknown',
@@ -3107,6 +3111,7 @@
           storage_paths:  JSON.stringify(photoStoragePaths),
           doc_paths:      JSON.stringify(docStoragePaths),
         });
+        var error = _er1.error;
         if (error) throw error;
       }
 
@@ -3256,7 +3261,7 @@
       btn.innerHTML = '<span class="spinner"></span><span>Saving submission\u2026</span>';
 
       // ── Step 2: Insert DB row with storage paths only (no base64 blob) ──
-      const { error } = await _supabase.from('scan_submissions').insert({
+      var _er0 = await _supabase.from('scan_submissions').insert({
         submit_code:    submitCode,
         insured_name:   data.insured   || '',
         address:        data.address   || '',
@@ -3265,17 +3270,17 @@
         occupancy:      data.occupancy || '',
         year_built:     data.yearBuilt || null,
         building_area:  data.area      || null,
-        form_data:      JSON.stringify({
-          ...data,
-          submitterName:    document.getElementById('s-submitter-name')?.value.trim() || '',
-          submitterCompany: document.getElementById('s-submitter-company')?.value.trim() || '',
-        }),
+        form_data:      JSON.stringify(Object.assign({}, data, {
+          submitterName:    (document.getElementById('s-submitter-name') ? document.getElementById('s-submitter-name').value.trim() : '') || '',
+          submitterCompany: (document.getElementById('s-submitter-company') ? document.getElementById('s-submitter-company').value.trim() : '') || '',
+        })),
         photo_count:    allPhotos.length,
         photos:         JSON.stringify(photoMeta),   // paths only — no base64
         storage_paths:  JSON.stringify(storagePaths),
         submitted_at:   new Date().toISOString(),
         status:         'pending',
       });
+        var error = _er0.error;
 
       if (error) console.warn('DB insert error:', error.message);
       showPublicSuccess();
