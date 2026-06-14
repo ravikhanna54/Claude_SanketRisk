@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 250 — 2026-06-14 -->
+<!-- SanketRisk SCAN ONE — Deploy 251 — 2026-06-14 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -251,7 +251,7 @@
     </div>
   </div>
   <div class="nav-right">
-    <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:rgba(255,255,255,.35);margin-right:8px;">v250</span>
+    <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:rgba(255,255,255,.35);margin-right:8px;">v251</span>
     <a href="/dashboard.html" class="btn-nav">&#x2190; Dashboard</a>
     <a href="/app.html" class="btn-nav">Inspection Form</a>
   </div>
@@ -2558,7 +2558,13 @@
       }
       photoSection.style.display = 'block';
     } else if (photoSection) {
-      photoSection.style.display = 'none';
+      // No local photos — show section anyway if storage paths exist (recalled report)
+      if (_storagePaths && _storagePaths.length > 0) {
+        photoSection.style.display = 'block';
+        setTimeout(function() { renderStoragePhotosIntoGrid(_storagePaths); }, 100);
+      } else {
+        photoSection.style.display = 'none';
+      }
     }
 
     // ── Additional Supporting Documents section ──
@@ -2567,6 +2573,12 @@
       var existingDocSec = document.getElementById('res-support-docs-section');
       if (existingDocSec) existingDocSec.remove();
       var docsToShow = uploadedDocs && uploadedDocs.length ? uploadedDocs : [];
+      // In recall mode uploadedDocs is empty — rebuild from form_data.additionalDocs
+      if (!docsToShow.length && lastResult && lastResult.formData && lastResult.formData.additionalDocs) {
+        docsToShow = lastResult.formData.additionalDocs.map(function(d) {
+          return { name: d.name, file: { size: 0 }, dataUrl: '', _storagePath: d.storagePath || '' };
+        });
+      }
       if (!docsToShow.length) return;
       var docSec = document.createElement('div');
       docSec.id = 'res-support-docs-section';
@@ -3063,14 +3075,28 @@
       const d   = lastResult.formData || {};
       const now = new Date();
 
-      // Get next SRC2 sequence number
-      const seqRes = await fetch(
-        'https://lzsfmqbhrpsmnivxhggi.supabase.co/rest/v1/rpc/next_src2',
-        { method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' }, body: '{}' }
-      );
-      let seqNum = 1001;
-      if (seqRes.ok) { try { seqNum = await seqRes.json(); } catch(e) {} }
-      const inspId = 'SRC2' + String(seqNum).padStart(6, '0');
+      // Get file number — reuse existing if updating, get new one only for inserts
+      var inspId = null;
+      if (_reviewId) {
+        // Keep the existing inspection_id — fetch it from the DB
+        try {
+          var idRes = await _supabase.from('scan_submissions')
+            .select('inspection_id').eq('id', _reviewId).single();
+          if (idRes.data && idRes.data.inspection_id) {
+            inspId = idRes.data.inspection_id;
+          }
+        } catch(e) {}
+      }
+      if (!inspId) {
+        // New record — get next sequence number
+        var seqRes = await fetch(
+          'https://lzsfmqbhrpsmnivxhggi.supabase.co/rest/v1/rpc/next_src2',
+          { method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' }, body: '{}' }
+        );
+        var seqNum = 1001;
+        if (seqRes.ok) { try { seqNum = await seqRes.json(); } catch(e) {} }
+        inspId = 'SRC2' + String(seqNum).padStart(6, '0');
+      }
 
       // Build complete form_data payload — everything the inspector entered
       const formDataPayload = {
