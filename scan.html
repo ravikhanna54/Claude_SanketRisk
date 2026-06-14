@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 249 — 2026-06-14 -->
+<!-- SanketRisk SCAN ONE — Deploy 250 — 2026-06-14 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -251,7 +251,7 @@
     </div>
   </div>
   <div class="nav-right">
-    <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:rgba(255,255,255,.35);margin-right:8px;">v249</span>
+    <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:rgba(255,255,255,.35);margin-right:8px;">v250</span>
     <a href="/dashboard.html" class="btn-nav">&#x2190; Dashboard</a>
     <a href="/app.html" class="btn-nav">Inspection Form</a>
   </div>
@@ -786,7 +786,7 @@
       <div class="result-section" id="res-photo-section" style="display:none;">
         <div class="result-section-header"><div class="result-section-icon">&#x1F4F8;</div><div class="result-section-title">Submitted Photographs</div></div>
         <div class="result-section-body">
-          <div id="res-photo-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:8px;"></div>
+          <div id="res-photo-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:8px;"></div>
         </div>
       </div>
 
@@ -2587,13 +2587,26 @@
       }
       var docList = document.getElementById('res-doc-list');
       docsToShow.forEach(function(doc) {
-        var row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;';
+        // Header row with filename
+        var hdr = document.createElement('div');
+        hdr.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 14px;background:#f0f4f8;border:1px solid var(--border);border-radius:8px 8px 0 0;';
         var sizeMB = doc.file && doc.file.size ? (doc.file.size / 1024 / 1024).toFixed(1) + ' MB' : '';
-        row.innerHTML = '<span style="font-size:22px;">&#x1F4C4;</span>' +
+        hdr.innerHTML = '<span style="font-size:20px;">&#x1F4C4;</span>' +
           '<div><div style="font-size:13px;font-weight:700;color:var(--navy);">' + (doc.name || 'Document') + '</div>' +
-          (sizeMB ? '<div style="font-size:11px;color:var(--slate);">' + sizeMB + ' &#x2014; passed to AI as context</div>' : '') + '</div>';
-        docList.appendChild(row);
+          (sizeMB ? '<div style="font-size:11px;color:var(--slate);">' + sizeMB + ' — passed to AI as context</div>' : '') + '</div>';
+        docList.appendChild(hdr);
+        // PDF page renderer
+        if (doc.dataUrl && doc.dataUrl.length > 50) {
+          var pdfGrid = document.createElement('div');
+          pdfGrid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px;background:#f8f9fb;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;margin-bottom:12px;';
+          docList.appendChild(pdfGrid);
+          extractPhotosFromPdf(doc.dataUrl, pdfGrid);
+        } else {
+          var noPreview = document.createElement('div');
+          noPreview.style.cssText = 'padding:10px 14px;background:#f8f9fb;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;font-size:11px;color:var(--slate);margin-bottom:12px;';
+          noPreview.textContent = 'Document passed to AI as context — preview not available in view mode.';
+          docList.appendChild(noPreview);
+        }
       });
     })();
 
@@ -3004,14 +3017,34 @@
     });
     // Support docs — name cards
     if (docPaths.length) {
-      var sec=document.createElement('div');
-      sec.style.cssText='grid-column:1/-1;margin-top:16px;';
-      sec.innerHTML='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);">Additional Supporting Documents</div>';
-      docPaths.forEach(function(path){
-        var dc=document.createElement('div');
-        dc.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:12px;';
-        dc.innerHTML='<span style="font-size:18px;">&#x1F4C4;</span><span style="font-weight:600;color:var(--navy);">'+path.split('/').pop()+'</span>';
-        sec.appendChild(dc);
+      var sec = document.createElement('div');
+      sec.style.cssText = 'grid-column:1/-1;margin-top:16px;';
+      var secHdr = document.createElement('div');
+      secHdr.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);margin-bottom:12px;padding-bottom:4px;border-bottom:1px solid var(--border);';
+      secHdr.textContent = 'Additional Supporting Documents';
+      sec.appendChild(secHdr);
+      docPaths.forEach(function(path) {
+        var fname = path.split('/').pop();
+        // File header
+        var dHdr = document.createElement('div');
+        dHdr.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0f4f8;border:1px solid var(--border);border-radius:8px 8px 0 0;';
+        dHdr.innerHTML = '<span style="font-size:18px;">&#x1F4C4;</span><span style="font-weight:600;color:var(--navy);font-size:12px;">' + fname + '</span>';
+        sec.appendChild(dHdr);
+        // PDF grid
+        var dGrid = document.createElement('div');
+        dGrid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px;background:#f8f9fb;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;margin-bottom:12px;';
+        sec.appendChild(dGrid);
+        // Fetch and render
+        fetch(SUPABASE_URL + '/storage/v1/object/scan-uploads/' + path,
+          { headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY } })
+          .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+          .then(function(buf) {
+            var bytes = new Uint8Array(buf), bin = '';
+            bytes.forEach(function(b) { bin += String.fromCharCode(b); });
+            extractPhotosFromPdf('data:application/pdf;base64,' + btoa(bin), dGrid);
+          }).catch(function(e) {
+            dGrid.innerHTML = '<div style="grid-column:1/-1;padding:8px;font-size:11px;color:#888;">Could not load: ' + e.message + '</div>';
+          });
       });
       photoGrid.appendChild(sec);
     }
