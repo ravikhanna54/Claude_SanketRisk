@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 238 — 2026-06-14 -->
+<!-- SanketRisk SCAN ONE — Deploy 239 — 2026-06-14 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sanket SCAN ONE [237] — AI Photo Assessment v4</title>
+  <title>Sanket SCAN ONE [239] — AI Photo Assessment v4</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -222,8 +222,11 @@
     #topnav, #main-hero, #mode-bar, .scan-form-section, #progress-wrap,
     .btn-report, .result-actions { display: none !important; }
     #res-brand-header { display: block !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #res-cover-photo-wrap { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     #res-profile-section { display: block !important; }
     #results-wrap { display: block !important; }
+    /* Report body starts on a fresh page after the cover header */
+    .result-header { page-break-before: always; }
     #structured-cope-panel { display: block !important; page-break-inside: avoid; }
     .result-section { display: block !important; page-break-inside: avoid; }
     body { background: #fff; }
@@ -2461,13 +2464,46 @@
       if (seqRes.ok) { try { seqNum = await seqRes.json(); } catch(e) {} }
       const inspId = 'SRC2' + String(seqNum).padStart(6, '0');
 
+      // Build complete form_data payload — everything the inspector entered
+      const formDataPayload = {
+        insured:          d.insured          || '',
+        address:          d.address          || '',
+        city:             d.city             || '',
+        province:         d.province         || '',
+        occupancy:        d.occupancy        || '',
+        tenure:           d.tenure           || '',
+        yearBuilt:        d.yearBuilt        || '',
+        storeys:          d.storeys          || '',
+        area:             d.area             || '',
+        construction:     d.construction     || '',
+        fireProtection:   d.fireProtection   || '',
+        context:          d.context          || '',
+        submitterName:    d.submitterName    || '',
+        submitterCompany: d.submitterCompany || '',
+        losses:           d.losses           || '',
+        lossCause:        d.lossCause        || '',
+        lossAmt:          d.lossAmt          || '',
+        upgrades:         d.upgrades         || {},
+        hazards:          d.hazards          || [],
+        additionalDocs:   uploadedDocs.map(function(doc) {
+                            return { name: doc.name, storagePath: doc._storagePath || '' };
+                          }),
+      };
+
+      // Separate photo paths from doc paths for clarity
+      var photoStoragePaths = (_storagePaths || []).filter(function(p) { return !p.includes('/doc-'); });
+      var docStoragePaths   = (_storagePaths || []).filter(function(p) { return p.includes('/doc-'); });
+
       // Save or update scan_submissions
       if (_reviewId) {
         const { error } = await _supabase.from('scan_submissions').update({
-          status:        'analysed',
-          scan_result:   JSON.stringify(lastResult),
-          inspection_id: inspId,
-          file_number:   inspId,
+          status:         'analysed',
+          scan_result:    JSON.stringify(lastResult),
+          inspection_id:  inspId,
+          file_number:    inspId,
+          form_data:      JSON.stringify(formDataPayload),
+          storage_paths:  JSON.stringify(photoStoragePaths),
+          doc_paths:      JSON.stringify(docStoragePaths),
         }).eq('id', _reviewId);
         if (error) throw error;
       } else {
@@ -2484,8 +2520,10 @@
           photo_count:    lastResult.photoCount || 0,
           status:         'analysed',
           scan_result:    JSON.stringify(lastResult),
+          form_data:      JSON.stringify(formDataPayload),
           submitted_at:   now.toISOString(),
-          storage_paths:  JSON.stringify(_storagePaths || []),
+          storage_paths:  JSON.stringify(photoStoragePaths),
+          doc_paths:      JSON.stringify(docStoragePaths),
         });
         if (error) throw error;
       }
