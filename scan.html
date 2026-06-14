@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 237 — 2026-06-03 -->
+<!-- SanketRisk SCAN ONE — Deploy 238 — 2026-06-14 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -221,7 +221,7 @@
   @media print {
     #topnav, #main-hero, #mode-bar, .scan-form-section, #progress-wrap,
     .btn-report, .result-actions { display: none !important; }
-    #res-brand-header { display: flex !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #res-brand-header { display: block !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     #res-profile-section { display: block !important; }
     #results-wrap { display: block !important; }
     #structured-cope-panel { display: block !important; page-break-inside: avoid; }
@@ -571,6 +571,32 @@
       </div>
     </div>
 
+    <!-- SECTION 5b: Additional Documents -->
+    <div class="card">
+      <div class="card-header scan-accent">
+        <div class="card-header-icon">&#x1F4CE;</div>
+        <div>
+          <div class="card-header-title">Additional Documents <span style="font-size:11px;font-weight:400;opacity:.7;font-family:'IBM Plex Mono',monospace;">(Optional)</span></div>
+          <div class="card-header-sub">Attach supporting documents for AI context — loss runs, prior inspection reports, floor plans, certificates</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="callout callout-tip" style="margin-bottom:16px;">
+          <strong>What to upload here:</strong> Prior inspection or engineering reports, loss run summaries, floor plans or site plans, sprinkler certificates, certificates of insurance, or any other relevant documents. These are passed to the AI as background context &mdash; not treated as photographs.
+        </div>
+        <div class="photo-zone" id="doc-zone" style="border-color:var(--slate);background:#f8f9fb;cursor:pointer;position:relative;">
+          <input type="file" id="doc-input" accept="application/pdf,.pdf" multiple onchange="handleDocUpload(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
+          <div class="photo-zone-icon">&#x1F4C2;</div>
+          <div class="photo-zone-title" style="color:var(--slate);">Click or drag supporting documents here</div>
+          <div class="photo-zone-sub">PDF documents accepted &mdash; maximum 5 files.<br>These are provided to the AI as reference context alongside your photos.</div>
+        </div>
+        <div id="doc-preview-wrap" style="display:none;margin-top:12px;">
+          <div id="doc-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+          <div id="doc-count-badge" class="photo-count-badge" style="background:var(--slate);margin-top:8px;"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ANALYSE BUTTON -->
     <!-- Step 1: Upload -->
     <button class="btn-analyse" id="btn-upload" onclick="uploadPhotos()" style="background:linear-gradient(135deg,#065f73,#0891b2);margin-bottom:10px;">
@@ -626,19 +652,28 @@
     <div class="results-wrap" id="results-wrap">
 
       <!-- SanketRisk ONE Brand Header -->
-      <div id="res-brand-header" style="background:var(--navy);border-radius:12px 12px 0 0;padding:18px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold);">
-        <div style="display:flex;align-items:center;gap:14px;">
-          <!-- Logo placeholder — replace src with actual logo file -->
-          <div id="res-logo-placeholder" style="width:42px;height:42px;background:var(--scan);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">&#x1F3E2;</div>
-          <div>
-            <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#fff;letter-spacing:.01em;">SanketRisk <span style="color:var(--scan-light);">ONE</span></div>
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--gold-light);margin-top:1px;">AI-Powered Property Risk Intelligence</div>
-          </div>
+      <!-- SanketRisk ONE Brand Header -->
+      <div id="res-brand-header" style="background:var(--navy);border-radius:12px 12px 0 0;overflow:hidden;border-bottom:3px solid var(--gold);">
+        <!-- Cover photo strip — shown when a front photo is available -->
+        <div id="res-cover-photo-wrap" style="display:none;position:relative;width:100%;height:200px;overflow:hidden;">
+          <img id="res-cover-photo" src="" alt="Property front elevation" style="width:100%;height:100%;object-fit:cover;display:block;opacity:.8;">
+          <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(13,27,42,.15) 0%,rgba(13,27,42,.65) 100%);"></div>
+          <div style="position:absolute;bottom:10px;left:16px;font-size:10px;color:rgba(255,255,255,.65);font-family:'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;">Property Photo</div>
         </div>
-        <div style="text-align:right;">
-          <div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;">Prepared by</div>
-          <div style="font-size:13px;font-weight:600;color:#fff;" id="res-prepared-by">Sanket Risk Consultants</div>
-          <div style="font-size:11px;color:var(--gold-light);" id="res-prepared-date"></div>
+        <!-- Header bar -->
+        <div style="padding:18px 28px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div id="res-logo-placeholder" style="width:42px;height:42px;background:var(--scan);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">&#x1F3E2;</div>
+            <div>
+              <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#fff;letter-spacing:.01em;">SanketRisk <span style="color:var(--scan-light);">ONE</span></div>
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--gold-light);margin-top:1px;">AI-Powered Property Risk Intelligence</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;">Prepared by</div>
+            <div style="font-size:13px;font-weight:600;color:#fff;" id="res-prepared-by">Sanket Risk Consultants</div>
+            <div style="font-size:11px;color:var(--gold-light);" id="res-prepared-date"></div>
+          </div>
         </div>
       </div>
 
@@ -832,6 +867,7 @@
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let uploadedPhotos = []; // Array of {file, dataUrl}
+  let uploadedDocs    = []; // Array of {file, dataUrl, name} — additional support documents
   let currentUser = null;
   let lastResult = null;
 
@@ -1084,6 +1120,53 @@
 
   function savePhotoDesc(idx, val) {
     if (uploadedPhotos[idx]) uploadedPhotos[idx].description = val.trim();
+  }
+
+  // ── ADDITIONAL DOCUMENT UPLOAD ──
+  function handleDocUpload(input) {
+    const files = Array.from(input.files);
+    if (!files.length) return;
+    const MAX_DOCS = 5;
+    if (uploadedDocs.length + files.length > MAX_DOCS) {
+      showToast('\u26A0 Maximum 5 additional documents allowed.');
+    }
+    const toAdd = files.slice(0, MAX_DOCS - uploadedDocs.length);
+    let loaded = 0;
+    toAdd.forEach(function(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        uploadedDocs.push({ file: file, dataUrl: e.target.result, name: file.name });
+        loaded++;
+        if (loaded === toAdd.length) renderDocPreview();
+      };
+      reader.readAsDataURL(file);
+    });
+    input.value = '';
+  }
+
+  function renderDocPreview() {
+    const wrap  = document.getElementById('doc-preview-wrap');
+    const list  = document.getElementById('doc-list');
+    const badge = document.getElementById('doc-count-badge');
+    if (!uploadedDocs.length) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    badge.textContent = uploadedDocs.length + ' document' + (uploadedDocs.length !== 1 ? 's' : '') + ' ready for AI context';
+    list.innerHTML = uploadedDocs.map(function(d, i) {
+      var sizeMB = (d.file.size / 1024 / 1024).toFixed(1);
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;font-size:13px;">' +
+        '<span style="font-size:20px;">&#x1F4C4;</span>' +
+        '<div style="flex:1;">' +
+          '<div style="font-weight:600;color:var(--navy);">' + d.name + '</div>' +
+          '<div style="font-size:11px;color:var(--slate);">' + sizeMB + ' MB &mdash; will be passed to AI as context</div>' +
+        '</div>' +
+        '<button onclick="removeDoc(' + i + ')" style="background:none;border:none;color:var(--slate);cursor:pointer;font-size:16px;padding:0 4px;" title="Remove">&#x2715;</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function removeDoc(idx) {
+    uploadedDocs.splice(idx, 1);
+    renderDocPreview();
   }
 
   function toggleSelectAllPhotos(checked) {
@@ -1343,7 +1426,8 @@
     const upgStr = 'Roof:' + data.upgrades.roof + ' Elec:' + data.upgrades.elec + ' Plmb:' + data.upgrades.plmb + ' HVAC:' + data.upgrades.hvac + ' Spk:' + data.upgrades.spk + ' Env:' + data.upgrades.env;
     const imgCt = uploadedPhotos.filter(x=>x.type!=='pdf').length;
     const pdfCt = uploadedPhotos.filter(x=>x.type==='pdf').length;
-    const attachDesc = [imgCt ? imgCt+' photos' : '', pdfCt ? pdfCt+' PDF' : ''].filter(Boolean).join(' + ');
+    const docCt = uploadedDocs.length;
+    const attachDesc = [imgCt ? imgCt+' photos' : '', pdfCt ? pdfCt+' PDF' : '', docCt ? docCt+' supporting doc'+(docCt!==1?'s':'') : ''].filter(Boolean).join(' + ');
     // Build photo index with descriptions for AI context
     var checkedForPrompt = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
     var photoIndex = (checkedForPrompt.length > 0 ? checkedForPrompt : uploadedPhotos.map(function(_,i){ return i; }))
@@ -1355,6 +1439,9 @@
       }).join(' | ');
 
     // Compact property block — every token saved = more room for AI response
+    const docContextNote = docCt > 0
+      ? 'Supporting documents included: ' + uploadedDocs.map(function(d){return d.name;}).join(', ') + '. These documents have been passed to you alongside the photographs as additional reference context. Where relevant (e.g. prior inspection reports, loss runs, sprinkler certificates) incorporate findings from these documents into your assessment.\n'
+      : '';
     return 'PROPERTY: ' + (data.insured||'Unknown') + ' | ' + (data.address||'') + ', ' + (data.city||'') + ' ' + (data.province||'') + '\n' +
       'Occupancy:' + (data.occupancy||'?') + ' | Tenure:' + (data.tenure||'?') + ' | Age:' + age + ' | Storeys:' + (data.storeys||'?') + ' | Area:' + (data.area ? data.area+'sqft' : '?') + '\n' +
       'Construction:' + (data.construction||'unknown') + ' | Fire protection:' + (data.fireProtection||'?') + '\n' +
@@ -1363,6 +1450,7 @@
       'Loss history: ' + (data.losses||'none') + (data.lossCause ? ' cause:'+data.lossCause : '') + (data.lossAmt ? ' $'+data.lossAmt : '') + '\n' +
       'Context: ' + (data.context||'none') + '\n' +
       'Files: ' + attachDesc + '\n' +
+      (docContextNote ? docContextNote : '') +
       (photoIndex ? 'Photo index: ' + photoIndex + '\n' : '') +
       '\n' +
       getFormatInstruction() + getDynamicPromptAdditions(data) + '\n\n' +
@@ -1837,6 +1925,17 @@
       }
       _sessionId = sessionId;
       _storagePaths = paths;
+      // Also upload additional documents to storage
+      for (let di = 0; di < uploadedDocs.length; di++) {
+        statusDiv.textContent = 'Uploading document ' + (di+1) + ' of ' + uploadedDocs.length + '…';
+        const docPath = await uploadToStorage(
+          { file: uploadedDocs[di].file, dataUrl: uploadedDocs[di].dataUrl, type: 'pdf' },
+          sessionId, 'doc-' + di
+        );
+        paths.push(docPath);
+        uploadedDocs[di]._storagePath = docPath;
+      }
+
       statusDiv.textContent = '✓ ' + paths.length + ' file' + (paths.length!==1?'s':'') + ' uploaded. Click Step 2 to generate the COPE assessment.';
       statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
       btn.disabled = false;
@@ -2057,7 +2156,21 @@
     document.getElementById('results-wrap').style.display  = 'block';
 
     const name = data.insured || data.address || 'Subject Property';
-    document.getElementById('res-title').textContent = name + ' \u2014 SCAN ONE Assessment';
+    document.getElementById('res-title').textContent = name + '\u2014 SCAN ONE Assessment';
+
+    // ── Cover Photo — use first image photo (skip PDFs) ──
+    (function() {
+      var coverWrap  = document.getElementById('res-cover-photo-wrap');
+      var coverImg   = document.getElementById('res-cover-photo');
+      if (!coverWrap || !coverImg) return;
+      var firstImage = uploadedPhotos.find(function(p) { return p.type !== 'pdf' && p.dataUrl; });
+      if (firstImage) {
+        coverImg.src = firstImage.dataUrl;
+        coverWrap.style.display = 'block';
+      } else {
+        coverWrap.style.display = 'none';
+      }
+    })();
     document.getElementById('res-sub').textContent   = 'Photo-Based Preliminary Assessment \u00B7 ' + new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'}) + ' \u00B7 ' + (data.photoCount || uploadedPhotos.length || 0) + ' photos analyzed';
 
     // Populate brand header date and submitter
@@ -2386,11 +2499,14 @@
   // ── RESET ──
   function resetForm() {
     uploadedPhotos = [];
+    uploadedDocs   = [];
     lastResult     = null;
     document.getElementById('results-wrap').style.display  = 'none';
     document.getElementById('progress-wrap').style.display = 'none';
     document.getElementById('photo-preview-wrap').style.display = 'none';
     document.getElementById('photo-preview-grid').innerHTML = '';
+    var docWrap = document.getElementById('doc-preview-wrap');
+    if (docWrap) docWrap.style.display = 'none';
     window.scrollTo({ top: 0, behavior: 'smooth' });
     showToast('Form reset \u2014 ready for new assessment');
   }
