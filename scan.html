@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 254 — 2026-06-15 -->
+<!-- SanketRisk SCAN ONE — Deploy 255 — 2026-06-15 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2658,6 +2658,30 @@
   // Renders each page at high scale, detects non-white photo regions, crops and
   // inserts each photo as an individual card in the photo grid.
   // Handles Aviva-style 2x2 grid layout AND any other multi-photo-per-page PDFs.
+
+  // Buffer version — accepts ArrayBuffer directly (avoids atob limit on mobile)
+  function extractPhotosFromPdfBuffer(buf, targetGrid) {
+    if (typeof pdfjsLib === 'undefined') return;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    var photoCounter = 0;
+    pdfjsLib.getDocument({ data: buf }).promise.then(function(pdDoc) {
+      var pagePromises = [];
+      for (var pg = 1; pg <= pdDoc.numPages; pg++) pagePromises.push(pdDoc.getPage(pg));
+      return Promise.all(pagePromises);
+    }).then(function(pages) {
+      return pages.reduce(function(chain, page) {
+        return chain.then(function() {
+          return extractPhotosFromPage(page, targetGrid, function(n) { photoCounter = n; return photoCounter; }, photoCounter);
+        }).then(function(count) { photoCounter = count; });
+      }, Promise.resolve());
+    }).catch(function(e) {
+      var errDiv = document.createElement('div');
+      errDiv.style.cssText = 'grid-column:1/-1;padding:8px;font-size:11px;color:#888;';
+      errDiv.textContent = 'PDF extraction error: ' + e.message;
+      targetGrid.appendChild(errDiv);
+    });
+  }
+
   function extractPhotosFromPdf(dataUrl, targetGrid) {
     if (typeof pdfjsLib === 'undefined') return;
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -3063,15 +3087,13 @@
           photoGrid.appendChild(wrap);
         }).catch(function(){});
     });
-    // PDFs — extract individual photos
+    // PDFs — extract individual photos (pass ArrayBuffer directly to PDF.js — avoids atob limit)
     pdfPaths.forEach(function(path) {
       fetch(SUPABASE_URL+'/storage/v1/object/scan-uploads/'+path,
         {headers:{'Authorization':'Bearer '+SUPABASE_KEY,'apikey':SUPABASE_KEY}})
         .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer();})
         .then(function(buf){
-          var bytes=new Uint8Array(buf), bin='';
-          bytes.forEach(function(b){bin+=String.fromCharCode(b);});
-          extractPhotosFromPdf('data:application/pdf;base64,'+btoa(bin), photoGrid);
+          extractPhotosFromPdfBuffer(buf, photoGrid);
         }).catch(function(e){
           var d=document.createElement('div');
           d.style.cssText='grid-column:1/-1;padding:8px;font-size:11px;color:#888;';
@@ -3103,9 +3125,7 @@
           { headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY } })
           .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
           .then(function(buf) {
-            var bytes = new Uint8Array(buf), bin = '';
-            bytes.forEach(function(b) { bin += String.fromCharCode(b); });
-            extractPhotosFromPdf('data:application/pdf;base64,' + btoa(bin), dGrid);
+            extractPhotosFromPdfBuffer(buf, dGrid);
           }).catch(function(e) {
             dGrid.innerHTML = '<div style="grid-column:1/-1;padding:8px;font-size:11px;color:#888;">Could not load: ' + e.message + '</div>';
           });
