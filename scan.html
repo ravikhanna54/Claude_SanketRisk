@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 262 — 2026-06-15 -->
+<!-- SanketRisk SCAN ONE — Deploy 263 — 2026-06-15 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -220,7 +220,7 @@
     }
   @media print {
     #topnav, #main-hero, #mode-bar, .scan-form-section, #progress-wrap,
-    .btn-report, .result-actions { display: none !important; }
+    .btn-report, .result-actions, #view-report-banner, #report-only-bar { display: none !important; }
     body { background: #fff; }
     .results-container { box-shadow: none; border: none; }
 
@@ -929,14 +929,19 @@
 
   // ── AUTH & MODE DETECTION ──
   const urlParams    = new URLSearchParams(window.location.search);
-  const submitCode   = urlParams.get('submit');
-  const reviewId     = urlParams.get('review');
-  const isPublicMode = !!submitCode;
+  const submitCode    = urlParams.get('submit');
+  const reviewId      = urlParams.get('review');
+  const isPublicMode  = !!submitCode;
+  const isReportOnly  = urlParams.get('report_only') === '1';  // clean read-only report for customer
 
   (async () => {
     if (isPublicMode) {
       activatePublicMode();
       return;
+    }
+    if (isReportOnly) {
+      activateReportOnlyMode();
+      // Fall through to auth + view_report loading below
     }
     // Inspector mode — require login
     var _authRes = await _supabase.auth.getSession();
@@ -1039,6 +1044,33 @@
 
     // Mark submission as being reviewed
     _supabase.from('scan_submissions').update({ status: 'reviewing' }).eq('id', reviewId).then(() => {});
+  }
+
+  function activateReportOnlyMode() {
+    document.title = 'SCAN ONE Assessment Report — SanketRisk ONE';
+
+    // Hide all form/inspector elements — show only the report
+    ['topnav', 'main-hero', 'mode-bar', 'btn-analyse', 'progress-wrap'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    document.querySelectorAll('.scan-form-section, .btn-report, .result-actions').forEach(function(el) {
+      el.style.display = 'none';
+    });
+
+    // Show results wrap immediately (report will populate it)
+    var rw = document.getElementById('results-wrap');
+    if (rw) rw.style.display = 'block';
+
+    // Inject a minimal clean header bar with Back + Download buttons
+    var bar = document.createElement('div');
+    bar.id = 'report-only-bar';
+    bar.style.cssText = 'background:#0d1b2a;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:100;';
+    bar.innerHTML =
+      '<a href="/dashboard.html" style="color:rgba(255,255,255,.7);font-size:13px;text-decoration:none;font-family:IBM Plex Sans,sans-serif;">&#x2190; Dashboard</a>' +
+      '<div style="font-size:12px;font-weight:600;color:var(--gold,#b8860b);letter-spacing:.05em;font-family:IBM Plex Sans,sans-serif;">SCAN ONE ASSESSMENT REPORT</div>' +
+      '<button onclick="window.print()" style="background:#0891b2;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;">&#x1F5A8; Download PDF</button>';
+    document.body.insertBefore(bar, document.body.firstChild);
   }
 
   function activatePublicMode() {

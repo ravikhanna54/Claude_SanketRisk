@@ -610,10 +610,10 @@
               '<button class="btn-open" style="color:#c53030;border-color:#c53030;font-size:11px;display:block;width:100%;" data-del-id="' + r.id + '">🗑 Delete</button>' +
             '</td>';
 
-          // View Report — opens the formatted scan-report viewer
+          // View Report — opens scan.html in view_report mode (full report with photos)
           if (tr.querySelector('[data-view-id]')) {
             tr.querySelector('[data-view-id]').addEventListener('click', function() {
-              window.location.href = '/scan-report.html?id=' + r.id;
+              window.location.href = '/scan.html?report_only=1&view_report=' + r.id;
             });
           }
           // Open Submission — opens scan.html restoring ALL original form data + photos
