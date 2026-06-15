@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 259 — 2026-06-15 -->
+<!-- SanketRisk SCAN ONE — Deploy 260 — 2026-06-15 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -233,11 +233,14 @@
       page-break-after: always;
       break-before: page;
       break-after: page;
-      height: 267mm;           /* A4 page height minus margins — keeps everything on one page */
-      max-height: 267mm;
-      overflow: hidden;        /* prevent any content spilling to page 2 */
+      height: 100vh;
+      max-height: 100vh;
+      overflow: hidden;
       box-sizing: border-box;
+      padding: 40px 44px !important;  /* tighter padding than screen */
     }
+    /* Constrain cover photo height so meta footer fits on same page */
+    #scan-cover-page img { max-height: 220px !important; }
 
     /* ── Brand header + result header = Page 2, kept together ── */
     #res-brand-header {
@@ -2383,8 +2386,8 @@
         coverWrap.style.display = 'none';
       }
     })();
-    // Build cover page (print only)
-    buildCoverPage(data);
+    // Build cover page (print only) — pass file number so it shows immediately
+    buildCoverPage(data, _draftInspId || null);
 
     var _pc = (data.photoCount || uploadedPhotos.length || 0); document.getElementById('res-sub').textContent = 'Photo-Based Preliminary Assessment \u00B7 ' + new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'}) + ' \u00B7 ' + _pc + ' photo' + (_pc !== 1 ? 's' : '') + ' analyzed';
 
@@ -2619,10 +2622,15 @@
       }
       photoSection.style.display = 'block';
     } else if (photoSection) {
-      // No local photos — show section anyway if storage paths exist (recalled report)
+      // No local photos — show section only if storage paths exist
+      // Do NOT call renderStoragePhotosIntoGrid here when in recall mode (_reviewId set)
+      // because the recall path (checkViewReportMode) already calls it at 300ms
       if (_storagePaths && _storagePaths.length > 0) {
         photoSection.style.display = 'block';
-        setTimeout(function() { renderStoragePhotosIntoGrid(_storagePaths); }, 100);
+        if (!_reviewId) {
+          // Only call here for fresh analysis where recall path won't run
+          setTimeout(function() { renderStoragePhotosIntoGrid(_storagePaths); }, 100);
+        }
       } else {
         photoSection.style.display = 'none';
       }
@@ -2888,7 +2896,7 @@
       coverWrap.style.display = 'block';
       // Rebuild the cover page now that we have the first photo
       if (typeof lastResult !== 'undefined' && lastResult && lastResult.formData) {
-        buildCoverPage(lastResult.formData);
+        buildCoverPage(lastResult.formData, _draftInspId || null);
       }
     }
     var img = document.createElement('img');
@@ -2904,7 +2912,7 @@
   }
 
   // ── COVER PAGE ──
-  function buildCoverPage(data) {
+  function buildCoverPage(data, fileNum) {
     var existing = document.getElementById('scan-cover-page');
     if (existing) existing.remove();
 
@@ -2982,7 +2990,7 @@
     // Meta footer
     var metaWrap = document.createElement('div');
     metaWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:28px;margin-top:40px;';
-    var _coverFileNum = (typeof _draftInspId !== 'undefined' && _draftInspId) ? _draftInspId : '';
+    var _coverFileNum = fileNum || (typeof _draftInspId !== 'undefined' && _draftInspId) || '';
     var metaItems = [
       ['Assessment Date', new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'})],
       ['Prepared By',     (data.submitterName || 'Sanket Risk Consultants') + (data.submitterCompany ? ' — ' + data.submitterCompany : '')],
@@ -3119,7 +3127,7 @@
               coverImg.src = objUrl;
               coverWrap.style.display = 'block';
               if (typeof lastResult !== 'undefined' && lastResult && lastResult.formData) {
-                buildCoverPage(lastResult.formData);
+                buildCoverPage(lastResult.formData, _draftInspId || null);
               }
             }
           }
