@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 258 — 2026-06-15 -->
+<!-- SanketRisk SCAN ONE — Deploy 259 — 2026-06-15 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2403,15 +2403,8 @@
     // Populate property details strip in report header
     var strip = document.getElementById('res-property-strip');
     if (strip && data) {
-      // Get file number from DB record if available
-      var _fileNumDisplay = null;
-      if (typeof _draftInspId !== 'undefined' && _draftInspId) _fileNumDisplay = _draftInspId;
-      else if (typeof _reviewId !== 'undefined' && _reviewId) {
-        try {
-          var _fnRes = await _supabase.from('scan_submissions').select('inspection_id').eq('id', _reviewId).single();
-          if (_fnRes.data && _fnRes.data.inspection_id) _fileNumDisplay = _fnRes.data.inspection_id;
-        } catch(e) {}
-      }
+      // File number — already in memory from recall or draft-insert, no DB fetch needed
+      var _fileNumDisplay = (typeof _draftInspId !== 'undefined' && _draftInspId) ? _draftInspId : null;
       var stripFields = [
         ['File Number', _fileNumDisplay || null],
         ['Insured / Property', data.insured],
