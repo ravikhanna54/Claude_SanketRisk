@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 255 — 2026-06-15 -->
+<!-- SanketRisk SCAN ONE — Deploy 256 — 2026-06-15 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -221,20 +221,48 @@
   @media print {
     #topnav, #main-hero, #mode-bar, .scan-form-section, #progress-wrap,
     .btn-report, .result-actions { display: none !important; }
-    #res-brand-header { display: block !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    #res-cover-photo-wrap { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    #res-profile-section { display: block !important; }
-    #results-wrap { display: block !important; }
-    /* Cover page — shown only in print */
-    #scan-cover-page { display:flex !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    /* Report body starts on a fresh page after the cover */
-    .result-header { page-break-before: always; }
-    /* Supporting docs section */
-    #res-support-docs-section { display:block !important; page-break-inside:avoid; }
-    #structured-cope-panel { display: block !important; page-break-inside: avoid; }
-    .result-section { display: block !important; page-break-inside: avoid; }
     body { background: #fff; }
     .results-container { box-shadow: none; border: none; }
+
+    /* ── Cover page ── */
+    #scan-cover-page {
+      display: flex !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      page-break-before: always;  /* always start cover on its own page */
+      page-break-after: always;   /* always end cover with a page break */
+      break-before: page;
+      break-after: page;
+      min-height: 100vh;
+    }
+
+    /* ── Brand header + result header = Page 2, kept together ── */
+    #res-brand-header {
+      display: block !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      page-break-before: avoid;   /* don't break between cover-page and brand header */
+      break-before: avoid;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    #res-cover-photo-wrap {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .result-header {
+      page-break-before: avoid;   /* brand header and result-header stay on same page */
+      break-before: avoid;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* ── Sections ── */
+    #results-wrap { display: block !important; }
+    #res-profile-section { display: block !important; }
+    #res-support-docs-section { display: block !important; page-break-inside: avoid; break-inside: avoid; }
+    #structured-cope-panel { display: block !important; page-break-inside: avoid; break-inside: avoid; }
+    .result-section { display: block !important; page-break-inside: avoid; break-inside: avoid; }
   }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -2869,7 +2897,7 @@
 
     var cover = document.createElement('div');
     cover.id = 'scan-cover-page';
-    cover.style.cssText = 'display:none;width:100%;min-height:100vh;background:#0d1b2a;flex-direction:column;align-items:center;justify-content:center;padding:60px 48px;box-sizing:border-box;page-break-after:always;color:#fff;';
+    cover.style.cssText = 'display:none;width:100%;background:#0d1b2a;flex-direction:column;align-items:center;justify-content:center;padding:60px 48px;box-sizing:border-box;color:#fff;';
 
     // Logo strip
     var topStrip = document.createElement('div');
