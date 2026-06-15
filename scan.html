@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 257 — 2026-06-15 -->
+<!-- SanketRisk SCAN ONE — Deploy 258 — 2026-06-15 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -229,11 +229,14 @@
       display: flex !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
-      page-break-before: always;  /* always start cover on its own page */
-      page-break-after: always;   /* always end cover with a page break */
+      page-break-before: always;
+      page-break-after: always;
       break-before: page;
       break-after: page;
-      min-height: 100vh;
+      height: 267mm;           /* A4 page height minus margins — keeps everything on one page */
+      max-height: 267mm;
+      overflow: hidden;        /* prevent any content spilling to page 2 */
+      box-sizing: border-box;
     }
 
     /* ── Brand header + result header = Page 2, kept together ── */
@@ -263,6 +266,9 @@
     #res-support-docs-section { display: block !important; page-break-inside: avoid; break-inside: avoid; }
     #structured-cope-panel { display: block !important; page-break-inside: avoid; break-inside: avoid; }
     .result-section { display: block !important; page-break-inside: avoid; break-inside: avoid; }
+    /* Photo grid cards — never split a photo across pages */
+    #res-photo-grid > div { page-break-inside: avoid; break-inside: avoid; }
+    #res-photo-section { page-break-before: always; break-before: page; }
   }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -2397,7 +2403,17 @@
     // Populate property details strip in report header
     var strip = document.getElementById('res-property-strip');
     if (strip && data) {
+      // Get file number from DB record if available
+      var _fileNumDisplay = null;
+      if (typeof _draftInspId !== 'undefined' && _draftInspId) _fileNumDisplay = _draftInspId;
+      else if (typeof _reviewId !== 'undefined' && _reviewId) {
+        try {
+          var _fnRes = await _supabase.from('scan_submissions').select('inspection_id').eq('id', _reviewId).single();
+          if (_fnRes.data && _fnRes.data.inspection_id) _fileNumDisplay = _fnRes.data.inspection_id;
+        } catch(e) {}
+      }
       var stripFields = [
+        ['File Number', _fileNumDisplay || null],
         ['Insured / Property', data.insured],
         ['Address', data.address],
         ['City', data.city],
@@ -2889,7 +2905,7 @@
     cap.style.cssText = "padding:5px 7px;background:#f8f9fb;border-top:1px solid var(--border);font-size:10px;font-weight:700;color:var(--slate);font-family:'IBM Plex Mono',monospace;";
     cap.textContent = label + ' ' + num;
     var wrap = document.createElement('div');
-    wrap.style.cssText = 'border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f8f9fb;display:flex;flex-direction:column;';
+    wrap.style.cssText = 'border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f8f9fb;display:flex;flex-direction:column;page-break-inside:avoid;break-inside:avoid;';
     wrap.appendChild(img); wrap.appendChild(cap);
     grid.appendChild(wrap);
   }
@@ -2973,10 +2989,11 @@
     // Meta footer
     var metaWrap = document.createElement('div');
     metaWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:28px;margin-top:40px;';
+    var _coverFileNum = (typeof _draftInspId !== 'undefined' && _draftInspId) ? _draftInspId : '';
     var metaItems = [
       ['Assessment Date', new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'})],
       ['Prepared By',     (data.submitterName || 'Sanket Risk Consultants') + (data.submitterCompany ? ' — ' + data.submitterCompany : '')],
-      ['Assessment Type', 'Photo-Based Preliminary'],
+      ['File Number',     _coverFileNum || 'Pending'],
     ];
     metaItems.forEach(function(m) {
       var cell = document.createElement('div');
@@ -3114,7 +3131,7 @@
             }
           }
           var wrap = document.createElement('div');
-          wrap.style.cssText='border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f8f9fb;display:flex;flex-direction:column;';
+          wrap.style.cssText='border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f8f9fb;display:flex;flex-direction:column;page-break-inside:avoid;break-inside:avoid;';
           var img = document.createElement('img');
           img.src = objUrl;
           img.style.cssText='width:100%;aspect-ratio:4/3;object-fit:cover;display:block;';
