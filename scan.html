@@ -616,6 +616,7 @@
         <span>&#x1F4BE;</span><span id="btn-save-draft-text">Save Draft</span>
       </button>
       <div id="draft-status" style="font-size:11px;color:var(--slate);font-family:'IBM Plex Mono',monospace;font-style:italic;"></div>
+      <div id="draft-debug" style="font-size:10px;color:#c00;font-family:'IBM Plex Mono',monospace;margin-top:4px;word-break:break-all;"></div>
     </div>
 
     <!-- ANALYSE BUTTON -->
@@ -1592,6 +1593,4 @@
                 }
               });
             }
-            if (fd.hazards && fd.hazards.length) {
-              document.querySelectorAll('#hazard-checks .check-item').forEach(function(el) {
           
