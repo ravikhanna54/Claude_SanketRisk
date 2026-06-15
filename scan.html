@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 261 — 2026-06-15 -->
+<!-- SanketRisk SCAN ONE — Deploy 262 — 2026-06-15 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -233,29 +233,27 @@
       page-break-after: always;
       break-before: page;
       break-after: page;
-      height: 100vh;
-      max-height: 100vh;
+      height: 257mm;          /* A4 printable height — hard cap keeps everything on one page */
+      max-height: 257mm;
       overflow: hidden;
       box-sizing: border-box;
-      padding: 40px 44px !important;  /* tighter padding than screen */
+      padding: 36px 44px !important;
     }
-    /* Constrain cover photo height so meta footer fits on same page */
-    #scan-cover-page img { max-height: 220px !important; }
+    /* Cover photo: constrained so logo + text + meta footer all fit */
+    #scan-cover-page img { max-height: 190px !important; object-fit: cover !important; }
 
     /* ── Brand header + result header = Page 2, kept together ── */
     #res-brand-header {
       display: block !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
-      page-break-before: avoid;   /* don't break between cover-page and brand header */
+      page-break-before: avoid;
       break-before: avoid;
       page-break-inside: avoid;
       break-inside: avoid;
     }
-    #res-cover-photo-wrap {
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
+    /* Hide the photo strip in the brand header — already shown on the cover page */
+    #res-cover-photo-wrap { display: none !important; }
     .result-header {
       page-break-before: avoid;   /* brand header and result-header stay on same page */
       break-before: avoid;
