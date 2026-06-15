@@ -616,7 +616,6 @@
         <span>&#x1F4BE;</span><span id="btn-save-draft-text">Save Draft</span>
       </button>
       <div id="draft-status" style="font-size:11px;color:var(--slate);font-family:'IBM Plex Mono',monospace;font-style:italic;"></div>
-      <div id="draft-debug" style="font-size:10px;color:#c00;font-family:'IBM Plex Mono',monospace;margin-top:4px;word-break:break-all;"></div>
     </div>
 
     <!-- ANALYSE BUTTON -->
@@ -899,11 +898,6 @@
   const reviewId     = urlParams.get('review');
   const isPublicMode = !!submitCode;
 
-  // Declared here (top of script scope) so recall code at line ~928 can set them
-  var _reviewId    = null;  // set when opened from dashboard
-  var _draftId     = null;  // Supabase row ID of current draft
-  var _draftInspId = null;  // file number locked at first draft-insert, reused on final save
-
   (async () => {
     if (isPublicMode) {
       activatePublicMode();
@@ -923,16 +917,14 @@
         // and cause timeouts. We lazy-load them only when Step 1 upload runs.
         var _qr0 = await _supabase
           .from('scan_submissions')
-          .select('id, insured_name, address, city, province, occupancy, year_built, building_area, form_data, photo_count, submitted_at, status, inspection_id')
+          .select('id, insured_name, address, city, province, occupancy, year_built, building_area, form_data, photo_count, submitted_at, status')
           .eq('id', reviewId).single();
         var sub = _qr0.data, error = _qr0.error;
         if (error) throw error;
         sessionStorage.removeItem('scanSubmission');
         preloadSubmission(sub);
-        // Lock all three vars so saveDraft updates this row and never generates a new file number
-        _reviewId    = reviewId;
-        _draftId     = reviewId;
-        _draftInspId = sub.inspection_id || null;
+        // Store the reviewId so uploadPhotos() can lazy-fetch photos from the DB
+        _reviewId = reviewId;
       } catch(e) {
         console.warn('Could not load submission from Supabase:', e.message);
         showToast('\u26A0 Could not load submission: ' + e.message);
@@ -1551,11 +1543,9 @@
 
       // ── Wait for DOM then restore everything ──
       setTimeout(function() {
-        // 1. Set _reviewId/_draftId/_draftInspId so both saveToDashboard and
-        //    saveDraft update the existing row and never generate a new file number
-        _reviewId    = viewId;
-        _draftId     = viewId;
-        _draftInspId = sub.inspection_id || null;
+        // 1. Set _reviewId so saveToDashboard updates the row and
+        //    uploadPhotos() lazy-fetch is available for re-run
+        _reviewId = viewId;
 
         // 2. Restore ALL form fields directly — no preloadSubmission
         //    (that function uses reviewId URL param and calls status update)
@@ -1593,4 +1583,17 @@
                 }
               });
             }
-          
+            if (fd.hazards && fd.hazards.length) {
+              document.querySelectorAll('#hazard-checks .check-item').forEach(function(el) {
+                var key = (el.dataset && el.dataset.hazard) ? el.dataset.hazard : el.textContent.trim();
+                if (fd.hazards.indexOf(key) !== -1) el.classList.add('selected');
+              });
+            }
+          }
+        })();
+
+        // 3. Restore storage paths so Step 1 is skipped and re-analysis works
+        if (photoPaths.length || docPaths.length) {
+          var syntheticSessionId = photoPaths.length ? photoPaths[0].split('/')[0] : ('view-' + viewId);
+          _sessionId    = syntheticSessionId;
+          _storageP
