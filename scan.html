@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 252 — 2026-06-15 -->
+<!-- SanketRisk SCAN ONE — Deploy 253 — 2026-06-15 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1256,9 +1256,12 @@
           profileText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') +
           '</div><div style="font-size:10px;color:#aaa;margin-top:8px;font-style:italic;">'
           + 'Source: Public web search — ' + new Date().toLocaleDateString('en-CA') + '</div>';
+        // Save into lastResult so it persists to DB and can be restored on recall
+        if (lastResult) lastResult.insuredProfile = profileText;
       } else {
         profileBody.innerHTML = '<div style="font-size:12px;color:#888;font-style:italic;">No public information found for ' +
           insuredName.replace(/&/g,'&amp;') + '.</div>';
+        if (lastResult) lastResult.insuredProfile = '';
       }
     } catch(e) {
       console.warn('Profile search error:', e.message);
@@ -1624,6 +1627,23 @@
 
         // 5. Show saved report if available
         if (savedResult) {
+          // Restore insured profile if it was saved
+          if (savedResult.insuredProfile !== undefined) {
+            var profileSection = document.getElementById('res-profile-section');
+            var profileBody    = document.getElementById('res-profile-body');
+            if (profileSection && profileBody) {
+              profileSection.style.display = 'block';
+              if (savedResult.insuredProfile) {
+                profileBody.innerHTML = '<div style="font-size:13px;line-height:1.75;color:#2d3748;">' +
+                  savedResult.insuredProfile.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') +
+                  '</div><div style="font-size:10px;color:#aaa;margin-top:8px;font-style:italic;">Source: Public web search — saved report</div>';
+              } else {
+                var iName = (savedResult.formData && savedResult.formData.insured) || '';
+                profileBody.innerHTML = '<div style="font-size:12px;color:#888;font-style:italic;">No public information found for ' +
+                  iName.replace(/&/g,'&amp;') + '.</div>';
+              }
+            }
+          }
           var formData = savedResult.formData || fd || {};
           // Merge top-level sub fields into formData for renderResults
           if (!formData.insured && sub.insured_name) formData.insured = sub.insured_name;
