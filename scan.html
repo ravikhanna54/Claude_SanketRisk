@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 256 — 2026-06-15 -->
+<!-- SanketRisk SCAN ONE — Deploy 257 — 2026-06-15 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2601,7 +2601,7 @@
           pW.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:12px;background:#f8f9fb;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;margin-bottom:12px;';
           pdfSec.appendChild(pW);
           if (p.dataUrl && typeof pdfjsLib !== 'undefined') {
-            extractPhotosFromPdf(p.dataUrl, photoGrid);
+            extractPhotosFromPdf(p.dataUrl, pW);
           } else if (p.dataUrl) {
             pW.innerHTML = '<div style="padding:8px;font-size:11px;color:#888;text-align:center;">PDF.js not loaded — cannot preview.</div>';
           }
@@ -2871,12 +2871,16 @@
 
   function appendPhotoCard(canvas, label, grid, num) {
     var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-    // Set cover photo from very first extracted photo if not already set
+    // Set cover photo from very first extracted photo if not already set, then rebuild cover page
     var coverWrap = document.getElementById('res-cover-photo-wrap');
     var coverImg  = document.getElementById('res-cover-photo');
     if (coverWrap && coverImg && (!coverImg.src || coverImg.src.length < 10 || coverImg.src === window.location.href)) {
       coverImg.src = dataUrl;
       coverWrap.style.display = 'block';
+      // Rebuild the cover page now that we have the first photo
+      if (typeof lastResult !== 'undefined' && lastResult && lastResult.formData) {
+        buildCoverPage(lastResult.formData);
+      }
     }
     var img = document.createElement('img');
     img.src = dataUrl;
@@ -2968,7 +2972,7 @@
 
     // Meta footer
     var metaWrap = document.createElement('div');
-    metaWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:28px;margin-top:auto;';
+    metaWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:28px;margin-top:40px;';
     var metaItems = [
       ['Assessment Date', new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'})],
       ['Prepared By',     (data.submitterName || 'Sanket Risk Consultants') + (data.submitterCompany ? ' — ' + data.submitterCompany : '')],
@@ -3096,12 +3100,18 @@
         .then(function(blob){
           if (!blob) return;
           var objUrl = URL.createObjectURL(blob);
-          // Set cover photo from first image
+          // Set cover photo from first image and rebuild cover page
           if (!coverSet) {
             coverSet = true;
             var coverWrap = document.getElementById('res-cover-photo-wrap');
             var coverImg  = document.getElementById('res-cover-photo');
-            if (coverWrap && coverImg) { coverImg.src = objUrl; coverWrap.style.display = 'block'; }
+            if (coverWrap && coverImg) {
+              coverImg.src = objUrl;
+              coverWrap.style.display = 'block';
+              if (typeof lastResult !== 'undefined' && lastResult && lastResult.formData) {
+                buildCoverPage(lastResult.formData);
+              }
+            }
           }
           var wrap = document.createElement('div');
           wrap.style.cssText='border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f8f9fb;display:flex;flex-direction:column;';
