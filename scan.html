@@ -1543,9 +1543,11 @@
 
       // ── Wait for DOM then restore everything ──
       setTimeout(function() {
-        // 1. Set _reviewId so saveToDashboard updates the row and
-        //    uploadPhotos() lazy-fetch is available for re-run
-        _reviewId = viewId;
+        // 1. Set _reviewId/_draftId/_draftInspId so both saveToDashboard and
+        //    saveDraft update the existing row and never generate a new file number
+        _reviewId    = viewId;
+        _draftId     = viewId;
+        _draftInspId = sub.inspection_id || null;
 
         // 2. Restore ALL form fields directly — no preloadSubmission
         //    (that function uses reviewId URL param and calls status update)
@@ -1995,7 +1997,7 @@
 
   async function uploadPhotos() {
     // ── Lazy-fetch photos from Supabase if opened from dashboard review ──
-    if (_reviewId && !_draftId && uploadedPhotos.length === 0) {
+    if (_reviewId && uploadedPhotos.length === 0 && (_storagePaths || []).length === 0) {
       const btn = document.getElementById('btn-upload');
       const statusDiv = document.getElementById('upload-status');
       btn.disabled = true;
