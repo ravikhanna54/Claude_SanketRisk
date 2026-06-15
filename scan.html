@@ -1988,8 +1988,9 @@
     // Session state
   let _sessionId = null;
   let _storagePaths = [];
-  let _reviewId = null;  // set when opened from dashboard — enables lazy photo fetch
-  let _draftId  = null;  // Supabase row ID of current draft
+  let _reviewId    = null;  // set when opened from dashboard — enables lazy photo fetch
+  let _draftId     = null;  // Supabase row ID of current draft
+  let _draftInspId = null;  // file number locked at first draft-insert, reused on final save
   let _autosaveTimer = null;  // debounce handle for autosave
 
   async function uploadPhotos() {
@@ -2958,6 +2959,20 @@
         var r1 = await _supabase.from('scan_submissions').update(payload).eq('id', _draftId);
         if (r1.error) throw r1.error;
       } else {
+        // Generate file number now so it is locked to this record permanently
+        if (!_draftInspId) {
+          try {
+            var seqR = await fetch(
+              'https://lzsfmqbhrpsmnivxhggi.supabase.co/rest/v1/rpc/next_src2',
+              { method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' }, body: '{}' }
+            );
+            var seqN = 1001;
+            if (seqR.ok) { try { seqN = await seqR.json(); } catch(e) {} }
+            _draftInspId = 'SRC2' + String(seqN).padStart(6, '0');
+          } catch(e) { _draftInspId = 'SRC2' + String(Date.now()).slice(-6); }
+        }
+        payload.inspection_id = _draftInspId;
+        payload.file_number   = _draftInspId;
         var r2 = await _supabase.from('scan_submissions').insert(payload).select('id').single();
         if (r2.error) throw r2.error;
         if (r2.data && r2.data.id) { _draftId = r2.data.id; _reviewId = _draftId; }
@@ -3077,8 +3092,11 @@
 
       // Get file number — reuse existing if updating, get new one only for inserts
       var inspId = null;
-      if (_reviewId) {
-        // Keep the existing inspection_id — fetch it from the DB
+      if (_draftInspId) {
+        // Already generated at draft-insert time — reuse it directly
+        inspId = _draftInspId;
+      } else if (_reviewId) {
+        // Opened from dashboard (no draft flow) — fetch existing inspection_id from DB
         try {
           var idRes = await _supabase.from('scan_submissions')
             .select('inspection_id').eq('id', _reviewId).single();
@@ -3088,7 +3106,7 @@
         } catch(e) {}
       }
       if (!inspId) {
-        // New record — get next sequence number
+        // Truly new record with no draft — get next sequence number
         var seqRes = await fetch(
           'https://lzsfmqbhrpsmnivxhggi.supabase.co/rest/v1/rpc/next_src2',
           { method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' }, body: '{}' }
@@ -3176,6 +3194,7 @@
     uploadedDocs   = [];
     lastResult     = null;
     _draftId       = null;
+    _draftInspId   = null;
     if (_autosaveTimer) { clearTimeout(_autosaveTimer); _autosaveTimer = null; }
     document.getElementById('results-wrap').style.display  = 'none';
     document.getElementById('progress-wrap').style.display = 'none';
