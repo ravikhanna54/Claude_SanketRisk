@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 271 — 2026-06-16 — Fix PDF page breaks (print + stored/emailed) -->
+<!-- SanketRisk SCAN ONE — Deploy 272 — 2026-06-16 — Fix cover gaps, profile markdown, photo timing -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -238,13 +238,14 @@
       break-before: page;
       page-break-after: always;
       break-after: page;
-      height: 257mm;
-      max-height: 257mm;
-      overflow: hidden;
+      min-height: 100vh;
+      width: 100%;
       box-sizing: border-box;
-      padding: 36px 44px !important;
+      padding: 52px 48px 48px !important;
+      justify-content: flex-start !important;
+      align-items: flex-start !important;
     }
-    #scan-cover-page img { max-height: 190px !important; object-fit: cover !important; }
+    #scan-cover-page img { max-height: 240px !important; object-fit: cover !important; width: 100% !important; }
 
     /* ── Brand header: starts page 2, no break inside ── */
     #res-brand-header {
@@ -1437,8 +1438,16 @@
       var profileText = data.result || '';
 
       if (profileText) {
+        // Strip markdown artifacts the AI sometimes includes: ## headings, **bold**, --- dividers
+        var cleanProfile = profileText
+          .replace(/^#{1,3}\s+.*$/gm, '')          // remove ## Heading lines
+          .replace(/\*\*([^*]+)\*\*/g, '$1')        // **bold** → plain text
+          .replace(/\*([^*]+)\*/g, '$1')             // *italic* → plain text
+          .replace(/^---+\s*$/gm, '')               // remove --- divider lines
+          .replace(/^\s*\n{2,}/gm, '\n')            // collapse multiple blank lines
+          .trim();
         profileBody.innerHTML = '<div style="font-size:13px;line-height:1.75;color:#2d3748;">' +
-          profileText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') +
+          cleanProfile.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') +
           '</div><div style="font-size:10px;color:#aaa;margin-top:8px;font-style:italic;">'
           + 'Source: Public web search — ' + new Date().toLocaleDateString('en-CA') + '</div>';
         // Save into lastResult so it persists to DB and can be restored on recall
@@ -1823,10 +1832,17 @@
             var profileBody    = document.getElementById('res-profile-body');
             if (!profileSection || !profileBody) return;
             if (savedResult.insuredProfile) {
-              // Saved profile text — restore directly
+              // Saved profile text — restore directly, stripping any markdown artifacts
+              var cleanProfile = savedResult.insuredProfile
+                .replace(/^#{1,3}\s+.*$/gm, '')
+                .replace(/\*\*([^*]+)\*\*/g, '$1')
+                .replace(/\*([^*]+)\*/g, '$1')
+                .replace(/^---+\s*$/gm, '')
+                .replace(/^\s*\n{2,}/gm, '\n')
+                .trim();
               profileSection.style.display = 'block';
               profileBody.innerHTML = '<div style="font-size:13px;line-height:1.75;color:#2d3748;">' +
-                savedResult.insuredProfile.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') +
+                cleanProfile.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') +
                 '</div><div style="font-size:10px;color:#aaa;margin-top:8px;font-style:italic;">Source: Public web search — saved report</div>';
             } else {
               // Not saved (older record) — re-fetch live from profile-search
@@ -3076,11 +3092,11 @@
 
     var cover = document.createElement('div');
     cover.id = 'scan-cover-page';
-    cover.style.cssText = 'display:none;width:100%;background:#0d1b2a;flex-direction:column;align-items:center;justify-content:center;padding:60px 48px;box-sizing:border-box;color:#fff;';
+    cover.style.cssText = 'display:none;width:100%;min-height:100vh;background:#0d1b2a;flex-direction:column;align-items:flex-start;justify-content:flex-start;padding:52px 48px 48px;box-sizing:border-box;color:#fff;';
 
     // Logo strip
     var topStrip = document.createElement('div');
-    topStrip.style.cssText = 'display:flex;align-items:center;gap:16px;margin-bottom:60px;align-self:flex-start;';
+    topStrip.style.cssText = 'display:flex;align-items:center;gap:16px;margin-bottom:40px;';
 
     var logoMark = document.createElement('div');
     logoMark.style.cssText = 'width:54px;height:54px;background:#0891b2;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;';
@@ -3113,18 +3129,18 @@
 
     // Gold divider
     var divider = document.createElement('div');
-    divider.style.cssText = 'width:80px;height:3px;background:#b8860b;border-radius:2px;margin-bottom:28px;align-self:flex-start;';
+    divider.style.cssText = 'width:80px;height:3px;background:#b8860b;border-radius:2px;margin-bottom:28px;';
     cover.appendChild(divider);
 
     // Badge
     var badge = document.createElement('div');
-    badge.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:20px;align-self:flex-start;';
+    badge.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:20px;';
     badge.innerHTML = '&#x1F4F8; SCAN ONE Assessment';
     cover.appendChild(badge);
 
     // Property name
     var propName = document.createElement('div');
-    propName.style.cssText = 'font-size:34px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:10px;align-self:flex-start;';
+    propName.style.cssText = 'font-size:34px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:10px;';
     propName.textContent = data.insured || data.address || 'Subject Property';
     cover.appendChild(propName);
 
@@ -3132,7 +3148,7 @@
     var addrParts = [data.address, data.city, data.province].filter(Boolean).join(', ');
     if (addrParts) {
       var addr = document.createElement('div');
-      addr.style.cssText = 'font-size:16px;color:rgba(255,255,255,.65);margin-bottom:8px;align-self:flex-start;';
+      addr.style.cssText = 'font-size:16px;color:rgba(255,255,255,.65);margin-bottom:8px;';
       addr.textContent = addrParts;
       cover.appendChild(addr);
     }
@@ -3140,14 +3156,14 @@
     // Occupancy
     if (data.occupancy) {
       var occ = document.createElement('div');
-      occ.style.cssText = 'font-size:13px;color:rgba(255,255,255,.45);margin-bottom:48px;align-self:flex-start;';
+      occ.style.cssText = 'font-size:13px;color:rgba(255,255,255,.45);margin-bottom:0;flex:1;';
       occ.textContent = data.occupancy;
       cover.appendChild(occ);
     }
 
     // Meta footer
     var metaWrap = document.createElement('div');
-    metaWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:28px;margin-top:40px;';
+    metaWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:28px;margin-top:auto;';
     var _coverFileNum = fileNum || (typeof _draftInspId !== 'undefined' && _draftInspId) || '';
     var metaItems = [
       ['Assessment Date', new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'})],
@@ -3414,8 +3430,11 @@
         }
       }
 
-      // ── Page 1: Cover page ──
-      if (coverEl) coverEl.style.display = 'flex';
+      // ── Page 1: Cover page — stretch to fill full A4 ──
+      if (coverEl) {
+        coverEl.style.display = 'flex';
+        coverEl.style.minHeight = '100vh';
+      }
       var coverCanvas = await html2canvas(coverEl, {
         scale: 1.5,
         useCORS: true,
@@ -3423,41 +3442,66 @@
         logging: false,
         backgroundColor: '#0d1b2a',
         windowWidth: 960,
+        windowHeight: Math.round(960 * 1.414),  // A4 aspect ratio
       });
       if (coverEl) coverEl.style.display = 'none';
-      var coverImgData = coverCanvas.toDataURL('image/jpeg', 0.88);
-      var coverH       = (coverCanvas.height * pageW) / coverCanvas.width;
-      var coverScale   = Math.min(1, pageH / coverH);
-      var coverDrawH   = coverH * coverScale;
-      var coverDrawW   = pageW * coverScale;
-      pdf.addImage(coverImgData, 'JPEG', (pageW - coverDrawW) / 2, (pageH - coverDrawH) / 2, coverDrawW, coverDrawH);
+      // Always stretch cover to fill the full page — no centering gaps
+      pdf.addImage(coverCanvas.toDataURL('image/jpeg', 0.88), 'JPEG', 0, 0, pageW, pageH);
 
       // ── Pages 2+: Section-by-section capture — each section starts a new page ──
       // Order matches the report: brand header + result header, COPE panel, profile,
       // construction, occupancy, protection, exposure, hazards, recommendations, UW summary, photos.
       var reportSections = [
-        { id: 'res-brand-header',          bg: '#0d1b2a' },
-        { id: 'structured-cope-panel',     bg: '#ffffff' },
-        { id: 'res-profile-section',       bg: '#ffffff' },
-        { id: 'res-construction-section',  bg: '#ffffff' },
-        { id: 'res-occupancy-section',     bg: '#ffffff' },
-        { id: 'res-protection-section',    bg: '#ffffff' },
-        { id: 'res-exposure-section',      bg: '#ffffff' },
-        { id: 'res-hazards-section',       bg: '#ffffff' },
+        { id: 'res-brand-header',            bg: '#0d1b2a' },
+        { id: 'structured-cope-panel',       bg: '#ffffff' },
+        { id: 'res-profile-section',         bg: '#ffffff' },
+        { id: 'res-construction-section',    bg: '#ffffff' },
+        { id: 'res-occupancy-section',       bg: '#ffffff' },
+        { id: 'res-protection-section',      bg: '#ffffff' },
+        { id: 'res-exposure-section',        bg: '#ffffff' },
+        { id: 'res-hazards-section',         bg: '#ffffff' },
         { id: 'res-recommendations-section', bg: '#ffffff' },
-        { id: 'res-uw-section',            bg: '#ffffff' },
-        { id: 'res-photo-section',         bg: '#ffffff' },
+        { id: 'res-uw-section',              bg: '#ffffff' },
       ];
 
       for (var si = 0; si < reportSections.length; si++) {
         var sec = document.getElementById(reportSections[si].id);
         if (!sec) continue;
-        // Ensure visible for capture (profile + photo sections may be display:none)
         var wasHidden = (sec.style.display === 'none');
         if (wasHidden) sec.style.display = 'block';
         pdf.addPage();
         await addElementToPdf(sec, reportSections[si].bg);
         if (wasHidden) sec.style.display = 'none';
+      }
+
+      // ── Photo section: capture last, after a delay to allow async photo rendering ──
+      var photoSec = document.getElementById('res-photo-section');
+      if (photoSec) {
+        var photoWasHidden = (photoSec.style.display === 'none');
+        if (photoWasHidden) photoSec.style.display = 'block';
+        // Wait up to 3 seconds for photo grid images to load
+        await new Promise(function(resolve) {
+          var imgs = photoSec.querySelectorAll('img');
+          if (imgs.length === 0) { resolve(); return; }
+          var loaded = 0;
+          var total = imgs.length;
+          var done = false;
+          var timeout = setTimeout(function() { if (!done) { done = true; resolve(); } }, 3000);
+          imgs.forEach(function(img) {
+            if (img.complete) {
+              loaded++;
+              if (loaded >= total && !done) { done = true; clearTimeout(timeout); resolve(); }
+            } else {
+              img.onload = img.onerror = function() {
+                loaded++;
+                if (loaded >= total && !done) { done = true; clearTimeout(timeout); resolve(); }
+              };
+            }
+          });
+        });
+        pdf.addPage();
+        await addElementToPdf(photoSec, '#ffffff');
+        if (photoWasHidden) photoSec.style.display = 'none';
       }
 
       // Convert to blob
