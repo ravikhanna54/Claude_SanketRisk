@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 263 — 2026-06-15 -->
+<!-- SanketRisk SCAN ONE — Deploy 264 — 2026-06-16 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -344,6 +344,7 @@
           <div class="field"><label>Insured / Property Name</label><input type="text" id="s-insured" placeholder="e.g. Acme Manufacturing Ltd."></div>
           <div class="field"><label>Submitted By (Your Name)</label><input type="text" id="s-submitter-name" placeholder="e.g. Jane Smith"></div>
           <div class="field"><label>Company / Brokerage</label><input type="text" id="s-submitter-company" placeholder="e.g. ABC Insurance Brokers"></div>
+          <div class="field"><label>Recipient Email <span style="font-size:10px;color:var(--slate);font-weight:400">(for report delivery)</span></label><input type="email" id="s-recipient-email" placeholder="e.g. client@company.com"></div>
           <div class="field"><label>Street Address</label><input type="text" id="s-address" placeholder="e.g. 1250 Industrial Pkwy"></div>
           <div class="field"><label>City</label><input type="text" id="s-city" placeholder="e.g. Mississauga"></div>
           <div class="field"><label>Province / State</label><input type="text" id="s-province" placeholder="e.g. ON"></div>
@@ -1287,6 +1288,7 @@
       context:    document.getElementById('s-context').value.trim(),
       submitterName:    document.getElementById('s-submitter-name').value.trim(),
       submitterCompany: document.getElementById('s-submitter-company').value.trim(),
+      recipientEmail:   (document.getElementById('s-recipient-email') ? document.getElementById('s-recipient-email').value.trim() : ''),
       losses:     document.getElementById('s-losses').value,
       lossCause:  document.getElementById('s-loss-cause').value,
       lossAmt:    document.getElementById('s-loss-amt').value.trim(),
@@ -1646,6 +1648,7 @@
             s('s-loss-amt',          fd.lossAmt);
             s('s-submitter-name',    fd.submitterName);
             s('s-submitter-company', fd.submitterCompany);
+            s('s-recipient-email',  fd.recipientEmail);
             if (fd.upgrades) {
               ['roof','elec','plmb','hvac','spk','env'].forEach(function(k) {
                 var val = fd.upgrades[k];
