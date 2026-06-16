@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 273 — 2026-06-16 — PDF hybrid layout: flow narrative, row-aware photo slicing -->
+<!-- SanketRisk SCAN ONE — Deploy 276 — 2026-06-16 — Remove photo count limits, 8min poll timeout -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -671,7 +671,7 @@
           <input type="file" id="photo-input" accept="image/*,application/pdf" multiple onchange="handlePhotoUpload(this)">
           <div class="photo-zone-icon">&#x1F4F7;</div>
           <div class="photo-zone-title">Click or drag photos here</div>
-          <div class="photo-zone-sub">Select up to 50 photos or 1 PDF document &mdash; JPG, PNG, HEIC, PDF accepted<br><strong>Do not exceed 50 files.</strong> For PDF reports, a single file is recommended. The AI will analyze all submitted files together.</div>
+          <div class="photo-zone-sub">Select photos or 1 PDF document &mdash; JPG, PNG, HEIC, PDF accepted<br>For PDF reports, a single file is recommended. The AI will analyze all submitted files together.</div>
         </div>
 
         <div id="photo-preview-wrap" style="display:none;margin-top:4px">
@@ -1256,8 +1256,8 @@
   function handlePhotoUpload(input) {
     const files = Array.from(input.files);
     if (!files.length) return;
-    if (files.length > 50) {
-      showToast('⚠ Maximum 50 files allowed. Only the first 50 will be used.');
+    if (files.length > 100) {
+      showToast('⚠ Large submission (' + files.length + ' files). Processing may take several minutes.');
     }
     let loaded = 0;
     files.forEach(file => {
@@ -1637,7 +1637,6 @@
     var checkedForPrompt = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
     var photoIndex = (checkedForPrompt.length > 0 ? checkedForPrompt : uploadedPhotos.map(function(_,i){ return i; }))
       .filter(function(i){ return uploadedPhotos[i]; })
-      .slice(0, 50)
       .map(function(i, n){ 
         var desc = uploadedPhotos[i].description || '';
         return 'Photo ' + (n+1) + (desc ? ': ' + desc : '');
@@ -2190,7 +2189,7 @@
 
     // Poll scan_jobs table in Supabase every 6 seconds (up to 5 minutes)
     var pollStart = Date.now();
-    var pollMax   = 300000; // 5 minutes
+    var pollMax   = 480000; // 8 minutes
     var pollInterval = 6000;
 
     while (Date.now() - pollStart < pollMax) {
@@ -2217,7 +2216,7 @@
         console.warn('Poll error:', pollErr.message);
       }
     }
-    throw new Error('Analysis timed out after 5 minutes. Please try again.');
+    throw new Error('Analysis timed out after 8 minutes. Please try again with fewer photos.');
   }
 
     // Session state
@@ -2304,9 +2303,8 @@
     try {
       // Only send checked (selected) photos for analysis
     var checkedIdxs = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
-    const allPhotos = (checkedIdxs.length > 0 ? checkedIdxs.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean).slice(0, 50);
+    const allPhotos = (checkedIdxs.length > 0 ? checkedIdxs.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean);
       const sessionId = 'scan-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
-      const paths = [];
       for (let i = 0; i < allPhotos.length; i++) {
         statusDiv.textContent = 'Uploading file ' + (i+1) + ' of ' + allPhotos.length + '…';
         const path = await uploadToStorage(allPhotos[i], sessionId, i);
@@ -2366,7 +2364,7 @@
     try {
       // Only send checked (selected) photos for analysis
     var checkedIdxs = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
-    const allPhotos = (checkedIdxs.length > 0 ? checkedIdxs.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean).slice(0, 50);
+    const allPhotos = (checkedIdxs.length > 0 ? checkedIdxs.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean);
       const BATCH_SIZE = 10;
       const sessionId = _sessionId;
       // Files already uploaded in Step 1
@@ -3849,7 +3847,7 @@
       const sessionId = 'pub-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
       const storagePaths = [];
       const photoMeta    = [];
-      const allPhotos    = uploadedPhotos.slice(0, 50);
+      const allPhotos    = uploadedPhotos.slice();
 
       for (let i = 0; i < allPhotos.length; i++) {
         btn.innerHTML = '<span class="spinner"></span><span>Uploading photo ' + (i + 1) + ' of ' + allPhotos.length + '\u2026</span>';
