@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-16 -->
+<!-- SanketRisk SCAN ONE — Deploy 271 — 2026-06-16 — Fix PDF page breaks (print + stored/emailed) -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -221,57 +221,121 @@
       .scan-hero{padding:24px 20px}
     }
   @media print {
+    @page { margin: 14mm 12mm; }
+
     #topnav, #main-hero, #mode-bar, .scan-form-section, #progress-wrap,
-    .btn-report, .result-actions, #view-report-banner, #report-only-bar { display: none !important; }
+    .btn-report, .result-actions, #view-report-banner, #report-only-bar,
+    .report-actions { display: none !important; }
     body { background: #fff; }
     .results-container { box-shadow: none; border: none; }
 
-    /* ── Cover page ── */
+    /* ── Cover page: full page, nothing bleeds in or out ── */
     #scan-cover-page {
       display: flex !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
       page-break-before: always;
-      page-break-after: always;
       break-before: page;
+      page-break-after: always;
       break-after: page;
-      height: 257mm;          /* A4 printable height — hard cap keeps everything on one page */
+      height: 257mm;
       max-height: 257mm;
       overflow: hidden;
       box-sizing: border-box;
       padding: 36px 44px !important;
     }
-    /* Cover photo: constrained so logo + text + meta footer all fit */
     #scan-cover-page img { max-height: 190px !important; object-fit: cover !important; }
 
-    /* ── Brand header + result header = Page 2, kept together ── */
+    /* ── Brand header: starts page 2, no break inside ── */
     #res-brand-header {
       display: block !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      page-break-before: always;
+      break-before: page;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    /* Hide the photo strip in the brand header — already on cover page */
+    #res-cover-photo-wrap { display: none !important; }
+
+    /* ── Result header (exec summary + scores + COPE): keep with brand header ── */
+    .result-header {
       page-break-before: avoid;
       break-before: avoid;
       page-break-inside: avoid;
       break-inside: avoid;
     }
-    /* Hide the photo strip in the brand header — already shown on the cover page */
-    #res-cover-photo-wrap { display: none !important; }
-    .result-header {
-      page-break-before: avoid;   /* brand header and result-header stay on same page */
-      break-before: avoid;
+
+    /* ── COPE structured panel: keep together ── */
+    #structured-cope-panel {
+      display: block !important;
       page-break-inside: avoid;
       break-inside: avoid;
     }
 
-    /* ── Sections ── */
+    /* ── All result sections: visible, allow page breaks between them ── */
     #results-wrap { display: block !important; }
-    #res-profile-section { display: block !important; }
-    #res-support-docs-section { display: block !important; page-break-inside: avoid; break-inside: avoid; }
-    #structured-cope-panel { display: block !important; page-break-inside: avoid; break-inside: avoid; }
-    .result-section { display: block !important; page-break-inside: avoid; break-inside: avoid; }
-    /* Photo grid cards — never split a photo across pages */
-    #res-photo-grid > div { page-break-inside: avoid; break-inside: avoid; }
-    #res-photo-section { page-break-before: always; break-before: page; }
+    .result-section {
+      display: block !important;
+      /* Do NOT use page-break-inside:avoid globally — long sections cannot honour it */
+      margin-bottom: 0;
+      border-radius: 0;
+    }
+
+    /* ── Insured Profile: always starts a new page (it's long) ── */
+    #res-profile-section {
+      display: block !important;
+      page-break-before: always;
+      break-before: page;
+    }
+
+    /* ── Hazards: new page (follows long Exposure section) ── */
+    #res-hazards-section {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    /* ── Recommendations: new page ── */
+    #res-recommendations-section {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    /* ── Underwriting Summary: new page, keep the dark box together ── */
+    #res-uw-section {
+      page-break-before: always;
+      break-before: page;
+    }
+    .uw-box {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* ── Supporting docs: keep together ── */
+    #res-support-docs-section {
+      display: block !important;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* ── Photo section: always new page, cards never split ── */
+    #res-photo-section {
+      page-break-before: always;
+      break-before: page;
+    }
+    #res-photo-grid > div {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* ── Recommendation cards: never split ── */
+    .rec-card {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
   }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -768,39 +832,39 @@
         <div class="result-section-body" id="res-profile-body"><div style="color:#aaa;font-style:italic;font-size:12px;">Searching for company information…</div></div>
       </div>
 
-      <div class="result-section">
+      <div class="result-section" id="res-construction-section">
         <div class="result-section-header"><div class="result-section-icon">&#x1F3D7;&#xFE0F;</div><div class="result-section-title">Construction Assessment</div></div>
         <div class="result-section-body" id="res-construction">&#x2014;</div>
       </div>
 
-      <div class="result-section">
+      <div class="result-section" id="res-occupancy-section">
         <div class="result-section-header"><div class="result-section-icon">&#x1F3ED;</div><div class="result-section-title">Occupancy &amp; Operations</div></div>
         <div class="result-section-body" id="res-occupancy">&#x2014;</div>
       </div>
 
-      <div class="result-section">
+      <div class="result-section" id="res-protection-section">
         <div class="result-section-header"><div class="result-section-icon">&#x1F9EF;</div><div class="result-section-title">Protection Assessment</div></div>
         <div class="result-section-body" id="res-protection">&#x2014;</div>
       </div>
 
-      <div class="result-section">
+      <div class="result-section" id="res-exposure-section">
         <div class="result-section-header"><div class="result-section-icon">&#x1F30D;</div><div class="result-section-title">Exposure Assessment</div></div>
         <div class="result-section-body" id="res-exposure">&#x2014;</div>
       </div>
 
-      <div class="result-section">
+      <div class="result-section" id="res-hazards-section">
         <div class="result-section-header"><div class="result-section-icon">&#x26A0;&#xFE0F;</div><div class="result-section-title">Identified Hazards &amp; Deficiencies</div></div>
         <div class="result-section-body" id="res-hazards">&#x2014;</div>
       </div>
 
       <!-- Recommendations -->
-      <div class="result-section">
+      <div class="result-section" id="res-recommendations-section">
         <div class="result-section-header"><div class="result-section-icon">&#x2705;</div><div class="result-section-title">Recommendations</div></div>
         <div id="res-recommendations">&#x2014;</div>
       </div>
 
       <!-- UW Summary -->
-      <div class="result-section">
+      <div class="result-section" id="res-uw-section">
         <div class="result-section-header"><div class="result-section-icon">&#x1F4CA;</div><div class="result-section-title">Underwriting Summary</div></div>
         <div class="result-section-body">
           <div class="uw-box">
@@ -3295,14 +3359,12 @@
     try {
       var resultsEl = document.getElementById('results-wrap');
       if (!resultsEl) return null;
-      // Ensure results are visible before capturing
+      // Ensure results are visible
       if (resultsEl.style.display === 'none') resultsEl.style.display = 'block';
 
       showToast('\u23F3 Generating PDF report\u2026');
 
-      // Temporarily show cover page for PDF capture
       var coverEl = document.getElementById('scan-cover-page');
-      if (coverEl) coverEl.style.display = 'flex';
 
       // Use jsPDF with html2canvas
       var { jsPDF } = window.jspdf;
@@ -3310,46 +3372,49 @@
       var pageW = pdf.internal.pageSize.getWidth();
       var pageH = pdf.internal.pageSize.getHeight();
 
-      // Capture the full results section as canvas
-      var canvas = await html2canvas(resultsEl, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        windowWidth: 960,
-        imageTimeout: 0,
-        onclone: function(clonedDoc) {
-          // Ensure results-wrap is visible in cloned document
-          var rw = clonedDoc.getElementById('results-wrap');
-          if (rw) rw.style.display = 'block';
-
-          // Hide by ID — elements that must not appear in PDF body capture
-          ['topnav','main-hero','mode-bar','progress-wrap',
-           'view-report-banner','report-only-bar',
-           'res-cover-photo-wrap','scan-cover-page'].forEach(function(id) {
-            var el = clonedDoc.getElementById(id);
-            if (el) el.style.display = 'none';
-          });
-
-          // Hide by class — form sections and action buttons
-          clonedDoc.querySelectorAll(
-            '.scan-form-section, .btn-report, .result-actions, .report-actions'
-          ).forEach(function(el) { el.style.display = 'none'; });
+      // ── Helper: capture one element and add to PDF as page(s) ──
+      // If the element fits on one page it occupies exactly one page.
+      // If it is taller than one page it slices cleanly (unavoidable for very long sections).
+      async function addElementToPdf(el, bgColor) {
+        if (!el || el.offsetParent === null) return;  // skip hidden elements
+        var elCanvas = await html2canvas(el, {
+          scale: 1.5,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: bgColor || '#ffffff',
+          windowWidth: 960,
+          imageTimeout: 0,
+          onclone: function(clonedDoc) {
+            // Make sure the element is visible in the clone
+            var cloneEl = clonedDoc.getElementById(el.id);
+            if (cloneEl) cloneEl.style.display = '';
+            // Hide chrome elements
+            ['topnav','main-hero','mode-bar','progress-wrap',
+             'view-report-banner','report-only-bar',
+             'res-cover-photo-wrap','scan-cover-page'].forEach(function(id) {
+              var e2 = clonedDoc.getElementById(id);
+              if (e2) e2.style.display = 'none';
+            });
+            clonedDoc.querySelectorAll('.scan-form-section,.btn-report,.result-actions,.report-actions')
+              .forEach(function(e2) { e2.style.display = 'none'; });
+          }
+        });
+        var elW   = pageW;
+        var elH   = (elCanvas.height * elW) / elCanvas.width;
+        var yOff  = 0;
+        var first = true;
+        while (yOff < elH) {
+          var remaining = elH - yOff;
+          if (remaining < 4) break;   // ignore near-empty trailing slivers
+          if (!first) pdf.addPage();
+          first = false;
+          pdf.addImage(elCanvas.toDataURL('image/jpeg', 0.88), 'JPEG', 0, -yOff, elW, elH);
+          yOff += pageH;
         }
-      });
+      }
 
-      // Hide cover page again after capture
-      if (coverEl) coverEl.style.display = 'none';
-
-      var imgData  = canvas.toDataURL('image/jpeg', 0.88);
-      var imgW     = pageW;
-      var imgH     = (canvas.height * imgW) / canvas.width;
-      var yPos     = 0;
-      var margin   = 8;  // mm margin top and bottom on each page
-
-      // ── Page 1: Cover page only ──
-      // Capture cover separately so it fills exactly one page
+      // ── Page 1: Cover page ──
       if (coverEl) coverEl.style.display = 'flex';
       var coverCanvas = await html2canvas(coverEl, {
         scale: 1.5,
@@ -3360,26 +3425,39 @@
         windowWidth: 960,
       });
       if (coverEl) coverEl.style.display = 'none';
-
       var coverImgData = coverCanvas.toDataURL('image/jpeg', 0.88);
       var coverH       = (coverCanvas.height * pageW) / coverCanvas.width;
-      // Scale cover to fit one page
-      var coverScale   = Math.min(1, (pageH - margin * 2) / coverH);
+      var coverScale   = Math.min(1, pageH / coverH);
       var coverDrawH   = coverH * coverScale;
       var coverDrawW   = pageW * coverScale;
-      var coverX       = (pageW - coverDrawW) / 2;
-      var coverY       = (pageH - coverDrawH) / 2;
-      pdf.addImage(coverImgData, 'JPEG', coverX, coverY, coverDrawW, coverDrawH);
+      pdf.addImage(coverImgData, 'JPEG', (pageW - coverDrawW) / 2, (pageH - coverDrawH) / 2, coverDrawW, coverDrawH);
 
-      // ── Pages 2+: Report body ──
-      pdf.addPage();
-      while (yPos < imgH) {
-        // Check how much content remains
-        var remaining = imgH - yPos;
-        if (remaining < 20) break;  // skip nearly-empty trailing pages
-        if (yPos > 0) pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, -yPos, imgW, imgH);
-        yPos += pageH;
+      // ── Pages 2+: Section-by-section capture — each section starts a new page ──
+      // Order matches the report: brand header + result header, COPE panel, profile,
+      // construction, occupancy, protection, exposure, hazards, recommendations, UW summary, photos.
+      var reportSections = [
+        { id: 'res-brand-header',          bg: '#0d1b2a' },
+        { id: 'structured-cope-panel',     bg: '#ffffff' },
+        { id: 'res-profile-section',       bg: '#ffffff' },
+        { id: 'res-construction-section',  bg: '#ffffff' },
+        { id: 'res-occupancy-section',     bg: '#ffffff' },
+        { id: 'res-protection-section',    bg: '#ffffff' },
+        { id: 'res-exposure-section',      bg: '#ffffff' },
+        { id: 'res-hazards-section',       bg: '#ffffff' },
+        { id: 'res-recommendations-section', bg: '#ffffff' },
+        { id: 'res-uw-section',            bg: '#ffffff' },
+        { id: 'res-photo-section',         bg: '#ffffff' },
+      ];
+
+      for (var si = 0; si < reportSections.length; si++) {
+        var sec = document.getElementById(reportSections[si].id);
+        if (!sec) continue;
+        // Ensure visible for capture (profile + photo sections may be display:none)
+        var wasHidden = (sec.style.display === 'none');
+        if (wasHidden) sec.style.display = 'block';
+        pdf.addPage();
+        await addElementToPdf(sec, reportSections[si].bg);
+        if (wasHidden) sec.style.display = 'none';
       }
 
       // Convert to blob
