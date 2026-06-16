@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 265 — 2026-06-16 -->
+<!-- SanketRisk SCAN ONE — Deploy 266 — 2026-06-16 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -3244,7 +3244,9 @@
   async function generateAndStorePDF(inspId) {
     try {
       var resultsEl = document.getElementById('results-wrap');
-      if (!resultsEl || resultsEl.style.display === 'none') return null;
+      if (!resultsEl) return null;
+      // Ensure results are visible before capturing
+      if (resultsEl.style.display === 'none') resultsEl.style.display = 'block';
 
       showToast('\u23F3 Generating PDF report\u2026');
 
@@ -3260,12 +3262,24 @@
 
       // Capture the full results section as canvas
       var canvas = await html2canvas(resultsEl, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: 900,
+        windowWidth: 960,
+        imageTimeout: 0,
+        onclone: function(clonedDoc) {
+          // Ensure results-wrap is visible in cloned document
+          var rw = clonedDoc.getElementById('results-wrap');
+          if (rw) rw.style.display = 'block';
+          // Hide elements that shouldn't appear in PDF
+          ['topnav','main-hero','mode-bar','scan-form-section','progress-wrap',
+           'view-report-banner','report-only-bar'].forEach(function(id) {
+            var el = clonedDoc.getElementById(id);
+            if (el) el.style.display = 'none';
+          });
+        }
       });
 
       // Hide cover page again after capture

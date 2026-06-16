@@ -845,6 +845,22 @@
       document.getElementById('email-send-btn').disabled = false;
       document.getElementById('email-send-btn').textContent = 'Send Report';
 
+      // Show PDF attachment status
+      var pdfNote = document.getElementById('email-pdf-status');
+      if (pdfNote) {
+        if (r.report_pdf_path) {
+          pdfNote.style.background = '#f0fff4';
+          pdfNote.style.borderColor = '#9ae6b4';
+          pdfNote.style.color = '#276749';
+          pdfNote.innerHTML = '📎 <strong>Attachment:</strong> PDF report ready — <code>' + r.report_pdf_path + '</code>';
+        } else {
+          pdfNote.style.background = '#fff5f5';
+          pdfNote.style.borderColor = '#fc8181';
+          pdfNote.style.color = '#c53030';
+          pdfNote.innerHTML = '⚠ <strong>No PDF stored yet.</strong> Open this submission, then click "Save to Dashboard" to generate and store the PDF. The email will send without attachment until then.';
+        }
+      }
+
       // Show modal
       var modal = document.getElementById('email-modal');
       modal.style.display = 'flex';
@@ -949,8 +965,8 @@
           <textarea id="email-body" rows="8"
             style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;box-sizing:border-box;outline:none;resize:vertical;line-height:1.6;"></textarea>
         </div>
-        <div style="background:#fffbeb;border:1px solid #f6e05e;border-radius:8px;padding:10px 14px;font-size:11px;color:#744210;font-family:'IBM Plex Sans',sans-serif;">
-          📎 <strong>Attachment:</strong> The report PDF will be generated from the live report page and attached automatically.
+        <div id="email-pdf-status" style="background:#fffbeb;border:1px solid #f6e05e;border-radius:8px;padding:10px 14px;font-size:11px;color:#744210;font-family:'IBM Plex Sans',sans-serif;">
+          📎 <strong>Attachment:</strong> Checking for stored PDF…
         </div>
         <div id="email-status" style="display:none;font-size:12px;padding:10px 14px;border-radius:8px;font-family:'IBM Plex Sans',sans-serif;"></div>
       </div>
