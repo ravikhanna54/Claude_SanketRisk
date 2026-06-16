@@ -570,7 +570,7 @@
       try {
         const { data: rows, error } = await _supabase
           .from('scan_submissions')
-          .select('id, file_number, inspection_id, insured_name, city, province, occupancy, photo_count, submitted_at, status, qa_status, scan_result, form_data')
+          .select('id, file_number, inspection_id, insured_name, city, province, occupancy, photo_count, submitted_at, status, qa_status, scan_result, form_data, report_pdf_path')
           .order('submitted_at', { ascending: false });
 
         if (error) {
@@ -875,39 +875,20 @@
       }
 
       btn.disabled = true;
-      btn.textContent = 'Generating PDF…';
-      showEmailStatus('info', '⏳ Opening report to generate PDF — please wait…');
+      btn.textContent = 'Sending…';
+      showEmailStatus('info', '📤 Sending report via Resend…');
 
       try {
-        // Step 1: Fetch the report HTML from scan.html?report_only=1&view_report=ID
-        var reportId = _emailRecord.id;
-        var reportUrl = window.location.origin + '/scan.html?report_only=1&view_report=' + reportId;
-
-        // Step 2: Use fetch to get the report page content as base64 for attachment
-        // Since we can't generate a true PDF client-side without a library,
-        // we send the report URL as a link AND a note. 
-        // For PDF attachment we open the report in a hidden iframe and use print-to-PDF approach.
-        // Practical approach: attach HTML file as .html — opens natively as report in browser.
-        var resp = await fetch(reportUrl);
-        if (!resp.ok) throw new Error('Could not load report page');
-        var htmlContent = await resp.text();
-        var b64Html = btoa(unescape(encodeURIComponent(htmlContent)));
-
-        btn.textContent = 'Sending…';
-        showEmailStatus('info', '📤 Sending email via Resend…');
-
-        // Step 3: Send via Netlify function (avoids CORS — Resend API called server-side)
-        var fileName = 'SanketRisk_SCAN_ONE_' + (_emailRecord.inspection_id || _emailRecord.id).replace(/[^a-zA-Z0-9]/g,'_') + '_Report.html';
-
+        // Send via Netlify function — PDF fetched server-side from Supabase Storage
         var res = await fetch('/.netlify/functions/send-report-email', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({
-            to:              to,
-            subject:         subject,
-            body:            body,
-            attachment_b64:  b64Html,
-            attachment_name: fileName,
+            to:            to,
+            subject:       subject,
+            body:          body,
+            pdf_path:      _emailRecord.report_pdf_path || null,
+            inspection_id: _emailRecord.inspection_id   || _emailRecord.id,
           })
         });
 
@@ -915,7 +896,8 @@
         if (!res.ok) throw new Error(data.error || 'Email send failed');
 
         btn.textContent = '✓ Sent';
-        showEmailStatus('success', '✓ Report emailed successfully to ' + to);
+        var hasPdf = data.has_pdf ? ' with PDF attachment' : ' (PDF not yet available — save report first)';
+        showEmailStatus('success', '✓ Report emailed successfully to ' + to + hasPdf);
 
         // Close after 3 seconds
         setTimeout(closeEmailModal, 3000);

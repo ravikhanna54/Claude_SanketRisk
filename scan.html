@@ -7,6 +7,8 @@
   <title>Sanket SCAN ONE [240] — AI Photo Assessment v4</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -3238,6 +3240,86 @@
   }
 
   // ── SAVE TO DASHBOARD ──
+  // ── GENERATE AND STORE PDF REPORT ──
+  async function generateAndStorePDF(inspId) {
+    try {
+      var resultsEl = document.getElementById('results-wrap');
+      if (!resultsEl || resultsEl.style.display === 'none') return null;
+
+      showToast('\u23F3 Generating PDF report\u2026');
+
+      // Temporarily show cover page for PDF capture
+      var coverEl = document.getElementById('scan-cover-page');
+      if (coverEl) coverEl.style.display = 'flex';
+
+      // Use jsPDF with html2canvas
+      var { jsPDF } = window.jspdf;
+      var pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      var pageW = pdf.internal.pageSize.getWidth();
+      var pageH = pdf.internal.pageSize.getHeight();
+
+      // Capture the full results section as canvas
+      var canvas = await html2canvas(resultsEl, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 900,
+      });
+
+      // Hide cover page again after capture
+      if (coverEl) coverEl.style.display = 'none';
+
+      var imgData = canvas.toDataURL('image/jpeg', 0.92);
+      var imgW    = pageW;
+      var imgH    = (canvas.height * imgW) / canvas.width;
+      var yPos    = 0;
+
+      // Add image across multiple pages if needed
+      while (yPos < imgH) {
+        if (yPos > 0) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, -yPos, imgW, imgH);
+        yPos += pageH;
+      }
+
+      // Convert to blob
+      var pdfBlob = pdf.output('blob');
+
+      // Check if PDF already exists in Supabase
+      var pdfPath = 'reports/' + inspId + '.pdf';
+      var checkRes = await _supabase.storage.from('reports').list('reports', { search: inspId + '.pdf' });
+      var alreadyExists = checkRes.data && checkRes.data.length > 0;
+
+      if (alreadyExists) {
+        // Prompt to overwrite
+        var overwrite = confirm('A PDF report already exists for ' + inspId + '.\n\nOverwrite with the new analysis?');
+        if (!overwrite) {
+          showToast('\u2139 Keeping existing PDF report.');
+          return pdfPath;
+        }
+        // Delete existing before re-upload
+        await _supabase.storage.from('reports').remove([pdfPath]);
+      }
+
+      // Upload PDF to Supabase Storage
+      var uploadRes = await _supabase.storage.from('reports').upload(pdfPath, pdfBlob, {
+        contentType: 'application/pdf',
+        upsert: true,
+      });
+
+      if (uploadRes.error) throw uploadRes.error;
+
+      showToast('\u2713 PDF report stored successfully.');
+      return pdfPath;
+
+    } catch(e) {
+      console.warn('PDF generation error:', e.message);
+      showToast('\u26A0 PDF generation failed: ' + e.message);
+      return null;
+    }
+  }
+
   async function saveToDashboard() {
     if (!lastResult) return;
     showToast('\u23F3 Saving assessment to dashboard\u2026');
@@ -3332,6 +3414,14 @@
         });
         var error = _er1.error;
         if (error) throw error;
+      }
+
+      // Generate and store PDF, then update record with path
+      var pdfPath = await generateAndStorePDF(inspId);
+      if (pdfPath) {
+        await _supabase.from('scan_submissions').update({
+          report_pdf_path: pdfPath
+        }).eq('inspection_id', inspId);
       }
 
       showToast('\u2713 Saved as ' + inspId + ' \u2014 redirecting\u2026');
