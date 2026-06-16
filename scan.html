@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 266 — 2026-06-16 -->
+<!-- SanketRisk SCAN ONE — Deploy 267 — 2026-06-16 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -3273,12 +3273,19 @@
           // Ensure results-wrap is visible in cloned document
           var rw = clonedDoc.getElementById('results-wrap');
           if (rw) rw.style.display = 'block';
-          // Hide elements that shouldn't appear in PDF
-          ['topnav','main-hero','mode-bar','scan-form-section','progress-wrap',
-           'view-report-banner','report-only-bar'].forEach(function(id) {
+
+          // Hide by ID — elements that must not appear in PDF
+          ['topnav','main-hero','mode-bar','progress-wrap',
+           'view-report-banner','report-only-bar',
+           'res-cover-photo-wrap'].forEach(function(id) {
             var el = clonedDoc.getElementById(id);
             if (el) el.style.display = 'none';
           });
+
+          // Hide by class — form sections and action buttons
+          clonedDoc.querySelectorAll(
+            '.scan-form-section, .btn-report, .result-actions, .report-actions'
+          ).forEach(function(el) { el.style.display = 'none'; });
         }
       });
 
