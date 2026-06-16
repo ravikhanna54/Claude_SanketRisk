@@ -904,8 +904,7 @@
           to:      [to],
           subject: subject,
           text:    body,
-          html:    body.replace(/
-/g, '<br>'),
+          html:    body.replace(/\n/g, '<br>'),
           attachments: [{
             filename: fileName,
             content:  b64Html,
