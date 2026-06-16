@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 267 — 2026-06-16 -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-16 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1072,8 +1072,56 @@
     bar.innerHTML =
       '<a href="/dashboard.html" style="color:rgba(255,255,255,.7);font-size:13px;text-decoration:none;font-family:IBM Plex Sans,sans-serif;">&#x2190; Dashboard</a>' +
       '<div style="font-size:12px;font-weight:600;color:var(--gold,#b8860b);letter-spacing:.05em;font-family:IBM Plex Sans,sans-serif;">SCAN ONE ASSESSMENT REPORT</div>' +
-      '<button onclick="window.print()" style="background:#0891b2;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;">&#x1F5A8; Download PDF</button>';
+      '<button id="btn-download-pdf" onclick="downloadStoredPDF()" style="background:#0891b2;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;">&#x2B07; Download PDF</button>';
     document.body.insertBefore(bar, document.body.firstChild);
+  }
+
+  // Download the stored PDF from Supabase — called from report_only bar
+  async function downloadStoredPDF() {
+    var btn = document.getElementById('btn-download-pdf');
+    var pdfPath = window._reportPdfPath || (_draftInspId ? _draftInspId + '.pdf' : null);
+
+    // Try to get path from DB if not in memory
+    if (!pdfPath && _reviewId) {
+      try {
+        var r = await _supabase.from('scan_submissions')
+          .select('report_pdf_path, inspection_id').eq('id', _reviewId).single();
+        if (r.data && r.data.report_pdf_path) pdfPath = r.data.report_pdf_path;
+        else if (r.data && r.data.inspection_id) pdfPath = r.data.inspection_id + '.pdf';
+      } catch(e) {}
+    }
+
+    if (!pdfPath) {
+      // No stored PDF — fall back to browser print
+      showToast('\u2139 No stored PDF found — opening print dialog instead.');
+      window.print();
+      return;
+    }
+
+    if (btn) { btn.textContent = '\u23F3 Downloading\u2026'; btn.disabled = true; }
+
+    try {
+      // Fetch PDF from Supabase Storage (private bucket — use auth header)
+      var pdfRes = await fetch(
+        SUPABASE_URL + '/storage/v1/object/authenticated/reports/' + pdfPath,
+        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+      );
+      if (!pdfRes.ok) throw new Error('Could not fetch PDF (HTTP ' + pdfRes.status + ')');
+
+      var blob = await pdfRes.blob();
+      var url  = URL.createObjectURL(blob);
+      var a    = document.createElement('a');
+      a.href   = url;
+      a.download = 'SanketRisk_SCAN_ONE_' + (pdfPath.replace('.pdf','')) + '.pdf';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 2000);
+      if (btn) { btn.textContent = '\u2B07 Download PDF'; btn.disabled = false; }
+    } catch(e) {
+      showToast('\u26A0 PDF download failed: ' + e.message + ' — using print instead.');
+      window.print();
+      if (btn) { btn.textContent = '\u2B07 Download PDF'; btn.disabled = false; }
+    }
   }
 
   function activatePublicMode() {
@@ -1591,7 +1639,7 @@
       var res = await fetch(
         SUPABASE_URL + '/rest/v1/scan_submissions?id=eq.' + encodeURIComponent(viewId) +
         '&select=id,insured_name,address,city,province,occupancy,year_built,building_area,' +
-        'photo_count,form_data,storage_paths,doc_paths,scan_result,inspection_id,status',
+        'photo_count,form_data,storage_paths,doc_paths,scan_result,inspection_id,status,report_pdf_path',
         { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
       );
       if (!res.ok) throw new Error('Could not fetch report (HTTP ' + res.status + ')');
@@ -1624,6 +1672,8 @@
         _reviewId    = viewId;
         _draftId     = viewId;
         _draftInspId = sub.inspection_id || null;
+        // Also store report_pdf_path for downloadStoredPDF()
+        if (sub.report_pdf_path) window._reportPdfPath = sub.report_pdf_path;
 
         // 2. Restore ALL form fields directly — no preloadSubmission
         //    (that function uses reviewId URL param and calls status update)
@@ -3274,10 +3324,10 @@
           var rw = clonedDoc.getElementById('results-wrap');
           if (rw) rw.style.display = 'block';
 
-          // Hide by ID — elements that must not appear in PDF
+          // Hide by ID — elements that must not appear in PDF body capture
           ['topnav','main-hero','mode-bar','progress-wrap',
            'view-report-banner','report-only-bar',
-           'res-cover-photo-wrap'].forEach(function(id) {
+           'res-cover-photo-wrap','scan-cover-page'].forEach(function(id) {
             var el = clonedDoc.getElementById(id);
             if (el) el.style.display = 'none';
           });
@@ -3292,13 +3342,41 @@
       // Hide cover page again after capture
       if (coverEl) coverEl.style.display = 'none';
 
-      var imgData = canvas.toDataURL('image/jpeg', 0.92);
-      var imgW    = pageW;
-      var imgH    = (canvas.height * imgW) / canvas.width;
-      var yPos    = 0;
+      var imgData  = canvas.toDataURL('image/jpeg', 0.88);
+      var imgW     = pageW;
+      var imgH     = (canvas.height * imgW) / canvas.width;
+      var yPos     = 0;
+      var margin   = 8;  // mm margin top and bottom on each page
 
-      // Add image across multiple pages if needed
+      // ── Page 1: Cover page only ──
+      // Capture cover separately so it fills exactly one page
+      if (coverEl) coverEl.style.display = 'flex';
+      var coverCanvas = await html2canvas(coverEl, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#0d1b2a',
+        windowWidth: 960,
+      });
+      if (coverEl) coverEl.style.display = 'none';
+
+      var coverImgData = coverCanvas.toDataURL('image/jpeg', 0.88);
+      var coverH       = (coverCanvas.height * pageW) / coverCanvas.width;
+      // Scale cover to fit one page
+      var coverScale   = Math.min(1, (pageH - margin * 2) / coverH);
+      var coverDrawH   = coverH * coverScale;
+      var coverDrawW   = pageW * coverScale;
+      var coverX       = (pageW - coverDrawW) / 2;
+      var coverY       = (pageH - coverDrawH) / 2;
+      pdf.addImage(coverImgData, 'JPEG', coverX, coverY, coverDrawW, coverDrawH);
+
+      // ── Pages 2+: Report body ──
+      pdf.addPage();
       while (yPos < imgH) {
+        // Check how much content remains
+        var remaining = imgH - yPos;
+        if (remaining < 20) break;  // skip nearly-empty trailing pages
         if (yPos > 0) pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, -yPos, imgW, imgH);
         yPos += pageH;
