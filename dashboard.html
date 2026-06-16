@@ -817,48 +817,6 @@
       } catch(e) { msg.textContent = '⚠ Failed: ' + e.message; msg.style.color='#e53e3e'; }
     }
 
-    init();
-  </script>
-  <!-- ── EMAIL REPORT MODAL ── -->
-  <div id="email-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-    <div style="background:#fff;border-radius:14px;width:100%;max-width:540px;box-shadow:0 24px 64px rgba(0,0,0,.3);overflow:hidden;">
-      <!-- Header -->
-      <div style="background:#0d1b2a;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-size:15px;font-weight:700;color:#fff;font-family:'IBM Plex Sans',sans-serif;">📧 Email Assessment Report</div>
-        <button onclick="closeEmailModal()" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:20px;cursor:pointer;line-height:1;">×</button>
-      </div>
-      <!-- Body -->
-      <div style="padding:24px;display:flex;flex-direction:column;gap:14px;">
-        <div id="email-modal-record" style="background:#f0f7ff;border:1px solid #bee3f8;border-radius:8px;padding:10px 14px;font-size:12px;color:#2b6cb0;font-family:'IBM Plex Sans',sans-serif;"></div>
-        <div>
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4a5568;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:5px;">To (Recipient Email)</label>
-          <input type="email" id="email-to" placeholder="client@company.com"
-            style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;box-sizing:border-box;outline:none;">
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4a5568;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:5px;">Subject</label>
-          <input type="text" id="email-subject"
-            style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;box-sizing:border-box;outline:none;">
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4a5568;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:5px;">Message</label>
-          <textarea id="email-body" rows="8"
-            style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;box-sizing:border-box;outline:none;resize:vertical;line-height:1.6;"></textarea>
-        </div>
-        <div style="background:#fffbeb;border:1px solid #f6e05e;border-radius:8px;padding:10px 14px;font-size:11px;color:#744210;font-family:'IBM Plex Sans',sans-serif;">
-          📎 <strong>Attachment:</strong> The report PDF will be generated from the live report page and attached automatically.
-        </div>
-        <div id="email-status" style="display:none;font-size:12px;padding:10px 14px;border-radius:8px;font-family:'IBM Plex Sans',sans-serif;"></div>
-      </div>
-      <!-- Footer -->
-      <div style="padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end;">
-        <button onclick="closeEmailModal()" style="border:1.5px solid #e2e8f0;background:#fff;color:#4a5568;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">Cancel</button>
-        <button id="email-send-btn" onclick="sendReportEmail()" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:9px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">Send Report</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
     // ── EMAIL MODAL ──
     var _emailRecord = null;
 
@@ -901,8 +859,9 @@
     }
 
     // Close on backdrop click
-    document.getElementById('email-modal').addEventListener('click', function(e) {
-      if (e.target === this) closeEmailModal();
+    document.addEventListener('DOMContentLoaded', function() {
+      var modal = document.getElementById('email-modal');
+      if (modal) modal.addEventListener('click', function(e) { if (e.target === this) closeEmailModal(); });
     });
 
     async function sendReportEmail() {
@@ -989,7 +948,46 @@
       st.style.cssText = 'display:block;background:' + c.bg + ';border:1px solid ' + c.border + ';color:' + c.color + ';border-radius:8px;padding:10px 14px;font-size:12px;font-family:IBM Plex Sans,sans-serif;';
       st.textContent = msg;
     }
+  
+    init();
   </script>
-
+  <!-- ── EMAIL REPORT MODAL ── -->
+  <div id="email-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:540px;box-shadow:0 24px 64px rgba(0,0,0,.3);overflow:hidden;">
+      <!-- Header -->
+      <div style="background:#0d1b2a;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:15px;font-weight:700;color:#fff;font-family:'IBM Plex Sans',sans-serif;">📧 Email Assessment Report</div>
+        <button onclick="closeEmailModal()" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:20px;cursor:pointer;line-height:1;">×</button>
+      </div>
+      <!-- Body -->
+      <div style="padding:24px;display:flex;flex-direction:column;gap:14px;">
+        <div id="email-modal-record" style="background:#f0f7ff;border:1px solid #bee3f8;border-radius:8px;padding:10px 14px;font-size:12px;color:#2b6cb0;font-family:'IBM Plex Sans',sans-serif;"></div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4a5568;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:5px;">To (Recipient Email)</label>
+          <input type="email" id="email-to" placeholder="client@company.com"
+            style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;box-sizing:border-box;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4a5568;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:5px;">Subject</label>
+          <input type="text" id="email-subject"
+            style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;box-sizing:border-box;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4a5568;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:5px;">Message</label>
+          <textarea id="email-body" rows="8"
+            style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;box-sizing:border-box;outline:none;resize:vertical;line-height:1.6;"></textarea>
+        </div>
+        <div style="background:#fffbeb;border:1px solid #f6e05e;border-radius:8px;padding:10px 14px;font-size:11px;color:#744210;font-family:'IBM Plex Sans',sans-serif;">
+          📎 <strong>Attachment:</strong> The report PDF will be generated from the live report page and attached automatically.
+        </div>
+        <div id="email-status" style="display:none;font-size:12px;padding:10px 14px;border-radius:8px;font-family:'IBM Plex Sans',sans-serif;"></div>
+      </div>
+      <!-- Footer -->
+      <div style="padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="closeEmailModal()" style="border:1.5px solid #e2e8f0;background:#fff;color:#4a5568;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">Cancel</button>
+        <button id="email-send-btn" onclick="sendReportEmail()" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:9px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">Send Report</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
