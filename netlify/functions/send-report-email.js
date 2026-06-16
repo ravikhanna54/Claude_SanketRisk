@@ -27,7 +27,9 @@ exports.handler = async function(event) {
     // Fetch PDF from Supabase Storage if path provided
     if (pdf_path) {
       try {
-        var pdfUrl = SUPABASE_URL + '/storage/v1/object/reports/' + pdf_path.replace(/^reports\//, '');
+        // Private bucket — use authenticated endpoint with service key
+        var cleanPath = pdf_path.replace(/^\//, '').replace(/^reports\//, '');
+        var pdfUrl = SUPABASE_URL + '/storage/v1/object/authenticated/reports/' + cleanPath;
         var pdfRes = await fetch(pdfUrl, {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
         });
