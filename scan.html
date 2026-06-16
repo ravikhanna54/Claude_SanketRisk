@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 272 — 2026-06-16 — Fix cover gaps, profile markdown, photo timing -->
+<!-- SanketRisk SCAN ONE — Deploy 273 — 2026-06-16 — PDF hybrid layout: flow narrative, row-aware photo slicing -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -3388,24 +3388,12 @@
       var pageW = pdf.internal.pageSize.getWidth();
       var pageH = pdf.internal.pageSize.getHeight();
 
-      // ── Helper: capture one element and add to PDF as page(s) ──
-      // If the element fits on one page it occupies exactly one page.
-      // If it is taller than one page it slices cleanly (unavoidable for very long sections).
-      async function addElementToPdf(el, bgColor) {
-        if (!el || el.offsetParent === null) return;  // skip hidden elements
-        var elCanvas = await html2canvas(el, {
-          scale: 1.5,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          backgroundColor: bgColor || '#ffffff',
-          windowWidth: 960,
-          imageTimeout: 0,
+      // ── html2canvas shared options ──
+      var h2cOpts = function(bgColor) {
+        return {
+          scale: 1.5, useCORS: true, allowTaint: true, logging: false,
+          backgroundColor: bgColor || '#ffffff', windowWidth: 960, imageTimeout: 0,
           onclone: function(clonedDoc) {
-            // Make sure the element is visible in the clone
-            var cloneEl = clonedDoc.getElementById(el.id);
-            if (cloneEl) cloneEl.style.display = '';
-            // Hide chrome elements
             ['topnav','main-hero','mode-bar','progress-wrap',
              'view-report-banner','report-only-bar',
              'res-cover-photo-wrap','scan-cover-page'].forEach(function(id) {
@@ -3415,17 +3403,21 @@
             clonedDoc.querySelectorAll('.scan-form-section,.btn-report,.result-actions,.report-actions')
               .forEach(function(e2) { e2.style.display = 'none'; });
           }
-        });
-        var elW   = pageW;
-        var elH   = (elCanvas.height * elW) / elCanvas.width;
-        var yOff  = 0;
-        var first = true;
-        while (yOff < elH) {
-          var remaining = elH - yOff;
-          if (remaining < 4) break;   // ignore near-empty trailing slivers
-          if (!first) pdf.addPage();
-          first = false;
-          pdf.addImage(elCanvas.toDataURL('image/jpeg', 0.88), 'JPEG', 0, -yOff, elW, elH);
+        };
+      };
+
+      // Slice a canvas image across PDF pages
+      function sliceCanvasToPdf(cv, isFirstBlock) {
+        var imgData = cv.toDataURL('image/jpeg', 0.88);
+        var imgW = pageW;
+        var imgH = (cv.height * imgW) / cv.width;
+        var yOff = 0;
+        var isVeryFirst = isFirstBlock;
+        while (yOff < imgH) {
+          if (imgH - yOff < 4) break;
+          if (!isVeryFirst) pdf.addPage();
+          isVeryFirst = false;
+          pdf.addImage(imgData, 'JPEG', 0, -yOff, imgW, imgH);
           yOff += pageH;
         }
       }
@@ -3436,73 +3428,149 @@
         coverEl.style.minHeight = '100vh';
       }
       var coverCanvas = await html2canvas(coverEl, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: '#0d1b2a',
-        windowWidth: 960,
-        windowHeight: Math.round(960 * 1.414),  // A4 aspect ratio
+        scale: 1.5, useCORS: true, allowTaint: true, logging: false,
+        backgroundColor: '#0d1b2a', windowWidth: 960,
+        windowHeight: Math.round(960 * 1.414),
       });
       if (coverEl) coverEl.style.display = 'none';
-      // Always stretch cover to fill the full page — no centering gaps
       pdf.addImage(coverCanvas.toDataURL('image/jpeg', 0.88), 'JPEG', 0, 0, pageW, pageH);
 
-      // ── Pages 2+: Section-by-section capture — each section starts a new page ──
-      // Order matches the report: brand header + result header, COPE panel, profile,
-      // construction, occupancy, protection, exposure, hazards, recommendations, UW summary, photos.
-      var reportSections = [
-        { id: 'res-brand-header',            bg: '#0d1b2a' },
-        { id: 'structured-cope-panel',       bg: '#ffffff' },
-        { id: 'res-profile-section',         bg: '#ffffff' },
-        { id: 'res-construction-section',    bg: '#ffffff' },
-        { id: 'res-occupancy-section',       bg: '#ffffff' },
-        { id: 'res-protection-section',      bg: '#ffffff' },
-        { id: 'res-exposure-section',        bg: '#ffffff' },
-        { id: 'res-hazards-section',         bg: '#ffffff' },
-        { id: 'res-recommendations-section', bg: '#ffffff' },
-        { id: 'res-uw-section',              bg: '#ffffff' },
-      ];
+      // ── Page 2: Brand header + result header + COPE panel — captured as one block ──
+      var brandEl       = document.getElementById('res-brand-header');
+      var resultHdrEl   = document.querySelector('.result-header');
+      var copeEl        = document.getElementById('structured-cope-panel');
+      var page2Wrap     = document.createElement('div');
+      page2Wrap.style.cssText = 'background:#fff;width:100%;';
+      if (brandEl)    page2Wrap.appendChild(brandEl.cloneNode(true));
+      if (resultHdrEl) page2Wrap.appendChild(resultHdrEl.cloneNode(true));
+      if (copeEl)     { var copeClone = copeEl.cloneNode(true); copeClone.style.display = 'block'; page2Wrap.appendChild(copeClone); }
+      document.body.appendChild(page2Wrap);
+      var page2Canvas = await html2canvas(page2Wrap, h2cOpts('#ffffff'));
+      document.body.removeChild(page2Wrap);
+      pdf.addPage();
+      sliceCanvasToPdf(page2Canvas, true);
 
-      for (var si = 0; si < reportSections.length; si++) {
-        var sec = document.getElementById(reportSections[si].id);
-        if (!sec) continue;
-        var wasHidden = (sec.style.display === 'none');
-        if (wasHidden) sec.style.display = 'block';
+      // ── Insured Profile (may be hidden) — new page ──
+      var profileEl = document.getElementById('res-profile-section');
+      if (profileEl) {
+        var profWasHidden = (profileEl.style.display === 'none');
+        if (profWasHidden) profileEl.style.display = 'block';
+        var profileCanvas = await html2canvas(profileEl, h2cOpts('#ffffff'));
+        if (profWasHidden) profileEl.style.display = 'none';
         pdf.addPage();
-        await addElementToPdf(sec, reportSections[si].bg);
-        if (wasHidden) sec.style.display = 'none';
+        sliceCanvasToPdf(profileCanvas, true);
       }
 
-      // ── Photo section: capture last, after a delay to allow async photo rendering ──
+      // ── Flowing narrative group: Construction → Occupancy → Protection → Exposure → Hazards ──
+      // Captured as ONE canvas so they flow naturally — no forced page breaks between them
+      var narrativeIds = [
+        'res-construction-section', 'res-occupancy-section',
+        'res-protection-section',   'res-exposure-section',
+        'res-hazards-section'
+      ];
+      var narWrap = document.createElement('div');
+      narWrap.style.cssText = 'background:#fff;width:100%;';
+      narrativeIds.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) narWrap.appendChild(el.cloneNode(true));
+      });
+      document.body.appendChild(narWrap);
+      var narCanvas = await html2canvas(narWrap, h2cOpts('#ffffff'));
+      document.body.removeChild(narWrap);
+      pdf.addPage();
+      sliceCanvasToPdf(narCanvas, true);
+
+      // ── Recommendations — new page ──
+      var recEl = document.getElementById('res-recommendations-section');
+      if (recEl) {
+        var recCanvas = await html2canvas(recEl, h2cOpts('#ffffff'));
+        pdf.addPage();
+        sliceCanvasToPdf(recCanvas, true);
+      }
+
+      // ── Underwriting Summary — new page ──
+      var uwEl = document.getElementById('res-uw-section');
+      if (uwEl) {
+        var uwCanvas = await html2canvas(uwEl, h2cOpts('#ffffff'));
+        pdf.addPage();
+        sliceCanvasToPdf(uwCanvas, true);
+      }
+
+      // ── Submitted Photographs — new page, row-aware slicing ──
       var photoSec = document.getElementById('res-photo-section');
       if (photoSec) {
         var photoWasHidden = (photoSec.style.display === 'none');
         if (photoWasHidden) photoSec.style.display = 'block';
-        // Wait up to 3 seconds for photo grid images to load
+
+        // Wait up to 5s for async photo images to finish loading
         await new Promise(function(resolve) {
           var imgs = photoSec.querySelectorAll('img');
-          if (imgs.length === 0) { resolve(); return; }
-          var loaded = 0;
-          var total = imgs.length;
-          var done = false;
-          var timeout = setTimeout(function() { if (!done) { done = true; resolve(); } }, 3000);
+          if (!imgs.length) { resolve(); return; }
+          var loaded = 0, total = imgs.length, done = false;
+          var timeout = setTimeout(function() { if (!done) { done = true; resolve(); } }, 5000);
           imgs.forEach(function(img) {
             if (img.complete) {
-              loaded++;
-              if (loaded >= total && !done) { done = true; clearTimeout(timeout); resolve(); }
+              if (++loaded >= total && !done) { done = true; clearTimeout(timeout); resolve(); }
             } else {
               img.onload = img.onerror = function() {
-                loaded++;
-                if (loaded >= total && !done) { done = true; clearTimeout(timeout); resolve(); }
+                if (++loaded >= total && !done) { done = true; clearTimeout(timeout); resolve(); }
               };
             }
           });
         });
+
+        // Build a clean print grid with fixed row height so page slices land between rows
+        var COLS = 3, ROW_H = 200, GAP = 10;
+        var photoGrid = document.getElementById('res-photo-grid');
+        var photoCards = photoGrid ? Array.from(photoGrid.querySelectorAll('div')) : [];
+        // Filter to actual photo cards (have an img child)
+        photoCards = photoCards.filter(function(d) { return d.querySelector('img'); });
+
+        var printWrap = document.createElement('div');
+        printWrap.style.cssText = 'background:#fff;padding:16px;width:100%;box-sizing:border-box;';
+        var pgHdr = document.createElement('div');
+        pgHdr.style.cssText = 'font-size:13px;font-weight:700;color:#1e3a4f;font-family:monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #e2e8f0;';
+        pgHdr.innerHTML = '&#x1F4F8;&nbsp; Submitted Photographs';
+        printWrap.appendChild(pgHdr);
+
+        var grid = document.createElement('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(' + COLS + ',1fr);gap:' + GAP + 'px;';
+        printWrap.appendChild(grid);
+
+        photoCards.forEach(function(card) {
+          var clone = card.cloneNode(true);
+          var img = clone.querySelector('img');
+          if (img) img.style.cssText = 'width:100%;height:' + ROW_H + 'px;object-fit:cover;display:block;';
+          grid.appendChild(clone);
+        });
+
+        document.body.appendChild(printWrap);
+        var photoCanvas = await html2canvas(printWrap, h2cOpts('#ffffff'));
+        document.body.removeChild(printWrap);
+
+        // Row-aware page slicing
+        var imgData3  = photoCanvas.toDataURL('image/jpeg', 0.88);
+        var imgW3     = pageW;
+        var imgH3     = (photoCanvas.height * imgW3) / photoCanvas.width;
+        // How tall is one row in mm on the PDF page?
+        var rowH_mm   = (ROW_H + GAP) * (pageW / 960);
+        var rowsFit   = Math.max(1, Math.floor(pageH / rowH_mm));
+        var sliceH_mm = rowsFit * rowH_mm;
+        var yOff3 = 0;
         pdf.addPage();
-        await addElementToPdf(photoSec, '#ffffff');
+        var firstPhotoPage = true;
+        while (yOff3 < imgH3) {
+          if (imgH3 - yOff3 < 4) break;
+          if (!firstPhotoPage) pdf.addPage();
+          firstPhotoPage = false;
+          pdf.addImage(imgData3, 'JPEG', 0, -yOff3, imgW3, imgH3);
+          yOff3 += sliceH_mm;
+        }
+
         if (photoWasHidden) photoSec.style.display = 'none';
       }
+
+
 
       // Convert to blob
       var pdfBlob = pdf.output('blob');
