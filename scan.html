@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 264 — 2026-06-16 -->
+<!-- SanketRisk SCAN ONE — Deploy 265 — 2026-06-16 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -3287,9 +3287,9 @@
       var pdfBlob = pdf.output('blob');
 
       // Check if PDF already exists in Supabase
-      var pdfPath = 'reports/' + inspId + '.pdf';
-      var checkRes = await _supabase.storage.from('reports').list('reports', { search: inspId + '.pdf' });
-      var alreadyExists = checkRes.data && checkRes.data.length > 0;
+      var pdfPath = inspId + '.pdf';  // path within the 'reports' bucket
+      var checkRes = await _supabase.storage.from('reports').list('', { search: inspId + '.pdf' });
+      var alreadyExists = checkRes.data && checkRes.data.some(function(f){ return f.name === inspId + '.pdf'; });
 
       if (alreadyExists) {
         // Prompt to overwrite
@@ -3299,10 +3299,11 @@
           return pdfPath;
         }
         // Delete existing before re-upload
-        await _supabase.storage.from('reports').remove([pdfPath]);
+        await _supabase.storage.from('reports').remove([inspId + '.pdf']);
       }
 
       // Upload PDF to Supabase Storage
+      showToast('\u23F3 Uploading PDF to storage\u2026');
       var uploadRes = await _supabase.storage.from('reports').upload(pdfPath, pdfBlob, {
         contentType: 'application/pdf',
         upsert: true,
@@ -3310,7 +3311,7 @@
 
       if (uploadRes.error) throw uploadRes.error;
 
-      showToast('\u2713 PDF report stored successfully.');
+      showToast('\u2713 PDF report stored — ' + pdfPath);
       return pdfPath;
 
     } catch(e) {
@@ -3419,6 +3420,7 @@
       // Generate and store PDF, then update record with path
       var pdfPath = await generateAndStorePDF(inspId);
       if (pdfPath) {
+        // Store just the filename — bucket name 'reports' is implicit
         await _supabase.from('scan_submissions').update({
           report_pdf_path: pdfPath
         }).eq('inspection_id', inspId);
