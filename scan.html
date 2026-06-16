@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 276 — 2026-06-16 — Remove photo count limits, 8min poll timeout -->
+<!-- SanketRisk SCAN ONE — Deploy 277 — 2026-06-16 — Diagnostic toasts for mobile debugging -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2123,6 +2123,7 @@
 
     var jobId = 'job-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
     console.log('v3 job:', jobId, 'paths:', storagePaths.length);
+    showToast('⏳ Starting: ' + storagePaths.length + ' photos — job ' + jobId.substring(0,12));
 
     // Fetch matching library recommendations
     document.getElementById('btn-analyse-text').textContent = 'Loading recommendations…';
@@ -2175,19 +2176,19 @@
         var data = await response.json();
         if (data.status === 'complete' && data.result) {
           console.log('Lambda returned directly');
+          showToast('✓ Lambda responded directly');
           return data.result;
         }
-        if (data.error) throw new Error(data.error);
+        if (data.error) { showToast('⚠ Lambda error: ' + String(data.error).substring(0,80)); throw new Error(data.error); }
       }
     } catch(fetchErr) {
       // Connection drop / timeout is expected for long jobs — fall through to polling
-      // Only hard-fail if it's clearly a network-unreachable error
       console.log('Fetch ended:', fetchErr.message);
+      // Show on screen so mobile users without dev console can see the error
+      showToast('⚠ Lambda: ' + fetchErr.message.substring(0, 100));
     }
 
-    // Fetch matching recommendations from library
-
-    // Poll scan_jobs table in Supabase every 6 seconds (up to 5 minutes)
+    // Poll scan_jobs table in Supabase every 6 seconds (up to 8 minutes)
     var pollStart = Date.now();
     var pollMax   = 480000; // 8 minutes
     var pollInterval = 6000;
