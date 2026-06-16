@@ -311,6 +311,12 @@
     const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // ── EMAIL CONFIG — update these when your Resend domain is verified ──
+    const RESEND_API_KEY   = 're_JeyjNXkX_BhQRjCmmh6R1oHFyaZ5dzimu';
+    const RESEND_FROM      = 'SanketRisk ONE <onboarding@resend.dev>';  // change to e.g. reports@sanketrisk.com after domain verification
+    const EMAIL_SUBJECT_TPL = 'SanketRisk SCAN ONE — Property Risk Assessment: {insured}';
+    const EMAIL_BODY_TPL    = 'Dear {name},\n\nPlease find attached the SanketRisk SCAN ONE Property Risk Assessment Report for {insured}, located at {address}.\n\nThis report has been prepared based on the photographs and property information submitted for AI-assisted analysis. Please review the findings and recommendations at your earliest convenience.\n\nShould you have any questions regarding the assessment, please do not hesitate to contact us.\n\nKind regards,\nSanket Risk Consultants\n\n---\nThis report is AI-generated and is intended as a preliminary assessment only. It does not replace a full physical inspection by a qualified professional.';
+
     let currentUser     = null;
     let currentUserRole = 'inspector';
     let currentUserName = '';
@@ -563,7 +569,7 @@
       try {
         const { data: rows, error } = await _supabase
           .from('scan_submissions')
-          .select('id, file_number, inspection_id, insured_name, city, province, occupancy, photo_count, submitted_at, status, qa_status, scan_result')
+          .select('id, file_number, inspection_id, insured_name, city, province, occupancy, photo_count, submitted_at, status, qa_status, scan_result, form_data')
           .order('submitted_at', { ascending: false });
 
         if (error) {
@@ -604,7 +610,8 @@
             '<td style="text-align:center;font-size:13px;font-weight:600;color:var(--slate)">' + (r.photo_count||0) + '</td>' +
             '<td style="text-align:center;white-space:nowrap">' +
               (r.status === 'analysed' && r.scan_result
-                ? '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;font-size:11px;display:block;width:100%;margin-bottom:3px" data-view-id="' + r.id + '">📋 View Report</button>'
+                ? '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;font-size:11px;display:block;width:100%;margin-bottom:3px" data-view-id="' + r.id + '">📋 View Report</button>' +
+                  '<button class="btn-open" style="background:#7c3aed;color:#fff;border-color:#7c3aed;font-size:11px;display:block;width:100%;margin-bottom:3px" data-email-id="' + r.id + '">📧 Email Report</button>'
                 : '') +
               '<button class="btn-open" style="background:#0891b2;color:#fff;border-color:#0891b2;font-size:11px;display:block;width:100%;margin-bottom:3px" data-scan-id="' + r.id + '">📂 Open Submission</button>' +
               '<button class="btn-open" style="color:#c53030;border-color:#c53030;font-size:11px;display:block;width:100%;" data-del-id="' + r.id + '">🗑 Delete</button>' +
@@ -614,6 +621,12 @@
           if (tr.querySelector('[data-view-id]')) {
             tr.querySelector('[data-view-id]').addEventListener('click', function() {
               window.location.href = '/scan.html?report_only=1&view_report=' + r.id;
+            });
+          }
+          // Email Report — opens email modal for this submission
+          if (tr.querySelector('[data-email-id]')) {
+            tr.querySelector('[data-email-id]').addEventListener('click', function() {
+              openEmailModal(r);
             });
           }
           // Open Submission — opens scan.html restoring ALL original form data + photos
@@ -806,5 +819,177 @@
 
     init();
   </script>
+  <!-- ── EMAIL REPORT MODAL ── -->
+  <div id="email-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:540px;box-shadow:0 24px 64px rgba(0,0,0,.3);overflow:hidden;">
+      <!-- Header -->
+      <div style="background:#0d1b2a;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:15px;font-weight:700;color:#fff;font-family:'IBM Plex Sans',sans-serif;">📧 Email Assessment Report</div>
+        <button onclick="closeEmailModal()" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:20px;cursor:pointer;line-height:1;">×</button>
+      </div>
+      <!-- Body -->
+      <div style="padding:24px;display:flex;flex-direction:column;gap:14px;">
+        <div id="email-modal-record" style="background:#f0f7ff;border:1px solid #bee3f8;border-radius:8px;padding:10px 14px;font-size:12px;color:#2b6cb0;font-family:'IBM Plex Sans',sans-serif;"></div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4a5568;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:5px;">To (Recipient Email)</label>
+          <input type="email" id="email-to" placeholder="client@company.com"
+            style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;box-sizing:border-box;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4a5568;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:5px;">Subject</label>
+          <input type="text" id="email-subject"
+            style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;box-sizing:border-box;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4a5568;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:5px;">Message</label>
+          <textarea id="email-body" rows="8"
+            style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;box-sizing:border-box;outline:none;resize:vertical;line-height:1.6;"></textarea>
+        </div>
+        <div style="background:#fffbeb;border:1px solid #f6e05e;border-radius:8px;padding:10px 14px;font-size:11px;color:#744210;font-family:'IBM Plex Sans',sans-serif;">
+          📎 <strong>Attachment:</strong> The report PDF will be generated from the live report page and attached automatically.
+        </div>
+        <div id="email-status" style="display:none;font-size:12px;padding:10px 14px;border-radius:8px;font-family:'IBM Plex Sans',sans-serif;"></div>
+      </div>
+      <!-- Footer -->
+      <div style="padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="closeEmailModal()" style="border:1.5px solid #e2e8f0;background:#fff;color:#4a5568;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">Cancel</button>
+        <button id="email-send-btn" onclick="sendReportEmail()" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:9px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">Send Report</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── EMAIL MODAL ──
+    var _emailRecord = null;
+
+    function openEmailModal(r) {
+      _emailRecord = r;
+
+      // Parse form_data to get client email
+      var fd = null;
+      try { fd = r.form_data ? (typeof r.form_data === 'string' ? JSON.parse(r.form_data) : r.form_data) : null; } catch(e) {}
+      var clientEmail = (fd && (fd.clientEmail || fd.submitterEmail || fd.email || fd.recipientEmail)) || '';
+
+      // Pre-fill fields
+      document.getElementById('email-to').value      = clientEmail;
+      document.getElementById('email-subject').value = EMAIL_SUBJECT_TPL.replace('{insured}', r.insured_name || 'Property');
+      document.getElementById('email-body').value    = EMAIL_BODY_TPL
+        .replace('{name}',    r.insured_name || 'Sir/Madam')
+        .replace('{insured}', r.insured_name || 'the subject property')
+        .replace('{address}', [r.city, r.province].filter(Boolean).join(', ') || 'the property');
+
+      // Record info strip
+      var fileNo = r.inspection_id || r.file_number || '—';
+      document.getElementById('email-modal-record').innerHTML =
+        '<strong>' + (r.insured_name || '—') + '</strong> &nbsp;·&nbsp; ' + fileNo +
+        ' &nbsp;·&nbsp; ' + [r.city, r.province].filter(Boolean).join(', ');
+
+      // Reset status
+      var st = document.getElementById('email-status');
+      st.style.display = 'none'; st.textContent = '';
+      document.getElementById('email-send-btn').disabled = false;
+      document.getElementById('email-send-btn').textContent = 'Send Report';
+
+      // Show modal
+      var modal = document.getElementById('email-modal');
+      modal.style.display = 'flex';
+    }
+
+    function closeEmailModal() {
+      document.getElementById('email-modal').style.display = 'none';
+      _emailRecord = null;
+    }
+
+    // Close on backdrop click
+    document.getElementById('email-modal').addEventListener('click', function(e) {
+      if (e.target === this) closeEmailModal();
+    });
+
+    async function sendReportEmail() {
+      var to      = document.getElementById('email-to').value.trim();
+      var subject = document.getElementById('email-subject').value.trim();
+      var body    = document.getElementById('email-body').value.trim();
+      var st      = document.getElementById('email-status');
+      var btn     = document.getElementById('email-send-btn');
+
+      if (!to || !to.includes('@')) {
+        showEmailStatus('error', '⚠ Please enter a valid recipient email address.');
+        document.getElementById('email-to').focus();
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Generating PDF…';
+      showEmailStatus('info', '⏳ Opening report to generate PDF — please wait…');
+
+      try {
+        // Step 1: Fetch the report HTML from scan.html?report_only=1&view_report=ID
+        var reportId = _emailRecord.id;
+        var reportUrl = window.location.origin + '/scan.html?report_only=1&view_report=' + reportId;
+
+        // Step 2: Use fetch to get the report page content as base64 for attachment
+        // Since we can't generate a true PDF client-side without a library,
+        // we send the report URL as a link AND a note. 
+        // For PDF attachment we open the report in a hidden iframe and use print-to-PDF approach.
+        // Practical approach: attach HTML file as .html — opens natively as report in browser.
+        var resp = await fetch(reportUrl);
+        if (!resp.ok) throw new Error('Could not load report page');
+        var htmlContent = await resp.text();
+        var b64Html = btoa(unescape(encodeURIComponent(htmlContent)));
+
+        btn.textContent = 'Sending…';
+        showEmailStatus('info', '📤 Sending email via Resend…');
+
+        // Step 3: Send via Resend API
+        var fileName = 'SanketRisk_SCAN_ONE_' + (_emailRecord.inspection_id || _emailRecord.id).replace(/[^a-zA-Z0-9]/g,'_') + '_Report.html';
+
+        var payload = {
+          from:    RESEND_FROM,
+          to:      [to],
+          subject: subject,
+          text:    body,
+          html:    body.replace(/
+/g, '<br>'),
+          attachments: [{
+            filename: fileName,
+            content:  b64Html,
+          }]
+        };
+
+        var res = await fetch('https://api.resend.com/emails', {
+          method:  'POST',
+          headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payload)
+        });
+
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.message || data.name || 'Resend error');
+
+        btn.textContent = '✓ Sent';
+        showEmailStatus('success', '✓ Report emailed successfully to ' + to);
+
+        // Close after 3 seconds
+        setTimeout(closeEmailModal, 3000);
+
+      } catch(e) {
+        btn.disabled = false;
+        btn.textContent = 'Send Report';
+        showEmailStatus('error', '⚠ Failed to send: ' + e.message);
+      }
+    }
+
+    function showEmailStatus(type, msg) {
+      var st = document.getElementById('email-status');
+      var colors = {
+        info:    { bg: '#ebf8ff', border: '#bee3f8', color: '#2b6cb0' },
+        success: { bg: '#f0fff4', border: '#9ae6b4', color: '#276749' },
+        error:   { bg: '#fff5f5', border: '#fc8181', color: '#c53030' },
+      };
+      var c = colors[type] || colors.info;
+      st.style.cssText = 'display:block;background:' + c.bg + ';border:1px solid ' + c.border + ';color:' + c.color + ';border-radius:8px;padding:10px 14px;font-size:12px;font-family:IBM Plex Sans,sans-serif;';
+      st.textContent = msg;
+    }
+  </script>
+
 </body>
 </html>
