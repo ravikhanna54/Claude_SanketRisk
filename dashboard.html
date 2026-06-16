@@ -896,29 +896,23 @@
         btn.textContent = 'Sending…';
         showEmailStatus('info', '📤 Sending email via Resend…');
 
-        // Step 3: Send via Resend API
+        // Step 3: Send via Netlify function (avoids CORS — Resend API called server-side)
         var fileName = 'SanketRisk_SCAN_ONE_' + (_emailRecord.inspection_id || _emailRecord.id).replace(/[^a-zA-Z0-9]/g,'_') + '_Report.html';
 
-        var payload = {
-          from:    RESEND_FROM,
-          to:      [to],
-          subject: subject,
-          text:    body,
-          html:    body.replace(/\n/g, '<br>'),
-          attachments: [{
-            filename: fileName,
-            content:  b64Html,
-          }]
-        };
-
-        var res = await fetch('https://api.resend.com/emails', {
+        var res = await fetch('/.netlify/functions/send-report-email', {
           method:  'POST',
-          headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
-          body:    JSON.stringify(payload)
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            to:              to,
+            subject:         subject,
+            body:            body,
+            attachment_b64:  b64Html,
+            attachment_name: fileName,
+          })
         });
 
         var data = await res.json();
-        if (!res.ok) throw new Error(data.message || data.name || 'Resend error');
+        if (!res.ok) throw new Error(data.error || 'Email send failed');
 
         btn.textContent = '✓ Sent';
         showEmailStatus('success', '✓ Report emailed successfully to ' + to);
