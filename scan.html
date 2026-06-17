@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 280 — 2026-06-16 — Fix hazards [object Object] rendering -->
+<!-- SanketRisk SCAN ONE — Deploy 281 — 2026-06-16 — Fix JSON code fence parsing for claude-sonnet-4-5 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1917,6 +1917,13 @@
     if (!raw) throw new Error('Empty response from AI');
     if (typeof raw === 'object') return raw;
 
+    // S0: strip markdown code fences — claude-sonnet-4-5 often wraps JSON in ```json ... ```
+    var stripped = raw.trim();
+    if (stripped.indexOf('```') === 0) {
+      stripped = stripped.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+      try { return JSON.parse(stripped); } catch(e) {}
+    }
+
     // S1: direct parse
     try { return JSON.parse(raw); } catch(e) {}
 
@@ -1960,7 +1967,7 @@
     }
     try { return JSON.parse(out); } catch(e) {}
 
-    throw new Error('Parse failed | len:' + raw.length + ' | first char code:' + raw.charCodeAt(0));
+    throw new Error('Parse failed | len:' + raw.length + ' | first char code:' + raw.charCodeAt(0) + ' | Raw starts: ' + raw.substring(0, 120).replace(/\n/g,' '));
   }
 
   // ── COMPRESS IMAGE (for preview only — actual upload uses original) ──
