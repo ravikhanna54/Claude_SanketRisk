@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Diagnostic toast on recall, ?review= param -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Fix photo lazy fetch condition -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2181,7 +2181,7 @@
 
   async function uploadPhotos() {
     // ── Lazy-fetch photos from Supabase if opened from dashboard review ──
-    if (_reviewId && !_draftId && uploadedPhotos.length === 0) {
+    if (_reviewId && uploadedPhotos.length === 0) {
       const btn = document.getElementById('btn-upload');
       const statusDiv = document.getElementById('upload-status');
       btn.disabled = true;
