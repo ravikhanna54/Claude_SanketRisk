@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Fix PDF photos via direct data URL injection -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Accept ?review= URL param for recall -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1630,7 +1630,7 @@
   // Restores the full form so the inspector can re-run the analysis with original data.
   (async function checkViewReportMode() {
     var params = new URLSearchParams(window.location.search);
-    var viewId = params.get('view_report');
+    var viewId = params.get('view_report') || params.get('review');
     if (!viewId) return;
 
     // Show loading banner immediately
