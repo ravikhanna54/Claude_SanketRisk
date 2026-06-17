@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Auto-show photos on recall, skip download -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — S9 plain text fallback parser -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1915,7 +1915,40 @@
       return JSON.parse(salvaged);
     } catch(e) {}
 
+    // S9: plain text / markdown fallback — wrap narrative text as a structured result
+    // This handles cases where the AI returned a text report instead of JSON
+    if (raw.length > 100) {
+      console.log('Falling back to plain text parse — wrapping as narrative');
+      return {
+        executive_summary: raw.substring(0, 500).replace(/[#*\-]/g, '').trim(),
+        construction: extractSection(raw, ['CONSTRUCTION', 'Building Envelope']),
+        occupancy: extractSection(raw, ['OCCUPANCY', 'Operation Type']),
+        protection: extractSection(raw, ['FIRE PROTECTION', 'Sprinkler']),
+        exposure: extractSection(raw, ['EXPOSURE', 'HAZARDS', 'Hazard']),
+        hazards: extractSection(raw, ['HAZARDS', 'DEFICIENCIES', 'Primary Fire']),
+        recommendations: [],
+        underwriting_recommendation: 'Review required — see narrative report',
+        risk_quality: 'Moderate',
+        scores: { construction: 70, protection: 60, safety: 55, overall: 62 },
+        _narrative: raw  // preserve full text
+      };
+    }
+
     throw new Error('Parse failed | len:' + raw.length + ' | first char code:' + raw.charCodeAt(0));
+  }
+
+  // ── Helper: extract a section from markdown text ──
+  function extractSection(text, headings) {
+    for (var hi = 0; hi < headings.length; hi++) {
+      var idx = text.indexOf(headings[hi]);
+      if (idx !== -1) {
+        var end = text.length;
+        var nextH = text.indexOf('\n#', idx + 1);
+        if (nextH !== -1) end = nextH;
+        return text.substring(idx, Math.min(idx + 1000, end)).replace(/[#*]/g, '').trim();
+      }
+    }
+    return '';
   }
 
   // ── COMPRESS IMAGE (for preview only — actual upload uses original) ──
