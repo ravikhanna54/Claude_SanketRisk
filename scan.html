@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Fix PDF photos, pre-populate grid before capture -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Fix PDF photos via direct data URL injection -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -3355,28 +3355,40 @@
       var pageW = pdf.internal.pageSize.getWidth();
       var pageH = pdf.internal.pageSize.getHeight();
 
-      // Capture the full results section as canvas
-      // First ensure photo section is visible and images are loaded
-      var photoSec = document.getElementById('res-photo-section');
-      var photoWasHidden = photoSec && photoSec.style.display === 'none';
-      if (photoWasHidden) photoSec.style.display = 'block';
-
-      // Wait for all photos in grid to load (up to 5 seconds)
-      await new Promise(function(resolve) {
-        var imgs = document.querySelectorAll('#res-photo-grid img');
-        if (!imgs.length) { resolve(); return; }
-        var loaded = 0, total = imgs.length, done = false;
-        var timeout = setTimeout(function() { if (!done) { done = true; resolve(); } }, 5000);
-        imgs.forEach(function(img) {
-          if (img.complete) {
-            if (++loaded >= total && !done) { done = true; clearTimeout(timeout); resolve(); }
-          } else {
-            img.onload = img.onerror = function() {
-              if (++loaded >= total && !done) { done = true; clearTimeout(timeout); resolve(); }
-            };
-          }
+      // ── Gather photo data URLs for PDF ──
+      // Use uploadedPhotos (fresh analysis) or fetch from storage (recalled)
+      var photoDataUrls = [];
+      if (uploadedPhotos && uploadedPhotos.length) {
+        uploadedPhotos.forEach(function(p) {
+          if (p.dataUrl && p.type !== 'pdf') photoDataUrls.push(p.dataUrl);
         });
+      }
+      if (!photoDataUrls.length && _storagePaths && _storagePaths.length) {
+        var _imgPaths = _storagePaths.filter(function(p){ return !p.includes('/doc-') && !p.endsWith('.pdf'); });
+        showToast('\u23F3 Loading photos for PDF\u2026');
+        for (var _pi = 0; _pi < _imgPaths.length; _pi++) {
+          try {
+            var _pr = await fetch(SUPABASE_URL+'/storage/v1/object/scan-uploads/'+_imgPaths[_pi],
+              {headers:{'Authorization':'Bearer '+SUPABASE_KEY,'apikey':SUPABASE_KEY}});
+            if (_pr.ok) {
+              var _pb = await _pr.blob();
+              var _pdu = await new Promise(function(res) {
+                var fr = new FileReader(); fr.onload = function(){ res(fr.result); }; fr.readAsDataURL(_pb);
+              });
+              photoDataUrls.push(_pdu);
+            }
+          } catch(e) {}
+        }
+      }
+      // Also grab canvas elements from PDF.js extraction
+      document.querySelectorAll('#res-photo-grid canvas').forEach(function(cv) {
+        try { photoDataUrls.push(cv.toDataURL('image/jpeg', 0.85)); } catch(e) {}
       });
+
+      // Capture the full results section as canvas (excluding photo section — added separately)
+      var photoSec = document.getElementById('res-photo-section');
+      var photoWasHidden = photoSec && photoSec.style.display !== 'none';
+      if (photoSec) photoSec.style.display = 'none'; // hide photos — added as separate PDF pages
 
       var canvas = await html2canvas(resultsEl, {
         scale: 1.5,
@@ -3439,12 +3451,54 @@
       // ── Pages 2+: Report body ──
       pdf.addPage();
       while (yPos < imgH) {
-        // Check how much content remains
         var remaining = imgH - yPos;
-        if (remaining < 20) break;  // skip nearly-empty trailing pages
+        if (remaining < 20) break;
         if (yPos > 0) pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, -yPos, imgW, imgH);
         yPos += pageH;
+      }
+
+      // Restore photo section visibility
+      if (photoSec) photoSec.style.display = 'block';
+
+      // ── Photo pages: add 3-per-row grid of photos directly to PDF ──
+      if (photoDataUrls.length) {
+        var COLS = 3, margin2 = 8;
+        var cellW = (pageW - margin2 * 2 - (COLS-1) * 4) / COLS;
+        var cellH = cellW * 0.75; // 4:3 ratio
+        var xStart = margin2, yStart = margin2 + 8;
+        var xCur = xStart, yCur = yStart;
+        var col = 0;
+        pdf.addPage();
+        // Page header
+        pdf.setFontSize(10);
+        pdf.setTextColor(30, 58, 79);
+        pdf.text('Submitted Photographs', margin2, margin2 + 4);
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(margin2, margin2 + 6, pageW - margin2, margin2 + 6);
+
+        for (var pdi = 0; pdi < photoDataUrls.length; pdi++) {
+          // Check if new page needed
+          if (yCur + cellH > pageH - margin2) {
+            pdf.addPage();
+            pdf.text('Submitted Photographs (continued)', margin2, margin2 + 4);
+            pdf.line(margin2, margin2 + 6, pageW - margin2, margin2 + 6);
+            xCur = xStart; yCur = yStart; col = 0;
+          }
+          try {
+            pdf.addImage(photoDataUrls[pdi], 'JPEG', xCur, yCur, cellW, cellH);
+            // Photo number caption
+            pdf.setFontSize(7);
+            pdf.setTextColor(100, 100, 100);
+            pdf.text('Photo ' + (pdi + 1), xCur + 1, yCur + cellH - 1);
+          } catch(e) {}
+          col++;
+          if (col >= COLS) {
+            col = 0; xCur = xStart; yCur += cellH + 4;
+          } else {
+            xCur += cellW + 4;
+          }
+        }
       }
 
       // Convert to blob
