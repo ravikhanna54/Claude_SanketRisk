@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 284 — 2026-06-17 — Fix fence strip regex, suppress expected fetch toast -->
+<!-- SanketRisk SCAN ONE — Deploy 285 — 2026-06-17 — Fix fence strip in synthesis path -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2498,8 +2498,22 @@
         }
         const synData = await synRes.json();
         const raw = (synData.content && synData.content.find(function(c){return c.type==='text';}));
-        const rawText = (raw && raw.text) || '';
+        var rawText = (raw && raw.text) || '';
         if (!rawText) throw new Error('No synthesis response from AI');
+        // Strip fences before parsing — claude-sonnet-4-5/4-6 often wraps JSON in ```json...```
+        rawText = (function(t) {
+          var s = t.trim().replace(/^```(?:json|JSON)?[\s\r\n]*/i, '').replace(/[\s\r\n]*```[\s\r\n]*$/g, '').trim();
+          var out = '', inStr = false;
+          for (var i = 0; i < s.length; i++) {
+            var c = s[i], p = i > 0 ? s[i-1] : '';
+            if (c === '"' && p !== '\\') inStr = !inStr;
+            if (inStr && (c === '\n' || c === '\r')) out += ' ';
+            else out += c;
+          }
+          try { JSON.parse(out); return out; } catch(e) {}
+          try { JSON.parse(s); return s; } catch(e) {}
+          return t;
+        })(rawText);
         try {
           finalResult = parseAIResponse(rawText);
         } catch(e) {
