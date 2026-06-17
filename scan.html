@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 285 — 2026-06-17 — Fix fence strip in synthesis path -->
+<!-- SanketRisk SCAN ONE — Deploy 287 — 2026-06-17 — Revert to single Lambda call, remove batch/synthesis -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2004,6 +2004,26 @@
     }
     try { return JSON.parse(out); } catch(e) {}
 
+    // S7: aggressive repair — remove all control characters inside strings
+    var out2 = '', inStr2 = false;
+    for (var m = 0; m < slice.length; m++) {
+      var ch = slice[m], prev = m > 0 ? slice[m-1] : '';
+      if (ch === '"' && prev !== '\\') inStr2 = !inStr2;
+      var code = ch.charCodeAt(0);
+      if (inStr2 && code < 32) out2 += ' '; // strip ALL control chars inside strings
+      else out2 += ch;
+    }
+    try { return JSON.parse(out2); } catch(e) {}
+
+    // S8: extract individual fields as last resort
+    var fallback = {};
+    var fieldRx = /"([^"]+)"\s*:\s*("(?:[^"\\]|\\.)*"|[\d.]+|true|false|null|\[[\s\S]*?\])/g;
+    var fm;
+    while ((fm = fieldRx.exec(slice)) !== null) {
+      try { fallback[fm[1]] = JSON.parse(fm[2]); } catch(e) { fallback[fm[1]] = fm[2].replace(/^"|"$/g,''); }
+    }
+    if (Object.keys(fallback).length > 3) return fallback;
+
     throw new Error('Parse failed | len:' + raw.length + ' | first char code:' + raw.charCodeAt(0) + ' | Raw starts: ' + raw.substring(0, 120).replace(/\n/g,' '));
   }
 
@@ -2412,8 +2432,6 @@
     try {
       // Only send checked (selected) photos for analysis
     var checkedIdxs = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
-    const allPhotos = (checkedIdxs.length > 0 ? checkedIdxs.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean);
-      const BATCH_SIZE = 10;
       const sessionId = _sessionId;
       // Files already uploaded in Step 1
       const storagePaths = _storagePaths;
@@ -2422,103 +2440,19 @@
       document.getElementById('btn-analyse-text').textContent = 'Starting AI analysis\u2026';
       await delay(300);
 
-      // ── Step 2: Split paths into batches ──
-      const batches = [];
-      for (let i = 0; i < storagePaths.length; i += BATCH_SIZE) {
-        batches.push(storagePaths.slice(i, i + BATCH_SIZE));
-      }
-
       setStep(3);
       let finalResult;
 
-      if (batches.length === 1) {
-        // ── Single batch — proxy fetches from public storage URLs ──
-        document.getElementById('btn-analyse-text').textContent =
-          'Analysing ' + allPhotos.length + ' photo' + (allPhotos.length !== 1 ? 's' : '') + '…';
+      // ── Single Lambda call — all photos sent together, Lambda handles everything ──
+      document.getElementById('btn-analyse-text').textContent =
+        'Analysing ' + storagePaths.length + ' photo' + (storagePaths.length !== 1 ? 's' : '') + '\u2026';
 
-        const raw = await callProxy(null, batches[0], buildPrompt(data));
-        setStep(4);
-        try {
-          finalResult = parseAIResponse(raw);
-        } catch(e) {
-          throw new Error('Parse error: ' + e.message + ' | Raw starts: ' + (typeof raw==='string' ? raw.substring(0,80) : typeof raw));
-        }
-      } else {
-        // ── Multiple batches — observe then synthesise ──
-        const observations = [];
-        for (let i = 0; i < batches.length; i++) {
-          document.getElementById('btn-analyse-text').textContent =
-            'Analysing batch ' + (i + 1) + ' of ' + batches.length + '\u2026';
-          setStep(i === 0 ? 3 : i === batches.length - 1 ? 4 : 3);
-
-          const batchPrompt =
-            'You are a senior commercial property risk inspector. ' +
-            'These are files ' + (i * BATCH_SIZE + 1) + ' to ' +
-            Math.min((i + 1) * BATCH_SIZE, allPhotos.length) +
-            ' of ' + allPhotos.length + ' total for: ' +
-            (data.insured || data.address || 'subject property') + ', ' +
-            (data.occupancy || '') + '. ' +
-            'Describe in detail what you observe relevant to construction, occupancy, ' +
-            'fire protection, hazards and deficiencies. Be specific. ' +
-            'This is batch ' + (i + 1) + ' of ' + batches.length +
-            ' \u2014 observations will be combined for a final assessment.';
-
-          const obs = await callProxy(null, batches[i], batchPrompt);
-          observations.push(
-            '=== BATCH ' + (i + 1) + ' (Files ' +
-            (i * BATCH_SIZE + 1) + '-' +
-            Math.min((i + 1) * BATCH_SIZE, allPhotos.length) + ') ===\n' + obs
-          );
-          await delay(300);
-        }
-
-        // ── Synthesis pass (text only — no storage needed) ──
-        document.getElementById('btn-analyse-text').textContent = 'Synthesising full assessment\u2026';
-        setStep(4);
-
-        const synthesisPrompt = buildPrompt(data) +
-          '\n\n=== OBSERVATIONS FROM ALL ' + batches.length +
-          ' BATCHES (' + allPhotos.length + ' FILES TOTAL) ===\n' +
-          observations.join('\n\n') +
-          '\n\nUsing ALL of the above observations, produce the complete JSON assessment.';
-
-        // Text-only synthesis — pass as direct message, no storage paths
-        const synPayload = JSON.stringify({
-          model: 'claude-sonnet-4-6', max_tokens: 6000,
-          messages: [{ role: 'user', content: [{ type: 'text', text: synthesisPrompt }] }]
-        });
-        const synRes = await fetch(EDGE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: synPayload,
-        });
-        if (!synRes.ok) {
-          const e = await synRes.text();
-          throw new Error('Synthesis error: ' + (JSON.parse(e).error || e).substring(0, 200));
-        }
-        const synData = await synRes.json();
-        const raw = (synData.content && synData.content.find(function(c){return c.type==='text';}));
-        var rawText = (raw && raw.text) || '';
-        if (!rawText) throw new Error('No synthesis response from AI');
-        // Strip fences before parsing — claude-sonnet-4-5/4-6 often wraps JSON in ```json...```
-        rawText = (function(t) {
-          var s = t.trim().replace(/^```(?:json|JSON)?[\s\r\n]*/i, '').replace(/[\s\r\n]*```[\s\r\n]*$/g, '').trim();
-          var out = '', inStr = false;
-          for (var i = 0; i < s.length; i++) {
-            var c = s[i], p = i > 0 ? s[i-1] : '';
-            if (c === '"' && p !== '\\') inStr = !inStr;
-            if (inStr && (c === '\n' || c === '\r')) out += ' ';
-            else out += c;
-          }
-          try { JSON.parse(out); return out; } catch(e) {}
-          try { JSON.parse(s); return s; } catch(e) {}
-          return t;
-        })(rawText);
-        try {
-          finalResult = parseAIResponse(rawText);
-        } catch(e) {
-          throw new Error('Synthesis parse error: ' + e.message + ' | Raw: ' + rawText.substring(0, 100));
-        }
+      const raw = await callProxy(null, storagePaths, buildPrompt(data));
+      setStep(4);
+      try {
+        finalResult = parseAIResponse(raw);
+      } catch(e) {
+        throw new Error('Parse error: ' + e.message + ' | Raw starts: ' + (typeof raw==='string' ? raw.substring(0,80) : typeof raw));
       }
 
       
