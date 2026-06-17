@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 277 — 2026-06-16 — Diagnostic toasts for mobile debugging -->
+<!-- SanketRisk SCAN ONE — Deploy 278 — 2026-06-16 — Fix missing paths array causing upload failure -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2306,6 +2306,7 @@
     var checkedIdxs = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
     const allPhotos = (checkedIdxs.length > 0 ? checkedIdxs.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean);
       const sessionId = 'scan-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
+      const paths = [];
       for (let i = 0; i < allPhotos.length; i++) {
         statusDiv.textContent = 'Uploading file ' + (i+1) + ' of ' + allPhotos.length + '…';
         const path = await uploadToStorage(allPhotos[i], sessionId, i);
