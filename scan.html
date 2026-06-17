@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-16 — S8 salvage malformed recommendations array -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-16 — Increase max_tokens to 6000 for claude-sonnet-4-5 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2035,7 +2035,7 @@
   async function callProxy(messages, storagePaths, prompt) {
     // Text-only or inline-image call — send messages directly to proxy
     if (!storagePaths || storagePaths.length === 0) {
-      var mtokens = (function(){ var f=getReportFormat(); return f==='structured'?4000:f==='narrative'?5000:4000; })();
+      var mtokens = (function(){ var f=getReportFormat(); return f==='structured'?6000:f==='narrative'?7000:6000; })();
       const response = await fetch('/.netlify/functions/scan-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2056,7 +2056,7 @@
     }
 
     // Storage-mode — v3 async: Lambda saves result to scan_jobs, browser polls Supabase
-    var maxTokens = (function(){ var f=getReportFormat(); return f==='structured'?3500:f==='narrative'?5000:4000; })();
+    var maxTokens = (function(){ var f=getReportFormat(); return f==='structured'?6000:f==='narrative'?7000:6000; })();
 
     var jobId = 'job-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
     console.log('v3 job:', jobId, 'paths:', storagePaths.length);
