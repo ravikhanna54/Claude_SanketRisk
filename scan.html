@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 281 — 2026-06-16 — Fix JSON code fence parsing for claude-sonnet-4-5 -->
+<!-- SanketRisk SCAN ONE — Deploy 283 — 2026-06-17 — Fix photo recall on dashboard open -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1913,15 +1913,32 @@
 
   // ── RUN ANALYSIS ──
   // ── PARSE AI RESPONSE — handles all markdown fence variations ──
+  // Shared helper: strip markdown fences and fix embedded newlines in JSON strings
+  function stripFencesAndFix(text) {
+    // Remove ```json ... ``` or ``` ... ``` wrappers
+    var s = text.trim().replace(/^```(?:json|JSON)?\s*[\r\n]*/,'').replace(/[\r\n]*\s*```\s*$/,'').trim();
+    // Try direct parse first
+    try { return JSON.parse(s); } catch(e) {}
+    // Fix unescaped newlines inside JSON string values
+    var out = '', inStr = false;
+    for (var i = 0; i < s.length; i++) {
+      var c = s[i], p = i > 0 ? s[i-1] : '';
+      if (c === '"' && p !== '\\') inStr = !inStr;
+      if (inStr && (c === '\n' || c === '\r')) out += ' ';
+      else out += c;
+    }
+    try { return JSON.parse(out); } catch(e) {}
+    return null; // caller will try further strategies
+  }
+
   function parseAIResponse(raw) {
     if (!raw) throw new Error('Empty response from AI');
     if (typeof raw === 'object') return raw;
 
-    // S0: strip markdown code fences — claude-sonnet-4-5 often wraps JSON in ```json ... ```
-    var stripped = raw.trim();
-    if (stripped.indexOf('```') === 0) {
-      stripped = stripped.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
-      try { return JSON.parse(stripped); } catch(e) {}
+    // S0: strip markdown code fences first — claude-sonnet-4-5 wraps JSON in ```json ... ```
+    if (raw.trim().charCodeAt(0) === 96) { // backtick
+      var fenceResult = stripFencesAndFix(raw);
+      if (fenceResult) return fenceResult;
     }
 
     // S1: direct parse
@@ -2237,7 +2254,7 @@
 
   async function uploadPhotos() {
     // ── Lazy-fetch photos from Supabase if opened from dashboard review ──
-    if (_reviewId && !_draftId && uploadedPhotos.length === 0) {
+    if (_reviewId && uploadedPhotos.length === 0) {
       const btn = document.getElementById('btn-upload');
       const statusDiv = document.getElementById('upload-status');
       btn.disabled = true;
@@ -2478,19 +2495,21 @@
       if (finalResult && finalResult.raw && !finalResult.construction) {
         console.log('Parsing raw field, length:', finalResult.raw.length);
         var rawStr = finalResult.raw;
+        // Try fence strip first
+        var fenceAttempt = stripFencesAndFix(rawStr);
+        if (fenceAttempt) {
+          finalResult = fenceAttempt;
+        } else {
         // Use charCode scan to find true { and } positions
         var a = -1, b = -1;
         for (var ri = 0; ri < rawStr.length; ri++) { if (rawStr.charCodeAt(ri) === 123) { a = ri; break; } }
         for (var rj = rawStr.length-1; rj >= 0; rj--) { if (rawStr.charCodeAt(rj) === 125) { b = rj; break; } }
         if (a !== -1 && b !== -1) {
           var slice = rawStr.substring(a, b + 1);
-          // Try direct parse
           try { finalResult = JSON.parse(slice); }
           catch(e1) {
-            // Fix all newlines
             try { finalResult = JSON.parse(slice.replace(/\n/g,' ').replace(/\r/g,'')); }
             catch(e2) {
-              // Char by char fix
               var out = '', inS = false;
               for (var i = 0; i < slice.length; i++) {
                 var c = slice[i], p = i > 0 ? slice[i-1] : '';
@@ -2503,6 +2522,7 @@
             }
           }
         }
+        } // end else
       }
       lastResult = Object.assign({}, finalResult, { formData: data, photoCount: allPhotos.length, date: new Date().toISOString() });
       await delay(400);
