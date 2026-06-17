@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — max_tokens 16000 for verbose model -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Fix PDF photos, pre-populate grid before capture -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -3356,6 +3356,28 @@
       var pageH = pdf.internal.pageSize.getHeight();
 
       // Capture the full results section as canvas
+      // First ensure photo section is visible and images are loaded
+      var photoSec = document.getElementById('res-photo-section');
+      var photoWasHidden = photoSec && photoSec.style.display === 'none';
+      if (photoWasHidden) photoSec.style.display = 'block';
+
+      // Wait for all photos in grid to load (up to 5 seconds)
+      await new Promise(function(resolve) {
+        var imgs = document.querySelectorAll('#res-photo-grid img');
+        if (!imgs.length) { resolve(); return; }
+        var loaded = 0, total = imgs.length, done = false;
+        var timeout = setTimeout(function() { if (!done) { done = true; resolve(); } }, 5000);
+        imgs.forEach(function(img) {
+          if (img.complete) {
+            if (++loaded >= total && !done) { done = true; clearTimeout(timeout); resolve(); }
+          } else {
+            img.onload = img.onerror = function() {
+              if (++loaded >= total && !done) { done = true; clearTimeout(timeout); resolve(); }
+            };
+          }
+        });
+      });
+
       var canvas = await html2canvas(resultsEl, {
         scale: 1.5,
         useCORS: true,
@@ -3365,27 +3387,25 @@
         windowWidth: 960,
         imageTimeout: 0,
         onclone: function(clonedDoc) {
-          // Ensure results-wrap is visible in cloned document
           var rw = clonedDoc.getElementById('results-wrap');
           if (rw) rw.style.display = 'block';
-
-          // Hide by ID — elements that must not appear in PDF body capture
+          // Make photo section visible in clone
+          var ps = clonedDoc.getElementById('res-photo-section');
+          if (ps) ps.style.display = 'block';
           ['topnav','main-hero','mode-bar','progress-wrap',
            'view-report-banner','report-only-bar',
            'res-cover-photo-wrap','scan-cover-page'].forEach(function(id) {
             var el = clonedDoc.getElementById(id);
             if (el) el.style.display = 'none';
           });
-
-          // Hide by class — form sections and action buttons
           clonedDoc.querySelectorAll(
             '.scan-form-section, .btn-report, .result-actions, .report-actions'
           ).forEach(function(el) { el.style.display = 'none'; });
         }
       });
 
-      // Hide cover page again after capture
-      if (coverEl) coverEl.style.display = 'none';
+      // Restore photo section visibility
+      if (photoWasHidden) photoSec.style.display = 'none';
 
       var imgData  = canvas.toDataURL('image/jpeg', 0.88);
       var imgW     = pageW;
@@ -3559,6 +3579,12 @@
         });
         var error = _er1.error;
         if (error) throw error;
+      }
+
+      // Ensure photo grid is populated with all storage photos before PDF capture
+      if (_storagePaths && _storagePaths.length) {
+        renderStoragePhotosIntoGrid(_storagePaths);
+        await new Promise(function(r){ setTimeout(r, 500); }); // brief wait for grid to render
       }
 
       // Generate and store PDF, then update record with path
