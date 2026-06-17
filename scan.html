@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Remove batching, single Lambda call -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Restore runAnalysis, single Lambda call -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2306,13 +2306,64 @@
       }
     }
 
-    if (uploadedPhotos.length === 0) { showToast('Please select photos first.'); return; }
+    if (uploadedPhotos.length === 0 && (!_storagePaths || !_storagePaths.length)) {
+      showToast('Please select photos first.');
+      return;
+    }
     const btn = document.getElementById('btn-upload');
     const statusDiv = document.getElementById('upload-status');
     btn.disabled = true;
-    document.getElementById('btn-upload-text').textContent = 'Uploading…';
+    document.getElementById('btn-upload-text').textContent = 'Uploading\u2026';
     statusDiv.style.display = 'block';
-    statusDiv.textContent = 'Preparing upload…';
+    statusDiv.textContent = 'Preparing upload\u2026';
+    try {
+      var checkedIdxs2 = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
+      var allPhotos2 = (checkedIdxs2.length > 0 ? checkedIdxs2.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean);
+      var sessionId2 = 'scan-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
+      var paths2 = [];
+      for (var i2 = 0; i2 < allPhotos2.length; i2++) {
+        statusDiv.textContent = 'Uploading file ' + (i2+1) + ' of ' + allPhotos2.length + '\u2026';
+        var path2 = await uploadToStorage(allPhotos2[i2], sessionId2, i2);
+        paths2.push(path2);
+      }
+      _sessionId = sessionId2;
+      _storagePaths = paths2;
+      statusDiv.textContent = '\u2713 ' + paths2.length + ' file' + (paths2.length!==1?'s':'') + ' uploaded. Click Step 2 to generate the COPE assessment.';
+      statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
+      btn.disabled = false;
+      document.getElementById('btn-upload-text').textContent = '\u2713 Uploaded \u2014 Upload Again';
+      var analyseBtn3 = document.getElementById('btn-analyse');
+      if (analyseBtn3) { analyseBtn3.disabled = false; analyseBtn3.style.opacity = '1'; }
+      showToast('\u2713 ' + paths2.length + ' files uploaded! Click Step 2 to analyse.');
+      saveDraft(true);
+    } catch(e) {
+      btn.disabled = false;
+      document.getElementById('btn-upload-text').textContent = 'Step 1 \u2014 Upload Photos to Secure Storage';
+      statusDiv.textContent = '\u26A0 Upload failed: ' + e.message;
+      statusDiv.style.cssText += ';background:#fff5f5;border-color:#fc8181;color:#c53030;';
+      showToast('\u26A0 Upload failed: ' + e.message);
+    }
+  }
+
+  async function runAnalysis() {
+    if (!_sessionId || !_storagePaths || _storagePaths.length === 0) {
+      showToast('Please upload your photos first using Step 1.');
+      return;
+    }
+    const data = collectFormData();
+    var _profilePromise = (data && data.insured && data.insured.length > 2)
+      ? fetchInsuredProfile(data.insured, data.city, data.province)
+      : Promise.resolve();
+
+    const btn = document.getElementById('btn-analyse');
+    btn.disabled = true;
+    document.getElementById('btn-analyse-text').textContent = 'Analysing \u2014 please wait\u2026';
+    document.getElementById('progress-wrap').style.display = 'block';
+    document.getElementById('results-wrap').style.display  = 'none';
+    document.getElementById('progress-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setStep(1);
+    await delay(400);
+
     try {
       const sessionId = _sessionId;
       const storagePaths = _storagePaths;
@@ -2320,9 +2371,8 @@
       setStep(3);
       let finalResult;
 
-      // Single Lambda call — all photos sent together
       document.getElementById('btn-analyse-text').textContent =
-        'Analysing ' + storagePaths.length + ' photo' + (storagePaths.length !== 1 ? 's' : '') + '…';
+        'Analysing ' + storagePaths.length + ' photo' + (storagePaths.length !== 1 ? 's' : '') + '\u2026';
 
       const raw = await callProxy(null, storagePaths, buildPrompt(data));
       setStep(4);
@@ -2332,10 +2382,10 @@
         throw new Error('Parse error: ' + e.message + ' | Raw starts: ' + (typeof raw==='string' ? raw.substring(0,80) : typeof raw));
       }
 
-            setStep(5);
+      setStep(5);
       // Ensure photoCount is set
       data.photoCount = storagePaths.length;
-      // If finalResult has raw field, parse the COPE fields from it
+      lastResult = Object.assign({}, finalResult, { formData: data, photoCount: storagePaths.length, date: new Date().toISOString() });
       if (finalResult && finalResult.raw && !finalResult.construction) {
         console.log('Parsing raw field, length:', finalResult.raw.length);
         var rawStr = finalResult.raw;
@@ -2365,7 +2415,7 @@
           }
         }
       }
-      lastResult = Object.assign({}, finalResult, { formData: data, photoCount: allPhotos.length, date: new Date().toISOString() });
+      lastResult = Object.assign({}, finalResult, { formData: data, photoCount: storagePaths.length, date: new Date().toISOString() });
       await delay(400);
       // Wait for profile search to complete before rendering (runs in parallel, so little extra delay)
       await _profilePromise;
