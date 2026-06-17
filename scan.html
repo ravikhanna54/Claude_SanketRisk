@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-16 — Increase max_tokens to 6000 for claude-sonnet-4-5 -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Auto-save after upload, max_tokens 6000 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2268,6 +2268,9 @@
       const analyseBtn = document.getElementById('btn-analyse');
       if (analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
       showToast('✓ ' + paths.length + ' files uploaded! Click Step 2 to analyse.');
+      // Auto-save draft so storage paths are persisted for recall
+      var d = collectFormData();
+      if (d.insured || d.address) saveDraft(true);
     } catch(e) {
       btn.disabled = false;
       document.getElementById('btn-upload-text').textContent = 'Step 1 — Upload Photos to Secure Storage';
