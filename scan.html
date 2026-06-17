@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Fix photo lazy fetch condition -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Skip re-upload for recalled submissions -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2231,7 +2231,15 @@
 
         if (uploadedPhotos.length > 0) {
           renderPhotoPreview();
-          statusDiv.textContent = uploadedPhotos.length + ' photos loaded — starting upload to AI storage\u2026';
+          // Photos already in storage — no need to re-upload
+          // Just show status and enable Step 2
+          statusDiv.textContent = '✓ ' + uploadedPhotos.length + ' photos loaded from original submission. Click Step 2 to re-run analysis.';
+          statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
+          btn.disabled = false;
+          document.getElementById('btn-upload-text').textContent = '✓ Photos on file — Upload Again to refresh';
+          const analyseBtn2 = document.getElementById('btn-analyse');
+          if (analyseBtn2) { analyseBtn2.disabled = false; analyseBtn2.style.opacity = '1'; }
+          return; // ← skip re-upload, _storagePaths already set from recall
         } else {
           statusDiv.textContent = 'No photos found in submission.';
           btn.disabled = false;
