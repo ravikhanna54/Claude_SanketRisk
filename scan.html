@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 287 — 2026-06-17 — Revert to single Lambda call, remove batch/synthesis -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-16 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -221,122 +221,57 @@
       .scan-hero{padding:24px 20px}
     }
   @media print {
-    @page { margin: 14mm 12mm; }
-
     #topnav, #main-hero, #mode-bar, .scan-form-section, #progress-wrap,
-    .btn-report, .result-actions, #view-report-banner, #report-only-bar,
-    .report-actions { display: none !important; }
+    .btn-report, .result-actions, #view-report-banner, #report-only-bar { display: none !important; }
     body { background: #fff; }
     .results-container { box-shadow: none; border: none; }
 
-    /* ── Cover page: full page, nothing bleeds in or out ── */
+    /* ── Cover page ── */
     #scan-cover-page {
       display: flex !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
       page-break-before: always;
-      break-before: page;
       page-break-after: always;
+      break-before: page;
       break-after: page;
-      min-height: 100vh;
-      width: 100%;
+      height: 257mm;          /* A4 printable height — hard cap keeps everything on one page */
+      max-height: 257mm;
+      overflow: hidden;
       box-sizing: border-box;
-      padding: 52px 48px 48px !important;
-      justify-content: flex-start !important;
-      align-items: flex-start !important;
+      padding: 36px 44px !important;
     }
-    #scan-cover-page img { max-height: 240px !important; object-fit: cover !important; width: 100% !important; }
+    /* Cover photo: constrained so logo + text + meta footer all fit */
+    #scan-cover-page img { max-height: 190px !important; object-fit: cover !important; }
 
-    /* ── Brand header: starts page 2, no break inside ── */
+    /* ── Brand header + result header = Page 2, kept together ── */
     #res-brand-header {
       display: block !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
-      page-break-before: always;
-      break-before: page;
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-    /* Hide the photo strip in the brand header — already on cover page */
-    #res-cover-photo-wrap { display: none !important; }
-
-    /* ── Result header (exec summary + scores + COPE): keep with brand header ── */
-    .result-header {
       page-break-before: avoid;
       break-before: avoid;
       page-break-inside: avoid;
       break-inside: avoid;
     }
-
-    /* ── COPE structured panel: keep together ── */
-    #structured-cope-panel {
-      display: block !important;
+    /* Hide the photo strip in the brand header — already shown on the cover page */
+    #res-cover-photo-wrap { display: none !important; }
+    .result-header {
+      page-break-before: avoid;   /* brand header and result-header stay on same page */
+      break-before: avoid;
       page-break-inside: avoid;
       break-inside: avoid;
     }
 
-    /* ── All result sections: visible, allow page breaks between them ── */
+    /* ── Sections ── */
     #results-wrap { display: block !important; }
-    .result-section {
-      display: block !important;
-      /* Do NOT use page-break-inside:avoid globally — long sections cannot honour it */
-      margin-bottom: 0;
-      border-radius: 0;
-    }
-
-    /* ── Insured Profile: always starts a new page (it's long) ── */
-    #res-profile-section {
-      display: block !important;
-      page-break-before: always;
-      break-before: page;
-    }
-
-    /* ── Hazards: new page (follows long Exposure section) ── */
-    #res-hazards-section {
-      page-break-before: always;
-      break-before: page;
-    }
-
-    /* ── Recommendations: new page ── */
-    #res-recommendations-section {
-      page-break-before: always;
-      break-before: page;
-    }
-
-    /* ── Underwriting Summary: new page, keep the dark box together ── */
-    #res-uw-section {
-      page-break-before: always;
-      break-before: page;
-    }
-    .uw-box {
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    /* ── Supporting docs: keep together ── */
-    #res-support-docs-section {
-      display: block !important;
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    /* ── Photo section: always new page, cards never split ── */
-    #res-photo-section {
-      page-break-before: always;
-      break-before: page;
-    }
-    #res-photo-grid > div {
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    /* ── Recommendation cards: never split ── */
-    .rec-card {
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
+    #res-profile-section { display: block !important; }
+    #res-support-docs-section { display: block !important; page-break-inside: avoid; break-inside: avoid; }
+    #structured-cope-panel { display: block !important; page-break-inside: avoid; break-inside: avoid; }
+    .result-section { display: block !important; page-break-inside: avoid; break-inside: avoid; }
+    /* Photo grid cards — never split a photo across pages */
+    #res-photo-grid > div { page-break-inside: avoid; break-inside: avoid; }
+    #res-photo-section { page-break-before: always; break-before: page; }
   }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -671,7 +606,7 @@
           <input type="file" id="photo-input" accept="image/*,application/pdf" multiple onchange="handlePhotoUpload(this)">
           <div class="photo-zone-icon">&#x1F4F7;</div>
           <div class="photo-zone-title">Click or drag photos here</div>
-          <div class="photo-zone-sub">Select photos or 1 PDF document &mdash; JPG, PNG, HEIC, PDF accepted<br>For PDF reports, a single file is recommended. The AI will analyze all submitted files together.</div>
+          <div class="photo-zone-sub">Select up to 50 photos or 1 PDF document &mdash; JPG, PNG, HEIC, PDF accepted<br><strong>Do not exceed 50 files.</strong> For PDF reports, a single file is recommended. The AI will analyze all submitted files together.</div>
         </div>
 
         <div id="photo-preview-wrap" style="display:none;margin-top:4px">
@@ -833,39 +768,39 @@
         <div class="result-section-body" id="res-profile-body"><div style="color:#aaa;font-style:italic;font-size:12px;">Searching for company information…</div></div>
       </div>
 
-      <div class="result-section" id="res-construction-section">
+      <div class="result-section">
         <div class="result-section-header"><div class="result-section-icon">&#x1F3D7;&#xFE0F;</div><div class="result-section-title">Construction Assessment</div></div>
         <div class="result-section-body" id="res-construction">&#x2014;</div>
       </div>
 
-      <div class="result-section" id="res-occupancy-section">
+      <div class="result-section">
         <div class="result-section-header"><div class="result-section-icon">&#x1F3ED;</div><div class="result-section-title">Occupancy &amp; Operations</div></div>
         <div class="result-section-body" id="res-occupancy">&#x2014;</div>
       </div>
 
-      <div class="result-section" id="res-protection-section">
+      <div class="result-section">
         <div class="result-section-header"><div class="result-section-icon">&#x1F9EF;</div><div class="result-section-title">Protection Assessment</div></div>
         <div class="result-section-body" id="res-protection">&#x2014;</div>
       </div>
 
-      <div class="result-section" id="res-exposure-section">
+      <div class="result-section">
         <div class="result-section-header"><div class="result-section-icon">&#x1F30D;</div><div class="result-section-title">Exposure Assessment</div></div>
         <div class="result-section-body" id="res-exposure">&#x2014;</div>
       </div>
 
-      <div class="result-section" id="res-hazards-section">
+      <div class="result-section">
         <div class="result-section-header"><div class="result-section-icon">&#x26A0;&#xFE0F;</div><div class="result-section-title">Identified Hazards &amp; Deficiencies</div></div>
         <div class="result-section-body" id="res-hazards">&#x2014;</div>
       </div>
 
       <!-- Recommendations -->
-      <div class="result-section" id="res-recommendations-section">
+      <div class="result-section">
         <div class="result-section-header"><div class="result-section-icon">&#x2705;</div><div class="result-section-title">Recommendations</div></div>
         <div id="res-recommendations">&#x2014;</div>
       </div>
 
       <!-- UW Summary -->
-      <div class="result-section" id="res-uw-section">
+      <div class="result-section">
         <div class="result-section-header"><div class="result-section-icon">&#x1F4CA;</div><div class="result-section-title">Underwriting Summary</div></div>
         <div class="result-section-body">
           <div class="uw-box">
@@ -1256,8 +1191,8 @@
   function handlePhotoUpload(input) {
     const files = Array.from(input.files);
     if (!files.length) return;
-    if (files.length > 100) {
-      showToast('⚠ Large submission (' + files.length + ' files). Processing may take several minutes.');
+    if (files.length > 50) {
+      showToast('⚠ Maximum 50 files allowed. Only the first 50 will be used.');
     }
     let loaded = 0;
     files.forEach(file => {
@@ -1438,16 +1373,8 @@
       var profileText = data.result || '';
 
       if (profileText) {
-        // Strip markdown artifacts the AI sometimes includes: ## headings, **bold**, --- dividers
-        var cleanProfile = profileText
-          .replace(/^#{1,3}\s+.*$/gm, '')          // remove ## Heading lines
-          .replace(/\*\*([^*]+)\*\*/g, '$1')        // **bold** → plain text
-          .replace(/\*([^*]+)\*/g, '$1')             // *italic* → plain text
-          .replace(/^---+\s*$/gm, '')               // remove --- divider lines
-          .replace(/^\s*\n{2,}/gm, '\n')            // collapse multiple blank lines
-          .trim();
         profileBody.innerHTML = '<div style="font-size:13px;line-height:1.75;color:#2d3748;">' +
-          cleanProfile.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') +
+          profileText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') +
           '</div><div style="font-size:10px;color:#aaa;margin-top:8px;font-style:italic;">'
           + 'Source: Public web search — ' + new Date().toLocaleDateString('en-CA') + '</div>';
         // Save into lastResult so it persists to DB and can be restored on recall
@@ -1637,6 +1564,7 @@
     var checkedForPrompt = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
     var photoIndex = (checkedForPrompt.length > 0 ? checkedForPrompt : uploadedPhotos.map(function(_,i){ return i; }))
       .filter(function(i){ return uploadedPhotos[i]; })
+      .slice(0, 50)
       .map(function(i, n){ 
         var desc = uploadedPhotos[i].description || '';
         return 'Photo ' + (n+1) + (desc ? ': ' + desc : '');
@@ -1831,17 +1759,10 @@
             var profileBody    = document.getElementById('res-profile-body');
             if (!profileSection || !profileBody) return;
             if (savedResult.insuredProfile) {
-              // Saved profile text — restore directly, stripping any markdown artifacts
-              var cleanProfile = savedResult.insuredProfile
-                .replace(/^#{1,3}\s+.*$/gm, '')
-                .replace(/\*\*([^*]+)\*\*/g, '$1')
-                .replace(/\*([^*]+)\*/g, '$1')
-                .replace(/^---+\s*$/gm, '')
-                .replace(/^\s*\n{2,}/gm, '\n')
-                .trim();
+              // Saved profile text — restore directly
               profileSection.style.display = 'block';
               profileBody.innerHTML = '<div style="font-size:13px;line-height:1.75;color:#2d3748;">' +
-                cleanProfile.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') +
+                savedResult.insuredProfile.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') +
                 '</div><div style="font-size:10px;color:#aaa;margin-top:8px;font-style:italic;">Source: Public web search — saved report</div>';
             } else {
               // Not saved (older record) — re-fetch live from profile-search
@@ -1913,53 +1834,9 @@
 
   // ── RUN ANALYSIS ──
   // ── PARSE AI RESPONSE — handles all markdown fence variations ──
-  // Shared helper: strip markdown fences and fix embedded newlines in JSON strings
-  function stripFencesAndFix(text) {
-    var s = text.trim();
-    // Strip opening fence: ```json, ```JSON, ``` — with or without newline/space before {
-    s = s.replace(/^```(?:json|JSON)?[\s\r\n]*/i, '');
-    // Strip closing fence: trailing ``` with optional whitespace
-    s = s.replace(/[\s\r\n]*```[\s\r\n]*$/g, '').trim();
-    // Try direct parse
-    try { return JSON.parse(s); } catch(e) {}
-    // Fix unescaped newlines/carriage returns inside JSON string values
-    var out = '', inStr = false;
-    for (var i = 0; i < s.length; i++) {
-      var c = s[i], p = i > 0 ? s[i-1] : '';
-      if (c === '"' && p !== '\\') inStr = !inStr;
-      if (inStr && (c === '\n' || c === '\r')) out += ' ';
-      else out += c;
-    }
-    try { return JSON.parse(out); } catch(e) {}
-    // Last resort: find first { and last } and parse that slice
-    var a = -1, b = -1;
-    for (var fi = 0; fi < s.length; fi++) { if (s.charCodeAt(fi) === 123) { a = fi; break; } }
-    for (var fj = s.length - 1; fj >= 0; fj--) { if (s.charCodeAt(fj) === 125) { b = fj; break; } }
-    if (a !== -1 && b !== -1 && b > a) {
-      var slice = s.substring(a, b + 1);
-      try { return JSON.parse(slice); } catch(e) {}
-      // Fix newlines in slice too
-      var out2 = '', inStr2 = false;
-      for (var si2 = 0; si2 < slice.length; si2++) {
-        var c2 = slice[si2], p2 = si2 > 0 ? slice[si2-1] : '';
-        if (c2 === '"' && p2 !== '\\') inStr2 = !inStr2;
-        if (inStr2 && (c2 === '\n' || c2 === '\r')) out2 += ' ';
-        else out2 += c2;
-      }
-      try { return JSON.parse(out2); } catch(e) {}
-    }
-    return null;
-  }
-
   function parseAIResponse(raw) {
     if (!raw) throw new Error('Empty response from AI');
     if (typeof raw === 'object') return raw;
-
-    // S0: strip markdown code fences first — claude-sonnet-4-5 wraps JSON in ```json ... ```
-    if (raw.trim().charCodeAt(0) === 96) { // backtick
-      var fenceResult = stripFencesAndFix(raw);
-      if (fenceResult) return fenceResult;
-    }
 
     // S1: direct parse
     try { return JSON.parse(raw); } catch(e) {}
@@ -2004,27 +1881,7 @@
     }
     try { return JSON.parse(out); } catch(e) {}
 
-    // S7: aggressive repair — remove all control characters inside strings
-    var out2 = '', inStr2 = false;
-    for (var m = 0; m < slice.length; m++) {
-      var ch = slice[m], prev = m > 0 ? slice[m-1] : '';
-      if (ch === '"' && prev !== '\\') inStr2 = !inStr2;
-      var code = ch.charCodeAt(0);
-      if (inStr2 && code < 32) out2 += ' '; // strip ALL control chars inside strings
-      else out2 += ch;
-    }
-    try { return JSON.parse(out2); } catch(e) {}
-
-    // S8: extract individual fields as last resort
-    var fallback = {};
-    var fieldRx = /"([^"]+)"\s*:\s*("(?:[^"\\]|\\.)*"|[\d.]+|true|false|null|\[[\s\S]*?\])/g;
-    var fm;
-    while ((fm = fieldRx.exec(slice)) !== null) {
-      try { fallback[fm[1]] = JSON.parse(fm[2]); } catch(e) { fallback[fm[1]] = fm[2].replace(/^"|"$/g,''); }
-    }
-    if (Object.keys(fallback).length > 3) return fallback;
-
-    throw new Error('Parse failed | len:' + raw.length + ' | first char code:' + raw.charCodeAt(0) + ' | Raw starts: ' + raw.substring(0, 120).replace(/\n/g,' '));
+    throw new Error('Parse failed | len:' + raw.length + ' | first char code:' + raw.charCodeAt(0));
   }
 
   // ── COMPRESS IMAGE (for preview only — actual upload uses original) ──
@@ -2187,7 +2044,6 @@
 
     var jobId = 'job-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
     console.log('v3 job:', jobId, 'paths:', storagePaths.length);
-    showToast('⏳ Starting: ' + storagePaths.length + ' photos — job ' + jobId.substring(0,12));
 
     // Fetch matching library recommendations
     document.getElementById('btn-analyse-text').textContent = 'Loading recommendations…';
@@ -2240,22 +2096,21 @@
         var data = await response.json();
         if (data.status === 'complete' && data.result) {
           console.log('Lambda returned directly');
-          showToast('✓ Lambda responded directly');
           return data.result;
         }
-        if (data.error) { showToast('⚠ Lambda error: ' + String(data.error).substring(0,80)); throw new Error(data.error); }
+        if (data.error) throw new Error(data.error);
       }
     } catch(fetchErr) {
-      // Connection drop / timeout is expected for long Lambda jobs — fall through to polling
+      // Connection drop / timeout is expected for long jobs — fall through to polling
+      // Only hard-fail if it's clearly a network-unreachable error
       console.log('Fetch ended:', fetchErr.message);
-      // Only show toast for unexpected errors — not normal connection drops (Failed to fetch / network)
-      var isExpectedDrop = fetchErr.message.indexOf('fetch') !== -1 || fetchErr.message.indexOf('network') !== -1 || fetchErr.message.indexOf('Failed') !== -1;
-      if (!isExpectedDrop) showToast('\u26A0 Lambda: ' + fetchErr.message.substring(0, 100));
     }
 
-    // Poll scan_jobs table in Supabase every 6 seconds (up to 8 minutes)
+    // Fetch matching recommendations from library
+
+    // Poll scan_jobs table in Supabase every 6 seconds (up to 5 minutes)
     var pollStart = Date.now();
-    var pollMax   = 480000; // 8 minutes
+    var pollMax   = 300000; // 5 minutes
     var pollInterval = 6000;
 
     while (Date.now() - pollStart < pollMax) {
@@ -2282,20 +2137,19 @@
         console.warn('Poll error:', pollErr.message);
       }
     }
-    throw new Error('Analysis timed out after 8 minutes. Please try again with fewer photos.');
+    throw new Error('Analysis timed out after 5 minutes. Please try again.');
   }
 
     // Session state
   let _sessionId = null;
   let _storagePaths = [];
-  let _reviewId   = null;  // set when opened from dashboard — enables lazy photo fetch
-  let _draftId    = null;  // Supabase row ID of current draft
-  var _draftInspId = null; // SRC2xxxxxx file number for current draft/submission
+  let _reviewId = null;  // set when opened from dashboard — enables lazy photo fetch
+  let _draftId  = null;  // Supabase row ID of current draft
   let _autosaveTimer = null;  // debounce handle for autosave
 
   async function uploadPhotos() {
     // ── Lazy-fetch photos from Supabase if opened from dashboard review ──
-    if (_reviewId && uploadedPhotos.length === 0) {
+    if (_reviewId && !_draftId && uploadedPhotos.length === 0) {
       const btn = document.getElementById('btn-upload');
       const statusDiv = document.getElementById('upload-status');
       btn.disabled = true;
@@ -2370,7 +2224,7 @@
     try {
       // Only send checked (selected) photos for analysis
     var checkedIdxs = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
-    const allPhotos = (checkedIdxs.length > 0 ? checkedIdxs.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean);
+    const allPhotos = (checkedIdxs.length > 0 ? checkedIdxs.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean).slice(0, 50);
       const sessionId = 'scan-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
       const paths = [];
       for (let i = 0; i < allPhotos.length; i++) {
@@ -2432,6 +2286,8 @@
     try {
       // Only send checked (selected) photos for analysis
     var checkedIdxs = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
+    const allPhotos = (checkedIdxs.length > 0 ? checkedIdxs.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean).slice(0, 50);
+      const BATCH_SIZE = 10;
       const sessionId = _sessionId;
       // Files already uploaded in Step 1
       const storagePaths = _storagePaths;
@@ -2440,19 +2296,89 @@
       document.getElementById('btn-analyse-text').textContent = 'Starting AI analysis\u2026';
       await delay(300);
 
+      // ── Step 2: Split paths into batches ──
+      const batches = [];
+      for (let i = 0; i < storagePaths.length; i += BATCH_SIZE) {
+        batches.push(storagePaths.slice(i, i + BATCH_SIZE));
+      }
+
       setStep(3);
       let finalResult;
 
-      // ── Single Lambda call — all photos sent together, Lambda handles everything ──
-      document.getElementById('btn-analyse-text').textContent =
-        'Analysing ' + storagePaths.length + ' photo' + (storagePaths.length !== 1 ? 's' : '') + '\u2026';
+      if (batches.length === 1) {
+        // ── Single batch — proxy fetches from public storage URLs ──
+        document.getElementById('btn-analyse-text').textContent =
+          'Analysing ' + allPhotos.length + ' photo' + (allPhotos.length !== 1 ? 's' : '') + '…';
 
-      const raw = await callProxy(null, storagePaths, buildPrompt(data));
-      setStep(4);
-      try {
-        finalResult = parseAIResponse(raw);
-      } catch(e) {
-        throw new Error('Parse error: ' + e.message + ' | Raw starts: ' + (typeof raw==='string' ? raw.substring(0,80) : typeof raw));
+        const raw = await callProxy(null, batches[0], buildPrompt(data));
+        setStep(4);
+        try {
+          finalResult = parseAIResponse(raw);
+        } catch(e) {
+          throw new Error('Parse error: ' + e.message + ' | Raw starts: ' + (typeof raw==='string' ? raw.substring(0,80) : typeof raw));
+        }
+      } else {
+        // ── Multiple batches — observe then synthesise ──
+        const observations = [];
+        for (let i = 0; i < batches.length; i++) {
+          document.getElementById('btn-analyse-text').textContent =
+            'Analysing batch ' + (i + 1) + ' of ' + batches.length + '\u2026';
+          setStep(i === 0 ? 3 : i === batches.length - 1 ? 4 : 3);
+
+          const batchPrompt =
+            'You are a senior commercial property risk inspector. ' +
+            'These are files ' + (i * BATCH_SIZE + 1) + ' to ' +
+            Math.min((i + 1) * BATCH_SIZE, allPhotos.length) +
+            ' of ' + allPhotos.length + ' total for: ' +
+            (data.insured || data.address || 'subject property') + ', ' +
+            (data.occupancy || '') + '. ' +
+            'Describe in detail what you observe relevant to construction, occupancy, ' +
+            'fire protection, hazards and deficiencies. Be specific. ' +
+            'This is batch ' + (i + 1) + ' of ' + batches.length +
+            ' \u2014 observations will be combined for a final assessment.';
+
+          const obs = await callProxy(null, batches[i], batchPrompt);
+          observations.push(
+            '=== BATCH ' + (i + 1) + ' (Files ' +
+            (i * BATCH_SIZE + 1) + '-' +
+            Math.min((i + 1) * BATCH_SIZE, allPhotos.length) + ') ===\n' + obs
+          );
+          await delay(300);
+        }
+
+        // ── Synthesis pass (text only — no storage needed) ──
+        document.getElementById('btn-analyse-text').textContent = 'Synthesising full assessment\u2026';
+        setStep(4);
+
+        const synthesisPrompt = buildPrompt(data) +
+          '\n\n=== OBSERVATIONS FROM ALL ' + batches.length +
+          ' BATCHES (' + allPhotos.length + ' FILES TOTAL) ===\n' +
+          observations.join('\n\n') +
+          '\n\nUsing ALL of the above observations, produce the complete JSON assessment.';
+
+        // Text-only synthesis — pass as direct message, no storage paths
+        const synPayload = JSON.stringify({
+          model: 'claude-sonnet-4-6', max_tokens: 6000,
+          messages: [{ role: 'user', content: [{ type: 'text', text: synthesisPrompt }] }]
+        });
+        const synRes = await fetch(EDGE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: synPayload,
+        });
+        if (!synRes.ok) {
+          const e = await synRes.text();
+          throw new Error('Synthesis error: ' + (JSON.parse(e).error || e).substring(0, 200));
+        }
+        const synData = await synRes.json();
+        const raw = (synData.content && synData.content.find(function(c){return c.type==='text';}));
+        const rawText = (raw && raw.text) || '';
+        if (!rawText) throw new Error('No synthesis response from AI');
+        try {
+          finalResult = parseAIResponse(rawText);
+        } catch(e) {
+          throw new Error('Synthesis parse error: ' + e.message + ' | Raw: ' + rawText.substring(0, 100));
+        }
       }
 
       
@@ -2464,21 +2390,19 @@
       if (finalResult && finalResult.raw && !finalResult.construction) {
         console.log('Parsing raw field, length:', finalResult.raw.length);
         var rawStr = finalResult.raw;
-        // Try fence strip first
-        var fenceAttempt = stripFencesAndFix(rawStr);
-        if (fenceAttempt) {
-          finalResult = fenceAttempt;
-        } else {
         // Use charCode scan to find true { and } positions
         var a = -1, b = -1;
         for (var ri = 0; ri < rawStr.length; ri++) { if (rawStr.charCodeAt(ri) === 123) { a = ri; break; } }
         for (var rj = rawStr.length-1; rj >= 0; rj--) { if (rawStr.charCodeAt(rj) === 125) { b = rj; break; } }
         if (a !== -1 && b !== -1) {
           var slice = rawStr.substring(a, b + 1);
+          // Try direct parse
           try { finalResult = JSON.parse(slice); }
           catch(e1) {
+            // Fix all newlines
             try { finalResult = JSON.parse(slice.replace(/\n/g,' ').replace(/\r/g,'')); }
             catch(e2) {
+              // Char by char fix
               var out = '', inS = false;
               for (var i = 0; i < slice.length; i++) {
                 var c = slice[i], p = i > 0 ? slice[i-1] : '';
@@ -2491,7 +2415,6 @@
             }
           }
         }
-        } // end else
       }
       lastResult = Object.assign({}, finalResult, { formData: data, photoCount: allPhotos.length, date: new Date().toISOString() });
       await delay(400);
@@ -2656,18 +2579,7 @@
     document.getElementById('res-occupancy').textContent    = r.occupancy    || '\u2014';
     document.getElementById('res-protection').textContent   = r.protection   || '\u2014';
     document.getElementById('res-exposure').textContent     = r.exposure     || '\u2014';
-    // Hazards may be a string or an array of objects — handle both
-    var hazardVal = r.hazards;
-    if (Array.isArray(hazardVal)) {
-      hazardVal = hazardVal.map(function(h) {
-        if (typeof h === 'string') return h;
-        // Object with severity/description fields
-        var sev  = h.severity || h.level || h.priority || '';
-        var desc = h.description || h.text || h.detail || h.hazard || JSON.stringify(h);
-        return sev ? sev.toUpperCase() + ': ' + desc : desc;
-      }).join('\n');
-    }
-    document.getElementById('res-hazards').textContent = hazardVal || 'No significant hazards identified from submitted photographs.';
+    document.getElementById('res-hazards').textContent      = r.hazards      || 'No significant hazards identified from submitted photographs.';
 
     // Recommendations
     const recWrap = document.getElementById('res-recommendations');
@@ -3100,11 +3012,11 @@
 
     var cover = document.createElement('div');
     cover.id = 'scan-cover-page';
-    cover.style.cssText = 'display:none;width:100%;min-height:100vh;background:#0d1b2a;flex-direction:column;align-items:flex-start;justify-content:flex-start;padding:52px 48px 48px;box-sizing:border-box;color:#fff;';
+    cover.style.cssText = 'display:none;width:100%;background:#0d1b2a;flex-direction:column;align-items:center;justify-content:center;padding:60px 48px;box-sizing:border-box;color:#fff;';
 
     // Logo strip
     var topStrip = document.createElement('div');
-    topStrip.style.cssText = 'display:flex;align-items:center;gap:16px;margin-bottom:40px;';
+    topStrip.style.cssText = 'display:flex;align-items:center;gap:16px;margin-bottom:60px;align-self:flex-start;';
 
     var logoMark = document.createElement('div');
     logoMark.style.cssText = 'width:54px;height:54px;background:#0891b2;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;';
@@ -3137,18 +3049,18 @@
 
     // Gold divider
     var divider = document.createElement('div');
-    divider.style.cssText = 'width:80px;height:3px;background:#b8860b;border-radius:2px;margin-bottom:28px;';
+    divider.style.cssText = 'width:80px;height:3px;background:#b8860b;border-radius:2px;margin-bottom:28px;align-self:flex-start;';
     cover.appendChild(divider);
 
     // Badge
     var badge = document.createElement('div');
-    badge.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:20px;';
+    badge.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:20px;align-self:flex-start;';
     badge.innerHTML = '&#x1F4F8; SCAN ONE Assessment';
     cover.appendChild(badge);
 
     // Property name
     var propName = document.createElement('div');
-    propName.style.cssText = 'font-size:34px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:10px;';
+    propName.style.cssText = 'font-size:34px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:10px;align-self:flex-start;';
     propName.textContent = data.insured || data.address || 'Subject Property';
     cover.appendChild(propName);
 
@@ -3156,7 +3068,7 @@
     var addrParts = [data.address, data.city, data.province].filter(Boolean).join(', ');
     if (addrParts) {
       var addr = document.createElement('div');
-      addr.style.cssText = 'font-size:16px;color:rgba(255,255,255,.65);margin-bottom:8px;';
+      addr.style.cssText = 'font-size:16px;color:rgba(255,255,255,.65);margin-bottom:8px;align-self:flex-start;';
       addr.textContent = addrParts;
       cover.appendChild(addr);
     }
@@ -3164,14 +3076,14 @@
     // Occupancy
     if (data.occupancy) {
       var occ = document.createElement('div');
-      occ.style.cssText = 'font-size:13px;color:rgba(255,255,255,.45);margin-bottom:0;flex:1;';
+      occ.style.cssText = 'font-size:13px;color:rgba(255,255,255,.45);margin-bottom:48px;align-self:flex-start;';
       occ.textContent = data.occupancy;
       cover.appendChild(occ);
     }
 
     // Meta footer
     var metaWrap = document.createElement('div');
-    metaWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:28px;margin-top:auto;';
+    metaWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:28px;margin-top:40px;';
     var _coverFileNum = fileNum || (typeof _draftInspId !== 'undefined' && _draftInspId) || '';
     var metaItems = [
       ['Assessment Date', new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'})],
@@ -3383,12 +3295,14 @@
     try {
       var resultsEl = document.getElementById('results-wrap');
       if (!resultsEl) return null;
-      // Ensure results are visible
+      // Ensure results are visible before capturing
       if (resultsEl.style.display === 'none') resultsEl.style.display = 'block';
 
       showToast('\u23F3 Generating PDF report\u2026');
 
+      // Temporarily show cover page for PDF capture
       var coverEl = document.getElementById('scan-cover-page');
+      if (coverEl) coverEl.style.display = 'flex';
 
       // Use jsPDF with html2canvas
       var { jsPDF } = window.jspdf;
@@ -3396,189 +3310,77 @@
       var pageW = pdf.internal.pageSize.getWidth();
       var pageH = pdf.internal.pageSize.getHeight();
 
-      // ── html2canvas shared options ──
-      var h2cOpts = function(bgColor) {
-        return {
-          scale: 1.5, useCORS: true, allowTaint: true, logging: false,
-          backgroundColor: bgColor || '#ffffff', windowWidth: 960, imageTimeout: 0,
-          onclone: function(clonedDoc) {
-            ['topnav','main-hero','mode-bar','progress-wrap',
-             'view-report-banner','report-only-bar',
-             'res-cover-photo-wrap','scan-cover-page'].forEach(function(id) {
-              var e2 = clonedDoc.getElementById(id);
-              if (e2) e2.style.display = 'none';
-            });
-            clonedDoc.querySelectorAll('.scan-form-section,.btn-report,.result-actions,.report-actions')
-              .forEach(function(e2) { e2.style.display = 'none'; });
-          }
-        };
-      };
+      // Capture the full results section as canvas
+      var canvas = await html2canvas(resultsEl, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 960,
+        imageTimeout: 0,
+        onclone: function(clonedDoc) {
+          // Ensure results-wrap is visible in cloned document
+          var rw = clonedDoc.getElementById('results-wrap');
+          if (rw) rw.style.display = 'block';
 
-      // Slice a canvas image across PDF pages
-      function sliceCanvasToPdf(cv, isFirstBlock) {
-        var imgData = cv.toDataURL('image/jpeg', 0.88);
-        var imgW = pageW;
-        var imgH = (cv.height * imgW) / cv.width;
-        var yOff = 0;
-        var isVeryFirst = isFirstBlock;
-        while (yOff < imgH) {
-          if (imgH - yOff < 4) break;
-          if (!isVeryFirst) pdf.addPage();
-          isVeryFirst = false;
-          pdf.addImage(imgData, 'JPEG', 0, -yOff, imgW, imgH);
-          yOff += pageH;
+          // Hide by ID — elements that must not appear in PDF body capture
+          ['topnav','main-hero','mode-bar','progress-wrap',
+           'view-report-banner','report-only-bar',
+           'res-cover-photo-wrap','scan-cover-page'].forEach(function(id) {
+            var el = clonedDoc.getElementById(id);
+            if (el) el.style.display = 'none';
+          });
+
+          // Hide by class — form sections and action buttons
+          clonedDoc.querySelectorAll(
+            '.scan-form-section, .btn-report, .result-actions, .report-actions'
+          ).forEach(function(el) { el.style.display = 'none'; });
         }
-      }
+      });
 
-      // ── Page 1: Cover page — stretch to fill full A4 ──
-      if (coverEl) {
-        coverEl.style.display = 'flex';
-        coverEl.style.minHeight = '100vh';
-      }
+      // Hide cover page again after capture
+      if (coverEl) coverEl.style.display = 'none';
+
+      var imgData  = canvas.toDataURL('image/jpeg', 0.88);
+      var imgW     = pageW;
+      var imgH     = (canvas.height * imgW) / canvas.width;
+      var yPos     = 0;
+      var margin   = 8;  // mm margin top and bottom on each page
+
+      // ── Page 1: Cover page only ──
+      // Capture cover separately so it fills exactly one page
+      if (coverEl) coverEl.style.display = 'flex';
       var coverCanvas = await html2canvas(coverEl, {
-        scale: 1.5, useCORS: true, allowTaint: true, logging: false,
-        backgroundColor: '#0d1b2a', windowWidth: 960,
-        windowHeight: Math.round(960 * 1.414),
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#0d1b2a',
+        windowWidth: 960,
       });
       if (coverEl) coverEl.style.display = 'none';
-      pdf.addImage(coverCanvas.toDataURL('image/jpeg', 0.88), 'JPEG', 0, 0, pageW, pageH);
 
-      // ── Page 2: Brand header + result header + COPE panel — captured as one block ──
-      var brandEl       = document.getElementById('res-brand-header');
-      var resultHdrEl   = document.querySelector('.result-header');
-      var copeEl        = document.getElementById('structured-cope-panel');
-      var page2Wrap     = document.createElement('div');
-      page2Wrap.style.cssText = 'background:#fff;width:100%;';
-      if (brandEl)    page2Wrap.appendChild(brandEl.cloneNode(true));
-      if (resultHdrEl) page2Wrap.appendChild(resultHdrEl.cloneNode(true));
-      if (copeEl)     { var copeClone = copeEl.cloneNode(true); copeClone.style.display = 'block'; page2Wrap.appendChild(copeClone); }
-      document.body.appendChild(page2Wrap);
-      var page2Canvas = await html2canvas(page2Wrap, h2cOpts('#ffffff'));
-      document.body.removeChild(page2Wrap);
+      var coverImgData = coverCanvas.toDataURL('image/jpeg', 0.88);
+      var coverH       = (coverCanvas.height * pageW) / coverCanvas.width;
+      // Scale cover to fit one page
+      var coverScale   = Math.min(1, (pageH - margin * 2) / coverH);
+      var coverDrawH   = coverH * coverScale;
+      var coverDrawW   = pageW * coverScale;
+      var coverX       = (pageW - coverDrawW) / 2;
+      var coverY       = (pageH - coverDrawH) / 2;
+      pdf.addImage(coverImgData, 'JPEG', coverX, coverY, coverDrawW, coverDrawH);
+
+      // ── Pages 2+: Report body ──
       pdf.addPage();
-      sliceCanvasToPdf(page2Canvas, true);
-
-      // ── Insured Profile (may be hidden) — new page ──
-      var profileEl = document.getElementById('res-profile-section');
-      if (profileEl) {
-        var profWasHidden = (profileEl.style.display === 'none');
-        if (profWasHidden) profileEl.style.display = 'block';
-        var profileCanvas = await html2canvas(profileEl, h2cOpts('#ffffff'));
-        if (profWasHidden) profileEl.style.display = 'none';
-        pdf.addPage();
-        sliceCanvasToPdf(profileCanvas, true);
+      while (yPos < imgH) {
+        // Check how much content remains
+        var remaining = imgH - yPos;
+        if (remaining < 20) break;  // skip nearly-empty trailing pages
+        if (yPos > 0) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, -yPos, imgW, imgH);
+        yPos += pageH;
       }
-
-      // ── Flowing narrative group: Construction → Occupancy → Protection → Exposure → Hazards ──
-      // Captured as ONE canvas so they flow naturally — no forced page breaks between them
-      var narrativeIds = [
-        'res-construction-section', 'res-occupancy-section',
-        'res-protection-section',   'res-exposure-section',
-        'res-hazards-section'
-      ];
-      var narWrap = document.createElement('div');
-      narWrap.style.cssText = 'background:#fff;width:100%;';
-      narrativeIds.forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) narWrap.appendChild(el.cloneNode(true));
-      });
-      document.body.appendChild(narWrap);
-      var narCanvas = await html2canvas(narWrap, h2cOpts('#ffffff'));
-      document.body.removeChild(narWrap);
-      pdf.addPage();
-      sliceCanvasToPdf(narCanvas, true);
-
-      // ── Recommendations — new page ──
-      var recEl = document.getElementById('res-recommendations-section');
-      if (recEl) {
-        var recCanvas = await html2canvas(recEl, h2cOpts('#ffffff'));
-        pdf.addPage();
-        sliceCanvasToPdf(recCanvas, true);
-      }
-
-      // ── Underwriting Summary — new page ──
-      var uwEl = document.getElementById('res-uw-section');
-      if (uwEl) {
-        var uwCanvas = await html2canvas(uwEl, h2cOpts('#ffffff'));
-        pdf.addPage();
-        sliceCanvasToPdf(uwCanvas, true);
-      }
-
-      // ── Submitted Photographs — new page, row-aware slicing ──
-      var photoSec = document.getElementById('res-photo-section');
-      if (photoSec) {
-        var photoWasHidden = (photoSec.style.display === 'none');
-        if (photoWasHidden) photoSec.style.display = 'block';
-
-        // Wait up to 5s for async photo images to finish loading
-        await new Promise(function(resolve) {
-          var imgs = photoSec.querySelectorAll('img');
-          if (!imgs.length) { resolve(); return; }
-          var loaded = 0, total = imgs.length, done = false;
-          var timeout = setTimeout(function() { if (!done) { done = true; resolve(); } }, 5000);
-          imgs.forEach(function(img) {
-            if (img.complete) {
-              if (++loaded >= total && !done) { done = true; clearTimeout(timeout); resolve(); }
-            } else {
-              img.onload = img.onerror = function() {
-                if (++loaded >= total && !done) { done = true; clearTimeout(timeout); resolve(); }
-              };
-            }
-          });
-        });
-
-        // Build a clean print grid with fixed row height so page slices land between rows
-        var COLS = 3, ROW_H = 200, GAP = 10;
-        var photoGrid = document.getElementById('res-photo-grid');
-        var photoCards = photoGrid ? Array.from(photoGrid.querySelectorAll('div')) : [];
-        // Filter to actual photo cards (have an img child)
-        photoCards = photoCards.filter(function(d) { return d.querySelector('img'); });
-
-        var printWrap = document.createElement('div');
-        printWrap.style.cssText = 'background:#fff;padding:16px;width:100%;box-sizing:border-box;';
-        var pgHdr = document.createElement('div');
-        pgHdr.style.cssText = 'font-size:13px;font-weight:700;color:#1e3a4f;font-family:monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #e2e8f0;';
-        pgHdr.innerHTML = '&#x1F4F8;&nbsp; Submitted Photographs';
-        printWrap.appendChild(pgHdr);
-
-        var grid = document.createElement('div');
-        grid.style.cssText = 'display:grid;grid-template-columns:repeat(' + COLS + ',1fr);gap:' + GAP + 'px;';
-        printWrap.appendChild(grid);
-
-        photoCards.forEach(function(card) {
-          var clone = card.cloneNode(true);
-          var img = clone.querySelector('img');
-          if (img) img.style.cssText = 'width:100%;height:' + ROW_H + 'px;object-fit:cover;display:block;';
-          grid.appendChild(clone);
-        });
-
-        document.body.appendChild(printWrap);
-        var photoCanvas = await html2canvas(printWrap, h2cOpts('#ffffff'));
-        document.body.removeChild(printWrap);
-
-        // Row-aware page slicing
-        var imgData3  = photoCanvas.toDataURL('image/jpeg', 0.88);
-        var imgW3     = pageW;
-        var imgH3     = (photoCanvas.height * imgW3) / photoCanvas.width;
-        // How tall is one row in mm on the PDF page?
-        var rowH_mm   = (ROW_H + GAP) * (pageW / 960);
-        var rowsFit   = Math.max(1, Math.floor(pageH / rowH_mm));
-        var sliceH_mm = rowsFit * rowH_mm;
-        var yOff3 = 0;
-        pdf.addPage();
-        var firstPhotoPage = true;
-        while (yOff3 < imgH3) {
-          if (imgH3 - yOff3 < 4) break;
-          if (!firstPhotoPage) pdf.addPage();
-          firstPhotoPage = false;
-          pdf.addImage(imgData3, 'JPEG', 0, -yOff3, imgW3, imgH3);
-          yOff3 += sliceH_mm;
-        }
-
-        if (photoWasHidden) photoSec.style.display = 'none';
-      }
-
-
 
       // Convert to blob
       var pdfBlob = pdf.output('blob');
@@ -3857,7 +3659,7 @@
       const sessionId = 'pub-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
       const storagePaths = [];
       const photoMeta    = [];
-      const allPhotos    = uploadedPhotos.slice();
+      const allPhotos    = uploadedPhotos.slice(0, 50);
 
       for (let i = 0; i < allPhotos.length; i++) {
         btn.innerHTML = '<span class="spinner"></span><span>Uploading photo ' + (i + 1) + ' of ' + allPhotos.length + '\u2026</span>';
