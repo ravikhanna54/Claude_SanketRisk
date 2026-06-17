@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-16 — S7 control char strip for claude-sonnet-4-5 -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-16 — S8 salvage malformed recommendations array -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1881,7 +1881,7 @@
     }
     try { return JSON.parse(out); } catch(e) {}
 
-    // S7: strip ALL control characters (charCode < 32) inside strings
+    // S7: strip ALL control characters inside strings
     var out2 = '', inStr2 = false;
     for (var m = 0; m < slice.length; m++) {
       var ch = slice[m], prev = m > 0 ? slice[m-1] : '';
@@ -1890,6 +1890,12 @@
       else out2 += ch;
     }
     try { return JSON.parse(out2); } catch(e) {}
+
+    // S8: salvage — replace malformed recommendations array with empty array
+    try {
+      var salvaged = out2.replace(/"recommendations"\s*:\s*\[[\s\S]*?\](?=\s*[,}])/, '"recommendations":[]');
+      return JSON.parse(salvaged);
+    } catch(e) {}
 
     throw new Error('Parse failed | len:' + raw.length + ' | first char code:' + raw.charCodeAt(0));
   }
