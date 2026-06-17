@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Skip re-upload for recalled submissions -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Auto-show photos on recall, skip download -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1740,16 +1740,18 @@
           var uploadText = document.getElementById('btn-upload-text');
           var statusDiv  = document.getElementById('upload-status');
           var analyseBtn = document.getElementById('btn-analyse');
-          if (uploadText) uploadText.textContent = '✓ Photos on file — Upload Again to refresh';
+          if (uploadText) uploadText.textContent = '\u2713 Photos on file \u2014 Upload Again to refresh';
           if (uploadBtn)  uploadBtn.disabled = false;
           if (analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
           if (statusDiv) {
             statusDiv.style.display = 'block';
             statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
-            statusDiv.textContent = '✓ ' + photoPaths.length + ' photo' + (photoPaths.length !== 1 ? 's' : '') +
+            statusDiv.textContent = '\u2713 ' + photoPaths.length + ' photo' + (photoPaths.length !== 1 ? 's' : '') +
               (docPaths.length ? ' + ' + docPaths.length + ' document' + (docPaths.length !== 1 ? 's' : '') : '') +
               ' on file from original submission. Click Step 2 to re-run analysis, or view saved report below.';
           }
+          // Auto-render photos into grid immediately — no Step 1 click needed
+          setTimeout(function() { renderStoragePhotosIntoGrid(_storagePaths); }, 300);
         }
 
         // 4. Restore doc list display (names from form_data.additionalDocs)
@@ -2180,6 +2182,23 @@
   let _autosaveTimer = null;  // debounce handle for autosave
 
   async function uploadPhotos() {
+    // ── If photos already in storage from recall — just show and return ──
+    if (_storagePaths && _storagePaths.length > 0 && _reviewId) {
+      const btn = document.getElementById('btn-upload');
+      const statusDiv = document.getElementById('upload-status');
+      const analyseBtn = document.getElementById('btn-analyse');
+      if (btn) btn.disabled = false;
+      document.getElementById('btn-upload-text').textContent = '\u2713 Photos on file \u2014 Upload Again to refresh';
+      if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
+        statusDiv.textContent = '\u2713 ' + _storagePaths.length + ' photos on file. Click Step 2 to run analysis.';
+      }
+      if (analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
+      renderStoragePhotosIntoGrid(_storagePaths);
+      return;
+    }
+
     // ── Lazy-fetch photos from Supabase if opened from dashboard review ──
     if (_reviewId && uploadedPhotos.length === 0) {
       const btn = document.getElementById('btn-upload');
