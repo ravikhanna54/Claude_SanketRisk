@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 278 — 2026-06-16 — Fix missing paths array causing upload failure -->
+<!-- SanketRisk SCAN ONE — Deploy 279 — 2026-06-16 — Fix _draftInspId not defined -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2223,8 +2223,9 @@
     // Session state
   let _sessionId = null;
   let _storagePaths = [];
-  let _reviewId = null;  // set when opened from dashboard — enables lazy photo fetch
-  let _draftId  = null;  // Supabase row ID of current draft
+  let _reviewId   = null;  // set when opened from dashboard — enables lazy photo fetch
+  let _draftId    = null;  // Supabase row ID of current draft
+  var _draftInspId = null; // SRC2xxxxxx file number for current draft/submission
   let _autosaveTimer = null;  // debounce handle for autosave
 
   async function uploadPhotos() {
