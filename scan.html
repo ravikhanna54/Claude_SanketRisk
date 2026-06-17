@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — S9 plain text fallback parser -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Remove batching, single Lambda call -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2314,172 +2314,27 @@
     statusDiv.style.display = 'block';
     statusDiv.textContent = 'Preparing upload…';
     try {
-      // Only send checked (selected) photos for analysis
-    var checkedIdxs = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
-    const allPhotos = (checkedIdxs.length > 0 ? checkedIdxs.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean).slice(0, 50);
-      const sessionId = 'scan-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
-      const paths = [];
-      for (let i = 0; i < allPhotos.length; i++) {
-        statusDiv.textContent = 'Uploading file ' + (i+1) + ' of ' + allPhotos.length + '…';
-        const path = await uploadToStorage(allPhotos[i], sessionId, i);
-        paths.push(path);
-      }
-      _sessionId = sessionId;
-      _storagePaths = paths;
-      // Also upload additional documents to storage
-      for (let di = 0; di < uploadedDocs.length; di++) {
-        statusDiv.textContent = 'Uploading document ' + (di+1) + ' of ' + uploadedDocs.length + '…';
-        const docPath = await uploadToStorage(
-          { file: uploadedDocs[di].file, dataUrl: uploadedDocs[di].dataUrl, type: 'pdf' },
-          sessionId, 'doc-' + di
-        );
-        paths.push(docPath);
-        uploadedDocs[di]._storagePath = docPath;
-      }
-
-      statusDiv.textContent = '✓ ' + paths.length + ' file' + (paths.length!==1?'s':'') + ' uploaded. Click Step 2 to generate the COPE assessment.';
-      statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
-      btn.disabled = false;
-      document.getElementById('btn-upload-text').textContent = '✓ Uploaded — Upload Again';
-      const analyseBtn = document.getElementById('btn-analyse');
-      if (analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
-      showToast('✓ ' + paths.length + ' files uploaded! Click Step 2 to analyse.');
-      // Auto-save draft so storage paths are persisted for recall
-      saveDraft(true);
-    } catch(e) {
-      btn.disabled = false;
-      document.getElementById('btn-upload-text').textContent = 'Step 1 — Upload Photos to Secure Storage';
-      statusDiv.textContent = '⚠ Upload failed: ' + e.message;
-      statusDiv.style.cssText += ';background:#fff5f5;border-color:#fc8181;color:#c53030;';
-      showToast('⚠ Upload failed: ' + e.message);
-    }
-  }
-
-  async function runAnalysis() {
-    if (!_sessionId || _storagePaths.length === 0) {
-      showToast('Please upload your photos first using Step 1.');
-      return;
-    }
-    const data = collectFormData();
-
-    // Store profile promise — run in parallel with main analysis, await both at render time
-    var _profilePromise = (data && data.insured && data.insured.length > 2)
-      ? fetchInsuredProfile(data.insured, data.city, data.province)
-      : Promise.resolve();
-
-    const btn = document.getElementById('btn-analyse');
-    btn.disabled = true;
-    document.getElementById('btn-analyse-text').textContent = 'Analysing \u2014 please wait\u2026';
-    document.getElementById('progress-wrap').style.display = 'block';
-    document.getElementById('results-wrap').style.display  = 'none';
-    document.getElementById('progress-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    setStep(1);
-    await delay(400);
-
-    try {
-      // Only send checked (selected) photos for analysis
-    var checkedIdxs = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
-    const allPhotos = (checkedIdxs.length > 0 ? checkedIdxs.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean).slice(0, 50);
-      const BATCH_SIZE = 10;
       const sessionId = _sessionId;
-      // Files already uploaded in Step 1
       const storagePaths = _storagePaths;
-
-      setStep(2);
-      document.getElementById('btn-analyse-text').textContent = 'Starting AI analysis\u2026';
-      await delay(300);
-
-      // ── Step 2: Split paths into batches ──
-      const batches = [];
-      for (let i = 0; i < storagePaths.length; i += BATCH_SIZE) {
-        batches.push(storagePaths.slice(i, i + BATCH_SIZE));
-      }
 
       setStep(3);
       let finalResult;
 
-      if (batches.length === 1) {
-        // ── Single batch — proxy fetches from public storage URLs ──
-        document.getElementById('btn-analyse-text').textContent =
-          'Analysing ' + allPhotos.length + ' photo' + (allPhotos.length !== 1 ? 's' : '') + '…';
+      // Single Lambda call — all photos sent together
+      document.getElementById('btn-analyse-text').textContent =
+        'Analysing ' + storagePaths.length + ' photo' + (storagePaths.length !== 1 ? 's' : '') + '…';
 
-        const raw = await callProxy(null, batches[0], buildPrompt(data));
-        setStep(4);
-        try {
-          finalResult = parseAIResponse(raw);
-        } catch(e) {
-          throw new Error('Parse error: ' + e.message + ' | Raw starts: ' + (typeof raw==='string' ? raw.substring(0,80) : typeof raw));
-        }
-      } else {
-        // ── Multiple batches — observe then synthesise ──
-        const observations = [];
-        for (let i = 0; i < batches.length; i++) {
-          document.getElementById('btn-analyse-text').textContent =
-            'Analysing batch ' + (i + 1) + ' of ' + batches.length + '\u2026';
-          setStep(i === 0 ? 3 : i === batches.length - 1 ? 4 : 3);
-
-          const batchPrompt =
-            'You are a senior commercial property risk inspector. ' +
-            'These are files ' + (i * BATCH_SIZE + 1) + ' to ' +
-            Math.min((i + 1) * BATCH_SIZE, allPhotos.length) +
-            ' of ' + allPhotos.length + ' total for: ' +
-            (data.insured || data.address || 'subject property') + ', ' +
-            (data.occupancy || '') + '. ' +
-            'Describe in detail what you observe relevant to construction, occupancy, ' +
-            'fire protection, hazards and deficiencies. Be specific. ' +
-            'This is batch ' + (i + 1) + ' of ' + batches.length +
-            ' \u2014 observations will be combined for a final assessment.';
-
-          const obs = await callProxy(null, batches[i], batchPrompt);
-          observations.push(
-            '=== BATCH ' + (i + 1) + ' (Files ' +
-            (i * BATCH_SIZE + 1) + '-' +
-            Math.min((i + 1) * BATCH_SIZE, allPhotos.length) + ') ===\n' + obs
-          );
-          await delay(300);
-        }
-
-        // ── Synthesis pass (text only — no storage needed) ──
-        document.getElementById('btn-analyse-text').textContent = 'Synthesising full assessment\u2026';
-        setStep(4);
-
-        const synthesisPrompt = buildPrompt(data) +
-          '\n\n=== OBSERVATIONS FROM ALL ' + batches.length +
-          ' BATCHES (' + allPhotos.length + ' FILES TOTAL) ===\n' +
-          observations.join('\n\n') +
-          '\n\nUsing ALL of the above observations, produce the complete JSON assessment.';
-
-        // Text-only synthesis — pass as direct message, no storage paths
-        const synPayload = JSON.stringify({
-          model: 'claude-sonnet-4-6', max_tokens: 6000,
-          messages: [{ role: 'user', content: [{ type: 'text', text: synthesisPrompt }] }]
-        });
-        const synRes = await fetch(EDGE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: synPayload,
-        });
-        if (!synRes.ok) {
-          const e = await synRes.text();
-          throw new Error('Synthesis error: ' + (JSON.parse(e).error || e).substring(0, 200));
-        }
-        const synData = await synRes.json();
-        const raw = (synData.content && synData.content.find(function(c){return c.type==='text';}));
-        const rawText = (raw && raw.text) || '';
-        if (!rawText) throw new Error('No synthesis response from AI');
-        try {
-          finalResult = parseAIResponse(rawText);
-        } catch(e) {
-          throw new Error('Synthesis parse error: ' + e.message + ' | Raw: ' + rawText.substring(0, 100));
-        }
+      const raw = await callProxy(null, storagePaths, buildPrompt(data));
+      setStep(4);
+      try {
+        finalResult = parseAIResponse(raw);
+      } catch(e) {
+        throw new Error('Parse error: ' + e.message + ' | Raw starts: ' + (typeof raw==='string' ? raw.substring(0,80) : typeof raw));
       }
 
-      
-
-      setStep(5);
+            setStep(5);
       // Ensure photoCount is set
-      data.photoCount = allPhotos.length;
+      data.photoCount = storagePaths.length;
       // If finalResult has raw field, parse the COPE fields from it
       if (finalResult && finalResult.raw && !finalResult.construction) {
         console.log('Parsing raw field, length:', finalResult.raw.length);
