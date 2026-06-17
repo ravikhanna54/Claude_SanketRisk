@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 283 — 2026-06-17 — Fix photo recall on dashboard open -->
+<!-- SanketRisk SCAN ONE — Deploy 284 — 2026-06-17 — Fix fence strip regex, suppress expected fetch toast -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1915,11 +1915,14 @@
   // ── PARSE AI RESPONSE — handles all markdown fence variations ──
   // Shared helper: strip markdown fences and fix embedded newlines in JSON strings
   function stripFencesAndFix(text) {
-    // Remove ```json ... ``` or ``` ... ``` wrappers
-    var s = text.trim().replace(/^```(?:json|JSON)?\s*[\r\n]*/,'').replace(/[\r\n]*\s*```\s*$/,'').trim();
-    // Try direct parse first
+    var s = text.trim();
+    // Strip opening fence: ```json, ```JSON, ``` — with or without newline/space before {
+    s = s.replace(/^```(?:json|JSON)?[\s\r\n]*/i, '');
+    // Strip closing fence: trailing ``` with optional whitespace
+    s = s.replace(/[\s\r\n]*```[\s\r\n]*$/g, '').trim();
+    // Try direct parse
     try { return JSON.parse(s); } catch(e) {}
-    // Fix unescaped newlines inside JSON string values
+    // Fix unescaped newlines/carriage returns inside JSON string values
     var out = '', inStr = false;
     for (var i = 0; i < s.length; i++) {
       var c = s[i], p = i > 0 ? s[i-1] : '';
@@ -1928,7 +1931,24 @@
       else out += c;
     }
     try { return JSON.parse(out); } catch(e) {}
-    return null; // caller will try further strategies
+    // Last resort: find first { and last } and parse that slice
+    var a = -1, b = -1;
+    for (var fi = 0; fi < s.length; fi++) { if (s.charCodeAt(fi) === 123) { a = fi; break; } }
+    for (var fj = s.length - 1; fj >= 0; fj--) { if (s.charCodeAt(fj) === 125) { b = fj; break; } }
+    if (a !== -1 && b !== -1 && b > a) {
+      var slice = s.substring(a, b + 1);
+      try { return JSON.parse(slice); } catch(e) {}
+      // Fix newlines in slice too
+      var out2 = '', inStr2 = false;
+      for (var si2 = 0; si2 < slice.length; si2++) {
+        var c2 = slice[si2], p2 = si2 > 0 ? slice[si2-1] : '';
+        if (c2 === '"' && p2 !== '\\') inStr2 = !inStr2;
+        if (inStr2 && (c2 === '\n' || c2 === '\r')) out2 += ' ';
+        else out2 += c2;
+      }
+      try { return JSON.parse(out2); } catch(e) {}
+    }
+    return null;
   }
 
   function parseAIResponse(raw) {
@@ -2206,10 +2226,11 @@
         if (data.error) { showToast('⚠ Lambda error: ' + String(data.error).substring(0,80)); throw new Error(data.error); }
       }
     } catch(fetchErr) {
-      // Connection drop / timeout is expected for long jobs — fall through to polling
+      // Connection drop / timeout is expected for long Lambda jobs — fall through to polling
       console.log('Fetch ended:', fetchErr.message);
-      // Show on screen so mobile users without dev console can see the error
-      showToast('⚠ Lambda: ' + fetchErr.message.substring(0, 100));
+      // Only show toast for unexpected errors — not normal connection drops (Failed to fetch / network)
+      var isExpectedDrop = fetchErr.message.indexOf('fetch') !== -1 || fetchErr.message.indexOf('network') !== -1 || fetchErr.message.indexOf('Failed') !== -1;
+      if (!isExpectedDrop) showToast('\u26A0 Lambda: ' + fetchErr.message.substring(0, 100));
     }
 
     // Poll scan_jobs table in Supabase every 6 seconds (up to 8 minutes)
