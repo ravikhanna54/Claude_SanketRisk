@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Accept ?review= URL param for recall -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Diagnostic toast on recall, ?review= param -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1675,6 +1675,7 @@
 
       // ── Wait for DOM then restore everything ──
       setTimeout(function() {
+        showToast('\uD83D\uDCCB Recalling: ' + photoPaths.length + ' photos found');
         // 1. Set _reviewId so saveToDashboard updates the row and
         //    uploadPhotos() lazy-fetch is available for re-run
         _reviewId    = viewId;
