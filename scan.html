@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 279 — 2026-06-16 — Fix _draftInspId not defined -->
+<!-- SanketRisk SCAN ONE — Deploy 280 — 2026-06-16 — Fix hazards [object Object] rendering -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2660,7 +2660,18 @@
     document.getElementById('res-occupancy').textContent    = r.occupancy    || '\u2014';
     document.getElementById('res-protection').textContent   = r.protection   || '\u2014';
     document.getElementById('res-exposure').textContent     = r.exposure     || '\u2014';
-    document.getElementById('res-hazards').textContent      = r.hazards      || 'No significant hazards identified from submitted photographs.';
+    // Hazards may be a string or an array of objects — handle both
+    var hazardVal = r.hazards;
+    if (Array.isArray(hazardVal)) {
+      hazardVal = hazardVal.map(function(h) {
+        if (typeof h === 'string') return h;
+        // Object with severity/description fields
+        var sev  = h.severity || h.level || h.priority || '';
+        var desc = h.description || h.text || h.detail || h.hazard || JSON.stringify(h);
+        return sev ? sev.toUpperCase() + ': ' + desc : desc;
+      }).join('\n');
+    }
+    document.getElementById('res-hazards').textContent = hazardVal || 'No significant hazards identified from submitted photographs.';
 
     // Recommendations
     const recWrap = document.getElementById('res-recommendations');
