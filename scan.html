@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Fix report_pdf_path save after dashboard save -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-18 — Construction 3-paragraph prompt: structure, electrical, HVAC -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1540,8 +1540,8 @@
   function getFormatInstruction() {
     var fmt = getReportFormat();
     if (fmt === 'structured') {
-      return 'OUTPUT: Structured COPE assessment. Write each narrative section as a detailed professional paragraph of 3-5 sentences. Be specific and technical. Follow these mandatory assessment rules:' +
-      ' CONSTRUCTION: identify structural system, cladding type, roof assembly, interior wall and ceiling finishes (note combustible vs non-combustible — drywall/gypsum = non-combustible, wood panelling/OSB/plywood = combustible), year-built indicators, mezzanine levels, crane systems, any visible deficiencies.' +
+      return 'OUTPUT: Structured COPE assessment. Write each narrative section as a detailed professional paragraph. IMPORTANT: the "construction" field requires THREE paragraphs (use \\n\\n to separate them as specified in the schema). All other narrative fields are single paragraphs of 3-5 sentences. Be specific and technical. Follow these mandatory assessment rules:' +
+      ' CONSTRUCTION: Paragraph 1 covers building structure and finishes. Paragraph 2 covers electrical system and emergency power. Paragraph 3 covers HVAC and mechanical systems. See schema for full details.' +
       ' CONSTRUCTION CLASS: be conservative — Class 1 Fire Resistive ONLY if fireproofing visibly confirmed on ALL structural members. Exposed steel deck = Class 2 Non-Combustible. When in doubt assign Class 2.' +
       ' OCCUPANCY: for manufacturing/industrial — inventory major equipment visible (overhead cranes, extrusion machines, chiller/cooling units, boilers, furnaces, quality control ovens, air compressors, printing equipment, rail unloading). Identify forklift type (propane = higher hazard vs battery electric). Assess combustible loading including plastic resin, finished goods, rack storage height (high-piled storage >3.6m is a separate hazard class). Note any hazardous materials in chemical storage areas.' +
       ' PROTECTION: identify ALL visible — sprinkler heads, piping, risers, alarm panels, pull stations, strobes, extinguishers, exit signs. CRITICAL: for each extinguisher and sprinkler system — note whether service/inspection tags are visible in photos. If no service tags visible, flag as deficiency requiring annual inspection verification. State sprinkler density and coverage adequacy for occupancy type if determinable.' +
@@ -1549,10 +1549,8 @@
       ' Populate ALL structured fields (construction_class, roof_type, sprinkler_type, alarm_type, occupancy_class, all scores) accurately. Scores 0-100.';
     }
     if (fmt === 'narrative') {
-      // Narrative — professional paragraphs like a field inspection report
       return 'OUTPUT: Narrative COPE report. Write each section (construction, occupancy, protection, exposure, hazards) as a focused professional paragraph of 3-5 sentences covering key observations. Be specific — mention equipment brands, dimensions, conditions observed. For structured fields (construction_class, roof_type etc) still populate with your best assessed value. Keep total response under 2000 words.';
     }
-    // Both — structured fields + concise narrative
     return 'OUTPUT: Both structured summary and narrative. Write each narrative section (construction, occupancy, protection, exposure, hazards) as 2-3 focused sentences — specific and factual, not padded. Populate all structured fields accurately. Keep total response under 1500 words.';
   }
 
@@ -1614,7 +1612,7 @@
       '  "uw_narrative":"2-3 sentence underwriting summary.",\n' +
       '  "confidence":"Medium",\n' +
       '  "confidence_note":"What inspection would add.",\n' +
-      '  "construction":"Detailed narrative paragraph: structural system, exterior walls, roof assembly, interior finishes (combustible vs non-combustible), age and condition.",\n' +
+      '  "construction":"THREE paragraphs separated by a blank line:\\n\\nParagraph 1 — Building Structure & Finishes: State the construction class, structural system (frame type, columns, beams), exterior wall cladding, floor construction, and roof assembly (deck type, membrane/covering). Include year built and applicable construction code (NBC year if determinable). Separately describe interior finishes for each distinct area type present (office, warehouse/storage, plant/production) — ceiling finish, wall finish, floor finish, and whether finishes are combustible or non-combustible. Note any mezzanines, atriums, or unusual structural features.\\n\\nParagraph 2 — Electrical & Emergency Power: Describe the electrical service visible — panel type and brand, estimated amperage/voltage if visible on labels, overcurrent protection type (circuit breakers or fuses), wiring type if determinable (copper/aluminum, knob-and-tube, BX/conduit). Note condition of panels and any visible deficiencies (double-tapping, open knockouts, amateur wiring). Describe any emergency generator observed — fuel type (diesel/natural gas/propane), approximate capacity if labeled, automatic transfer switch presence, and condition.\\n\\nParagraph 3 — HVAC & Mechanical: Describe the heating system type (forced air, radiant, unit heaters, boiler/radiators), fuel source (natural gas, propane, electric, oil), approximate age and condition. Describe air conditioning or ventilation systems observed. Note any rooftop units, split systems, exhaust fans, or process ventilation. Identify the make/model of major equipment if visible on labels. Flag any fuel storage (oil tanks, propane tanks) and their condition and containment.",\n' +
       '  "recommendations":[{"priority":"High","code":"FP-XX-001","title":"Short title","text":"Full recommendation text with specific action required and applicable standard.","photo_refs":[1,3]},{"priority":"Medium","text":"...","photo_refs":[2]}],\n' +      '  "occupancy":"Detailed paragraph: occupancy type, operations, combustible loading, housekeeping, storage, vacancy status.",\n' +
       '  "protection":"Detailed paragraph: identify ALL fire protection visible — sprinkler heads/piping/riser, alarm panel/pull stations/strobes, extinguishers, exit signs, municipal fire dept assessment.",\n' +
       '  "exposure":"Detailed paragraph: neighbouring buildings, separation distances, construction of exposures, site access, geographic/natural hazards.",\n' +
@@ -2576,7 +2574,18 @@
       s.style.display = 'block';
     });
 
-    document.getElementById('res-construction').textContent = r.construction || '\u2014';
+    // Construction has 3 paragraphs separated by \n\n — render with proper spacing
+    var constructionEl = document.getElementById('res-construction');
+    if (constructionEl) {
+      if (r.construction) {
+        constructionEl.innerHTML = r.construction
+          .split(/\n\n+/)
+          .map(function(p) { return '<p style="margin:0 0 10px 0;">' + p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') + '</p>'; })
+          .join('');
+      } else {
+        constructionEl.textContent = '\u2014';
+      }
+    }
     document.getElementById('res-occupancy').textContent    = r.occupancy    || '\u2014';
     document.getElementById('res-protection').textContent   = r.protection   || '\u2014';
     document.getElementById('res-exposure').textContent     = r.exposure     || '\u2014';
