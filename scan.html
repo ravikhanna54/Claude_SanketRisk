@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-18 — Construction 3-paragraph prompt: structure, electrical, HVAC -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-18 — Google Maps site location + aerial view -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -788,7 +788,26 @@
         <div class="result-section-body" id="res-exposure">&#x2014;</div>
       </div>
 
-      <div class="result-section">
+      <!-- Site Location Map -->
+      <div class="result-section" id="res-map-section" style="display:none;">
+        <div class="result-section-header"><div class="result-section-icon">&#x1F4CD;</div><div class="result-section-title">Site Location &amp; Aerial View</div></div>
+        <div class="result-section-body">
+          <!-- Two-column: interactive map + satellite -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px;">
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#2d3748;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Interactive Map</div>
+              <iframe id="res-map-embed" width="100%" height="260" frameborder="0" style="border-radius:8px;border:1px solid #e2e8f0;" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src=""></iframe>
+              <a id="res-map-link" href="#" target="_blank" style="font-size:11px;color:#0891b2;display:block;margin-top:4px;">&#x2197; Open in Google Maps</a>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#2d3748;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Satellite Aerial <span style="font-weight:400;color:#718096;">(for area estimation)</span></div>
+              <img id="res-map-satellite" src="" alt="Satellite view" style="width:100%;height:260px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;display:block;">
+              <div id="res-map-area-note" style="font-size:11px;color:#718096;margin-top:4px;"></div>
+            </div>
+          </div>
+          <div id="res-map-address" style="font-size:12px;color:#4a5568;border-top:1px solid #e2e8f0;padding-top:8px;"></div>
+        </div>
+      </div>
         <div class="result-section-header"><div class="result-section-icon">&#x26A0;&#xFE0F;</div><div class="result-section-title">Identified Hazards &amp; Deficiencies</div></div>
         <div class="result-section-body" id="res-hazards">&#x2014;</div>
       </div>
@@ -923,6 +942,7 @@
 <script>
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
+  const GMAPS_KEY    = 'AIzaSyDAHNS9_C-NLzVhAUDhD9HfSP-7X-xTVkI';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let uploadedPhotos = []; // Array of {file, dataUrl}
@@ -1543,9 +1563,9 @@
       return 'OUTPUT: Structured COPE assessment. Write each narrative section as a detailed professional paragraph. IMPORTANT: the "construction" field requires THREE paragraphs (use \\n\\n to separate them as specified in the schema). All other narrative fields are single paragraphs of 3-5 sentences. Be specific and technical. Follow these mandatory assessment rules:' +
       ' CONSTRUCTION: Paragraph 1 covers building structure and finishes. Paragraph 2 covers electrical system and emergency power. Paragraph 3 covers HVAC and mechanical systems. See schema for full details.' +
       ' CONSTRUCTION CLASS: be conservative — Class 1 Fire Resistive ONLY if fireproofing visibly confirmed on ALL structural members. Exposed steel deck = Class 2 Non-Combustible. When in doubt assign Class 2.' +
-      ' OCCUPANCY: for manufacturing/industrial — inventory major equipment visible (overhead cranes, extrusion machines, chiller/cooling units, boilers, furnaces, quality control ovens, air compressors, printing equipment, rail unloading). Identify forklift type (propane = higher hazard vs battery electric). Assess combustible loading including plastic resin, finished goods, rack storage height (high-piled storage >3.6m is a separate hazard class). Note any hazardous materials in chemical storage areas.' +
+      ' OCCUPANCY: for manufacturing/industrial — inventory major equipment visible (overhead cranes, extrusion machines, chiller/cooling units, boilers, furnaces, quality control ovens, air compressors, printing equipment, rail unloading). Identify forklift type (propane = higher hazard vs battery electric). Assess combustible loading including plastic resin, finished goods, rack storage height (high-piled storage >3.6m is a separate hazard class). Note any hazardous materials in chemical storage areas. GRINDING/SHREDDING OPERATIONS: if any grinding, shredding, chipping, or milling of combustible materials is present (wood, foam, fabric, plastic, fibre, mattress materials, recycled materials), assess and recommend magnetic separators/tramp metal detectors on infeed conveyors — tramp metal (bolts, nails, wire) entering grinding equipment causes sparks that ignite combustible dust, creating explosion and fire hazard; magnetic separators are a critical fire prevention control for these operations.' +
       ' PROTECTION: identify ALL visible — sprinkler heads, piping, risers, alarm panels, pull stations, strobes, extinguishers, exit signs. CRITICAL: for each extinguisher and sprinkler system — note whether service/inspection tags are visible in photos. If no service tags visible, flag as deficiency requiring annual inspection verification. State sprinkler density and coverage adequacy for occupancy type if determinable.' +
-      ' HAZARDS: list each hazard specifically — welding/hot work, flammable liquid storage (identify if safety cabinets present), compressed gas cylinders (note if secured/chained upright and separated by type), combustible dust (woodworking/plastic dust collection systems), high-piled storage, propane-powered equipment, chemical mixing areas. Assign severity to each.' +
+      ' HAZARDS: list each hazard specifically — welding/hot work, flammable liquid storage (identify if safety cabinets present), compressed gas cylinders (note if secured/chained upright and separated by type), combustible dust (woodworking/plastic dust collection systems), high-piled storage, propane-powered equipment, chemical mixing areas. For grinding/shredding of combustible materials — flag absence of magnetic separators/tramp metal detectors as a HIGH severity hazard if not observed. Assign severity to each.' +
       ' Populate ALL structured fields (construction_class, roof_type, sprinkler_type, alarm_type, occupancy_class, all scores) accurately. Scores 0-100.';
     }
     if (fmt === 'narrative') {
@@ -1806,6 +1826,8 @@
           if (!formData.photoCount) formData.photoCount = sub.photo_count || 0;
           lastResult = savedResult;
           renderResults(aiResult, formData);
+          // Also load site map for recalled reports
+          loadSiteMap(formData);
           document.getElementById('results-wrap').style.display = 'block';
           document.getElementById('progress-wrap').style.display = 'none';
           // Render photos from Supabase storage (uploadedPhotos is empty in view mode)
@@ -2586,9 +2608,28 @@
         constructionEl.textContent = '\u2014';
       }
     }
-    document.getElementById('res-occupancy').textContent    = r.occupancy    || '\u2014';
-    document.getElementById('res-protection').textContent   = r.protection   || '\u2014';
-    document.getElementById('res-exposure').textContent     = r.exposure     || '\u2014';
+    // Helper: highlight severity keywords in text
+    function highlightSeverity(text) {
+      if (!text) return '';
+      var escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      // Red bold for Critical/Severe/High
+      escaped = escaped.replace(/\b(CRITICAL|CRITICAL DEFICIENCY|SEVERE|HIGH SEVERITY|HIGH)\b/g,
+        '<strong style="color:#c53030;font-weight:700;">$1</strong>');
+      // Orange bold for Medium/Moderate
+      escaped = escaped.replace(/\b(MEDIUM SEVERITY|MEDIUM|MODERATE)\b/g,
+        '<strong style="color:#c05621;font-weight:700;">$1</strong>');
+      // Grey bold for Low/Advisory
+      escaped = escaped.replace(/\b(LOW SEVERITY|LOW|ADVISORY)\b/g,
+        '<strong style="color:#2d3748;font-weight:700;">$1</strong>');
+      return escaped.replace(/\n/g,'<br>');
+    }
+
+    var occEl = document.getElementById('res-occupancy');
+    if (occEl) occEl.innerHTML = highlightSeverity(r.occupancy) || '\u2014';
+    var protEl = document.getElementById('res-protection');
+    if (protEl) protEl.innerHTML = highlightSeverity(r.protection) || '\u2014';
+    var expEl = document.getElementById('res-exposure');
+    if (expEl) expEl.innerHTML = highlightSeverity(r.exposure) || '\u2014';
     // Hazards may be string or array of objects
     var _haz = r.hazards;
     if (Array.isArray(_haz)) {
@@ -2599,7 +2640,8 @@
         return sev ? sev.toUpperCase() + ': ' + desc : desc;
       }).join('\n');
     }
-    document.getElementById('res-hazards').textContent = _haz || 'No significant hazards identified from submitted photographs.';
+    var hazEl = document.getElementById('res-hazards');
+    if (hazEl) hazEl.innerHTML = highlightSeverity(_haz) || 'No significant hazards identified from submitted photographs.';
 
     // Recommendations
     const recWrap = document.getElementById('res-recommendations');
@@ -2811,6 +2853,52 @@
     const btn = document.getElementById('btn-analyse');
     btn.disabled = false;
     document.getElementById('btn-analyse-text').textContent = 'Analyse with AI \u2014 Generate COPE Assessment';
+
+    // Load site map after results render
+    loadSiteMap(data);
+  }
+
+  // ── SITE LOCATION MAP ──
+  function loadSiteMap(data) {
+    var mapSection  = document.getElementById('res-map-section');
+    var mapEmbed    = document.getElementById('res-map-embed');
+    var mapSat      = document.getElementById('res-map-satellite');
+    var mapLink     = document.getElementById('res-map-link');
+    var mapAddress  = document.getElementById('res-map-address');
+    var mapAreaNote = document.getElementById('res-map-area-note');
+    if (!mapSection || !mapEmbed || !mapSat) return;
+
+    // Build location string from form data
+    var parts = [data.address, data.city, data.province].filter(Boolean);
+    if (!parts.length) { mapSection.style.display = 'none'; return; }
+    var locationStr = parts.join(', ') + ', Canada';
+    var locationEnc = encodeURIComponent(locationStr);
+
+    // Interactive embed map (Satellite hybrid, zoom 18)
+    mapEmbed.src = 'https://www.google.com/maps/embed/v1/place?key=' + GMAPS_KEY +
+      '&q=' + locationEnc +
+      '&zoom=18&maptype=satellite';
+
+    // Static satellite image for aerial view (600x260, zoom 19)
+    mapSat.src = 'https://maps.googleapis.com/maps/api/staticmap' +
+      '?center=' + locationEnc +
+      '&zoom=19&size=600x260&maptype=hybrid' +
+      '&markers=color:red%7C' + locationEnc +
+      '&key=' + GMAPS_KEY;
+
+    // Google Maps link
+    mapLink.href = 'https://www.google.com/maps/search/?api=1&query=' + locationEnc;
+
+    // Address label
+    mapAddress.textContent = '\uD83D\uDCCD ' + locationStr;
+
+    // Area note
+    var declaredArea = data.area ? data.area + ' sq ft (declared)' : '';
+    mapAreaNote.textContent = declaredArea
+      ? 'Declared area: ' + declaredArea + ' — use satellite view to verify building footprint'
+      : 'Use satellite view to estimate building footprint area';
+
+    mapSection.style.display = 'block';
   }
 
   // ── EXTRACT INDIVIDUAL PHOTOS FROM PDF PAGES ──
