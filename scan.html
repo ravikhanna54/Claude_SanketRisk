@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Restore runAnalysis, single Lambda call -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-17 — Fix report_pdf_path save after dashboard save -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -3610,10 +3610,17 @@
       // Generate and store PDF, then update record with path
       var pdfPath = await generateAndStorePDF(inspId);
       if (pdfPath) {
-        // Store just the filename — bucket name 'reports' is implicit
-        await _supabase.from('scan_submissions').update({
+        // Update by inspection_id first, then by id as fallback
+        var updateRes = await _supabase.from('scan_submissions').update({
           report_pdf_path: pdfPath
         }).eq('inspection_id', inspId);
+        // Also update by row id in case inspection_id doesn't match
+        if (_reviewId || _draftId) {
+          await _supabase.from('scan_submissions').update({
+            report_pdf_path: pdfPath
+          }).eq('id', _reviewId || _draftId);
+        }
+        window._reportPdfPath = pdfPath;
       }
 
       showToast('\u2713 Saved as ' + inspId + ' \u2014 redirecting\u2026');
