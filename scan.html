@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-18 — Dedicated electrical system field + transformer prompt -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-18 — 10min timeout, detailed sprinkler/protection prompt -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1570,7 +1570,7 @@
       ' CONSTRUCTION CLASS — MANDATORY RULE: You MUST apply the most conservative classification supportable by photographic evidence. Class 1 Fire Resistive requires VISIBLE spray-applied fireproofing OR concrete encasement on ALL structural steel members — if fireproofing is not clearly visible on columns, beams AND deck, do NOT assign Class 1. Exposed steel columns, beams, or deck = Class 2 Non-Combustible MINIMUM. Pre-engineered metal buildings = Class 2. Combustible wood framing = Class 3 or 5. When ANY doubt exists between Class 1 and Class 2, assign Class 2. State explicitly in your assessment what evidence you used to determine the class.' +
       ' CONSTRUCTION PARAGRAPH 2 — ELECTRICAL: This paragraph is MANDATORY and must be specific. Examine ALL photos carefully for electrical panels, switchgear, meters, and wiring. For each panel visible: state the brand (Siemens, Square D, Eaton, Federal Pacific, Zinsco, GE, Cutler-Hammer, Murray, etc.), whether overcurrent protection uses circuit breakers or fuses, estimated service amperage if visible on the label, and voltage (120/240V single phase vs 347/600V three phase). Identify wiring type where visible in photos — copper vs aluminum conductors, conduit type (EMT, rigid, flexible), or legacy wiring (knob-and-tube, cloth-wrapped). Flag Federal Pacific Stab-Lok or Zinsco panels as HIGH hazard. Note any open knockouts, double-tapped breakers, amateur wiring, or panels in poor condition. If NO electrical panels are visible in photos, state this explicitly.' +
       ' OCCUPANCY: for manufacturing/industrial — inventory major equipment visible (overhead cranes, extrusion machines, chiller/cooling units, boilers, furnaces, quality control ovens, air compressors, printing equipment, rail unloading). Identify forklift type (propane = higher hazard vs battery electric). Assess combustible loading including plastic resin, finished goods, rack storage height (high-piled storage >3.6m is a separate hazard class). Note any hazardous materials in chemical storage areas. GRINDING/SHREDDING OPERATIONS: if any grinding, shredding, chipping, or milling of combustible materials is present (wood, foam, fabric, plastic, fibre, mattress materials, recycled materials), assess and recommend magnetic separators/tramp metal detectors on infeed conveyors — tramp metal (bolts, nails, wire) entering grinding equipment causes sparks that ignite combustible dust, creating explosion and fire hazard; magnetic separators are a critical fire prevention control for these operations.' +
-      ' PROTECTION: identify ALL visible — sprinkler heads, piping, risers, alarm panels, pull stations, strobes, extinguishers, exit signs. CRITICAL: for each extinguisher and sprinkler system — note whether service/inspection tags are visible in photos. If no service tags visible, flag as deficiency requiring annual inspection verification. State sprinkler density and coverage adequacy for occupancy type if determinable.' +
+      ' PROTECTION — MANDATORY DETAILED INSPECTION: Examine ALL photos systematically for fire protection equipment. For SPRINKLER SYSTEMS: identify every visible component — (1) Sprinkler heads: type (pendant, upright, sidewall, ESFR), coverage pattern, any that are painted, corroded, or damaged; (2) Sprinkler riser: identify wet pipe vs dry pipe vs pre-action vs deluge, note OS&Y or butterfly control valve position (open/closed), check valve, pressure gauges (record readings if visible), alarm check valve, inspector test connection; (3) Hydraulic data plate/nameplate on riser: record design density (gpm/sq ft), design area, water supply date, contractor name — this confirms system adequacy for the occupancy; (4) Sprinkler piping: note branch line spacing, any steel vs CPVC pipe, pipe hangers condition; (5) Backflow preventer if visible. For FIRE ALARM: identify panel brand and model, zone count, any trouble/alarm indicators lit, manual pull stations, smoke/heat detectors, horn/strobe devices, annunciator panels. For FIRE EXTINGUISHERS: count all visible, note type (ABC dry chemical, CO2, wet agent, Class K), size, mounting location, and CRITICALLY whether annual inspection tags are visible and current. For SUPPRESSION SYSTEMS: any kitchen hood suppression, clean agent (FM-200, Halon), CO2 systems. If service/inspection tags are NOT visible on any fire protection equipment, flag as deficiency. State coverage adequacy for the occupancy hazard classification.' +
       ' HAZARDS: list each hazard specifically — welding/hot work, flammable liquid storage (identify if safety cabinets present), compressed gas cylinders (note if secured/chained upright and separated by type), combustible dust (woodworking/plastic dust collection systems), high-piled storage, propane-powered equipment, chemical mixing areas. For grinding/shredding of combustible materials — flag absence of magnetic separators/tramp metal detectors as a HIGH severity hazard if not observed. Assign severity to each.' +
       ' Populate ALL structured fields (construction_class, roof_type, sprinkler_type, alarm_type, occupancy_class, all scores) accurately. Scores 0-100.';
     }
@@ -2205,7 +2205,7 @@
 
     // Poll scan_jobs table in Supabase every 6 seconds (up to 5 minutes)
     var pollStart = Date.now();
-    var pollMax   = 300000; // 5 minutes
+    var pollMax   = 600000; // 10 minutes
     var pollInterval = 6000;
 
     while (Date.now() - pollStart < pollMax) {
@@ -2232,7 +2232,7 @@
         console.warn('Poll error:', pollErr.message);
       }
     }
-    throw new Error('Analysis timed out after 5 minutes. Please try again.');
+    throw new Error('Analysis timed out after 10 minutes. Please try again.');
   }
 
     // Session state
