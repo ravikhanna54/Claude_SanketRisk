@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-24 — Trim prompts to reduce API timeout risk -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-24 — Clean schema with recommendations, dry pipe, exterior -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1570,7 +1570,8 @@
       ' CONSTRUCTION CLASS — MANDATORY RULE: You MUST apply the most conservative classification supportable by photographic evidence. Class 1 Fire Resistive requires VISIBLE spray-applied fireproofing OR concrete encasement on ALL structural steel members — if fireproofing is not clearly visible on columns, beams AND deck, do NOT assign Class 1. Exposed steel columns, beams, or deck = Class 2 Non-Combustible MINIMUM. Pre-engineered metal buildings = Class 2. Combustible wood framing = Class 3 or 5. When ANY doubt exists between Class 1 and Class 2, assign Class 2. State explicitly in your assessment what evidence you used to determine the class.' +
       ' ELECTRICAL: The electrical_system field is MANDATORY and separate from the construction paragraphs. Do NOT include electrical information in the construction paragraphs — put ALL electrical observations in the electrical_system field only. Examine exterior photos carefully for pad-mount transformers on concrete pads — these are very common at industrial facilities and often missed.' +
       ' OCCUPANCY: for manufacturing/industrial — inventory major equipment visible (overhead cranes, extrusion machines, chiller/cooling units, boilers, furnaces, quality control ovens, air compressors, printing equipment, rail unloading). Identify forklift type (propane = higher hazard vs battery electric). Assess combustible loading including plastic resin, finished goods, rack storage height (high-piled storage >3.6m is a separate hazard class). Note any hazardous materials in chemical storage areas. GRINDING/SHREDDING OPERATIONS: if any grinding, shredding, chipping, or milling of combustible materials is present (wood, foam, fabric, plastic, fibre, mattress materials, recycled materials), assess and recommend magnetic separators/tramp metal detectors on infeed conveyors — tramp metal (bolts, nails, wire) entering grinding equipment causes sparks that ignite combustible dust, creating explosion and fire hazard; magnetic separators are a critical fire prevention control for these operations.' +
-      ' PROTECTION — MANDATORY: The protection field must describe ALL fire protection systematically. CRITICAL: Identify sprinkler system type — DRY PIPE systems are identified by: air compressor or air maintenance device beside the riser, TWO pressure gauges (air pressure higher than water pressure), dry pipe valve (different appearance from wet pipe alarm valve), accelerator device. Do NOT assume wet pipe — examine all photos showing the sprinkler riser room carefully. Describe hydraulic data plate readings if visible. See schema for full required format.' +
+      ' PROTECTION — MANDATORY: Identify sprinkler system type FIRST before describing anything else. DRY PIPE system indicators — look for ALL of these: (1) AIR COMPRESSOR or air maintenance device mounted beside or near the riser; (2) TWO pressure gauges on the riser — the upper gauge shows AIR pressure (typically 40-60 psi) which is HIGHER than the lower water pressure gauge; (3) DRY PIPE VALVE body which is larger and more complex than a wet pipe alarm check valve; (4) ACCELERATOR device (small cylindrical device on piping near dry valve). If ANY of these are visible, it is a DRY PIPE system — state this explicitly. Do NOT default to wet pipe assumption. Then describe all other protection components per the schema.' +
+      ' PHOTO DESCRIPTIONS: The photo index includes descriptions added by the inspector — use these as guidance for what each photo shows. For example if a photo is described as "sprinkler riser room" examine it extra carefully for all riser components. If described as "electrical panel" look for brand labels, breaker types, wiring.' +
       ' HAZARDS: list each hazard specifically — welding/hot work, flammable liquid storage (identify if safety cabinets present), compressed gas cylinders (note if secured/chained upright and separated by type), combustible dust (woodworking/plastic dust collection systems), high-piled storage, propane-powered equipment, chemical mixing areas. For grinding/shredding of combustible materials — flag absence of magnetic separators/tramp metal detectors as a HIGH severity hazard if not observed. Assign severity to each.' +
       ' Populate ALL structured fields (construction_class, roof_type, sprinkler_type, alarm_type, occupancy_class, all scores) accurately. Scores 0-100.';
     }
@@ -1594,13 +1595,17 @@
     const attachDesc = [imgCt ? imgCt+' photos' : '', pdfCt ? pdfCt+' PDF' : '', docCt ? docCt+' supporting doc'+(docCt!==1?'s':'') : ''].filter(Boolean).join(' + ');
     // Build photo index with descriptions for AI context
     var checkedForPrompt = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
-    var photoIndex = (checkedForPrompt.length > 0 ? checkedForPrompt : uploadedPhotos.map(function(_,i){ return i; }))
-      .filter(function(i){ return uploadedPhotos[i]; })
-      .slice(0, 50)
-      .map(function(i, n){ 
-        var desc = uploadedPhotos[i].description || '';
-        return 'Photo ' + (n+1) + (desc ? ': ' + desc : '');
-      }).join(' | ');
+    var photoIndex = '';
+    if (uploadedPhotos.length > 0) {
+      photoIndex = (checkedForPrompt.length > 0 ? checkedForPrompt : uploadedPhotos.map(function(_,i){ return i; }))
+        .filter(function(i){ return uploadedPhotos[i]; })
+        .slice(0, 50)
+        .map(function(i, n){
+          var desc = uploadedPhotos[i].description || '';
+          return 'Photo ' + (n+1) + (desc ? ': ' + desc : '');
+        }).filter(function(s){ return s.indexOf(':') !== -1; }) // only include photos with descriptions
+        .join(' | ');
+    }
 
     // Compact property block — every token saved = more room for AI response
     const docContextNote = docCt > 0
@@ -1615,37 +1620,40 @@
       'Context: ' + (data.context||'none') + '\n' +
       'Files: ' + attachDesc + '\n' +
       (docContextNote ? docContextNote : '') +
-      (photoIndex ? 'Photo index: ' + photoIndex + '\n' : '') +
+      (photoIndex ? 'Photo descriptions (inspector-added context — use to guide your analysis): ' + photoIndex + '\n' : '') +
       '\n' +
       getFormatInstruction() + getDynamicPromptAdditions(data) + '\n\n' +
-      'Respond with ONLY a valid JSON object — no markdown, no backticks. All string values must be single-line (no newlines inside values). Schema:\n' +
+      'Respond with ONLY valid JSON — no markdown fences, no backticks, no newlines inside string values (use \\n for line breaks within strings). Complete ALL fields. Schema:\n' +
       '{\n' +
-      '  "executive_summary":"2-3 sentence narrative paragraph: state construction class, occupancy type, overall risk score, risk quality, and the 1-2 most critical priority findings requiring action. Written as professional underwriting prose — not a list.",\n' +
-      '  "construction_class":"Class 1 — Fire Resistive",\n' +
-      '  "year_built_assessed":"1998",\n' +
-      '  "stories":"3",\n' +
-      '  "area_sqft":"35,000 sq ft (declared)",\n' +
-      '  "roof_type":"TPO membrane over concrete deck",\n' +
-      '  "sprinkler_type":"Wet Pipe — NFPA 13",\n' +
-      '  "alarm_type":"Central Station monitored",\n' +
-      '  "occupancy_class":"Class B Office / Retail",\n' +
-      '  "electrical_system":"MANDATORY — examine ALL photos for electrical equipment and complete this field. Format: SERVICE: [describe utility transformer if visible — pad-mount/pole-mount, estimated kVA if labeled, oil/dry type; or state not visible]. MAIN DISTRIBUTION: [brand, type, estimated amperage/voltage, breakers or fuses, number of panels, condition]. WIRING: [conduit type — EMT/rigid/flexible, BX/armoured cable, open wiring; conductor material — copper/aluminum; condition]. SUB-PANELS: [any sub-panels, branch circuit panels, motor control centres visible — brand, location, amperage]. DEFICIENCIES: [any concerns — Federal Pacific/Zinsco panels, open knockouts, double-tapping, amateur wiring, exposed conductors, deteriorated insulation]. If no electrical equipment visible in photos, state: No electrical panels or wiring visible in submitted photographs.",\n' +
-      '  "score_construction":72,\n' +
-      '  "score_protection":65,\n' +
-      '  "score_safety":70,\n' +
-      '  "score_overall":69,\n' +
-      '  "risk_quality":"Acceptable / Standard",\n' +
+      '  "executive_summary":"2-3 sentence professional underwriting paragraph: construction class, occupancy type, overall risk score, risk quality, and 1-2 most critical findings.",\n' +
+      '  "construction_class":"Class 2 — Non-Combustible",\n' +
+      '  "year_built_assessed":"2018",\n' +
+      '  "stories":"1",\n' +
+      '  "area_sqft":"21,000 sq ft (declared)",\n' +
+      '  "roof_type":"Metal deck over steel frame",\n' +
+      '  "sprinkler_type":"Dry Pipe — NFPA 13",\n' +
+      '  "alarm_type":"None observed",\n' +
+      '  "occupancy_class":"Heavy Manufacturing — High Hazard",\n' +
+      '  "score_construction":70,\n' +
+      '  "score_protection":55,\n' +
+      '  "score_safety":50,\n' +
+      '  "score_overall":58,\n' +
+      '  "risk_quality":"Moderate",\n' +
       '  "uw_recommendation":"Accept with Recommendations",\n' +
-      '  "uw_narrative":"2-3 sentence underwriting summary.",\n' +
+      '  "uw_narrative":"2-3 sentence underwriting summary with conditions.",\n' +
       '  "confidence":"Medium",\n' +
-      '  "confidence_note":"What inspection would add.",\n' +
-      '  "construction":"THREE paragraphs separated by \\n\\n:\\n\\nParagraph 1 — Structure & Finishes: Construction class with evidence (e.g. exposed steel = Class 2). Structural system, exterior cladding, floor, roof assembly. Year built. Interior finishes by area type (office/warehouse/plant) — combustible vs non-combustible. Mezzanines, cranes, unusual features.\\n\\nParagraph 2 — HVAC & Mechanical: Heating type and fuel, cooling systems, process ventilation, rooftop units, exhaust fans, dust collection. Equipment brands/models from labels. Fuel storage (oil/propane tanks) with capacity and containment.\\n\\nParagraph 3 — Site & Observations: Site layout, parking, loading, yard storage, fencing. Building condition (roof, walls, foundation, maintenance). Outbuildings, storage tanks, site infrastructure. Fire apparatus access.",\n' +
-      '  "electrical_system":"MANDATORY. Format:\\nTRANSFORMER: [pad-mount on concrete pad outside building OR pole-mount on utility poles — very common at industrial sites, check all exterior photos; note estimated kVA and type if labeled; or: Not visible]\\nMAIN SERVICE: [brand, amperage, voltage, breakers or fuses, condition]\\nWIRING: [conduit type, conductor material, condition]\\nSUB-PANELS: [any sub-panels, MCCs, VFDs — brand, location, amperage]\\nDEFICIENCIES: [Federal Pacific/Zinsco panels = HIGH hazard; open knockouts; double-tapping; amateur wiring; exposed conductors]\\nIf no electrical visible: state Not visible in submitted photographs.",\n' +
-      '  "protection":"SYSTEMATIC INSPECTION — examine every photo. SPRINKLER TYPE: Determine wet pipe vs dry pipe vs pre-action. DRY PIPE identified by: air compressor beside riser + TWO pressure gauges (air pressure > water pressure) + dry pipe valve (different from wet alarm valve). State system type explicitly. Describe: sprinkler heads (type, any painted/corroded), riser components (valve position, gauge readings), hydraulic data plate (density gpm/sqft, design area — record if visible), backflow preventer. FIRE ALARM: panel brand/model, zone count, pull stations, detectors, horn/strobes. EXTINGUISHERS: count, type, size, inspection tags visible (yes/no). OTHER: kitchen hood, clean agent systems. Flag missing inspection tags. State adequacy for occupancy.",\n'
-      '  "exposure":"Detailed paragraph: neighbouring buildings, separation distances, construction of exposures, site access, geographic/natural hazards.",\n' +
-      '  "hazards":"List all specific hazards and deficiencies observed with severity. State none identified only if truly none visible."\n' +
+      '  "confidence_note":"Brief note on what on-site inspection would verify.",\n' +
+      '  "construction":"[Para 1: construction class with evidence, structural system, cladding, floor, roof, year built, interior finishes by area type (combustible vs non-combustible)]\\n\\n[Para 2: HVAC and mechanical — heating type/fuel, cooling, ventilation, dust collection, equipment brands, fuel storage]\\n\\n[Para 3: site layout, building condition, access, outbuildings]",\n' +
+      '  "electrical_system":"TRANSFORMER: [pad-mount/pole-mount visible or Not visible]\\nMAIN SERVICE: [brand, amps, voltage, breakers or fuses, condition]\\nWIRING: [conduit type, copper or aluminum, condition]\\nSUB-PANELS: [any sub-panels or MCCs]\\nDEFICIENCIES: [Federal Pacific/Zinsco=HIGH hazard; open knockouts; double-tapping; amateur wiring]",\n' +
+      '  "construction_detail":"[Paragraph: structural system details, spans, column grid, any mezzanines, cranes, unusual features]",\n' +
+      '  "occupancy":"[Paragraph: operations, major equipment visible with brands/models, combustible loading, forklift type, housekeeping, storage heights, hazardous materials. For grinding/shredding: assess magnetic separator need]",\n' +
+      '  "protection":"SPRINKLER TYPE: [WET PIPE or DRY PIPE — DRY PIPE identified by: air compressor beside riser + two gauges with air pressure > water pressure + dry pipe valve body]. [Describe heads, riser components, hydraulic data plate readings if visible, backflow preventer]. FIRE ALARM: [panel brand/model, zones, detectors, horn/strobes, pull stations]. EXTINGUISHERS: [count, type, inspection tags yes/no]. OTHER: [hood suppression, clean agent]. Overall adequacy for occupancy.",\n' +
+      '  "exposure":"[Para 1: Exterior Assessment — cladding condition, roof visible, doors/openings, signage, drainage, maintenance level, exterior hazards]. [Para 2: Exposure — neighbouring buildings, separation distances, site access for fire apparatus, geographic risks, municipal fire protection]",\n' +
+      '  "hazards":"[SEVERITY: specific observation. SEVERITY: specific observation. Use CRITICAL/HIGH/MEDIUM/LOW/ADVISORY. Cover: electrical, sprinkler deficiencies, housekeeping, storage, process hazards, missing protection. If grinding present and no magnetic separator visible: HIGH: Magnetic separator/tramp metal detector not observed on infeed conveyor — required for grinding combustible materials]",\n' +
+      '  "recommendations":[{"priority":"High","code":"FP-SP-001","title":"Sprinkler Annual Inspection","text":"Annual inspection records not confirmed. Engage licensed sprinkler contractor per NFPA 25."},{"priority":"Medium","code":"HS-CD-001","title":"Combustible Dust Housekeeping","text":"Implement documented cleaning program per NFPA 652."}],\n' +
+      '  "insured_profile_search":true\n' +
       '}\n' +
-      'Scores 0-100. risk_quality options: Preferred/Low | Acceptable/Standard | Moderate | High Risk/Refer | Decline. uw_recommendation options: Accept as Standard | Accept with Recommendations | Refer to Underwriter | Decline.';
+      'Scores 0-100. risk_quality: Preferred/Low | Acceptable/Standard | Moderate | High Risk/Refer | Decline. uw_recommendation: Accept as Standard | Accept with Recommendations | Refer to Underwriter | Decline. Populate recommendations array with ALL applicable recommendations — minimum 3, maximum 15. Each recommendation must have priority (High/Medium/Low/Advisory), code, title, and text with specific action and applicable standard.';
   }
 
     // ── VIEW REPORT MODE — load stored result from URL param ──
@@ -2113,7 +2121,7 @@
   async function callProxy(messages, storagePaths, prompt) {
     // Text-only or inline-image call — send messages directly to proxy
     if (!storagePaths || storagePaths.length === 0) {
-      var mtokens = (function(){ var f=getReportFormat(); return f==='structured'?16000:f==='narrative'?16000:16000; })();
+      var mtokens = (function(){ var f=getReportFormat(); return f==='structured'?12000:f==='narrative'?12000:12000; })();
       const response = await fetch('/.netlify/functions/scan-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2134,7 +2142,7 @@
     }
 
     // Storage-mode — v3 async: Lambda saves result to scan_jobs, browser polls Supabase
-    var maxTokens = (function(){ var f=getReportFormat(); return f==='structured'?16000:f==='narrative'?16000:16000; })();
+    var maxTokens = (function(){ var f=getReportFormat(); return f==='structured'?12000:f==='narrative'?12000:12000; })();
 
     var jobId = 'job-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
     console.log('v3 job:', jobId, 'paths:', storagePaths.length);
