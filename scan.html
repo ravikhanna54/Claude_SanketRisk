@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-24 — Sprinkler: no wet/dry guess, valve ID only if readable -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-24 — Fix PDF photos, map embed URL -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2902,10 +2902,9 @@
     var locationStr = parts.join(', ') + ', Canada';
     var locationEnc = encodeURIComponent(locationStr);
 
-    // Interactive embed map (Satellite hybrid, zoom 18)
-    mapEmbed.src = 'https://www.google.com/maps/embed/v1/place?key=' + GMAPS_KEY +
-      '&q=' + locationEnc +
-      '&zoom=18&maptype=satellite';
+    // Interactive embed map — use Maps search URL (no API key needed for basic embed)
+    mapEmbed.src = 'https://maps.google.com/maps?q=' + locationEnc +
+      '&t=k&z=18&output=embed&iwloc=near';
 
     // Static satellite image for aerial view (600x260, zoom 19)
     mapSat.src = 'https://maps.googleapis.com/maps/api/staticmap' +
@@ -3449,32 +3448,65 @@
       // ── Gather photo data URLs for PDF ──
       // Use uploadedPhotos (fresh analysis) or fetch from storage (recalled)
       var photoDataUrls = [];
+
+      // For fresh analysis — use in-memory data URLs (already available)
       if (uploadedPhotos && uploadedPhotos.length) {
         uploadedPhotos.forEach(function(p) {
           if (p.dataUrl && p.type !== 'pdf') photoDataUrls.push(p.dataUrl);
         });
       }
+
+      // For recalled submissions OR PDF submissions — fetch individual JPGs from storage
+      // Always do this if we have storage paths but no in-memory photos
       if (!photoDataUrls.length && _storagePaths && _storagePaths.length) {
-        var _imgPaths = _storagePaths.filter(function(p){ return !p.includes('/doc-') && !p.endsWith('.pdf'); });
-        showToast('\u23F3 Loading photos for PDF\u2026');
-        for (var _pi = 0; _pi < _imgPaths.length; _pi++) {
-          try {
-            var _pr = await fetch(SUPABASE_URL+'/storage/v1/object/scan-uploads/'+_imgPaths[_pi],
-              {headers:{'Authorization':'Bearer '+SUPABASE_KEY,'apikey':SUPABASE_KEY}});
-            if (_pr.ok) {
-              var _pb = await _pr.blob();
-              var _pdu = await new Promise(function(res) {
-                var fr = new FileReader(); fr.onload = function(){ res(fr.result); }; fr.readAsDataURL(_pb);
-              });
-              photoDataUrls.push(_pdu);
-            }
-          } catch(e) {}
+        var _imgPaths = _storagePaths.filter(function(p){
+          return !p.includes('/doc-') && !p.endsWith('.pdf');
+        });
+        if (_imgPaths.length) {
+          showToast('\u23F3 Loading ' + _imgPaths.length + ' photos for PDF\u2026');
+          for (var _pi = 0; _pi < _imgPaths.length; _pi++) {
+            try {
+              var _pr = await fetch(
+                SUPABASE_URL + '/storage/v1/object/scan-uploads/' + _imgPaths[_pi],
+                { headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY } }
+              );
+              if (_pr.ok) {
+                var _pb = await _pr.blob();
+                var _pdu = await new Promise(function(res) {
+                  var fr = new FileReader();
+                  fr.onload = function(){ res(fr.result); };
+                  fr.readAsDataURL(_pb);
+                });
+                photoDataUrls.push(_pdu);
+              }
+            } catch(e) { console.warn('Photo fetch failed:', _imgPaths[_pi], e.message); }
+          }
         }
       }
-      // Also grab canvas elements from PDF.js extraction
-      document.querySelectorAll('#res-photo-grid canvas').forEach(function(cv) {
-        try { photoDataUrls.push(cv.toDataURL('image/jpeg', 0.85)); } catch(e) {}
-      });
+
+      // For PDF-extracted photos — grab from the photo grid img tags (use src if it's a blob URL)
+      if (!photoDataUrls.length) {
+        var gridImgs = document.querySelectorAll('#res-photo-grid img');
+        for (var gi = 0; gi < gridImgs.length; gi++) {
+          var imgSrc = gridImgs[gi].src;
+          if (imgSrc && imgSrc.startsWith('blob:')) {
+            try {
+              var bRes = await fetch(imgSrc);
+              var bBlob = await bRes.blob();
+              var bDU = await new Promise(function(res) {
+                var fr = new FileReader(); fr.onload = function(){ res(fr.result); }; fr.readAsDataURL(bBlob);
+              });
+              photoDataUrls.push(bDU);
+            } catch(e) {}
+          }
+        }
+        // Also grab any canvas elements (PDF.js extracted pages)
+        document.querySelectorAll('#res-photo-grid canvas').forEach(function(cv) {
+          try { photoDataUrls.push(cv.toDataURL('image/jpeg', 0.85)); } catch(e) {}
+        });
+      }
+
+      console.log('PDF photos collected:', photoDataUrls.length);
 
       // Capture the full results section as canvas (excluding photo section — added separately)
       var photoSec = document.getElementById('res-photo-section');
