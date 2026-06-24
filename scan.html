@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-18 — Stronger electrical/construction class prompt -->
+<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-18 — Dedicated electrical system field + transformer prompt -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -771,6 +771,12 @@
       <div class="result-section">
         <div class="result-section-header"><div class="result-section-icon">&#x1F3D7;&#xFE0F;</div><div class="result-section-title">Construction Assessment</div></div>
         <div class="result-section-body" id="res-construction">&#x2014;</div>
+      </div>
+
+      <!-- Electrical System — dedicated section -->
+      <div class="result-section" id="res-electrical-section" style="display:none;">
+        <div class="result-section-header"><div class="result-section-icon">&#x26A1;</div><div class="result-section-title">Electrical System</div></div>
+        <div class="result-section-body" id="res-electrical">&#x2014;</div>
       </div>
 
       <div class="result-section">
@@ -1623,6 +1629,7 @@
       '  "sprinkler_type":"Wet Pipe — NFPA 13",\n' +
       '  "alarm_type":"Central Station monitored",\n' +
       '  "occupancy_class":"Class B Office / Retail",\n' +
+      '  "electrical_system":"MANDATORY — examine ALL photos for electrical equipment and complete this field. Format: SERVICE: [describe utility transformer if visible — pad-mount/pole-mount, estimated kVA if labeled, oil/dry type; or state not visible]. MAIN DISTRIBUTION: [brand, type, estimated amperage/voltage, breakers or fuses, number of panels, condition]. WIRING: [conduit type — EMT/rigid/flexible, BX/armoured cable, open wiring; conductor material — copper/aluminum; condition]. SUB-PANELS: [any sub-panels, branch circuit panels, motor control centres visible — brand, location, amperage]. DEFICIENCIES: [any concerns — Federal Pacific/Zinsco panels, open knockouts, double-tapping, amateur wiring, exposed conductors, deteriorated insulation]. If no electrical equipment visible in photos, state: No electrical panels or wiring visible in submitted photographs.",\n' +
       '  "score_construction":72,\n' +
       '  "score_protection":65,\n' +
       '  "score_safety":70,\n' +
@@ -1632,8 +1639,9 @@
       '  "uw_narrative":"2-3 sentence underwriting summary.",\n' +
       '  "confidence":"Medium",\n' +
       '  "confidence_note":"What inspection would add.",\n' +
-      '  "construction":"THREE paragraphs separated by a blank line:\\n\\nParagraph 1 — Building Structure & Finishes: State the construction class, structural system (frame type, columns, beams), exterior wall cladding, floor construction, and roof assembly (deck type, membrane/covering). Include year built and applicable construction code (NBC year if determinable). Separately describe interior finishes for each distinct area type present (office, warehouse/storage, plant/production) — ceiling finish, wall finish, floor finish, and whether finishes are combustible or non-combustible. Note any mezzanines, atriums, or unusual structural features.\\n\\nParagraph 2 — Electrical & Emergency Power: Describe the electrical service visible — panel type and brand, estimated amperage/voltage if visible on labels, overcurrent protection type (circuit breakers or fuses), wiring type if determinable (copper/aluminum, knob-and-tube, BX/conduit). Note condition of panels and any visible deficiencies (double-tapping, open knockouts, amateur wiring). Describe any emergency generator observed — fuel type (diesel/natural gas/propane), approximate capacity if labeled, automatic transfer switch presence, and condition.\\n\\nParagraph 3 — HVAC & Mechanical: Describe the heating system type (forced air, radiant, unit heaters, boiler/radiators), fuel source (natural gas, propane, electric, oil), approximate age and condition. Describe air conditioning or ventilation systems observed. Note any rooftop units, split systems, exhaust fans, or process ventilation. Identify the make/model of major equipment if visible on labels. Flag any fuel storage (oil tanks, propane tanks) and their condition and containment.",\n' +
-      '  "recommendations":[{"priority":"High","code":"FP-XX-001","title":"Short title","text":"Full recommendation text with specific action required and applicable standard.","photo_refs":[1,3]},{"priority":"Medium","text":"...","photo_refs":[2]}],\n' +      '  "occupancy":"Detailed paragraph: occupancy type, operations, combustible loading, housekeeping, storage, vacancy status.",\n' +
+      '  "construction":"THREE paragraphs separated by a blank line:\\n\\nParagraph 1 — Building Structure & Finishes: State the construction class with explicit evidence (e.g. exposed steel columns and deck confirm Class 2 Non-Combustible). Describe structural system, exterior wall cladding, floor construction, roof assembly. Include year built. Separately describe interior finishes for office, warehouse, and plant areas — combustible vs non-combustible.\\n\\nParagraph 2 — Electrical & Emergency Power: Begin with the electrical service entry and utility transformer (pad-mount or pole-mount transformer visible outside building — note estimated size and type). Describe main distribution panel(s) — brand, amperage, voltage, breaker or fuse type. Describe wiring methods visible — rigid conduit, EMT, BX/armoured cable, Romex. Note sub-panels, motor control centres, and branch circuit panels. Flag any hazardous panel brands (Federal Pacific, Zinsco). Describe emergency generator if present. This paragraph MUST describe what is visible in the photos — do not skip or generalize.\\n\\nParagraph 3 — HVAC & Mechanical: Describe heating system, fuel source, ventilation, rooftop units, process exhaust. Identify equipment brands from labels if visible. Note fuel storage.",\n' +
+      '  "recommendations":[{"priority":"High","code":"FP-XX-001","title":"Short title","text":"Full recommendation text with specific action required and applicable standard.","photo_refs":[1,3]},{"priority":"Medium","text":"...","photo_refs":[2]}],\n' +
+      '  "occupancy":"Detailed paragraph: occupancy type, operations, combustible loading, housekeeping, storage, vacancy status.",\n' +
       '  "protection":"Detailed paragraph: identify ALL fire protection visible — sprinkler heads/piping/riser, alarm panel/pull stations/strobes, extinguishers, exit signs, municipal fire dept assessment.",\n' +
       '  "exposure":"Detailed paragraph: neighbouring buildings, separation distances, construction of exposures, site access, geographic/natural hazards.",\n' +
       '  "hazards":"List all specific hazards and deficiencies observed with severity. State none identified only if truly none visible."\n' +
@@ -2606,6 +2614,21 @@
           .join('');
       } else {
         constructionEl.textContent = '\u2014';
+      }
+    }
+
+    // Electrical System — dedicated field displayed below construction
+    var elecEl = document.getElementById('res-electrical');
+    if (elecEl) {
+      if (r.electrical_system) {
+        elecEl.innerHTML = r.electrical_system
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/(SERVICE:|MAIN DISTRIBUTION:|WIRING:|SUB-PANELS:|DEFICIENCIES:)/g,
+            '<strong style="color:#1e3a4f;">$1</strong>')
+          .replace(/\n/g,'<br>');
+        document.getElementById('res-electrical-section').style.display = 'block';
+      } else {
+        document.getElementById('res-electrical-section').style.display = 'none';
       }
     }
     // Helper: highlight severity keywords in text
