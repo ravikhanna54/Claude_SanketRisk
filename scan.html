@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 285 — 2026-06-26 — PDF photo fetch via public bucket URL, satellite print CSS fix, photo count toast -->
+<!-- SanketRisk SCAN ONE — Deploy 286 — 2026-06-26 — PDF photos: DB fetch, canvas conversion, dedup by path and filename -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1283,8 +1283,23 @@
   function handlePhotoUpload(input) {
     var files = Array.from(input.files);
     if (!files.length) return;
+    // Build a set of existing file signatures to detect duplicates
+    var _existing = {};
+    uploadedPhotos.forEach(function(p) {
+      if (p.file) _existing[p.file.name + ':' + p.file.size] = true;
+    });
+    var skipped = 0;
     var loaded = 0;
+    var toLoad = [];
     files.forEach(function(file) {
+      var sig = file.name + ':' + file.size;
+      if (_existing[sig]) { skipped++; return; }
+      _existing[sig] = true;
+      toLoad.push(file);
+    });
+    if (skipped) showToast('\u2139 ' + skipped + ' duplicate photo' + (skipped !== 1 ? 's' : '') + ' skipped.');
+    if (!toLoad.length) { input.value = ''; return; }
+    toLoad.forEach(function(file) {
       var isPDF = file.type === 'application/pdf';
       var reader = new FileReader();
       reader.onload = function(e) {
@@ -1294,7 +1309,7 @@
           type: isPDF ? 'pdf' : 'image',
         });
         loaded++;
-        if (loaded === files.length) renderPhotoPreview();
+        if (loaded === toLoad.length) renderPhotoPreview();
       };
       reader.readAsDataURL(file);
     });
@@ -3559,28 +3574,62 @@
 
     // Fresh analysis — photos in memory as base64 data URLs (most reliable path)
     if (uploadedPhotos && uploadedPhotos.length) {
+      // Deduplicate by dataUrl to handle customer double-uploads
+      var _seenDU = {};
       uploadedPhotos.forEach(function(p) {
-        if (p.dataUrl && p.type !== 'pdf') photoDataUrls.push(p.dataUrl);
+        if (p.dataUrl && p.type !== 'pdf' && !_seenDU[p.dataUrl]) {
+          _seenDU[p.dataUrl] = true;
+          photoDataUrls.push(p.dataUrl);
+        }
       });
     }
 
-    // Recalled / no in-memory — fetch directly from Supabase Storage with auth header.
-    // IMPORTANT: Never use blob: URLs from the photo grid — they are origin-locked and
-    // cannot be fetched from a different execution context. Always fetch fresh from storage.
-    if (!photoDataUrls.length && _storagePaths && _storagePaths.length) {
-      var _imgPaths = _storagePaths.filter(function(p) {
-        return !p.includes('/doc-');  // exclude supporting docs only; include jpg AND pdf photo submissions
+    // Recalled / no in-memory — fetch from storage.
+    // Always re-fetch storage_paths from DB to get the FULL original list,
+    // since _storagePaths may have been overwritten by a partial re-upload.
+    if (!photoDataUrls.length) {
+      var _allStoragePaths = [];
+
+      // Try DB first for the authoritative full list
+      var _rowId = _reviewId || _draftId;
+      if (_rowId) {
+        try {
+          var _dbRes = await _supabase
+            .from('scan_submissions')
+            .select('storage_paths, doc_paths')
+            .eq('id', _rowId)
+            .single();
+          if (_dbRes.data && _dbRes.data.storage_paths) {
+            var _sp = _dbRes.data.storage_paths;
+            _allStoragePaths = typeof _sp === 'string' ? JSON.parse(_sp) : _sp;
+          }
+        } catch(e) { console.warn('DB storage_paths fetch failed:', e.message); }
+      }
+
+      // Fall back to in-memory _storagePaths if DB fetch failed
+      if (!_allStoragePaths.length && _storagePaths && _storagePaths.length) {
+        _allStoragePaths = _storagePaths;
+      }
+
+      // Deduplicate paths — removes duplicates from double-uploads
+      var _seenPaths = {};
+      var _imgPaths = _allStoragePaths.filter(function(p) {
+        if (p.includes('/doc-')) return false;  // exclude supporting docs
+        if (_seenPaths[p]) return false;         // deduplicate
+        _seenPaths[p] = true;
+        return true;
       });
+
       if (_imgPaths.length) {
         showToast('\u23F3 Loading ' + _imgPaths.length + ' photos for PDF\u2026');
         for (var _pi = 0; _pi < _imgPaths.length; _pi++) {
           try {
-            // scan-uploads is a public bucket — use public URL (no auth header needed)
+            // scan-uploads is a public bucket — use public URL first
             var _pr = await fetch(
               SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + _imgPaths[_pi]
             );
             if (!_pr.ok) {
-              // Fallback: try authenticated endpoint
+              // Fallback: authenticated endpoint
               _pr = await fetch(
                 SUPABASE_URL + '/storage/v1/object/scan-uploads/' + _imgPaths[_pi],
                 { headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY } }
@@ -3593,22 +3642,20 @@
               });
               if (_pdu) photoDataUrls.push(_pdu);
             } else {
-              console.warn('Photo fetch failed HTTP', _pr.status, _imgPaths[_pi]);
+              console.warn('Photo fetch HTTP', _pr.status, _imgPaths[_pi]);
             }
           } catch(e) { console.warn('Photo fetch error:', _imgPaths[_pi], e.message); }
         }
       }
     }
 
-    // Last resort — only data: URLs already in grid img tags (safe, never blob: URLs)
+    // Last resort — data: URLs already rendered in grid img tags (safe; never blob: URLs)
     if (!photoDataUrls.length) {
       var gridImgs = document.querySelectorAll('#res-photo-grid img');
       for (var gi = 0; gi < gridImgs.length; gi++) {
         var imgSrc = gridImgs[gi].src;
-        if (imgSrc && imgSrc.startsWith('data:')) {
-          photoDataUrls.push(imgSrc);
-        }
-        // blob: URLs intentionally skipped — they cannot be fetched cross-context
+        if (imgSrc && imgSrc.startsWith('data:')) photoDataUrls.push(imgSrc);
+        // blob: URLs intentionally skipped — origin-locked, cannot be fetched cross-context
       }
     }
 
@@ -3727,7 +3774,38 @@
           xCur = m2; yCur = m2 + 10; col = 0;
         }
         try {
-          pdf.addImage(photoDataUrls[pdi], 'JPEG', xCur, yCur, cellW, cellH);
+          // Detect image format from data URL header; convert/compress to JPEG for jsPDF
+          var rawDU = photoDataUrls[pdi];
+          var imgFmt = 'JPEG';
+          var imgForPdf = rawDU;
+          // Always convert to JPEG via canvas for consistent format and compression
+          // This handles HEIC, PNG, WEBP, and any other format
+          try {
+            imgForPdf = await new Promise(function(resolve, reject) {
+              var tmpImg = new Image();
+              tmpImg.onload = function() {
+                var cvs = document.createElement('canvas');
+                // Scale down if larger than 1200px wide — keeps PDF size manageable
+                var maxW = 1200;
+                var ratio = Math.min(1, maxW / tmpImg.naturalWidth);
+                cvs.width  = Math.round(tmpImg.naturalWidth  * ratio);
+                cvs.height = Math.round(tmpImg.naturalHeight * ratio);
+                var ctx = cvs.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, cvs.width, cvs.height);
+                ctx.drawImage(tmpImg, 0, 0, cvs.width, cvs.height);
+                resolve(cvs.toDataURL('image/jpeg', 0.80));
+              };
+              tmpImg.onerror = function() { resolve(rawDU); }; // fallback to original
+              tmpImg.src = rawDU;
+            });
+            imgFmt = 'JPEG';
+          } catch(convErr) {
+            // Conversion failed — try with original data
+            imgFmt = rawDU.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            imgForPdf = rawDU;
+          }
+          pdf.addImage(imgForPdf, imgFmt, xCur, yCur, cellW, cellH);
           pdf.setFontSize(7); pdf.setTextColor(100, 100, 100);
           pdf.text('Photo ' + (pdi + 1), xCur + 1, yCur + cellH - 1);
         } catch(e) { console.warn('Photo ' + (pdi+1) + ' skipped:', e.message); }
