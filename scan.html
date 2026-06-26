@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 280 — 2026-06-26 — PDF fix: hazards div, full scrollHeight capture, satellite fetch, photos via base64 -->
+<!-- SanketRisk SCAN ONE — Deploy 281 — 2026-06-26 — PDF: buildPdfBlob shared, Download PDF button, print CSS photo fix -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -223,8 +223,16 @@
   @media print {
     #topnav, #main-hero, #mode-bar, .scan-form-section, #progress-wrap,
     .btn-report, .result-actions, #view-report-banner, #report-only-bar { display: none !important; }
-    body { background: #fff; }
+    body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .results-container { box-shadow: none; border: none; }
+
+    /* Force ALL images to render in print/PDF — critical for photo grids */
+    img {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      display: block !important;
+      max-width: 100% !important;
+    }
 
     /* ── Cover page ── */
     #scan-cover-page {
@@ -269,9 +277,36 @@
     #res-support-docs-section { display: block !important; page-break-inside: avoid; break-inside: avoid; }
     #structured-cope-panel { display: block !important; page-break-inside: avoid; break-inside: avoid; }
     .result-section { display: block !important; page-break-inside: avoid; break-inside: avoid; }
-    /* Photo grid cards — never split a photo across pages */
-    #res-photo-grid > div { page-break-inside: avoid; break-inside: avoid; }
-    #res-photo-section { page-break-before: always; break-before: page; }
+
+    /* ── Photo grid — force images to render ── */
+    #res-photo-section { display: block !important; page-break-before: always; break-before: page; }
+    #res-photo-grid { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; }
+    #res-photo-grid > div {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      overflow: visible !important;
+    }
+    /* Override aspect-ratio + object-fit which can suppress images in some print engines */
+    #res-photo-grid img {
+      width: 100% !important;
+      height: auto !important;
+      aspect-ratio: auto !important;
+      object-fit: fill !important;
+      display: block !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ── Map section ── hide interactive iframe, show satellite only ── */
+    #res-map-section { display: block !important; page-break-inside: avoid; break-inside: avoid; }
+    #res-map-embed { display: none !important; }  /* iframe — cannot print */
+    #res-map-satellite {
+      display: block !important;
+      width: 100% !important;
+      height: auto !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
   }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -858,7 +893,8 @@
 
       <!-- Report Actions -->
       <div class="report-actions">
-        <button class="btn-report btn-report-scan" onclick="printScanReport()">&#x1F5A8; Print Photo Assessment Report</button>
+        <button class="btn-report btn-report-scan" onclick="printScanReport()">&#x1F5A8; Print Assessment Report</button>
+        <button class="btn-report" style="background:#0891b2;color:#fff;border-color:#0891b2;" onclick="downloadPdfLocal()">&#x2B07; Download PDF</button>
         <button class="btn-report btn-report-primary" onclick="saveToDashboard()">&#x2601;&#xFE0F; Save to Dashboard</button>
         <button class="btn-report btn-report-outline" onclick="resetForm()">&#x21BA; New Assessment</button>
       </div>
@@ -3423,6 +3459,39 @@
     window.print();
   }
 
+  // ── DOWNLOAD PDF LOCALLY ──
+  // Generates the full PDF (cover + report body + satellite map + photos)
+  // and downloads it directly to the device — no Supabase upload needed.
+  async function downloadPdfLocal() {
+    var btn = document.querySelector('.report-actions button[onclick="downloadPdfLocal()"]');
+    var origText = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Generating PDF\u2026'; }
+    try {
+      var insured = (lastResult && lastResult.formData && lastResult.formData.insured)
+        ? lastResult.formData.insured.replace(/[^a-zA-Z0-9 ]/g,'').replace(/\s+/g,'-').substring(0,40)
+        : 'ScanONE-Report';
+      var dateStr = new Date().toISOString().slice(0,10);
+      var filename = 'SRC-SCAN-' + insured + '-' + dateStr + '.pdf';
+
+      var pdfBlob = await buildPdfBlob();
+      if (!pdfBlob) { showToast('\u26A0 PDF generation failed — check console'); return; }
+
+      var url = URL.createObjectURL(pdfBlob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 3000);
+      showToast('\u2713 PDF downloaded: ' + filename);
+    } catch(e) {
+      console.error('Download PDF error:', e);
+      showToast('\u26A0 Download failed: ' + e.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+    }
+  }
+
   // ── SAVE TO DASHBOARD ──
   // ── GENERATE AND STORE PDF REPORT ──
 
@@ -3441,273 +3510,223 @@
     } catch(e) { return null; }
   }
 
+  async function buildPdfBlob() {
+    var resultsEl = document.getElementById('results-wrap');
+    if (!resultsEl) return null;
+    if (resultsEl.style.display === 'none') resultsEl.style.display = 'block';
+
+    showToast('\u23F3 Generating PDF report\u2026');
+
+    var jsPDFObj = window.jspdf.jsPDF;
+    var pdf = new jsPDFObj({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    var pageW = pdf.internal.pageSize.getWidth();
+    var pageH = pdf.internal.pageSize.getHeight();
+    var margin = 8;
+
+    // Step 1: Collect photo base64 data URLs
+    var photoDataUrls = [];
+
+    // Fresh analysis — photos in memory as base64 data URLs
+    if (uploadedPhotos && uploadedPhotos.length) {
+      uploadedPhotos.forEach(function(p) {
+        if (p.dataUrl && p.type !== 'pdf') photoDataUrls.push(p.dataUrl);
+      });
+    }
+
+    // Recalled — fetch from Supabase Storage with auth header (avoids CORS)
+    if (!photoDataUrls.length && _storagePaths && _storagePaths.length) {
+      var _imgPaths = _storagePaths.filter(function(p) {
+        return !p.includes('/doc-') && !p.endsWith('.pdf');
+      });
+      if (_imgPaths.length) {
+        showToast('\u23F3 Loading ' + _imgPaths.length + ' photos\u2026');
+        for (var _pi = 0; _pi < _imgPaths.length; _pi++) {
+          try {
+            var _pr = await fetch(
+              SUPABASE_URL + '/storage/v1/object/scan-uploads/' + _imgPaths[_pi],
+              { headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY } }
+            );
+            if (_pr.ok) {
+              var _pb = await _pr.blob();
+              var _pdu = await new Promise(function(resolve) {
+                var fr = new FileReader(); fr.onload = function(){ resolve(fr.result); }; fr.readAsDataURL(_pb);
+              });
+              if (_pdu) photoDataUrls.push(_pdu);
+            }
+          } catch(e) { console.warn('Photo fetch failed:', _imgPaths[_pi], e.message); }
+        }
+      }
+    }
+
+    // Last resort — data: URLs already in grid img tags, or convert blob: URLs
+    if (!photoDataUrls.length) {
+      var gridImgs = document.querySelectorAll('#res-photo-grid img');
+      for (var gi = 0; gi < gridImgs.length; gi++) {
+        var imgSrc = gridImgs[gi].src;
+        if (imgSrc && imgSrc.startsWith('data:')) {
+          photoDataUrls.push(imgSrc);
+        } else if (imgSrc && imgSrc.startsWith('blob:')) {
+          try {
+            var bResp = await fetch(imgSrc);
+            var bBlob = await bResp.blob();
+            var bDU = await new Promise(function(resolve) {
+              var fr = new FileReader(); fr.onload = function(){ resolve(fr.result); }; fr.readAsDataURL(bBlob);
+            });
+            if (bDU) photoDataUrls.push(bDU);
+          } catch(e) {}
+        }
+      }
+      document.querySelectorAll('#res-photo-grid canvas').forEach(function(cv) {
+        try { photoDataUrls.push(cv.toDataURL('image/jpeg', 0.85)); } catch(e) {}
+      });
+    }
+
+    console.log('PDF photos collected:', photoDataUrls.length);
+
+    // Step 2: Fetch satellite map as base64 (cross-origin; must fetch not canvas-capture)
+    var satDataUrl = null;
+    var satImgEl = document.getElementById('res-map-satellite');
+    if (satImgEl && satImgEl.src && satImgEl.src.indexOf('googleapis.com') !== -1) {
+      showToast('\u23F3 Fetching satellite image\u2026');
+      try {
+        var satResp = await fetch(satImgEl.src);
+        if (satResp.ok) {
+          var satBlob = await satResp.blob();
+          satDataUrl = await new Promise(function(resolve) {
+            var fr = new FileReader(); fr.onload = function(){ resolve(fr.result); }; fr.readAsDataURL(satBlob);
+          });
+        }
+      } catch(e) { console.warn('Satellite fetch failed:', e.message); }
+      console.log('Satellite map:', satDataUrl ? 'OK' : 'failed');
+    }
+
+    // Step 3: Cover page
+    var coverEl = document.getElementById('scan-cover-page');
+    var photoSec = document.getElementById('res-photo-section');
+    var mapSec   = document.getElementById('res-map-section');
+    var photoSecWasVisible = photoSec && photoSec.style.display !== 'none';
+    var mapSecWasVisible   = mapSec  && mapSec.style.display   !== 'none';
+
+    if (coverEl) coverEl.style.display = 'flex';
+    var coverCanvas = await html2canvas(coverEl, {
+      scale: 1.5, useCORS: true, allowTaint: true, logging: false,
+      backgroundColor: '#0d1b2a', windowWidth: 960,
+    });
+    if (coverEl) coverEl.style.display = 'none';
+    var coverImgData = coverCanvas.toDataURL('image/jpeg', 0.88);
+    var coverH     = (coverCanvas.height * pageW) / coverCanvas.width;
+    var coverScale = Math.min(1, (pageH - margin * 2) / coverH);
+    var coverDrawH = coverH * coverScale;
+    var coverDrawW = pageW * coverScale;
+    pdf.addImage(coverImgData, 'JPEG', (pageW - coverDrawW) / 2, (pageH - coverDrawH) / 2, coverDrawW, coverDrawH);
+
+    // Step 4: Report body — hide photos and map (added separately via pdf.addImage)
+    if (photoSec) photoSec.style.display = 'none';
+    if (mapSec)   mapSec.style.display   = 'none';
+
+    showToast('\u23F3 Rendering report body\u2026');
+    var canvas = await html2canvas(resultsEl, {
+      scale: 1.5, useCORS: true, allowTaint: true, logging: false,
+      backgroundColor: '#ffffff', windowWidth: 960,
+      height: resultsEl.scrollHeight, imageTimeout: 15000,
+      onclone: function(clonedDoc) {
+        var rw = clonedDoc.getElementById('results-wrap');
+        if (rw) { rw.style.display = 'block'; rw.style.height = 'auto'; rw.style.overflow = 'visible'; }
+        clonedDoc.querySelectorAll('.result-section').forEach(function(el) { el.style.display = 'block'; });
+        ['res-electrical-section','res-profile-section'].forEach(function(id) {
+          var el = clonedDoc.getElementById(id); if (el) el.style.display = 'block';
+        });
+        ['res-photo-section','res-map-section','topnav','main-hero','mode-bar','progress-wrap',
+         'view-report-banner','report-only-bar','res-cover-photo-wrap','scan-cover-page'].forEach(function(id) {
+          var el = clonedDoc.getElementById(id); if (el) el.style.display = 'none';
+        });
+        clonedDoc.querySelectorAll('.scan-form-section, .btn-report, .result-actions, .report-actions').forEach(function(el) { el.style.display = 'none'; });
+      }
+    });
+
+    if (photoSec) photoSec.style.display = photoSecWasVisible ? 'block' : 'none';
+    if (mapSec)   mapSec.style.display   = mapSecWasVisible   ? 'block' : 'none';
+
+    var imgData = canvas.toDataURL('image/jpeg', 0.88);
+    var imgW = pageW, imgH = (canvas.height * imgW) / canvas.width, yPos = 0;
+    pdf.addPage();
+    while (yPos < imgH) {
+      if (imgH - yPos < 20) break;
+      if (yPos > 0) pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, -yPos, imgW, imgH);
+      yPos += pageH;
+    }
+
+    // Step 5: Satellite map page
+    if (satDataUrl) {
+      pdf.addPage();
+      pdf.setFontSize(10); pdf.setTextColor(30, 58, 79);
+      pdf.text('Site Location \u2014 Satellite Aerial View', margin, margin + 4);
+      pdf.setDrawColor(200, 200, 200);
+      pdf.line(margin, margin + 6, pageW - margin, margin + 6);
+      var addrEl = document.getElementById('res-map-address');
+      if (addrEl && addrEl.textContent) {
+        pdf.setFontSize(8); pdf.setTextColor(100, 100, 100);
+        pdf.text(addrEl.textContent.replace(/[\u{1F4CD}\u{1F5FA}]\s*/u,'').trim(), margin, margin + 11);
+      }
+      var satImgW = pageW - margin * 2;
+      var satImgH = satImgW * (260 / 600);
+      pdf.addImage(satDataUrl, 'JPEG', margin, margin + 14, satImgW, satImgH);
+      pdf.setFontSize(7); pdf.setTextColor(130, 130, 130);
+      pdf.text('Interactive map available in the online report. Satellite imagery via Google Maps.', margin, margin + 14 + satImgH + 4);
+    }
+
+    // Step 6: Photo appendix pages
+    if (photoDataUrls.length) {
+      var COLS = 3, m2 = 8;
+      var cellW = (pageW - m2 * 2 - (COLS - 1) * 4) / COLS;
+      var cellH = cellW * 0.75;
+      var xCur = m2, yCur = m2 + 10, col = 0;
+      pdf.addPage();
+      pdf.setFontSize(10); pdf.setTextColor(30, 58, 79);
+      pdf.text('Submitted Photographs', m2, m2 + 4);
+      pdf.setDrawColor(200, 200, 200); pdf.line(m2, m2 + 6, pageW - m2, m2 + 6);
+      for (var pdi = 0; pdi < photoDataUrls.length; pdi++) {
+        if (yCur + cellH > pageH - m2) {
+          pdf.addPage();
+          pdf.setFontSize(10); pdf.setTextColor(30, 58, 79);
+          pdf.text('Submitted Photographs (continued)', m2, m2 + 4);
+          pdf.setDrawColor(200, 200, 200); pdf.line(m2, m2 + 6, pageW - m2, m2 + 6);
+          xCur = m2; yCur = m2 + 10; col = 0;
+        }
+        try {
+          pdf.addImage(photoDataUrls[pdi], 'JPEG', xCur, yCur, cellW, cellH);
+          pdf.setFontSize(7); pdf.setTextColor(100, 100, 100);
+          pdf.text('Photo ' + (pdi + 1), xCur + 1, yCur + cellH - 1);
+        } catch(e) { console.warn('Photo ' + (pdi+1) + ' skipped:', e.message); }
+        col++;
+        if (col >= COLS) { col = 0; xCur = m2; yCur += cellH + 4; }
+        else { xCur += cellW + 4; }
+      }
+    }
+
+    return pdf.output('blob');
+  }
+
   async function generateAndStorePDF(inspId) {
     try {
-      var resultsEl = document.getElementById('results-wrap');
-      if (!resultsEl) return null;
-      if (resultsEl.style.display === 'none') resultsEl.style.display = 'block';
-
-      showToast('\u23F3 Generating PDF report\u2026');
-
-      var jsPDFObj = window.jspdf.jsPDF;
-      var pdf = new jsPDFObj({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      var pageW = pdf.internal.pageSize.getWidth();
-      var pageH = pdf.internal.pageSize.getHeight();
-      var margin = 8;
-
-      // ── Step 1: Collect photo base64 data URLs ──
-      // Priority: in-memory (fresh analysis) → Supabase Storage (recalled) → blob URLs in grid
-      var photoDataUrls = [];
-
-      // Fresh analysis — photos already in memory as data URLs
-      if (uploadedPhotos && uploadedPhotos.length) {
-        uploadedPhotos.forEach(function(p) {
-          if (p.dataUrl && p.type !== 'pdf') photoDataUrls.push(p.dataUrl);
-        });
-      }
-
-      // Recalled / no in-memory — fetch directly from Supabase Storage as base64
-      if (!photoDataUrls.length && _storagePaths && _storagePaths.length) {
-        var _imgPaths = _storagePaths.filter(function(p) {
-          return !p.includes('/doc-') && !p.endsWith('.pdf');
-        });
-        if (_imgPaths.length) {
-          showToast('\u23F3 Loading ' + _imgPaths.length + ' photos\u2026');
-          for (var _pi = 0; _pi < _imgPaths.length; _pi++) {
-            var _pdu = await fetchAsDataUrl(
-              SUPABASE_URL + '/storage/v1/object/scan-uploads/' + _imgPaths[_pi] +
-              '?t=' + Date.now()  // cache-bust
-            );
-            if (!_pdu) {
-              // Try with auth header via fetch
-              try {
-                var _pr2 = await fetch(
-                  SUPABASE_URL + '/storage/v1/object/scan-uploads/' + _imgPaths[_pi],
-                  { headers: { 'Authorization': 'Bearer ' + SUPABASE_KEY, 'apikey': SUPABASE_KEY } }
-                );
-                if (_pr2.ok) {
-                  var _pb2 = await _pr2.blob();
-                  _pdu = await new Promise(function(resolve) {
-                    var fr = new FileReader();
-                    fr.onload = function() { resolve(fr.result); };
-                    fr.readAsDataURL(_pb2);
-                  });
-                }
-              } catch(e) { console.warn('Photo fetch failed:', _imgPaths[_pi], e.message); }
-            }
-            if (_pdu) photoDataUrls.push(_pdu);
-          }
-        }
-      }
-
-      // Last resort — blob URLs already rendered in the photo grid
-      if (!photoDataUrls.length) {
-        var gridImgs = document.querySelectorAll('#res-photo-grid img');
-        for (var gi = 0; gi < gridImgs.length; gi++) {
-          var imgSrc = gridImgs[gi].src;
-          if (imgSrc && (imgSrc.startsWith('blob:') || imgSrc.startsWith('data:'))) {
-            try {
-              var bDU = imgSrc.startsWith('data:') ? imgSrc : await fetchAsDataUrl(imgSrc);
-              if (bDU) photoDataUrls.push(bDU);
-            } catch(e) {}
-          }
-        }
-        // canvas elements from PDF.js extraction
-        document.querySelectorAll('#res-photo-grid canvas').forEach(function(cv) {
-          try { photoDataUrls.push(cv.toDataURL('image/jpeg', 0.85)); } catch(e) {}
-        });
-      }
-
-      console.log('PDF photos collected:', photoDataUrls.length);
-
-      // ── Step 2: Fetch satellite map as base64 ──
-      // Google Static Maps is cross-origin — html2canvas cannot capture it.
-      // Fetch it directly and add to PDF via pdf.addImage() instead.
-      var satDataUrl = null;
-      var satImg = document.getElementById('res-map-satellite');
-      if (satImg && satImg.src && satImg.src.indexOf('googleapis.com') !== -1) {
-        showToast('\u23F3 Fetching satellite image\u2026');
-        satDataUrl = await fetchAsDataUrl(satImg.src);
-        console.log('Satellite map fetched:', satDataUrl ? 'OK' : 'failed');
-      }
-
-      // ── Step 3: Cover page ──
-      var coverEl = document.getElementById('scan-cover-page');
-      var photoSec = document.getElementById('res-photo-section');
-      var mapSec = document.getElementById('res-map-section');
-      var photoSecWasVisible = photoSec && photoSec.style.display !== 'none';
-      var mapSecWasVisible   = mapSec  && mapSec.style.display   !== 'none';
-
-      if (coverEl) coverEl.style.display = 'flex';
-      var coverCanvas = await html2canvas(coverEl, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: '#0d1b2a',
-        windowWidth: 960,
-      });
-      if (coverEl) coverEl.style.display = 'none';
-
-      var coverImgData = coverCanvas.toDataURL('image/jpeg', 0.88);
-      var coverH     = (coverCanvas.height * pageW) / coverCanvas.width;
-      var coverScale = Math.min(1, (pageH - margin * 2) / coverH);
-      var coverDrawH = coverH * coverScale;
-      var coverDrawW = pageW * coverScale;
-      pdf.addImage(coverImgData, 'JPEG', (pageW - coverDrawW) / 2, (pageH - coverDrawH) / 2, coverDrawW, coverDrawH);
-
-      // ── Step 4: Report body via html2canvas ──
-      // Hide: photos (added separately), map section (satellite added separately),
-      // iframe (can never be captured), action buttons
-      if (photoSec) photoSec.style.display = 'none';
-      if (mapSec)   mapSec.style.display   = 'none';
-
-      showToast('\u23F3 Rendering report body\u2026');
-      var canvas = await html2canvas(resultsEl, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        windowWidth: 960,
-        height: resultsEl.scrollHeight,
-        imageTimeout: 15000,
-        onclone: function(clonedDoc) {
-          var rw = clonedDoc.getElementById('results-wrap');
-          if (rw) { rw.style.display = 'block'; rw.style.height = 'auto'; rw.style.overflow = 'visible'; }
-
-          // Show all result sections
-          clonedDoc.querySelectorAll('.result-section').forEach(function(el) { el.style.display = 'block'; });
-          ['res-electrical-section','res-profile-section'].forEach(function(id) {
-            var el = clonedDoc.getElementById(id);
-            if (el) el.style.display = 'block';
-          });
-
-          // Hide cross-origin / separately-added sections
-          ['res-photo-section','res-map-section',
-           'topnav','main-hero','mode-bar','progress-wrap',
-           'view-report-banner','report-only-bar',
-           'res-cover-photo-wrap','scan-cover-page'].forEach(function(id) {
-            var el = clonedDoc.getElementById(id);
-            if (el) el.style.display = 'none';
-          });
-          clonedDoc.querySelectorAll(
-            '.scan-form-section, .btn-report, .result-actions, .report-actions'
-          ).forEach(function(el) { el.style.display = 'none'; });
-        }
-      });
-
-      // Restore visibility
-      if (photoSec) photoSec.style.display = photoSecWasVisible ? 'block' : 'none';
-      if (mapSec && mapSecWasVisible) mapSec.style.display = 'block';
-
-      var imgData = canvas.toDataURL('image/jpeg', 0.88);
-      var imgW    = pageW;
-      var imgH    = (canvas.height * imgW) / canvas.width;
-      var yPos    = 0;
-
-      pdf.addPage();
-      while (yPos < imgH) {
-        if (imgH - yPos < 20) break;
-        if (yPos > 0) pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, -yPos, imgW, imgH);
-        yPos += pageH;
-      }
-
-      // ── Step 5: Satellite map page ──
-      if (satDataUrl) {
-        pdf.addPage();
-        pdf.setFontSize(10);
-        pdf.setTextColor(30, 58, 79);
-        pdf.text('Site Location — Satellite Aerial View', margin, margin + 4);
-        pdf.setDrawColor(200, 200, 200);
-        pdf.line(margin, margin + 6, pageW - margin, margin + 6);
-        // Address line
-        var addrEl = document.getElementById('res-map-address');
-        if (addrEl && addrEl.textContent) {
-          pdf.setFontSize(8);
-          pdf.setTextColor(100, 100, 100);
-          pdf.text(addrEl.textContent.replace(/\uD83D\uDCCD\s*/,''), margin, margin + 11);
-        }
-        // Satellite image — full width, proportional height
-        var satImgW = pageW - margin * 2;
-        var satImgH = satImgW * (260 / 600);  // matches &size=600x260 API param
-        pdf.addImage(satDataUrl, 'JPEG', margin, margin + 14, satImgW, satImgH);
-        // Note about interactive map
-        pdf.setFontSize(7);
-        pdf.setTextColor(130, 130, 130);
-        pdf.text('Interactive map available in the online report. Satellite imagery via Google Maps.', margin, margin + 14 + satImgH + 4);
-      }
-
-      // ── Step 6: Photo appendix pages ──
-      if (photoDataUrls.length) {
-        var COLS = 3, margin2 = 8;
-        var cellW = (pageW - margin2 * 2 - (COLS - 1) * 4) / COLS;
-        var cellH = cellW * 0.75;
-        var xStart = margin2, yStart = margin2 + 10;
-        var xCur = xStart, yCur = yStart;
-        var col = 0;
-
-        pdf.addPage();
-        pdf.setFontSize(10);
-        pdf.setTextColor(30, 58, 79);
-        pdf.text('Submitted Photographs', margin2, margin2 + 4);
-        pdf.setDrawColor(200, 200, 200);
-        pdf.line(margin2, margin2 + 6, pageW - margin2, margin2 + 6);
-
-        for (var pdi = 0; pdi < photoDataUrls.length; pdi++) {
-          if (yCur + cellH > pageH - margin2) {
-            pdf.addPage();
-            pdf.setFontSize(10);
-            pdf.setTextColor(30, 58, 79);
-            pdf.text('Submitted Photographs (continued)', margin2, margin2 + 4);
-            pdf.setDrawColor(200, 200, 200);
-            pdf.line(margin2, margin2 + 6, pageW - margin2, margin2 + 6);
-            xCur = xStart; yCur = yStart; col = 0;
-          }
-          try {
-            pdf.addImage(photoDataUrls[pdi], 'JPEG', xCur, yCur, cellW, cellH);
-            pdf.setFontSize(7);
-            pdf.setTextColor(100, 100, 100);
-            pdf.text('Photo ' + (pdi + 1), xCur + 1, yCur + cellH - 1);
-          } catch(e) { console.warn('Photo ' + (pdi+1) + ' skipped:', e.message); }
-          col++;
-          if (col >= COLS) { col = 0; xCur = xStart; yCur += cellH + 4; }
-          else { xCur += cellW + 4; }
-        }
-      }
-
-      // Convert to blob
-      var pdfBlob = pdf.output('blob');
-
-      // Check if PDF already exists in Supabase
-      var pdfPath = inspId + '.pdf';  // path within the 'reports' bucket
+      var pdfBlob = await buildPdfBlob();
+      if (!pdfBlob) return null;
+      var pdfPath = inspId + '.pdf';
       var checkRes = await _supabase.storage.from('reports').list('', { search: inspId + '.pdf' });
       var alreadyExists = checkRes.data && checkRes.data.some(function(f){ return f.name === inspId + '.pdf'; });
-
       if (alreadyExists) {
-        // Prompt to overwrite
         var overwrite = confirm('A PDF report already exists for ' + inspId + '.\n\nOverwrite with the new analysis?');
-        if (!overwrite) {
-          showToast('\u2139 Keeping existing PDF report.');
-          return pdfPath;
-        }
-        // Delete existing before re-upload
+        if (!overwrite) { showToast('\u2139 Keeping existing PDF report.'); return pdfPath; }
         await _supabase.storage.from('reports').remove([inspId + '.pdf']);
       }
-
-      // Upload PDF to Supabase Storage
       showToast('\u23F3 Uploading PDF to storage\u2026');
       var uploadRes = await _supabase.storage.from('reports').upload(pdfPath, pdfBlob, {
-        contentType: 'application/pdf',
-        upsert: true,
+        contentType: 'application/pdf', upsert: true,
       });
-
       if (uploadRes.error) throw uploadRes.error;
-
-      showToast('\u2713 PDF report stored — ' + pdfPath);
+      showToast('\u2713 PDF report stored \u2014 ' + pdfPath);
       return pdfPath;
-
     } catch(e) {
       console.warn('PDF generation error:', e.message);
       showToast('\u26A0 PDF generation failed: ' + e.message);
