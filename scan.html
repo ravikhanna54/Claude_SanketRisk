@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 286 — 2026-06-26 — PDF photos: DB fetch, canvas conversion, dedup by path and filename -->
+<!-- SanketRisk SCAN ONE — Deploy 287 — 2026-06-26 — Fix duplicate photos (double renderStoragePhotosIntoGrid call), PDF img path filter, canvas capture for PDF submissions -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1858,8 +1858,7 @@
               (docPaths.length ? ' + ' + docPaths.length + ' document' + (docPaths.length !== 1 ? 's' : '') : '') +
               ' on file from original submission. Click Step 2 to re-run analysis, or view saved report below.';
           }
-          // Auto-render photos into grid immediately — no Step 1 click needed
-          setTimeout(function() { renderStoragePhotosIntoGrid(_storagePaths); }, 300);
+          // Photos are rendered into the results grid below (inside if(savedResult) block) — do not render here
         }
 
         // 4. Restore doc list display (names from form_data.additionalDocs)
@@ -3614,8 +3613,9 @@
       // Deduplicate paths — removes duplicates from double-uploads
       var _seenPaths = {};
       var _imgPaths = _allStoragePaths.filter(function(p) {
-        if (p.includes('/doc-')) return false;  // exclude supporting docs
-        if (_seenPaths[p]) return false;         // deduplicate
+        if (p.includes('/doc-')) return false;   // exclude supporting docs
+        if (p.endsWith('.pdf'))  return false;   // exclude PDF photo submissions — not renderable as images
+        if (_seenPaths[p])       return false;   // deduplicate exact path
         _seenPaths[p] = true;
         return true;
       });
@@ -3650,6 +3650,7 @@
     }
 
     // Last resort — data: URLs already rendered in grid img tags (safe; never blob: URLs)
+    // Also capture PDF.js canvas elements for PDF photo submissions
     if (!photoDataUrls.length) {
       var gridImgs = document.querySelectorAll('#res-photo-grid img');
       for (var gi = 0; gi < gridImgs.length; gi++) {
@@ -3657,6 +3658,14 @@
         if (imgSrc && imgSrc.startsWith('data:')) photoDataUrls.push(imgSrc);
         // blob: URLs intentionally skipped — origin-locked, cannot be fetched cross-context
       }
+      // Capture PDF.js canvas elements (rendered pages from PDF photo submissions)
+      var gridCanvases = document.querySelectorAll('#res-photo-grid canvas');
+      gridCanvases.forEach(function(cv) {
+        try {
+          var cvDU = cv.toDataURL('image/jpeg', 0.82);
+          if (cvDU && cvDU.length > 100) photoDataUrls.push(cvDU);
+        } catch(e) {}
+      });
     }
 
     console.log('PDF photos collected:', photoDataUrls.length);
