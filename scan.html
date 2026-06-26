@@ -814,6 +814,9 @@
           <div id="res-map-address" style="font-size:12px;color:#4a5568;border-top:1px solid #e2e8f0;padding-top:8px;"></div>
         </div>
       </div>
+
+      <!-- Hazards -->
+      <div class="result-section">
         <div class="result-section-header"><div class="result-section-icon">&#x26A0;&#xFE0F;</div><div class="result-section-title">Identified Hazards &amp; Deficiencies</div></div>
         <div class="result-section-body" id="res-hazards">&#x2014;</div>
       </div>
@@ -3431,29 +3434,24 @@
 
       showToast('\u23F3 Generating PDF report\u2026');
 
-      // Temporarily show cover page for PDF capture
-      var coverEl = document.getElementById('scan-cover-page');
-      if (coverEl) coverEl.style.display = 'flex';
-
       // Use jsPDF with html2canvas
-      var { jsPDF } = window.jspdf;
-      var pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      var jsPDFObj = window.jspdf.jsPDF;
+      var pdf = new jsPDFObj({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       var pageW = pdf.internal.pageSize.getWidth();
       var pageH = pdf.internal.pageSize.getHeight();
+      var margin = 8;
 
       // ── Gather photo data URLs for PDF ──
-      // Use uploadedPhotos (fresh analysis) or fetch from storage (recalled)
       var photoDataUrls = [];
 
-      // For fresh analysis — use in-memory data URLs (already available)
+      // For fresh analysis — use in-memory data URLs
       if (uploadedPhotos && uploadedPhotos.length) {
         uploadedPhotos.forEach(function(p) {
           if (p.dataUrl && p.type !== 'pdf') photoDataUrls.push(p.dataUrl);
         });
       }
 
-      // For recalled submissions OR PDF submissions — fetch individual JPGs from storage
-      // Always do this if we have storage paths but no in-memory photos
+      // For recalled submissions — fetch from Supabase Storage
       if (!photoDataUrls.length && _storagePaths && _storagePaths.length) {
         var _imgPaths = _storagePaths.filter(function(p){
           return !p.includes('/doc-') && !p.endsWith('.pdf');
@@ -3480,7 +3478,7 @@
         }
       }
 
-      // For PDF-extracted photos — grab from the photo grid img tags (use src if it's a blob URL)
+      // For PDF-extracted photos — grab from photo grid img/canvas elements
       if (!photoDataUrls.length) {
         var gridImgs = document.querySelectorAll('#res-photo-grid img');
         for (var gi = 0; gi < gridImgs.length; gi++) {
@@ -3496,7 +3494,6 @@
             } catch(e) {}
           }
         }
-        // Also grab any canvas elements (PDF.js extracted pages)
         document.querySelectorAll('#res-photo-grid canvas').forEach(function(cv) {
           try { photoDataUrls.push(cv.toDataURL('image/jpeg', 0.85)); } catch(e) {}
         });
@@ -3504,48 +3501,15 @@
 
       console.log('PDF photos collected:', photoDataUrls.length);
 
-      // Capture the full results section as canvas (excluding photo section — added separately)
+      // ── Page 1: Cover page ──
+      // Temporarily show cover for capture, hide the interactive map iframe
+      var coverEl = document.getElementById('scan-cover-page');
       var photoSec = document.getElementById('res-photo-section');
-      var photoWasHidden = photoSec && photoSec.style.display !== 'none';
-      if (photoSec) photoSec.style.display = 'none'; // hide photos — added as separate PDF pages
+      var mapSec = document.getElementById('res-map-section');
+      // Track original states for restore
+      var photoSecWasVisible = photoSec && photoSec.style.display !== 'none';
+      var mapSecWasVisible   = mapSec  && mapSec.style.display  !== 'none';
 
-      var canvas = await html2canvas(resultsEl, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        windowWidth: 960,
-        imageTimeout: 0,
-        onclone: function(clonedDoc) {
-          var rw = clonedDoc.getElementById('results-wrap');
-          if (rw) rw.style.display = 'block';
-          // Make photo section visible in clone
-          var ps = clonedDoc.getElementById('res-photo-section');
-          if (ps) ps.style.display = 'block';
-          ['topnav','main-hero','mode-bar','progress-wrap',
-           'view-report-banner','report-only-bar',
-           'res-cover-photo-wrap','scan-cover-page'].forEach(function(id) {
-            var el = clonedDoc.getElementById(id);
-            if (el) el.style.display = 'none';
-          });
-          clonedDoc.querySelectorAll(
-            '.scan-form-section, .btn-report, .result-actions, .report-actions'
-          ).forEach(function(el) { el.style.display = 'none'; });
-        }
-      });
-
-      // Restore photo section visibility
-      if (photoWasHidden) photoSec.style.display = 'none';
-
-      var imgData  = canvas.toDataURL('image/jpeg', 0.88);
-      var imgW     = pageW;
-      var imgH     = (canvas.height * imgW) / canvas.width;
-      var yPos     = 0;
-      var margin   = 8;  // mm margin top and bottom on each page
-
-      // ── Page 1: Cover page only ──
-      // Capture cover separately so it fills exactly one page
       if (coverEl) coverEl.style.display = 'flex';
       var coverCanvas = await html2canvas(coverEl, {
         scale: 1.5,
@@ -3559,7 +3523,6 @@
 
       var coverImgData = coverCanvas.toDataURL('image/jpeg', 0.88);
       var coverH       = (coverCanvas.height * pageW) / coverCanvas.width;
-      // Scale cover to fit one page
       var coverScale   = Math.min(1, (pageH - margin * 2) / coverH);
       var coverDrawH   = coverH * coverScale;
       var coverDrawW   = pageW * coverScale;
@@ -3567,7 +3530,69 @@
       var coverY       = (pageH - coverDrawH) / 2;
       pdf.addImage(coverImgData, 'JPEG', coverX, coverY, coverDrawW, coverDrawH);
 
-      // ── Pages 2+: Report body ──
+      // ── Pages 2+: Report body (full scroll height) ──
+      // Hide: photo section (added separately), iframe (can't capture), buttons
+      if (photoSec) photoSec.style.display = 'none';
+
+      showToast('\u23F3 Rendering report body\u2026');
+      var canvas = await html2canvas(resultsEl, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 960,
+        height: resultsEl.scrollHeight,   // ← capture FULL scroll height, not just viewport
+        imageTimeout: 15000,
+        onclone: function(clonedDoc) {
+          // Show results wrap in clone
+          var rw = clonedDoc.getElementById('results-wrap');
+          if (rw) { rw.style.display = 'block'; rw.style.height = 'auto'; rw.style.overflow = 'visible'; }
+
+          // Show all result sections that might be hidden
+          clonedDoc.querySelectorAll('.result-section').forEach(function(el) {
+            el.style.display = 'block';
+          });
+          var elecSec = clonedDoc.getElementById('res-electrical-section');
+          if (elecSec) elecSec.style.display = 'block';
+          var profSec = clonedDoc.getElementById('res-profile-section');
+          if (profSec) profSec.style.display = 'block';
+
+          // Replace iframe with satellite image so map renders
+          var iframe = clonedDoc.getElementById('res-map-embed');
+          if (iframe) iframe.style.display = 'none';
+          var satImg = clonedDoc.getElementById('res-map-satellite');
+          if (satImg) satImg.style.gridColumn = '1 / -1';  // make satellite span full width
+
+          // Show map section (satellite image is capturable even if iframe is not)
+          var ms = clonedDoc.getElementById('res-map-section');
+          if (ms) ms.style.display = 'block';
+
+          // Hide photo section (added separately as PDF pages)
+          var ps = clonedDoc.getElementById('res-photo-section');
+          if (ps) ps.style.display = 'none';
+
+          // Hide chrome elements
+          ['topnav','main-hero','mode-bar','progress-wrap',
+           'view-report-banner','report-only-bar',
+           'res-cover-photo-wrap','scan-cover-page'].forEach(function(id) {
+            var el = clonedDoc.getElementById(id);
+            if (el) el.style.display = 'none';
+          });
+          clonedDoc.querySelectorAll(
+            '.scan-form-section, .btn-report, .result-actions, .report-actions'
+          ).forEach(function(el) { el.style.display = 'none'; });
+        }
+      });
+
+      // ── Restore visibility ──
+      if (photoSec) photoSec.style.display = photoSecWasVisible ? 'block' : 'none';
+
+      var imgData = canvas.toDataURL('image/jpeg', 0.88);
+      var imgW    = pageW;
+      var imgH    = (canvas.height * imgW) / canvas.width;
+      var yPos    = 0;
+
       pdf.addPage();
       while (yPos < imgH) {
         var remaining = imgH - yPos;
@@ -3577,19 +3602,15 @@
         yPos += pageH;
       }
 
-      // Restore photo section visibility
-      if (photoSec) photoSec.style.display = 'block';
-
-      // ── Photo pages: add 3-per-row grid of photos directly to PDF ──
+      // ── Photo appendix pages ──
       if (photoDataUrls.length) {
         var COLS = 3, margin2 = 8;
-        var cellW = (pageW - margin2 * 2 - (COLS-1) * 4) / COLS;
-        var cellH = cellW * 0.75; // 4:3 ratio
-        var xStart = margin2, yStart = margin2 + 8;
+        var cellW = (pageW - margin2 * 2 - (COLS - 1) * 4) / COLS;
+        var cellH = cellW * 0.75;
+        var xStart = margin2, yStart = margin2 + 10;
         var xCur = xStart, yCur = yStart;
         var col = 0;
         pdf.addPage();
-        // Page header
         pdf.setFontSize(10);
         pdf.setTextColor(30, 58, 79);
         pdf.text('Submitted Photographs', margin2, margin2 + 4);
@@ -3597,16 +3618,17 @@
         pdf.line(margin2, margin2 + 6, pageW - margin2, margin2 + 6);
 
         for (var pdi = 0; pdi < photoDataUrls.length; pdi++) {
-          // Check if new page needed
           if (yCur + cellH > pageH - margin2) {
             pdf.addPage();
+            pdf.setFontSize(10);
+            pdf.setTextColor(30, 58, 79);
             pdf.text('Submitted Photographs (continued)', margin2, margin2 + 4);
+            pdf.setDrawColor(200, 200, 200);
             pdf.line(margin2, margin2 + 6, pageW - margin2, margin2 + 6);
             xCur = xStart; yCur = yStart; col = 0;
           }
           try {
             pdf.addImage(photoDataUrls[pdi], 'JPEG', xCur, yCur, cellW, cellH);
-            // Photo number caption
             pdf.setFontSize(7);
             pdf.setTextColor(100, 100, 100);
             pdf.text('Photo ' + (pdi + 1), xCur + 1, yCur + cellH - 1);
