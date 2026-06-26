@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 281 — 2026-06-26 — PDF: buildPdfBlob shared, Download PDF button, print CSS photo fix -->
+<!-- SanketRisk SCAN ONE — Deploy 282 — 2026-06-26 — PDF: all buttons use buildPdfBlob, Print+Download in all banners -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -222,7 +222,8 @@
     }
   @media print {
     #topnav, #main-hero, #mode-bar, .scan-form-section, #progress-wrap,
-    .btn-report, .result-actions, #view-report-banner, #report-only-bar { display: none !important; }
+    .btn-report, .result-actions, .report-actions,
+    #view-report-banner, #report-only-bar { display: none !important; }
     body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .results-container { box-shadow: none; border: none; }
 
@@ -1137,7 +1138,10 @@
     bar.innerHTML =
       '<a href="/dashboard.html" style="color:rgba(255,255,255,.7);font-size:13px;text-decoration:none;font-family:IBM Plex Sans,sans-serif;">&#x2190; Dashboard</a>' +
       '<div style="font-size:12px;font-weight:600;color:var(--gold,#b8860b);letter-spacing:.05em;font-family:IBM Plex Sans,sans-serif;">SCAN ONE ASSESSMENT REPORT</div>' +
-      '<button id="btn-download-pdf" onclick="downloadStoredPDF()" style="background:#0891b2;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;">&#x2B07; Download PDF</button>';
+      '<div style="display:flex;gap:8px;">' +
+      '<button onclick="printScanReport()" style="background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;">&#x1F5A8; Print</button>' +
+      '<button id="btn-download-pdf" onclick="downloadStoredPDF()" style="background:#0891b2;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;">&#x2B07; Download PDF</button>' +
+      '</div>';
     document.body.insertBefore(bar, document.body.firstChild);
   }
 
@@ -1156,36 +1160,54 @@
       } catch(e) {}
     }
 
-    if (!pdfPath) {
-      // No stored PDF — fall back to browser print
-      showToast('\u2139 No stored PDF found — opening print dialog instead.');
-      window.print();
-      return;
+    var origLabel = btn ? btn.innerHTML : '\u2B07 Download PDF';
+    if (btn) { btn.innerHTML = '<span class="spinner" style="width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px;"></span> Downloading\u2026'; btn.disabled = true; }
+
+    // First try: fetch stored PDF from Supabase reports bucket
+    if (pdfPath) {
+      try {
+        var pdfRes = await fetch(
+          SUPABASE_URL + '/storage/v1/object/authenticated/reports/' + pdfPath,
+          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+        );
+        if (pdfRes.ok) {
+          var blob = await pdfRes.blob();
+          var url  = URL.createObjectURL(blob);
+          var a    = document.createElement('a');
+          a.href   = url;
+          a.download = 'SanketRisk_SCAN_ONE_' + (pdfPath.replace('.pdf','')) + '.pdf';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 2000);
+          if (btn) { btn.innerHTML = origLabel; btn.disabled = false; }
+          return;
+        }
+      } catch(e) {
+        console.warn('Stored PDF fetch failed:', e.message);
+      }
     }
 
-    if (btn) { btn.textContent = '\u23F3 Downloading\u2026'; btn.disabled = true; }
-
+    // Fallback: generate fresh PDF using buildPdfBlob (includes photos + satellite map)
+    showToast('\u23F3 No stored PDF found \u2014 generating fresh PDF\u2026');
     try {
-      // Fetch PDF from Supabase Storage (private bucket — use auth header)
-      var pdfRes = await fetch(
-        SUPABASE_URL + '/storage/v1/object/authenticated/reports/' + pdfPath,
-        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-      );
-      if (!pdfRes.ok) throw new Error('Could not fetch PDF (HTTP ' + pdfRes.status + ')');
-
-      var blob = await pdfRes.blob();
-      var url  = URL.createObjectURL(blob);
-      var a    = document.createElement('a');
-      a.href   = url;
-      a.download = 'SanketRisk_SCAN_ONE_' + (pdfPath.replace('.pdf','')) + '.pdf';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 2000);
-      if (btn) { btn.textContent = '\u2B07 Download PDF'; btn.disabled = false; }
-    } catch(e) {
-      showToast('\u26A0 PDF download failed: ' + e.message + ' — using print instead.');
+      var freshBlob = await buildPdfBlob();
+      if (!freshBlob) throw new Error('PDF generation returned null');
+      var insured = (lastResult && lastResult.formData && lastResult.formData.insured)
+        ? lastResult.formData.insured.replace(/[^a-zA-Z0-9 ]/g,'').replace(/\s+/g,'-').substring(0,40)
+        : 'ScanONE-Report';
+      var dateStr = new Date().toISOString().slice(0,10);
+      var filename = 'SRC-SCAN-' + insured + '-' + dateStr + '.pdf';
+      var url2 = URL.createObjectURL(freshBlob);
+      var a2 = document.createElement('a');
+      a2.href = url2; a2.download = filename;
+      document.body.appendChild(a2); a2.click();
+      setTimeout(function() { document.body.removeChild(a2); URL.revokeObjectURL(url2); }, 3000);
+      showToast('\u2713 PDF downloaded: ' + filename);
+    } catch(e2) {
+      showToast('\u26A0 PDF generation failed: ' + e2.message + ' \u2014 try Print instead.');
       window.print();
-      if (btn) { btn.textContent = '\u2B07 Download PDF'; btn.disabled = false; }
+    } finally {
+      if (btn) { btn.innerHTML = origLabel; btn.disabled = false; }
     }
   }
 
@@ -1886,12 +1908,17 @@
         }
 
         // 6. Update banner to final state
+        loadBanner.style.cssText = 'background:linear-gradient(135deg,#065f73,#0891b2);color:#fff;padding:10px 24px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
         loadBanner.innerHTML =
-          '&#x1F4CB; Saved SCAN ONE Report' +
+          '<span>&#x1F4CB; Saved SCAN ONE Report' +
           (sub.inspection_id ? ' &mdash; ' + sub.inspection_id : '') +
-          ' &mdash; All form data restored.' +
-          (savedResult ? ' Saved report shown below.' : ' No saved report yet — click Analyse with AI.') +
-          ' <a href="/dashboard.html" style="color:rgba(255,255,255,.8);margin-left:auto;font-size:12px;text-decoration:none;">&#x2190; Back to Dashboard</a>';
+          (savedResult ? ' &mdash; Report loaded.' : ' &mdash; No saved report yet &mdash; click Analyse with AI.') +
+          '</span>' +
+          '<div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;">' +
+          '<button onclick="printScanReport()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;">&#x1F5A8; Print</button>' +
+          '<button onclick="downloadPdfLocal()" style="background:#fff;color:#0891b2;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;">&#x2B07; Download PDF</button>' +
+          '<a href="/dashboard.html" style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;text-decoration:none;font-family:IBM Plex Sans,sans-serif;display:flex;align-items:center;">&#x2190; Dashboard</a>' +
+          '</div>';
 
         if (savedResult) {
           window.scrollTo({ top: document.getElementById('results-wrap').offsetTop - 20, behavior: 'smooth' });
