@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 269 — 2026-06-24 — Fix PDF photos, map embed URL -->
+<!-- SanketRisk SCAN ONE — Deploy 278 — 2026-06-26 — Rebuild from 269: photo limits removed, 8min poll, ES6 fixes, paths[] fix -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -606,7 +606,7 @@
           <input type="file" id="photo-input" accept="image/*,application/pdf" multiple onchange="handlePhotoUpload(this)">
           <div class="photo-zone-icon">&#x1F4F7;</div>
           <div class="photo-zone-title">Click or drag photos here</div>
-          <div class="photo-zone-sub">Select up to 50 photos or 1 PDF document &mdash; JPG, PNG, HEIC, PDF accepted<br><strong>Do not exceed 50 files.</strong> For PDF reports, a single file is recommended. The AI will analyze all submitted files together.</div>
+          <div class="photo-zone-sub">Select photos or a PDF document &mdash; JPG, PNG, HEIC, PDF accepted. For PDF reports, a single file is recommended. The AI will analyze all submitted files together.</div>
         </div>
 
         <div id="photo-preview-wrap" style="display:none;margin-top:4px">
@@ -963,7 +963,7 @@
   const isPublicMode  = !!submitCode;
   const isReportOnly  = urlParams.get('report_only') === '1';  // clean read-only report for customer
 
-  (async () => {
+  (async function() {
     if (isPublicMode) {
       activatePublicMode();
       return;
@@ -1007,7 +1007,7 @@
     showToast('\u2713 Submission loaded \u2014 review details and click Analyse');
 
     // Helper: set value on a form element by ID
-    const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined && val !== null && val !== '') el.value = val; };
+    var set = function(id, val) { var el = document.getElementById(id); if (el && val !== undefined && val !== null && val !== '') el.value = val; };
 
     // ── Top-level columns (always present) ──
     set('s-insured',   sub.insured_name);
@@ -1072,7 +1072,7 @@
     document.getElementById('mode-bar').after(banner);
 
     // Mark submission as being reviewed
-    _supabase.from('scan_submissions').update({ status: 'reviewing' }).eq('id', reviewId).then(() => {});
+    _supabase.from('scan_submissions').update({ status: 'reviewing' }).eq('id', reviewId).then(function(){});
   }
 
   function activateReportOnlyMode() {
@@ -1156,7 +1156,7 @@
     // ── Hide all inspector-only elements ──
     const hide = ['topnav', 'main-hero', 'mode-bar', 'btn-analyse',
                   'progress-wrap', 'results-wrap'];
-    hide.forEach(id => {
+    hide.forEach(function(id) {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
@@ -1181,12 +1181,12 @@
       'Loss History':                  'Insurance Claims (if any)',
       'Property Photographs':          'Upload Your Property Photos',
     };
-    document.querySelectorAll('.card-header-title').forEach(el => {
+    document.querySelectorAll('.card-header-title').forEach(function(el) {
       if (headers[el.textContent.trim()]) el.textContent = headers[el.textContent.trim()];
     });
 
     // ── Simplify card subtitles ──
-    document.querySelectorAll('.card-header-sub').forEach(el => {
+    document.querySelectorAll('.card-header-sub').forEach(function(el) {
       if (el.textContent.includes('Inspector') || el.textContent.includes('AI')) {
         el.style.display = 'none';
       }
@@ -1215,18 +1215,15 @@
 
   // ── PHOTO UPLOAD ──
   function handlePhotoUpload(input) {
-    const files = Array.from(input.files);
+    var files = Array.from(input.files);
     if (!files.length) return;
-    if (files.length > 50) {
-      showToast('⚠ Maximum 50 files allowed. Only the first 50 will be used.');
-    }
-    let loaded = 0;
-    files.forEach(file => {
-      const isPDF = file.type === 'application/pdf';
-      const reader = new FileReader();
-      reader.onload = e => {
+    var loaded = 0;
+    files.forEach(function(file) {
+      var isPDF = file.type === 'application/pdf';
+      var reader = new FileReader();
+      reader.onload = function(e) {
         uploadedPhotos.push({
-          file,
+          file: file,
           dataUrl: e.target.result,
           type: isPDF ? 'pdf' : 'image',
         });
@@ -1239,15 +1236,15 @@
   }
 
   function renderPhotoPreview() {
-    const grid  = document.getElementById('photo-preview-grid');
-    const wrap  = document.getElementById('photo-preview-wrap');
-    const badge = document.getElementById('photo-count-badge');
+    var grid  = document.getElementById('photo-preview-grid');
+    var wrap  = document.getElementById('photo-preview-wrap');
+    var badge = document.getElementById('photo-count-badge');
     if (!uploadedPhotos.length) { wrap.style.display = 'none'; return; }
     setTimeout(updateSelectedCount, 100);
     wrap.style.display = 'block';
-    const imgCount = uploadedPhotos.filter(p => p.type !== 'pdf').length;
-    const pdfCount = uploadedPhotos.filter(p => p.type === 'pdf').length;
-    let badgeParts = [];
+    var imgCount = uploadedPhotos.filter(function(p){ return p.type !== 'pdf'; }).length;
+    var pdfCount = uploadedPhotos.filter(function(p){ return p.type === 'pdf'; }).length;
+    var badgeParts = [];
     if (imgCount) badgeParts.push(imgCount + ' photo' + (imgCount !== 1 ? 's' : ''));
     if (pdfCount) badgeParts.push(pdfCount + ' PDF' + (pdfCount !== 1 ? 's' : ''));
     badge.textContent = badgeParts.join(' + ') + ' ready for analysis';
@@ -1262,11 +1259,11 @@
         '<span id="photo-selected-count" style="color:var(--scan);font-weight:600;"></span>';
       grid.parentNode.insertBefore(selWrap, grid);
     }
-    grid.innerHTML = uploadedPhotos.map((p, i) => {
-      const preview = p.type === 'pdf'
+    grid.innerHTML = uploadedPhotos.map(function(p, i) {
+      var preview = p.type === 'pdf'
         ? '<div style="width:100%;height:100%;background:linear-gradient(135deg,#1a2e42,#0d1b2a);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><div style="font-size:24px">&#x1F4C4;</div><div style="font-size:8px;color:var(--gold);font-family:\'IBM Plex Mono\',monospace;font-weight:700">PDF</div><div style="font-size:7px;color:rgba(255,255,255,.5);text-align:center;padding:0 4px">' + p.file.name.substring(0,20) + '</div></div>'
-        : '<img src="' + p.dataUrl + '" alt="Photo ' + i+1 + '">';
-      const label = p.type === 'pdf' ? 'PDF Doc ' + (i+1) : 'Photo ' + (i+1);
+        : '<img src="' + p.dataUrl + '" alt="Photo ' + (i+1) + '">';
+      var label = p.type === 'pdf' ? 'PDF Doc ' + (i+1) : 'Photo ' + (i+1);
       var desc = (uploadedPhotos[i] && uploadedPhotos[i].description) ? uploadedPhotos[i].description : '';
       return '<div class="photo-thumb" id="thumb-' + i + '"><div class="photo-thumb-img-wrap">' + preview + '<button class="photo-thumb-remove" onclick="removePhoto(' + i + ')">&#x2715;</button><label style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;display:flex;align-items:center;gap:3px;cursor:pointer;z-index:2;"><input type="checkbox" class="photo-chk" data-idx="' + i + '" checked style="width:13px;height:13px;cursor:pointer;" onchange="updateSelectedCount()"></label></div><div class="photo-thumb-label">' + label + '</div><textarea class="photo-thumb-desc" data-idx="' + i + '" placeholder="Add description (e.g. Front elevation, Sprinkler riser, Electrical panel...)" rows="2" onchange="savePhotoDesc(' + i + ',this.value)" oninput="savePhotoDesc(' + i + ',this.value)">' + desc + '</textarea></div>';
     }).join('');
@@ -1343,7 +1340,7 @@
   // ── COLLECT FORM DATA ──
   function collectFormData() {
     const upgrades = {};
-    ['roof','elec','plmb','hvac','spk','env'].forEach(k => {
+    ['roof','elec','plmb','hvac','spk','env'].forEach(function(k) {
       const unk = document.getElementById('upg-' + k + '-unk').checked;
       upgrades[k] = unk ? 'Unknown' : (document.getElementById('upg-' + k).value || 'Not provided');
     });
@@ -1598,7 +1595,6 @@
     if (uploadedPhotos.length > 0) {
       photoIndex = (checkedForPrompt.length > 0 ? checkedForPrompt : uploadedPhotos.map(function(_,i){ return i; }))
         .filter(function(i){ return uploadedPhotos[i]; })
-        .slice(0, 50)
         .map(function(i, n){
           var desc = uploadedPhotos[i].description || '';
           return 'Photo ' + (n+1) + (desc ? ': ' + desc : '');
@@ -1986,9 +1982,9 @@
 
   // ── COMPRESS IMAGE (for preview only — actual upload uses original) ──
   async function compressImage(dataUrl) {
-    return new Promise(resolve => {
+    return new Promise(function(resolve) {
       const img = new Image();
-      img.onload = () => {
+      img.onload = function() {
         const MAX = 800;  // 800px sufficient for AI analysis, cuts token usage ~55% vs 1200px
         let w = img.width, h = img.height;
         if (w > MAX || h > MAX) {
@@ -2000,7 +1996,7 @@
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         resolve(canvas.toDataURL('image/jpeg', 0.75).split(',')[1]);
       };
-      img.onerror = () => resolve(dataUrl.split(',')[1]);
+      img.onerror = function() { resolve(dataUrl.split(',')[1]); };
       img.src = dataUrl;
     });
   }
@@ -2089,9 +2085,9 @@
         } else {
           // Image — compress using canvas to reduce size dramatically
           const blob    = new Blob([buf], { type: 'image/jpeg' });
-          const dataUrl = await new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onload = e => resolve(e.target.result);
+          var dataUrl = await new Promise(function(resolve) {
+            var reader = new FileReader();
+            reader.onload = function(e) { resolve(e.target.result); };
             reader.readAsDataURL(blob);
           });
           const compressed = await compressImage(dataUrl);
@@ -2112,7 +2108,7 @@
       fetch(SUPA_URL + '/storage/v1/object/scan-uploads/' + path, {
         method: 'DELETE',
         headers: { 'Authorization': 'Bearer ' + SUPA_KEY, 'apikey': SUPA_KEY }
-      }).catch(e => console.log('Cleanup:', e.message));
+      }).catch(function(e) { console.log('Cleanup:', e.message); });
     }
   }
 
@@ -2210,7 +2206,7 @@
 
     // Poll scan_jobs table in Supabase every 6 seconds (up to 5 minutes)
     var pollStart = Date.now();
-    var pollMax   = 600000; // 10 minutes
+    var pollMax   = 480000; // 8 minutes
     var pollInterval = 6000;
 
     while (Date.now() - pollStart < pollMax) {
@@ -2383,7 +2379,7 @@
       showToast('Please upload your photos first using Step 1.');
       return;
     }
-    const data = collectFormData();
+    var data = collectFormData();
     var _profilePromise = (data && data.insured && data.insured.length > 2)
       ? fetchInsuredProfile(data.insured, data.city, data.province)
       : Promise.resolve();
@@ -2398,11 +2394,11 @@
     await delay(400);
 
     try {
-      const sessionId = _sessionId;
-      const storagePaths = _storagePaths;
+      var sessionId = _sessionId;
+      var storagePaths = _storagePaths;
 
       setStep(3);
-      let finalResult;
+      var finalResult;
 
       document.getElementById('btn-analyse-text').textContent =
         'Analysing ' + storagePaths.length + ' photo' + (storagePaths.length !== 1 ? 's' : '') + '\u2026';
@@ -2491,7 +2487,7 @@
     if (b) b.style.display = 'none';
   }
 
-  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function delay(ms) { return new Promise(function(r){ setTimeout(r, ms); }); }
 
   // ── RENDER RESULTS ──
   function renderResults(r, data) {
@@ -2675,16 +2671,16 @@
     const recWrap = document.getElementById('res-recommendations');
     if (r.recommendations && r.recommendations.length) {
       // Generate YYYYMM-NNN sequence numbers from assessment date
-      const now = new Date();
-      const yyyymm = now.getFullYear().toString() +
+      var now = new Date();
+      var yyyymm = now.getFullYear().toString() +
         String(now.getMonth() + 1).padStart(2, '0');
-      recWrap.innerHTML = r.recommendations.map((rec, idx) => {
-        const cls  = (rec.priority||'').toLowerCase() === 'high' ? 'rec-high'
+      recWrap.innerHTML = r.recommendations.map(function(rec, idx) {
+        var cls  = (rec.priority||'').toLowerCase() === 'high' ? 'rec-high'
                    : (rec.priority||'').toLowerCase() === 'medium' ? 'rec-med' : 'rec-low';
-        const seqNo = yyyymm + '-' + String(idx + 1).padStart(3, '0');
-        const code  = rec.code  ? ' [' + rec.code + ']' : '';
-        const title = rec.title ? '<strong>' + rec.title + '</strong><br>' : '';
-        const body  = rec.text  || rec.description || '';
+        var seqNo = yyyymm + '-' + String(idx + 1).padStart(3, '0');
+        var code  = rec.code  ? ' [' + rec.code + ']' : '';
+        var title = rec.title ? '<strong>' + rec.title + '</strong><br>' : '';
+        var body  = rec.text  || rec.description || '';
         return '<div class="rec-item">' +
           '<div style="min-width:90px;display:flex;flex-direction:column;gap:4px;align-items:flex-start;">' +
             '<span class="rec-priority ' + cls + '">' + (rec.priority||'') + '</span>' +
@@ -3781,7 +3777,7 @@
       }
 
       showToast('\u2713 Saved as ' + inspId + ' \u2014 redirecting\u2026');
-      setTimeout(() => window.location.href = '/dashboard.html', 2000);
+      setTimeout(function(){ window.location.href = '/dashboard.html'; }, 2000);
     } catch(e) {
       showToast('\u26A0 Save failed: ' + e.message);
     }
@@ -3815,11 +3811,11 @@
 
     // Try clipboard API — fall back to manual select
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(link).then(() => {
+      navigator.clipboard.writeText(link).then(function() {
         msg.textContent = '\u2713 Link copied to clipboard — paste into your email or share directly.';
         msg.style.display = 'block';
         showToast('\u2713 Link copied to clipboard');
-      }).catch(() => selectLinkText(preview, msg, link));
+      }).catch(function(){ selectLinkText(preview, msg, link); });
     } else {
       selectLinkText(preview, msg, link);
     }
@@ -3914,7 +3910,7 @@
       const sessionId = 'pub-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
       const storagePaths = [];
       const photoMeta    = [];
-      const allPhotos    = uploadedPhotos.slice(0, 50);
+      const allPhotos    = uploadedPhotos.filter(Boolean);
 
       for (let i = 0; i < allPhotos.length; i++) {
         btn.innerHTML = '<span class="spinner"></span><span>Uploading photo ' + (i + 1) + ' of ' + allPhotos.length + '\u2026</span>';
@@ -3975,7 +3971,7 @@
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 4000);
+    setTimeout(function(){ t.classList.remove('show'); }, 4000);
   }
 
   // ── HAZARD CLICK WIRING ──
