@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 282 — 2026-06-26 — PDF: all buttons use buildPdfBlob, Print+Download in all banners -->
+<!-- SanketRisk SCAN ONE — Deploy 283 — 2026-06-26 — Remove Download PDF from banner, fix blob URL photo bug in PDF gen -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1916,7 +1916,6 @@
           '</span>' +
           '<div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;">' +
           '<button onclick="printScanReport()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;">&#x1F5A8; Print</button>' +
-          '<button onclick="downloadPdfLocal()" style="background:#fff;color:#0891b2;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;">&#x2B07; Download PDF</button>' +
           '<a href="/dashboard.html" style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;text-decoration:none;font-family:IBM Plex Sans,sans-serif;display:flex;align-items:center;">&#x2190; Dashboard</a>' +
           '</div>';
 
@@ -3553,20 +3552,22 @@
     // Step 1: Collect photo base64 data URLs
     var photoDataUrls = [];
 
-    // Fresh analysis — photos in memory as base64 data URLs
+    // Fresh analysis — photos in memory as base64 data URLs (most reliable path)
     if (uploadedPhotos && uploadedPhotos.length) {
       uploadedPhotos.forEach(function(p) {
         if (p.dataUrl && p.type !== 'pdf') photoDataUrls.push(p.dataUrl);
       });
     }
 
-    // Recalled — fetch from Supabase Storage with auth header (avoids CORS)
+    // Recalled / no in-memory — fetch directly from Supabase Storage with auth header.
+    // IMPORTANT: Never use blob: URLs from the photo grid — they are origin-locked and
+    // cannot be fetched from a different execution context. Always fetch fresh from storage.
     if (!photoDataUrls.length && _storagePaths && _storagePaths.length) {
       var _imgPaths = _storagePaths.filter(function(p) {
         return !p.includes('/doc-') && !p.endsWith('.pdf');
       });
       if (_imgPaths.length) {
-        showToast('\u23F3 Loading ' + _imgPaths.length + ' photos\u2026');
+        showToast('\u23F3 Loading ' + _imgPaths.length + ' photos for PDF\u2026');
         for (var _pi = 0; _pi < _imgPaths.length; _pi++) {
           try {
             var _pr = await fetch(
@@ -3585,27 +3586,16 @@
       }
     }
 
-    // Last resort — data: URLs already in grid img tags, or convert blob: URLs
+    // Last resort — only data: URLs already in grid img tags (safe, never blob: URLs)
     if (!photoDataUrls.length) {
       var gridImgs = document.querySelectorAll('#res-photo-grid img');
       for (var gi = 0; gi < gridImgs.length; gi++) {
         var imgSrc = gridImgs[gi].src;
         if (imgSrc && imgSrc.startsWith('data:')) {
           photoDataUrls.push(imgSrc);
-        } else if (imgSrc && imgSrc.startsWith('blob:')) {
-          try {
-            var bResp = await fetch(imgSrc);
-            var bBlob = await bResp.blob();
-            var bDU = await new Promise(function(resolve) {
-              var fr = new FileReader(); fr.onload = function(){ resolve(fr.result); }; fr.readAsDataURL(bBlob);
-            });
-            if (bDU) photoDataUrls.push(bDU);
-          } catch(e) {}
         }
+        // blob: URLs intentionally skipped — they cannot be fetched cross-context
       }
-      document.querySelectorAll('#res-photo-grid canvas').forEach(function(cv) {
-        try { photoDataUrls.push(cv.toDataURL('image/jpeg', 0.85)); } catch(e) {}
-      });
     }
 
     console.log('PDF photos collected:', photoDataUrls.length);
@@ -3855,12 +3845,6 @@
         });
         var error = _er1.error;
         if (error) throw error;
-      }
-
-      // Ensure photo grid is populated with all storage photos before PDF capture
-      if (_storagePaths && _storagePaths.length) {
-        renderStoragePhotosIntoGrid(_storagePaths);
-        await new Promise(function(r){ setTimeout(r, 500); }); // brief wait for grid to render
       }
 
       // Generate and store PDF, then update record with path
