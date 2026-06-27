@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 287 — 2026-06-26 — Fix duplicate photos (double renderStoragePhotosIntoGrid call), PDF img path filter, canvas capture for PDF submissions -->
+<!-- SanketRisk SCAN ONE — Deploy 288 — 2026-06-27 — Prompt: cyclone sprinklers, spare cabinet check; Protection/Exposure bold subheadings -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1582,9 +1582,11 @@
     if (hz.some(function(h){ return /wood|dust/.test(h); })) {
       blocks.push(
         'COMBUSTIBLE DUST ASSESSMENT: Identify dust-generating processes (sawing, sanding, routing, plastic cutting/grinding). ' +
-        'Assess dust collection system — note bag-type vs cyclone collectors, check for visible dust accumulation on horizontal surfaces, ' +
-        'beams, and equipment (accumulation > 1/32 inch over large areas is a deficiency). ' +
-        'Confirm electrical equipment in dusty areas is suitable for dusty environments (dust-ignitionproof or dusttight rated).'
+        'Assess dust collection system — note bag-type vs cyclone collectors. ' +
+        'CYCLONE COLLECTORS SPECIFICALLY: large cyclone dust collectors handling combustible dust (wood, plastic, fabric, foam) present a significant fire and explosion risk — assess whether automatic sprinkler protection is installed inside the cyclone body and associated ductwork; if sprinkler protection inside the cyclone is not confirmed from photos, flag as a HIGH severity recommendation. ' +
+        'Check for visible dust accumulation on horizontal surfaces, beams, and equipment (accumulation > 1/32 inch over large areas is a deficiency). ' +
+        'Confirm electrical equipment in dusty areas is suitable for dusty environments (dust-ignitionproof or dusttight rated). ' +
+        'SPRINKLER CABINET: if a spare sprinkler head cabinet is visible and stocked with spare heads and a sprinkler wrench, note this as compliant — do NOT make a recommendation for spare heads if the cabinet is already present and adequate.'
       );
     }
 
@@ -1649,6 +1651,8 @@
       ' ELECTRICAL: The electrical_system field is MANDATORY and separate from the construction paragraphs. Do NOT include electrical information in the construction paragraphs — put ALL electrical observations in the electrical_system field only. Examine exterior photos carefully for pad-mount transformers on concrete pads — these are very common at industrial facilities and often missed.' +
       ' OCCUPANCY: for manufacturing/industrial — inventory major equipment visible (overhead cranes, extrusion machines, chiller/cooling units, boilers, furnaces, quality control ovens, air compressors, printing equipment, rail unloading). Identify forklift type (propane = higher hazard vs battery electric). Assess combustible loading including plastic resin, finished goods, rack storage height (high-piled storage >3.6m is a separate hazard class). Note any hazardous materials in chemical storage areas. GRINDING/SHREDDING OPERATIONS: if any grinding, shredding, chipping, or milling of combustible materials is present (wood, foam, fabric, plastic, fibre, mattress materials, recycled materials), assess and recommend magnetic separators/tramp metal detectors on infeed conveyors — tramp metal (bolts, nails, wire) entering grinding equipment causes sparks that ignite combustible dust, creating explosion and fire hazard; magnetic separators are a critical fire prevention control for these operations.' +
       ' PROTECTION — MANDATORY: For sprinkler systems, ALWAYS start the description with "The building is protected by an automatic sprinkler system." Do NOT state wet pipe or dry pipe — do not guess the system type. For the alarm valve/riser valve: state the make and model ONLY if the nameplate is clearly legible in photos. If not clearly readable, describe as "sprinkler control valve" only. For the sprinkler_type structured field: always use "Automatic Sprinkler System — NFPA 13" unless you can confirm otherwise from a clearly visible hydraulic data plate.' +
+      ' SPARE SPRINKLER CABINET: Look specifically for a spare sprinkler head cabinet (typically a small metal box mounted near the riser). If present and stocked with spare heads and a sprinkler wrench, note it as compliant — do NOT recommend a spare head cabinet if one is already present. Only recommend if absent or empty.' +
+      ' CYCLONE DUST COLLECTORS: If large cyclone dust collectors are present handling combustible dust, assess whether automatic sprinkler protection is installed inside the cyclone body — if not confirmed, flag as HIGH severity.' +
       ' HAZARDS: list each hazard specifically — welding/hot work, flammable liquid storage (identify if safety cabinets present), compressed gas cylinders (note if secured/chained upright and separated by type), combustible dust (woodworking/plastic dust collection systems), high-piled storage, propane-powered equipment, chemical mixing areas. For grinding/shredding of combustible materials — flag absence of magnetic separators/tramp metal detectors as a HIGH severity hazard if not observed. Assign severity to each.' +
       ' Populate ALL structured fields (construction_class, roof_type, sprinkler_type, alarm_type, occupancy_class, all scores) accurately. Scores 0-100.';
     }
@@ -1722,8 +1726,8 @@
       '  "construction":"[Para 1: construction class with photographic evidence, structural system, cladding, floor, roof, year built, interior finishes by area (office/warehouse/plant), combustible vs non-combustible]\\n\\n[Para 2: HVAC and mechanical — heating type/fuel, cooling, ventilation, dust collection, equipment brands, fuel storage]\\n\\n[Para 3: site layout, building condition, access, outbuildings]",\n' +
       '  "electrical_system":"TRANSFORMER: [pad-mount/pole-mount visible or Not visible — check exterior photos carefully]\\nMAIN SERVICE: [brand, amps, voltage, breakers or fuses, condition]\\nWIRING: [conduit type, copper or aluminum, condition]\\nSUB-PANELS: [any sub-panels or MCCs visible]\\nDEFICIENCIES: [Federal Pacific/Zinsco=HIGH hazard; open knockouts; double-tapping; amateur wiring; or None observed]",\n' +
       '  "occupancy":"[Paragraph: operations, major equipment visible with brands/models, combustible loading, forklift type, housekeeping, storage heights, hazardous materials. If grinding/shredding combustibles: note magnetic separator presence or absence]",\n' +
-      '  "protection":"[SPRINKLER SYSTEM: Always open with: The building is protected by an automatic sprinkler system. Then describe: (a) RISER — OS&Y or butterfly control valve position (open/closed), pressure gauge readings if visible, hydraulic data nameplate details (design density gpm/sqft, design area sqft, date tested) if visible; ALARM VALVE — state make and model ONLY if the nameplate is clearly readable in photos (e.g. Viking Model E, Tyco Model AC, Victaulic Series 751) — if nameplate not readable do not guess; (b) SPRINKLER HEADS — type (pendant/upright/sidewall/ESFR), condition, any painted or corroded heads; (c) PIPING — steel or CPVC, condition. FIRE ALARM: panel brand/model if visible, zones, detectors, pull stations, horn/strobes, or state None observed. EXTINGUISHERS: count, type (ABC/CO2/Class K), size, inspection tags visible yes/no. OTHER SUPPRESSION: kitchen hood, clean agent systems if present. State overall protection adequacy for the occupancy hazard classification.]",\n' +
-      '  "exposure":"[Para 1 — Exterior Assessment: wall cladding condition, roof condition visible from exterior, doors/windows/openings condition, signage, site drainage, maintenance level, exterior storage or hazards adjacent to building]. [Para 2 — Exposure and Natural Hazards: neighbouring buildings and separation distances, construction type of nearest exposures, site access for fire apparatus, geographic risks (flood, wildfire, seismic), municipal fire protection (paid/volunteer, estimated response time, water supply)]",\n' +
+      '  "protection":"[SPRINKLER PROTECTION: Always open with: The building is protected by an automatic sprinkler system. Describe: (a) RISER — OS&Y or butterfly control valve position (open/closed), pressure gauge readings if visible, hydraulic data nameplate details if visible; ALARM VALVE — state make/model ONLY if clearly readable; (b) SPRINKLER HEADS — type (pendant/upright/sidewall/ESFR), condition, painted or corroded heads; (c) PIPING — steel or CPVC, condition; (d) SPARE HEAD CABINET — note if present and compliant or absent; (e) CYCLONE COLLECTORS — if present assess sprinkler protection inside cyclone body, flag HIGH if not confirmed. FIRE ALARM: panel brand/model if visible, zones, detectors, pull stations, horn/strobes — or None observed. FIRE EXTINGUISHERS: count, type (ABC/CO2/Class K), size, tags yes/no. SPECIAL EXTINGUISHING SYSTEMS: kitchen hood, clean agent, CO2, foam if present — or None observed. Overall protection adequacy. Use these exact headings in your output: SPRINKLER PROTECTION, FIRE ALARM, FIRE EXTINGUISHERS, SPECIAL EXTINGUISHING SYSTEMS]",\n' +
+      '  "exposure":"[EXTERIOR BUILDING ASSESSMENT: wall cladding condition, roof condition from exterior, doors/windows/openings condition, signage, site drainage, maintenance level, exterior storage or hazards adjacent to building. EXPOSURE AND NATURAL HAZARDS: neighbouring buildings and separation distances, construction type of nearest exposures, site access for fire apparatus, geographic risks (flood, wildfire, seismic), municipal fire protection (paid/volunteer, estimated response time, water supply). Use these exact headings in your output: EXTERIOR BUILDING ASSESSMENT, EXPOSURE AND NATURAL HAZARDS]",' +
       '  "hazards":"[SEVERITY: brief one-line description. One line per hazard. Use CRITICAL/HIGH/MEDIUM/LOW/ADVISORY. Keep each entry to 10 words max — full details go in recommendations only. Example format: HIGH: Sprinkler annual inspection records not confirmed. MEDIUM: Combustible dust accumulation on horizontal surfaces. LOW: Single fire extinguisher for 21000 sq ft facility.]",\n' +
       '  "recommendations":[{"priority":"High","code":"FP-SP-001","title":"Sprinkler System — Annual Inspection Records Not Confirmed","text":"No annual inspection service tags visible on sprinkler riser or control valves. Per NFPA 25 and National Fire Code of Canada, annual inspection and testing by a licensed sprinkler contractor is required. Provide documentation of current annual inspection within 30 days. Engage licensed contractor to conduct ITM per NFPA 25 and affix current service tags to all assemblies."},{"priority":"Medium","code":"HS-CD-001","title":"Combustible Dust — Housekeeping Program Required","text":"Dust accumulation on horizontal surfaces and equipment from manufacturing operations. Per NFPA 652, combustible dust accumulation must not exceed 1/32 inch over 5% of floor area. Implement documented cleaning program using HEPA vacuum equipment. Never use compressed air to clean — this disperses dust and creates explosive atmosphere."}],\n' +
       '  "insured_profile_search":true\n' +
@@ -2732,12 +2736,33 @@
       return escaped.replace(/\n/g,'<br>');
     }
 
+    // Bold subheadings: converts ALL-CAPS section labels to bold styled headings
+    // Matches patterns like "SPRINKLER PROTECTION:" or "FIRE ALARM:" at start of line or after <br>
+    function addSubheadings(html) {
+      if (!html) return html;
+      var headings = [
+        'SPRINKLER PROTECTION',
+        'FIRE ALARM',
+        'FIRE EXTINGUISHERS',
+        'SPECIAL EXTINGUISHING SYSTEMS',
+        'EXTERIOR BUILDING ASSESSMENT',
+        'EXPOSURE AND NATURAL HAZARDS'
+      ];
+      headings.forEach(function(h) {
+        var re = new RegExp('((?:^|<br>)\\s*)(' + h + ')(\\s*:)', 'g');
+        html = html.replace(re, function(match, prefix, heading, colon) {
+          return prefix + '<strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">' + heading + colon + '</strong>';
+        });
+      });
+      return html;
+    }
+
     var occEl = document.getElementById('res-occupancy');
     if (occEl) occEl.innerHTML = highlightSeverity(r.occupancy) || '\u2014';
     var protEl = document.getElementById('res-protection');
-    if (protEl) protEl.innerHTML = highlightSeverity(r.protection) || '\u2014';
+    if (protEl) protEl.innerHTML = addSubheadings(highlightSeverity(r.protection)) || '\u2014';
     var expEl = document.getElementById('res-exposure');
-    if (expEl) expEl.innerHTML = highlightSeverity(r.exposure) || '\u2014';
+    if (expEl) expEl.innerHTML = addSubheadings(highlightSeverity(r.exposure)) || '\u2014';
     // Hazards may be string or array of objects
     var _haz = r.hazards;
     if (Array.isArray(_haz)) {
