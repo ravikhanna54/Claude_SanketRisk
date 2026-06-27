@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 294 — 2026-06-27 — Fire alarm: photo-by-photo ceiling scan, conclusion rule, remove duplicate instruction -->
+<!-- SanketRisk SCAN ONE — Deploy 295 — 2026-06-27 — Map: remove iframe, add Street View, satellite zoom 17, stacked 2-photo layout -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -298,21 +298,13 @@
       print-color-adjust: exact;
     }
 
-    /* ── Map section ── hide interactive iframe, show satellite full-width ── */
+    /* ── Map section ── both satellite and street view print full-width ── */
     #res-map-section { display: block !important; page-break-inside: avoid; break-inside: avoid; }
-    #res-map-embed { display: none !important; }  /* iframe — cannot print */
-    #res-map-section .result-section-body > div[style*="grid-template-columns"] {
-      display: block !important;  /* collapse two-column grid to single column */
-    }
-    #res-map-section .result-section-body > div[style*="grid-template-columns"] > div:first-child {
-      display: none !important;  /* hide the left column (interactive map) entirely */
-    }
-    #res-map-satellite {
+    #res-map-embed { display: none !important; }  /* iframe removed but safety rule kept */
+    #res-map-satellite, #res-map-streetview {
       display: block !important;
       width: 100% !important;
       height: auto !important;
-      max-height: 200px !important;
-      object-fit: cover !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -840,22 +832,23 @@
 
       <!-- Site Location Map -->
       <div class="result-section" id="res-map-section" style="display:none;">
-        <div class="result-section-header"><div class="result-section-icon">&#x1F4CD;</div><div class="result-section-title">Site Location &amp; Aerial View</div></div>
+        <div class="result-section-header"><div class="result-section-icon">&#x1F4CD;</div><div class="result-section-title">Site Location — Aerial &amp; Street View</div></div>
         <div class="result-section-body">
-          <!-- Two-column: interactive map + satellite -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px;">
-            <div>
-              <div style="font-size:11px;font-weight:700;color:#2d3748;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Interactive Map</div>
-              <iframe id="res-map-embed" width="100%" height="260" frameborder="0" style="border-radius:8px;border:1px solid #e2e8f0;" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src=""></iframe>
-              <a id="res-map-link" href="#" target="_blank" style="font-size:11px;color:#0891b2;display:block;margin-top:4px;">&#x2197; Open in Google Maps</a>
-            </div>
-            <div>
-              <div style="font-size:11px;font-weight:700;color:#2d3748;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Satellite Aerial <span style="font-weight:400;color:#718096;">(for area estimation)</span></div>
-              <img id="res-map-satellite" src="" alt="Satellite view" style="width:100%;height:260px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;display:block;">
-              <div id="res-map-area-note" style="font-size:11px;color:#718096;margin-top:4px;"></div>
-            </div>
+          <!-- Satellite aerial -->
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:#2d3748;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">&#x1F6F0; Satellite Aerial View <span style="font-weight:400;color:#718096;text-transform:none;">(for building footprint estimation)</span></div>
+            <img id="res-map-satellite" src="" alt="Satellite aerial view" style="width:100%;height:auto;border-radius:8px;border:1px solid #e2e8f0;display:block;">
+            <div id="res-map-area-note" style="font-size:11px;color:#718096;margin-top:4px;"></div>
           </div>
-          <div id="res-map-address" style="font-size:12px;color:#4a5568;border-top:1px solid #e2e8f0;padding-top:8px;"></div>
+          <!-- Street View -->
+          <div style="margin-bottom:12px;">
+            <div style="font-size:11px;font-weight:700;color:#2d3748;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">&#x1F6B6; Google Street View <span style="font-weight:400;color:#718096;text-transform:none;">(exterior building view)</span></div>
+            <img id="res-map-streetview" src="" alt="Street view" style="width:100%;height:auto;border-radius:8px;border:1px solid #e2e8f0;display:block;">
+            <div id="res-map-streetview-note" style="font-size:11px;color:#718096;margin-top:4px;"></div>
+          </div>
+          <!-- Address + links -->
+          <div id="res-map-address" style="font-size:12px;color:#4a5568;border-top:1px solid #e2e8f0;padding-top:8px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+          </div>
         </div>
       </div>
 
@@ -3048,13 +3041,13 @@
 
   // ── SITE LOCATION MAP ──
   function loadSiteMap(data) {
-    var mapSection  = document.getElementById('res-map-section');
-    var mapEmbed    = document.getElementById('res-map-embed');
-    var mapSat      = document.getElementById('res-map-satellite');
-    var mapLink     = document.getElementById('res-map-link');
-    var mapAddress  = document.getElementById('res-map-address');
-    var mapAreaNote = document.getElementById('res-map-area-note');
-    if (!mapSection || !mapEmbed || !mapSat) return;
+    var mapSection    = document.getElementById('res-map-section');
+    var mapSat        = document.getElementById('res-map-satellite');
+    var mapStreetView = document.getElementById('res-map-streetview');
+    var mapSvNote     = document.getElementById('res-map-streetview-note');
+    var mapAddress    = document.getElementById('res-map-address');
+    var mapAreaNote   = document.getElementById('res-map-area-note');
+    if (!mapSection || !mapSat) return;
 
     // Build location string from form data
     var parts = [data.address, data.city, data.province].filter(Boolean);
@@ -3062,28 +3055,43 @@
     var locationStr = parts.join(', ') + ', Canada';
     var locationEnc = encodeURIComponent(locationStr);
 
-    // Interactive embed map — use Maps search URL (no API key needed for basic embed)
-    mapEmbed.src = 'https://maps.google.com/maps?q=' + locationEnc +
-      '&t=k&z=18&output=embed&iwloc=near';
-
-    // Static satellite image for aerial view (600x260, zoom 19)
+    // Satellite aerial — zoom 17 (wider view showing surroundings), full width, 600x400
     mapSat.src = 'https://maps.googleapis.com/maps/api/staticmap' +
       '?center=' + locationEnc +
-      '&zoom=19&size=600x260&maptype=hybrid' +
-      '&markers=color:red%7C' + locationEnc +
+      '&zoom=17&size=640x400&maptype=hybrid&scale=2' +
+      '&markers=color:red%7Clabel:P%7C' + locationEnc +
       '&key=' + GMAPS_KEY;
-
-    // Google Maps link
-    mapLink.href = 'https://www.google.com/maps/search/?api=1&query=' + locationEnc;
-
-    // Address label
-    mapAddress.textContent = '\uD83D\uDCCD ' + locationStr;
+    mapSat.onerror = function() {
+      mapSat.style.display = 'none';
+    };
 
     // Area note
     var declaredArea = data.area ? data.area + ' sq ft (declared)' : '';
     mapAreaNote.textContent = declaredArea
       ? 'Declared area: ' + declaredArea + ' — use satellite view to verify building footprint'
-      : 'Use satellite view to estimate building footprint area';
+      : 'Use satellite view to estimate building footprint and surrounding exposures';
+
+    // Google Street View Static API — 640x400, heading auto (Google picks best angle)
+    if (mapStreetView) {
+      mapStreetView.src = 'https://maps.googleapis.com/maps/api/streetview' +
+        '?size=640x400&scale=2' +
+        '&location=' + locationEnc +
+        '&fov=90&pitch=5' +
+        '&source=outdoor' +
+        '&key=' + GMAPS_KEY;
+      mapStreetView.onerror = function() {
+        // Street View not available for this location
+        mapStreetView.style.display = 'none';
+        if (mapSvNote) mapSvNote.textContent = 'Street View not available for this location.';
+      };
+      if (mapSvNote) mapSvNote.textContent = 'Exterior view — Google Street View';
+    }
+
+    // Address line with Google Maps link
+    var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + locationEnc;
+    mapAddress.innerHTML =
+      '<span>\uD83D\uDCCD ' + locationStr + '</span>' +
+      '<a href="' + mapsUrl + '" target="_blank" style="font-size:11px;color:#0891b2;text-decoration:none;white-space:nowrap;">&#x2197; Open in Google Maps</a>';
 
     mapSection.style.display = 'block';
   }
@@ -3751,11 +3759,15 @@
     console.log('PDF photos collected:', photoDataUrls.length);
     showToast('\u23F3 PDF: ' + photoDataUrls.length + ' photos ready, building pages\u2026');
 
-    // Step 2: Fetch satellite map as base64 (cross-origin; must fetch not canvas-capture)
+    // Step 2: Fetch satellite map and street view as base64
+    // Both are cross-origin Static Maps API images — fetch directly, not via html2canvas
     var satDataUrl = null;
+    var svDataUrl  = null;
     var satImgEl = document.getElementById('res-map-satellite');
+    var svImgEl  = document.getElementById('res-map-streetview');
+
     if (satImgEl && satImgEl.src && satImgEl.src.indexOf('googleapis.com') !== -1) {
-      showToast('\u23F3 Fetching satellite image\u2026');
+      showToast('\u23F3 Fetching aerial image\u2026');
       try {
         var satResp = await fetch(satImgEl.src);
         if (satResp.ok) {
@@ -3765,8 +3777,22 @@
           });
         }
       } catch(e) { console.warn('Satellite fetch failed:', e.message); }
-      console.log('Satellite map:', satDataUrl ? 'OK' : 'failed');
     }
+
+    if (svImgEl && svImgEl.src && svImgEl.src.indexOf('googleapis.com') !== -1) {
+      showToast('\u23F3 Fetching street view image\u2026');
+      try {
+        var svResp = await fetch(svImgEl.src);
+        if (svResp.ok) {
+          var svBlob = await svResp.blob();
+          svDataUrl = await new Promise(function(resolve) {
+            var fr = new FileReader(); fr.onload = function(){ resolve(fr.result); }; fr.readAsDataURL(svBlob);
+          });
+        }
+      } catch(e) { console.warn('Street view fetch failed:', e.message); }
+    }
+
+    console.log('Satellite:', satDataUrl ? 'OK' : 'failed', '| Street View:', svDataUrl ? 'OK' : 'n/a');
 
     // Step 3: Cover page
     var coverEl = document.getElementById('scan-cover-page');
@@ -3825,23 +3851,39 @@
       yPos += pageH;
     }
 
-    // Step 5: Satellite map page
-    if (satDataUrl) {
+    // Step 5: Site location page — satellite aerial + street view
+    if (satDataUrl || svDataUrl) {
       pdf.addPage();
       pdf.setFontSize(10); pdf.setTextColor(30, 58, 79);
-      pdf.text('Site Location \u2014 Satellite Aerial View', margin, margin + 4);
+      pdf.text('Site Location \u2014 Aerial & Street View', margin, margin + 4);
       pdf.setDrawColor(200, 200, 200);
       pdf.line(margin, margin + 6, pageW - margin, margin + 6);
       var addrEl = document.getElementById('res-map-address');
       if (addrEl && addrEl.textContent) {
         pdf.setFontSize(8); pdf.setTextColor(100, 100, 100);
-        pdf.text(addrEl.textContent.replace(/[\u{1F4CD}\u{1F5FA}]\s*/u,'').trim(), margin, margin + 11);
+        pdf.text(addrEl.textContent.replace(/[\uD83D\uDCCD\u2197]\s*/g,'').trim().substring(0, 100), margin, margin + 11);
       }
-      var satImgW = pageW - margin * 2;
-      var satImgH = satImgW * (260 / 600);
-      pdf.addImage(satDataUrl, 'JPEG', margin, margin + 14, satImgW, satImgH);
+      var imgW2 = pageW - margin * 2;
+      var yOff  = margin + 15;
+      if (satDataUrl) {
+        pdf.setFontSize(8); pdf.setTextColor(30, 58, 79);
+        pdf.text('Satellite Aerial View', margin, yOff);
+        yOff += 4;
+        var satH2 = imgW2 * (400 / 640);
+        pdf.addImage(satDataUrl, 'JPEG', margin, yOff, imgW2, satH2);
+        yOff += satH2 + 8;
+      }
+      if (svDataUrl) {
+        if (yOff + (imgW2 * 400 / 640) > pageH - margin) { pdf.addPage(); yOff = margin; }
+        pdf.setFontSize(8); pdf.setTextColor(30, 58, 79);
+        pdf.text('Google Street View (Exterior)', margin, yOff);
+        yOff += 4;
+        var svH2 = imgW2 * (400 / 640);
+        pdf.addImage(svDataUrl, 'JPEG', margin, yOff, imgW2, svH2);
+        yOff += svH2 + 4;
+      }
       pdf.setFontSize(7); pdf.setTextColor(130, 130, 130);
-      pdf.text('Interactive map available in the online report. Satellite imagery via Google Maps.', margin, margin + 14 + satImgH + 4);
+      pdf.text('Satellite imagery and Street View via Google Maps Static API.', margin, yOff);
     }
 
     // Step 6: Photo appendix pages
