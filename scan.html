@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 293 — 2026-06-27 — Electrical all subheadings bold via addSubheadings, Edwards read-the-label instruction -->
+<!-- SanketRisk SCAN ONE — Deploy 294 — 2026-06-27 — Fire alarm: photo-by-photo ceiling scan, conclusion rule, remove duplicate instruction -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1654,17 +1654,22 @@
       'PROHIBITION: If the spare cabinet is found, you MUST NOT write any recommendation about spare sprinkler heads or spare head cabinets.'
     );
 
-    // ── ALWAYS-ON: FIRE ALARM PANEL IDENTIFICATION ────────────────────────
+    // ── ALWAYS-ON: FIRE ALARM PANEL AND DEVICE IDENTIFICATION ─────────────
     blocks.push(
-      'FIRE ALARM PANEL — MANDATORY IDENTIFICATION:\n' +
-      'Read the text/labels on every wall-mounted panel or cabinet in every photo.\n' +
-      'SPECIFICALLY LOOK FOR THE WORD "EDWARDS" — it will appear as a brand name printed on a label strip at the bottom or top of a tan/beige metal panel cabinet. ' +
-      'Edwards panels have: a tan or light grey metal cabinet body, a black rectangular LCD screen in the upper section, rows of small buttons or a numeric keypad, and LED indicator lights. ' +
-      'The word "EDWARDS" may appear in large letters on a white label at the bottom of the cabinet front. ' +
-      'If you see any panel with the text "EDWARDS" on it — even partially visible — this is an Edwards fire alarm control panel. State: "An Edwards fire alarm control panel is installed."\n' +
-      'Also check for: Simplex (red cabinet), Notifier (grey), Honeywell/Silent Knight, DSC, Bosch.\n' +
-      'Separately, scan ALL ceiling surfaces in all photos for white dome-shaped ceiling devices 10-15cm diameter — these are smoke detectors. Note their presence in the FIRE ALARM section.\n' +
-      'Include ALL fire alarm observations (panel, detectors, pull stations, strobes, horn) under the FIRE ALARM subheading.'
+      'FIRE ALARM DEVICES — PHOTO-BY-PHOTO CEILING SCAN (MANDATORY):\n' +
+      'You MUST go through each photo one at a time and look at the ceiling in every photo.\n' +
+      'In each photo that shows a ceiling, look for any round or dome-shaped device mounted to the ceiling.\n' +
+      'These devices may be:\n' +
+      '  - A white plastic dome approximately 10-15cm across (smoke detector)\n' +
+      '  - A smaller white or cream disc flush to the ceiling (heat detector)\n' +
+      '  - A white or red rectangular box on the wall with a horn/strobe (notification device)\n' +
+      'IMPORTANT: Even if the device is small or in the background of the photo, if a dome-shaped white ceiling device is visible, it is a smoke detector. DO NOT conclude that no smoke detectors are present unless you have checked the ceiling area of every single photo and found none.\n' +
+      'FIRE ALARM PANEL: In the same photo-by-photo review, look at every wall-mounted cabinet or panel. ' +
+      'Read any text visible on panel labels. ' +
+      'If you see the word "EDWARDS", "Simplex", "Notifier", "Honeywell", "Bosch", or "DSC" on any panel, state the brand. ' +
+      'An Edwards panel is tan/beige coloured with the word EDWARDS printed on a label strip on the front.\n' +
+      'CONCLUSION RULE: You may only write "no smoke detectors visible" if you have looked at the ceiling area in every photo and genuinely found none. If even one photo shows a dome ceiling device, report it as present.\n' +
+      'Report all findings under the FIRE ALARM subheading.'
     );
 
     return blocks.length > 0 ? '\n\nADDITIONAL ASSESSMENT REQUIREMENTS:\n' + blocks.join('\n\n') : '';
@@ -1681,7 +1686,6 @@
       ' PROTECTION — MANDATORY: For sprinkler systems, ALWAYS start the description with "The building is protected by an automatic sprinkler system." Do NOT state wet pipe or dry pipe — do not guess the system type.' +
       ' SPRINKLER CONTROL VALVE: Examine the riser assembly carefully. Identify the control valve type precisely — a BUTTERFLY VALVE appears as a circular disc valve with a lever handle or gear operator (often orange, red, or yellow lever arm), typically has an electrical tamper switch wired to the alarm panel, and looks distinctly different from a wheel handwheel; an OS&Y valve has a threaded rising stem through a yoke with a handwheel. State the valve type as observed. If a Tyco, Viking, or other brand nameplate is visible on the valve or alarm valve, state the brand. Note valve position (open = lever parallel to pipe; closed = lever perpendicular to pipe).' +
       ' SPARE SPRINKLER CABINET — THIS IS A REQUIRED NUMBERED STEP. You MUST complete this step before writing your protection assessment: STEP 1 — Go through every single photo submitted. STEP 2 — Look specifically for a RED metal box approximately 30cm wide. It may appear open or closed. STEP 3 — If the box is OPEN, look inside for: rows of sprinkler heads with orange, red, or yellow glass bulbs held in metal clips, and a black sprinkler head wrench. STEP 4 — If you find this cabinet open with heads and wrench visible, you MUST write: "A spare sprinkler head cabinet is present, photographed open and stocked with spare sprinkler heads and a sprinkler wrench, confirming compliance with NFPA 25 requirements." STEP 5 — If you include this cabinet in your report, you MUST NOT generate any recommendation regarding spare sprinkler heads.' +
-      ' FIRE ALARM PANEL AND DEVICES: Edwards (also marketed as Edwards EST or GE Edwards) is a major fire alarm manufacturer — panels are tan/beige coloured with LCD display and keypad, labelled "EDWARDS" or "Edwards Systems Technology". If an Edwards panel is visible, state: "Edwards fire alarm control panel observed." Also scan ALL photos for ceiling-mounted smoke detectors (white dome-shaped devices, 10-15cm diameter) and heat detectors. List every fire alarm device type seen across all photos — panel brand/model, smoke detectors by location, pull stations, horn/strobes. Report these in the FIRE ALARM section even if devices appear in different photos from the panel.' +
       ' CYCLONE DUST COLLECTORS: If large cyclone dust collectors are present handling combustible dust, assess whether automatic sprinkler protection is installed inside the cyclone body — if not confirmed, flag as HIGH severity.' +
       ' BATTERY CHARGING STATIONS: Look for battery charging equipment for electric forklifts or other vehicles — typically visible as a bank of charger units on the wall, heavy electrical cabling to floor-level connectors, or designated charging areas marked on the floor. Battery charging generates hydrogen gas during charging and presents fire risk from electrical arcing. Note the charging station location, proximity to combustibles, and whether ventilation appears adequate.' +
       ' HAZARDS: list each hazard specifically — welding/hot work, flammable liquid storage (identify if safety cabinets present), compressed gas cylinders (note if secured/chained upright and separated by type), combustible dust (woodworking/plastic dust collection systems), high-piled storage, propane-powered equipment, battery charging stations (electric forklifts/vehicles — hydrogen off-gassing and electrical arc hazard), chemical mixing areas. For grinding/shredding of combustible materials — flag absence of magnetic separators as HIGH ONLY if no magnetic separation equipment is observed. Assign severity to each.' +
