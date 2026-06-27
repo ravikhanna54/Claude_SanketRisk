@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 292 — 2026-06-27 — Always-on dynamic blocks: spare cabinet open/closed fix, Edwards panel ID, critical DO NOT describe as closed -->
+<!-- SanketRisk SCAN ONE — Deploy 293 — 2026-06-27 — Electrical all subheadings bold via addSubheadings, Edwards read-the-label instruction -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1657,14 +1657,14 @@
     // ── ALWAYS-ON: FIRE ALARM PANEL IDENTIFICATION ────────────────────────
     blocks.push(
       'FIRE ALARM PANEL — MANDATORY IDENTIFICATION:\n' +
-      'Examine every photo for a fire alarm control panel mounted on a wall.\n' +
-      'EDWARDS panels: tan or beige metal cabinet with a black LCD display screen, numeric keypad, and indicator LEDs. ' +
-      'The brand name "EDWARDS" or "Edwards" will be printed on the front label or nameplate at the bottom of the panel. ' +
-      'Edwards is owned by UTC / Carrier and may also appear as "Edwards EST" or "GE Edwards". ' +
-      'If an Edwards panel is seen in any photo, write: "An Edwards fire alarm control panel is installed."\n' +
-      'Also check for: Simplex (red panels), Notifier (grey panels), Honeywell/Silent Knight, DSC.\n' +
-      'Separately, scan ceiling surfaces in ALL photos for dome-shaped white ceiling devices (smoke detectors) and note their presence.\n' +
-      'Report panel brand AND all device types observed in the FIRE ALARM subheading.'
+      'Read the text/labels on every wall-mounted panel or cabinet in every photo.\n' +
+      'SPECIFICALLY LOOK FOR THE WORD "EDWARDS" — it will appear as a brand name printed on a label strip at the bottom or top of a tan/beige metal panel cabinet. ' +
+      'Edwards panels have: a tan or light grey metal cabinet body, a black rectangular LCD screen in the upper section, rows of small buttons or a numeric keypad, and LED indicator lights. ' +
+      'The word "EDWARDS" may appear in large letters on a white label at the bottom of the cabinet front. ' +
+      'If you see any panel with the text "EDWARDS" on it — even partially visible — this is an Edwards fire alarm control panel. State: "An Edwards fire alarm control panel is installed."\n' +
+      'Also check for: Simplex (red cabinet), Notifier (grey), Honeywell/Silent Knight, DSC, Bosch.\n' +
+      'Separately, scan ALL ceiling surfaces in all photos for white dome-shaped ceiling devices 10-15cm diameter — these are smoke detectors. Note their presence in the FIRE ALARM section.\n' +
+      'Include ALL fire alarm observations (panel, detectors, pull stations, strobes, horn) under the FIRE ALARM subheading.'
     );
 
     return blocks.length > 0 ? '\n\nADDITIONAL ASSESSMENT REQUIREMENTS:\n' + blocks.join('\n\n') : '';
@@ -2610,6 +2610,7 @@
 
   // ── RENDER RESULTS ──
   function renderResults(r, data) {
+    var _pendingElectrical = null;
     document.getElementById('progress-wrap').style.display = 'none';
     document.getElementById('results-wrap').style.display  = 'block';
 
@@ -2741,11 +2742,8 @@
     var elecEl = document.getElementById('res-electrical');
     if (elecEl) {
       if (r.electrical_system) {
-        elecEl.innerHTML = r.electrical_system
-          .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-          .replace(/(SERVICE:|MAIN DISTRIBUTION:|WIRING:|SUB-PANELS:|DEFICIENCIES:)/g,
-            '<strong style="color:#1e3a4f;">$1</strong>')
-          .replace(/\n/g,'<br>');
+        // Use addSubheadings + highlightSeverity after they are defined below
+        _pendingElectrical = r.electrical_system;
         document.getElementById('res-electrical-section').style.display = 'block';
       } else {
         document.getElementById('res-electrical-section').style.display = 'none';
@@ -2768,24 +2766,46 @@
     }
 
     // Bold subheadings: converts ALL-CAPS section labels to bold styled headings
-    // Matches patterns like "SPRINKLER PROTECTION:" or "FIRE ALARM:" at start of line or after <br>
+    // Matches patterns like "TRANSFORMER:" or "FIRE ALARM:" at start of line or after <br>
     function addSubheadings(html) {
       if (!html) return html;
       var headings = [
+        // Protection subheadings
         'SPRINKLER PROTECTION',
         'FIRE ALARM',
         'FIRE EXTINGUISHERS',
         'SPECIAL EXTINGUISHING SYSTEMS',
+        // Exposure subheadings
         'EXTERIOR BUILDING ASSESSMENT',
-        'EXPOSURE AND NATURAL HAZARDS'
+        'EXPOSURE AND NATURAL HAZARDS',
+        // Electrical subheadings — all variants the AI may produce
+        'TRANSFORMER',
+        'MAIN SERVICE',
+        'MAIN DISTRIBUTION',
+        'SERVICE ENTRANCE',
+        'ELECTRICAL SERVICE',
+        'WIRING',
+        'SUB-PANELS',
+        'SUB-PANEL',
+        'MOTOR CONTROL',
+        'DISTRIBUTION PANEL',
+        'DEFICIENCIES',
+        'ELECTRICAL DEFICIENCIES',
+        'PANEL'
       ];
       headings.forEach(function(h) {
-        var re = new RegExp('((?:^|<br>)\\s*)(' + h + ')(\\s*:)', 'g');
+        var re = new RegExp('((?:^|<br>)\\s*)(' + h + ')(\\s*:)', 'gi');
         html = html.replace(re, function(match, prefix, heading, colon) {
-          return prefix + '<strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">' + heading + colon + '</strong>';
+          return prefix + '<strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">' + heading.toUpperCase() + colon + '</strong>';
         });
       });
       return html;
+    }
+
+    // Apply electrical rendering now that addSubheadings and highlightSeverity are defined
+    if (_pendingElectrical) {
+      var elecEl2 = document.getElementById('res-electrical');
+      if (elecEl2) elecEl2.innerHTML = addSubheadings(highlightSeverity(_pendingElectrical)) || '\u2014';
     }
 
     var occEl = document.getElementById('res-occupancy');
