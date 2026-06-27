@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 291 — 2026-06-27 — Prompt: Edwards panel ID, Steinert magnetic separator compliant, spare cabinet 5-step mandatory check -->
+<!-- SanketRisk SCAN ONE — Deploy 292 — 2026-06-27 — Always-on dynamic blocks: spare cabinet open/closed fix, Edwards panel ID, critical DO NOT describe as closed -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1638,6 +1638,33 @@
       'If service tags ARE visible: note the date and confirm currency (sprinklers annual, extinguishers annual). ' +
       'If NO service tags are visible: flag as a deficiency — "Annual sprinkler/extinguisher inspection records not confirmed — ' +
       'verification required." Do not assume compliant if tags not visible in photos.'
+    );
+
+    // ── ALWAYS-ON: SPARE SPRINKLER CABINET ────────────────────────────────
+    blocks.push(
+      'SPARE SPRINKLER HEAD CABINET — MANDATORY PHOTO-BY-PHOTO CHECK:\n' +
+      'Before writing anything, examine every single photo in sequence and look for a RED metal box approximately 30cm wide.\n' +
+      'The lid may be OPEN or CLOSED in the photo.\n' +
+      'KEY VISUAL CUE: If the box is photographed with its lid OPEN and you can see INSIDE the box — you will see:\n' +
+      '  - Rows of spare sprinkler heads (small brass or chrome fittings with orange or yellow glass bulbs) held in metal spring clips\n' +
+      '  - A black steel sprinkler head wrench lying flat in the box\n' +
+      'CRITICAL INSTRUCTION: If a photo shows a red box that is open and you can see its interior contents — the lid being raised/open means the cabinet IS OPEN regardless of angle. DO NOT describe this as closed.\n' +
+      'If the cabinet is found open with heads and wrench visible, write EXACTLY:\n' +
+      '"A spare sprinkler head cabinet is present, photographed open and stocked with spare sprinkler heads and a sprinkler wrench — NFPA 25 compliant."\n' +
+      'PROHIBITION: If the spare cabinet is found, you MUST NOT write any recommendation about spare sprinkler heads or spare head cabinets.'
+    );
+
+    // ── ALWAYS-ON: FIRE ALARM PANEL IDENTIFICATION ────────────────────────
+    blocks.push(
+      'FIRE ALARM PANEL — MANDATORY IDENTIFICATION:\n' +
+      'Examine every photo for a fire alarm control panel mounted on a wall.\n' +
+      'EDWARDS panels: tan or beige metal cabinet with a black LCD display screen, numeric keypad, and indicator LEDs. ' +
+      'The brand name "EDWARDS" or "Edwards" will be printed on the front label or nameplate at the bottom of the panel. ' +
+      'Edwards is owned by UTC / Carrier and may also appear as "Edwards EST" or "GE Edwards". ' +
+      'If an Edwards panel is seen in any photo, write: "An Edwards fire alarm control panel is installed."\n' +
+      'Also check for: Simplex (red panels), Notifier (grey panels), Honeywell/Silent Knight, DSC.\n' +
+      'Separately, scan ceiling surfaces in ALL photos for dome-shaped white ceiling devices (smoke detectors) and note their presence.\n' +
+      'Report panel brand AND all device types observed in the FIRE ALARM subheading.'
     );
 
     return blocks.length > 0 ? '\n\nADDITIONAL ASSESSMENT REQUIREMENTS:\n' + blocks.join('\n\n') : '';
