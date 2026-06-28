@@ -1,7 +1,29 @@
 // netlify/functions/registry-intel.js
 // Sanket Registry Intel — server-side proxy for registry API calls
-// Node.js 18+ has built-in fetch — no node-fetch required
-// Place this file at: netlify/functions/registry-intel.js
+// Uses Node.js built-in https module — no dependencies required
+// Place at: netlify/functions/registry-intel.js
+
+const https = require('https');
+
+function httpsGet(url) {
+  return new Promise(function(resolve, reject) {
+    var options = {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'SanketRiskInspector/1.0'
+      }
+    };
+    https.get(url, options, function(res) {
+      var data = '';
+      res.on('data', function(chunk) { data += chunk; });
+      res.on('end', function() {
+        resolve({ status: res.statusCode, text: data });
+      });
+    }).on('error', function(e) {
+      reject(e);
+    });
+  });
+}
 
 exports.handler = async function(event) {
   var headers = {
@@ -35,37 +57,40 @@ exports.handler = async function(event) {
     }
 
     try {
-      // Try Canadian jurisdictions first
-      var url = 'https://api.opencorporates.com/v0.4/companies/search' +
+      // Search Canadian jurisdictions
+      var url1 = 'https://api.opencorporates.com/v0.4/companies/search' +
         '?q=' + encodeURIComponent(insured) +
         '&jurisdiction_code=ca&per_page=10&order=score';
 
-      var resp = await fetch(url, {
-        headers: { 'Accept': 'application/json', 'User-Agent': 'SanketRiskInspector/1.0' }
-      });
+      var r1 = await httpsGet(url1);
+      var data1 = { results: { companies: [] } };
+      try { data1 = JSON.parse(r1.text); } catch(e) {}
+      var results = (data1.results && data1.results.companies) || [];
 
-      var data = resp.ok ? await resp.json() : { results: { companies: [] } };
-      var results = (data.results && data.results.companies) || [];
-
-      // If nothing found with ca jurisdiction, try without it
+      // If no results, try without jurisdiction filter
       if (!results.length) {
         var url2 = 'https://api.opencorporates.com/v0.4/companies/search' +
           '?q=' + encodeURIComponent(insured) + '&per_page=10&order=score';
-        var resp2 = await fetch(url2, {
-          headers: { 'Accept': 'application/json', 'User-Agent': 'SanketRiskInspector/1.0' }
-        });
-        var data2 = resp2.ok ? await resp2.json() : { results: { companies: [] } };
-        results = (data2.results && data2.results.companies) || [];
-        // Filter to Canadian results only
-        results = results.filter(function(r) {
+        var r2 = await httpsGet(url2);
+        var data2 = { results: { companies: [] } };
+        try { data2 = JSON.parse(r2.text); } catch(e) {}
+        var allResults = (data2.results && data2.results.companies) || [];
+        // Filter to Canadian only
+        results = allResults.filter(function(r) {
           var jur = (r.company && r.company.jurisdiction_code) || '';
-          return jur.startsWith('ca') || jur === 'ca';
+          return jur.startsWith('ca');
         });
       }
 
       return {
         statusCode: 200, headers: headers,
-        body: JSON.stringify({ service: 'corporations_canada', status: 'ok', results: results, total: results.length })
+        body: JSON.stringify({
+          service: 'corporations_canada',
+          status: 'ok',
+          results: results,
+          total: results.length,
+          debug: 'OpenCorporates query for: ' + insured
+        })
       };
 
     } catch(e) {
@@ -87,38 +112,39 @@ exports.handler = async function(event) {
       var bcUrl = 'https://evaluebc.bcassessment.ca/api/address/suggest?q=' +
         encodeURIComponent(fullAddr) + '&maxResults=5';
 
-      var bcResp = await fetch(bcUrl, {
-        headers: { 'Accept': 'application/json', 'User-Agent': 'SanketRiskInspector/1.0' }
-      });
+      var bcR = await httpsGet(bcUrl);
+      var suggestions = [];
+      try { suggestions = JSON.parse(bcR.text); } catch(e) {}
 
-      if (!bcResp.ok) {
-        return {
-          statusCode: 200, headers: headers,
-          body: JSON.stringify({ service: 'bc_assessment', status: 'error', message: 'BC Assessment API HTTP ' + bcResp.status })
-        };
-      }
-
-      var suggestions = await bcResp.json();
       if (!suggestions || !suggestions.length) {
         return {
           statusCode: 200, headers: headers,
-          body: JSON.stringify({ service: 'bc_assessment', status: 'not_found', message: 'No property found for: ' + address + ', ' + city })
+          body: JSON.stringify({
+            service: 'bc_assessment',
+            status: 'not_found',
+            message: 'No property found for: ' + address + ', ' + city
+          })
         };
       }
 
-      // Try to fetch full property detail
-      var folio = suggestions[0].pid || suggestions[0].rollNumber || suggestions[0].parcelId || suggestions[0].folioId || '';
+      var folio = suggestions[0].pid || suggestions[0].rollNumber ||
+                  suggestions[0].parcelId || suggestions[0].folioId || '';
       var property = null;
+
       if (folio) {
-        var detailResp = await fetch('https://evaluebc.bcassessment.ca/api/property/' + encodeURIComponent(folio), {
-          headers: { 'Accept': 'application/json', 'User-Agent': 'SanketRiskInspector/1.0' }
-        });
-        if (detailResp.ok) property = await detailResp.json();
+        var detailUrl = 'https://evaluebc.bcassessment.ca/api/property/' + encodeURIComponent(folio);
+        var detailR = await httpsGet(detailUrl);
+        try { property = JSON.parse(detailR.text); } catch(e) {}
       }
 
       return {
         statusCode: 200, headers: headers,
-        body: JSON.stringify({ service: 'bc_assessment', status: 'ok', suggestion: suggestions[0], property: property })
+        body: JSON.stringify({
+          service: 'bc_assessment',
+          status: 'ok',
+          suggestion: suggestions[0],
+          property: property
+        })
       };
 
     } catch(e) {
@@ -129,5 +155,8 @@ exports.handler = async function(event) {
     }
   }
 
-  return { statusCode: 400, headers: headers, body: JSON.stringify({ error: 'Unknown service: ' + service }) };
+  return {
+    statusCode: 400, headers: headers,
+    body: JSON.stringify({ error: 'Unknown service: ' + service })
+  };
 };
