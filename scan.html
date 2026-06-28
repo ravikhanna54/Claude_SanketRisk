@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 305 — 2026-06-28 — Registry Intel fires from renderResults (not runAnalysis), exec summary consistency rule -->
+<!-- SanketRisk SCAN ONE — Deploy 306 — 2026-06-28 — TASK 2 rewritten with Scenario 1/2/3 charging station rules, prohibition on false not-found -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2001,23 +2001,33 @@
 
     // ── ALWAYS-ON: FORKLIFT TYPE AND BATTERY CHARGING ─────────────────────
     blocks.push(
-      'TASK 2 — FORKLIFT TYPE AND BATTERY CHARGING (complete this before writing any section):\n' +
-      'Step A — Identify forklift type:\n' +
-      '  PROPANE forklift = silver propane cylinder visible on rear. Has exhaust pipe.\n' +
-      '  BATTERY-ELECTRIC forklift = NO propane cylinder. Has large rectangular battery compartment. No exhaust.\n' +
-      '  If you cannot confirm a propane cylinder is present — do NOT call it a propane forklift.\n' +
-      'Step B — Look for battery charging stations (only if battery-electric forklifts identified):\n' +
-      '  Charging stations = wall-mounted charger units, heavy cables, floor connectors, marked bay.\n' +
-      '  Battery chargers are often mounted on the wall and may be compact units with indicator lights.\n' +
-      'Step C — CONSISTENCY RULE — your response must be consistent across ALL sections:\n' +
-      '  If battery-electric forklifts are identified:\n' +
-      '    · occupancy field MUST mention: forklift type AND charging station status (present or not observed)\n' +
-      '    · hazards field MUST include: "Battery charging — hydrogen off-gassing and electrical arc risk."\n' +
-      '    · recommendations field MUST address: charging station ventilation if present\n' +
-      '    · Do NOT say "no charging station noted" in occupancy while recommending ventilation in recommendations — these must agree.\n' +
-      '  If propane forklifts are identified:\n' +
-      '    · occupancy field MUST confirm: propane cylinder observed on forklift\n' +
-      '    · Do NOT flag as propane if no cylinder is visible.'
+      'TASK 2 — FORKLIFT TYPE AND BATTERY CHARGING STATIONS:\n' +
+      '\n' +
+      'Step A — IDENTIFY FORKLIFT TYPE from every photo showing forklifts:\n' +
+      '  PROPANE forklift = silver/white propane cylinder visible on rear counterweight. Has exhaust pipe.\n' +
+      '  BATTERY-ELECTRIC forklift = NO propane cylinder anywhere on the vehicle. Large rectangular battery compartment. No exhaust pipe.\n' +
+      '  RULE: Do NOT identify a forklift as propane unless you can clearly see a propane cylinder in the photos.\n' +
+      '\n' +
+      'Step B — IF battery-electric forklifts found, scan every photo for a CHARGING STATION:\n' +
+      '  Charging stations look like: wall-mounted rectangular charger units (often black or grey boxes), heavy electrical cables, floor-level connectors or plug receptacles, or a dedicated charging bay marked on the floor.\n' +
+      '  They may also appear as a single compact wall-mounted unit with an indicator light and cable.\n' +
+      '\n' +
+      'Step C — WRITE YOUR FINDINGS based on what you actually found:\n' +
+      '  SCENARIO 1 — Battery forklift found AND charging station visible in photos:\n' +
+      '    · occupancy: "Battery-electric forklift(s) in use. Battery charging station observed [describe location]."\n' +
+      '    · hazards: "Battery charging — hydrogen off-gassing during charge cycle; electrical arc risk at charger. MEDIUM severity."\n' +
+      '    · recommendations: Assess ventilation adequacy at the charging station location. Recommend improvements only if ventilation is inadequate or safety signage is absent. Do NOT recommend a charging station if one is already present.\n' +
+      '\n' +
+      '  SCENARIO 2 — Battery forklift found but NO charging station visible:\n' +
+      '    · occupancy: "Battery-electric forklift(s) in use. No dedicated charging station observed in submitted photos."\n' +
+      '    · hazards: "Battery charging area not identified — charging location and ventilation unconfirmed. MEDIUM severity."\n' +
+      '    · recommendations: Request photos of the charging area; recommend dedicated ventilated charging bay.\n' +
+      '\n' +
+      '  SCENARIO 3 — Propane forklift confirmed (cylinder visible):\n' +
+      '    · occupancy: "Propane-powered forklift in use. Propane cylinder observed on vehicle."\n' +
+      '    · hazards: "Propane storage and handling — fuel leak and ignition risk. MEDIUM severity."\n' +
+      '\n' +
+      'PROHIBITION: Your occupancy, hazards, and recommendations must be consistent. If a charging station was found in Step B, you MUST use Scenario 1 — never write a recommendation saying "no charging station observed" if one was found.'
     );
 
     // ── ALWAYS-ON: SPARE SPRINKLER CABINET ────────────────────────────────
