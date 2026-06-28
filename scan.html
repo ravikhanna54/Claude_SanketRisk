@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 295 — 2026-06-27 — Map: remove iframe, add Street View, satellite zoom 17, stacked 2-photo layout -->
+<!-- SanketRisk SCAN ONE — Deploy 297 — 2026-06-27 — Sanket Registry Intel: form card, results section, Corporations Canada + BC Assessment live -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -569,7 +569,115 @@
       </div>
     </div>
 
-    <!-- SECTION 5: Photo Upload -->
+    <!-- SECTION 5: Sanket Registry Intel -->
+    <div class="card" id="registry-intel-card">
+      <div class="card-header" style="background:linear-gradient(135deg,#1a3a4a,#0d2535);">
+        <div class="card-header-icon">&#x1F50D;</div>
+        <div style="flex:1;">
+          <div class="card-header-title" style="font-family:'IBM Plex Sans',sans-serif;letter-spacing:.02em;">Sanket Registry Intel</div>
+          <div class="card-header-sub">Select intelligence services to include with this assessment — active services run automatically with AI analysis</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#b8860b,#d4a017);color:#fff;font-size:9px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;white-space:nowrap;">REGISTRY INTEL</div>
+      </div>
+      <div class="card-body">
+
+        <div class="callout callout-info" style="margin-bottom:20px;font-size:12px;">
+          <strong>About Sanket Registry Intel:</strong> Each service queries authoritative registries and databases to provide verified business and property intelligence — separate from and complementary to the AI photo assessment. Results are sourced, dated, and included in the final report.
+        </div>
+
+        <!-- Service grid -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+          <!-- Corporations Canada — LIVE -->
+          <label id="ri-corp-label" style="display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid #0891b2;border-radius:10px;cursor:pointer;background:#f0f9ff;transition:all .2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='#f0f9ff'">
+            <input type="checkbox" id="ri-corp" style="margin-top:2px;width:16px;height:16px;accent-color:#0891b2;cursor:pointer;" checked>
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-size:14px;">&#x1F3DB;</span>
+                <strong style="font-size:13px;color:#0c4a6e;">Corporations Canada</strong>
+                <span style="background:#0891b2;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;font-family:'IBM Plex Mono',monospace;">LIVE</span>
+              </div>
+              <div style="font-size:11px;color:#475569;line-height:1.5;">Business registration status, incorporation date, jurisdiction, company number, registered address.</div>
+              <div style="font-size:10px;color:#0891b2;margin-top:4px;font-family:'IBM Plex Mono',monospace;">Source: OpenCorporates / ISED Canada</div>
+            </div>
+          </label>
+
+          <!-- BC Assessment — LIVE -->
+          <label id="ri-bca-label" style="display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid #0891b2;border-radius:10px;cursor:pointer;background:#f0f9ff;transition:all .2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='#f0f9ff'">
+            <input type="checkbox" id="ri-bca" style="margin-top:2px;width:16px;height:16px;accent-color:#0891b2;cursor:pointer;">
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-size:14px;">&#x1F3E0;</span>
+                <strong style="font-size:13px;color:#0c4a6e;">BC Assessment</strong>
+                <span style="background:#0891b2;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;font-family:'IBM Plex Mono',monospace;">LIVE</span>
+              </div>
+              <div style="font-size:11px;color:#475569;line-height:1.5;">Assessed value, lot size, legal description, property class, improvement value.</div>
+              <div style="font-size:10px;color:#0891b2;margin-top:4px;font-family:'IBM Plex Mono',monospace;">Source: BC Assessment Authority</div>
+            </div>
+          </label>
+
+          <!-- Dun & Bradstreet — COMING SOON -->
+          <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid #e2e8f0;border-radius:10px;background:#f8fafc;opacity:.6;cursor:not-allowed;">
+            <input type="checkbox" disabled style="margin-top:2px;width:16px;height:16px;cursor:not-allowed;">
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-size:14px;">&#x1F4CA;</span>
+                <strong style="font-size:13px;color:#94a3b8;">Dun &amp; Bradstreet</strong>
+                <span style="background:#94a3b8;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;font-family:'IBM Plex Mono',monospace;">COMING SOON</span>
+              </div>
+              <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Business credit rating, financial health score, years in operation, employee count, industry risk.</div>
+              <div style="font-size:10px;color:#94a3b8;margin-top:4px;font-family:'IBM Plex Mono',monospace;">Source: Dun &amp; Bradstreet</div>
+            </div>
+          </div>
+
+          <!-- OpenCorporates Directors — COMING SOON -->
+          <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid #e2e8f0;border-radius:10px;background:#f8fafc;opacity:.6;cursor:not-allowed;">
+            <input type="checkbox" disabled style="margin-top:2px;width:16px;height:16px;cursor:not-allowed;">
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-size:14px;">&#x1F465;</span>
+                <strong style="font-size:13px;color:#94a3b8;">Directors &amp; Officers</strong>
+                <span style="background:#94a3b8;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;font-family:'IBM Plex Mono',monospace;">COMING SOON</span>
+              </div>
+              <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Registered directors, officers, and beneficial owners. Cross-reference with other entities.</div>
+              <div style="font-size:10px;color:#94a3b8;margin-top:4px;font-family:'IBM Plex Mono',monospace;">Source: OpenCorporates</div>
+            </div>
+          </div>
+
+          <!-- Municipal Zoning — COMING SOON -->
+          <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid #e2e8f0;border-radius:10px;background:#f8fafc;opacity:.6;cursor:not-allowed;">
+            <input type="checkbox" disabled style="margin-top:2px;width:16px;height:16px;cursor:not-allowed;">
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-size:14px;">&#x1F5FA;</span>
+                <strong style="font-size:13px;color:#94a3b8;">Municipal Zoning</strong>
+                <span style="background:#94a3b8;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;font-family:'IBM Plex Mono',monospace;">COMING SOON</span>
+              </div>
+              <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Permitted use, zoning classification, compliance status, development restrictions.</div>
+              <div style="font-size:10px;color:#94a3b8;margin-top:4px;font-family:'IBM Plex Mono',monospace;">Source: Municipal Open Data</div>
+            </div>
+          </div>
+
+          <!-- Fire Incident History — COMING SOON -->
+          <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid #e2e8f0;border-radius:10px;background:#f8fafc;opacity:.6;cursor:not-allowed;">
+            <input type="checkbox" disabled style="margin-top:2px;width:16px;height:16px;cursor:not-allowed;">
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-size:14px;">&#x1F692;</span>
+                <strong style="font-size:13px;color:#94a3b8;">Fire Incident History</strong>
+                <span style="background:#94a3b8;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;font-family:'IBM Plex Mono',monospace;">COMING SOON</span>
+              </div>
+              <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Local fire department incident records, prior fire calls, inspection orders at this address.</div>
+              <div style="font-size:10px;color:#94a3b8;margin-top:4px;font-family:'IBM Plex Mono',monospace;">Source: Fire Department Open Data</div>
+            </div>
+          </div>
+
+        </div><!-- end service grid -->
+
+      </div>
+    </div>
+
+    <!-- SECTION 6: Photo Upload -->
     <div class="card">
       <div class="card-header scan-accent">
         <div class="card-header-icon">&#x1F4F8;</div>
@@ -882,6 +990,18 @@
             <div class="uw-disclaimer">This is an AI-generated Photo-Based Preliminary Assessment. Analysis is limited to photographs and information submitted — not all deficiencies may be visible or identified from photographs alone. This report does not replace a full physical inspection by a qualified professional. Findings should be independently verified before underwriting decisions are made. Professional judgment must be applied.</div>
           </div>
           <div id="res-uw-narrative" style="margin-top:12px;font-size:13px;line-height:1.75;color:#2d3748"></div>
+        </div>
+      </div>
+
+      <!-- Sanket Registry Intel Results -->
+      <div class="result-section" id="res-registry-section" style="display:none;">
+        <div class="result-section-header">
+          <div class="result-section-icon">&#x1F50D;</div>
+          <div class="result-section-title">Sanket Registry Intel</div>
+          <div style="margin-left:auto;background:linear-gradient(135deg,#b8860b,#d4a017);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;font-family:'IBM Plex Mono',monospace;letter-spacing:.05em;">REGISTRY INTEL</div>
+        </div>
+        <div class="result-section-body" id="res-registry-body">
+          <!-- Populated dynamically by runRegistryIntel() -->
         </div>
       </div>
 
@@ -1495,6 +1615,190 @@
     }
   }
 
+  // ── SANKET REGISTRY INTEL ─────────────────────────────────────────────────
+  // Runs selected registry services in parallel with AI analysis.
+  // Each service fetches independently and renders into its own subsection.
+  async function runRegistryIntel(data) {
+    var section = document.getElementById('res-registry-section');
+    var body    = document.getElementById('res-registry-body');
+    if (!section || !body) return;
+
+    var corpChecked = document.getElementById('ri-corp') && document.getElementById('ri-corp').checked;
+    var bcaChecked  = document.getElementById('ri-bca')  && document.getElementById('ri-bca').checked;
+
+    if (!corpChecked && !bcaChecked) return;  // nothing selected
+
+    section.style.display = 'block';
+    body.innerHTML = '';
+
+    var insured  = (data.insured  || '').trim();
+    var address  = (data.address  || '').trim();
+    var city     = (data.city     || '').trim();
+    var province = (data.province || '').trim();
+    var retrieved = new Date().toLocaleDateString('en-CA', { year:'numeric', month:'long', day:'numeric' });
+
+    // Run selected services in parallel
+    var promises = [];
+    if (corpChecked) promises.push(runCorpCanada(body, insured, city, province, retrieved));
+    if (bcaChecked)  promises.push(runBcAssessment(body, address, city, province, retrieved));
+    await Promise.allSettled(promises);
+
+    // Save registry results into lastResult for DB persistence
+    if (lastResult) lastResult.registryIntel = body.innerHTML;
+  }
+
+  // ── Corporations Canada via OpenCorporates ─────────────────────────────────
+  async function runCorpCanada(body, insured, city, province, retrieved) {
+    var el = _riAddService(body, 'corp', '&#x1F3DB;', 'Corporations Canada', 'OpenCorporates / ISED Canada');
+    if (!insured) { el.innerHTML = _riMsg('Business name required for registry lookup.', 'warn'); return; }
+
+    try {
+      // OpenCorporates free API — no key required for basic search
+      var url = 'https://api.opencorporates.com/v0.4/companies/search' +
+        '?q=' + encodeURIComponent(insured) +
+        '&jurisdiction_code=ca' +
+        '&per_page=5';
+
+      var resp = await fetch(url);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var json = await resp.json();
+      var results = (json.results && json.results.companies) || [];
+
+      if (!results.length) {
+        // Try without jurisdiction restriction
+        var url2 = 'https://api.opencorporates.com/v0.4/companies/search?q=' + encodeURIComponent(insured) + '&per_page=5';
+        var resp2 = await fetch(url2);
+        var json2 = await resp2.json();
+        results = (json2.results && json2.results.companies) || [];
+      }
+
+      if (!results.length) {
+        el.innerHTML = _riMsg('No registration found for "' + insured + '" in Canadian registries.', 'warn');
+        return;
+      }
+
+      // Find best match — prefer active companies
+      var best = results.find(function(r) {
+        return r.company && (r.company.current_status || '').toLowerCase().indexOf('active') !== -1;
+      }) || results[0];
+      var co = best.company;
+
+      var statusColor = (co.current_status || '').toLowerCase().indexOf('active') !== -1 ? '#16a34a' : '#dc2626';
+      var html =
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+        _riRow('Registered Name', '<strong>' + (co.name || '—') + '</strong>') +
+        _riRow('Company Number',  co.company_number || '—') +
+        _riRow('Status',          '<span style="color:' + statusColor + ';font-weight:700;">' + (co.current_status || '—') + '</span>') +
+        _riRow('Jurisdiction',    co.jurisdiction_code ? co.jurisdiction_code.toUpperCase().replace('CA_','').replace('CA','Federal') : '—') +
+        _riRow('Incorporation Date', co.incorporation_date || '—') +
+        _riRow('Company Type',    co.company_type || '—') +
+        _riRow('Registered Address', co.registered_address ? co.registered_address.street_address || '—' : '—') +
+        '</table>';
+
+      if (results.length > 1) {
+        html += '<div style="font-size:11px;color:#718096;margin-top:8px;">&#x2139; ' + results.length + ' registrations found — showing best match. ';
+        html += '<a href="https://opencorporates.com/companies?q=' + encodeURIComponent(insured) + '&jurisdiction_code=ca" target="_blank" style="color:#0891b2;">View all on OpenCorporates &#x2197;</a></div>';
+      }
+
+      el.innerHTML = html;
+
+    } catch(e) {
+      console.warn('Corp Canada error:', e.message);
+      el.innerHTML = _riMsg('Registry lookup temporarily unavailable. ' + e.message, 'error');
+    }
+  }
+
+  // ── BC Assessment ──────────────────────────────────────────────────────────
+  async function runBcAssessment(body, address, city, province, retrieved) {
+    var el = _riAddService(body, 'bca', '&#x1F3E0;', 'BC Assessment', 'BC Assessment Authority');
+
+    // BC Assessment is only relevant for BC properties
+    if (province && province.toUpperCase() !== 'BC' && province.toLowerCase() !== 'british columbia') {
+      el.innerHTML = _riMsg('BC Assessment is only available for British Columbia properties. Province entered: ' + (province || 'not specified') + '.', 'warn');
+      return;
+    }
+    if (!address || !city) {
+      el.innerHTML = _riMsg('Street address and city are required for BC Assessment lookup.', 'warn');
+      return;
+    }
+
+    try {
+      // BC Assessment eValue API — public, no key required
+      var searchAddr = encodeURIComponent(address + ' ' + city);
+      var url = 'https://evaluebc.bcassessment.ca/api/address/suggest?q=' + searchAddr + '&maxResults=5';
+      var resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+
+      if (!resp.ok) throw new Error('BC Assessment API returned HTTP ' + resp.status);
+      var suggestions = await resp.json();
+
+      if (!suggestions || !suggestions.length) {
+        el.innerHTML = _riMsg('Property not found in BC Assessment records for: ' + address + ', ' + city + '.', 'warn') +
+          '<div style="font-size:11px;margin-top:8px;"><a href="https://evaluebc.bcassessment.ca/" target="_blank" style="color:#0891b2;">Search manually on eValue BC &#x2197;</a></div>';
+        return;
+      }
+
+      // Fetch full property details for top result
+      var folio = suggestions[0].pid || suggestions[0].rollNumber || suggestions[0].parcelId;
+      var detailUrl = 'https://evaluebc.bcassessment.ca/api/property/' + encodeURIComponent(folio);
+      var detailResp = await fetch(detailUrl, { headers: { 'Accept': 'application/json' } });
+
+      if (!detailResp.ok) throw new Error('Property detail fetch failed: HTTP ' + detailResp.status);
+      var prop = await detailResp.json();
+
+      var html =
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+        _riRow('Address',           prop.address || suggestions[0].address || address + ', ' + city) +
+        _riRow('PID / Roll Number', prop.pid || prop.rollNumber || folio || '—') +
+        _riRow('Property Class',    prop.propertyClass || prop.actualUseDescription || '—') +
+        _riRow('Land Value',        prop.landValue    ? '$' + Number(prop.landValue).toLocaleString('en-CA')        : '—') +
+        _riRow('Improvement Value', prop.improvementValue ? '$' + Number(prop.improvementValue).toLocaleString('en-CA') : '—') +
+        _riRow('Total Assessed Value', prop.totalAssessedValue ? '<strong>$' + Number(prop.totalAssessedValue).toLocaleString('en-CA') + '</strong>' : '—') +
+        _riRow('Assessment Year',   prop.assessmentYear || new Date().getFullYear()) +
+        _riRow('Lot Size',          prop.landSize || prop.lotArea ? (prop.landSize || prop.lotArea) + ' m²' : '—') +
+        _riRow('Legal Description', prop.legalDescription || '—') +
+        '</table>';
+
+      el.innerHTML = html;
+
+    } catch(e) {
+      console.warn('BC Assessment error:', e.message);
+      // Graceful fallback — link to manual search
+      el.innerHTML = _riMsg('Automated BC Assessment lookup encountered an error. Please search manually.', 'warn') +
+        '<div style="font-size:11px;margin-top:8px;"><a href="https://evaluebc.bcassessment.ca/Default.aspx?address=' + encodeURIComponent(address + ' ' + city) + '" target="_blank" style="color:#0891b2;">Search BC Assessment eValue &#x2197;</a></div>';
+    }
+  }
+
+  // ── Registry Intel UI helpers ──────────────────────────────────────────────
+  function _riAddService(body, id, icon, title, source) {
+    var wrap = document.createElement('div');
+    wrap.id = 'ri-result-' + id;
+    wrap.style.cssText = 'margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid #e2e8f0;';
+    wrap.innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">' +
+      '<span style="font-size:15px;">' + icon + '</span>' +
+      '<strong style="font-size:13px;color:#1a2e42;">' + title + '</strong>' +
+      '<span style="font-size:10px;color:#94a3b8;margin-left:auto;font-family:\'IBM Plex Mono\',monospace;">' + source + ' &mdash; ' + new Date().toLocaleDateString('en-CA') + '</span>' +
+      '</div>' +
+      '<div class="ri-content" style="font-size:12px;color:#718096;font-style:italic;">&#x23F3; Querying registry&hellip;</div>';
+    body.appendChild(wrap);
+    return wrap.querySelector('.ri-content');
+  }
+
+  function _riRow(label, value) {
+    return '<tr style="border-bottom:1px solid #f1f5f9;">' +
+      '<td style="padding:6px 8px;color:#64748b;width:40%;font-weight:500;">' + label + '</td>' +
+      '<td style="padding:6px 8px;color:#1e293b;">' + value + '</td>' +
+      '</tr>';
+  }
+
+  function _riMsg(msg, type) {
+    var colors = { warn: '#92400e', error: '#991b1b', info: '#1e40af' };
+    var bgs    = { warn: '#fffbeb', error: '#fef2f2', info: '#eff6ff' };
+    var icons  = { warn: '&#x26A0;', error: '&#x274C;', info: '&#x2139;' };
+    return '<div style="font-size:12px;padding:10px 12px;border-radius:6px;background:' + (bgs[type]||bgs.info) + ';color:' + (colors[type]||colors.info) + ';">' +
+      (icons[type]||'') + ' ' + msg + '</div>';
+  }
+
   // ── DYNAMIC PROMPT BUILDER — form-driven AI instructions ───────────────────
   // Each block fires based on what the inspector declared in the COPE form.
   // Add new blocks here as new prompt requirements are identified.
@@ -1633,6 +1937,19 @@
       'verification required." Do not assume compliant if tags not visible in photos.'
     );
 
+    // ── ALWAYS-ON: MAGNETIC SEPARATOR IDENTIFICATION ──────────────────────
+    blocks.push(
+      'MAGNETIC SEPARATOR / EDDY CURRENT SEPARATOR — EQUIPMENT IDENTIFICATION:\n' +
+      'Look in every photo at equipment mounted above or alongside conveyors, infeed chutes, or material handling systems.\n' +
+      'A magnetic separator or eddy current separator appears as:\n' +
+      '  - A large box-shaped unit (typically white, grey, or black) suspended above a conveyor belt\n' +
+      '  - May have the brand name "STEINERT", "Eriez", "Bunting", or "Goudsmit" on the body\n' +
+      '  - Steinert UME/UMS models are common in waste/recycling — white rectangular units with the STEINERT logo\n' +
+      '  - May have a separate belt running underneath the main conveyor to carry away extracted metal\n' +
+      'If ANY such equipment is visible: note the brand and model if readable, and describe it as a magnetic separator or eddy current separator used for tramp metal removal — this is a COMPLIANT and positive fire prevention control. State: "[Brand] magnetic/eddy current separator installed on infeed conveyor — tramp metal removal confirmed as a fire prevention control."\n' +
+      'CRITICAL: If magnetic separation equipment IS found, do NOT flag absence of magnetic separators as a hazard in the Hazards section. Only flag absence as HIGH hazard if grinding/shredding of combustible materials is present AND no such equipment is visible in any photo.'
+    );
+
     // ── ALWAYS-ON: SPARE SPRINKLER CABINET ────────────────────────────────
     blocks.push(
       'SPARE SPRINKLER HEAD CABINET — MANDATORY PHOTO-BY-PHOTO CHECK:\n' +
@@ -1675,7 +1992,6 @@
       ' CONSTRUCTION CLASS — MANDATORY RULE: You MUST apply the most conservative classification supportable by photographic evidence. Class 1 Fire Resistive requires VISIBLE spray-applied fireproofing OR concrete encasement on ALL structural steel members — if fireproofing is not clearly visible on columns, beams AND deck, do NOT assign Class 1. Exposed steel columns, beams, or deck = Class 2 Non-Combustible MINIMUM. Pre-engineered metal buildings = Class 2. Combustible wood framing = Class 3 or 5. When ANY doubt exists between Class 1 and Class 2, assign Class 2. State explicitly in your assessment what evidence you used to determine the class.' +
       ' ELECTRICAL: The electrical_system field is MANDATORY and separate from the construction paragraphs. Do NOT include electrical information in the construction paragraphs — put ALL electrical observations in the electrical_system field only. Examine exterior photos carefully for pad-mount transformers on concrete pads — these are very common at industrial facilities and often missed.' +
       ' OCCUPANCY: for manufacturing/industrial — inventory major equipment visible (overhead cranes, extrusion machines, chiller/cooling units, boilers, furnaces, quality control ovens, air compressors, printing equipment, rail unloading). Identify forklift type — propane-powered forklifts (higher hazard: combustion, CO risk, fuel storage) vs battery-electric forklifts (hydrogen off-gassing during charging, electrical arc hazard at charging station). If battery-electric forklifts are present, look for charging stations (bank of charger units on wall, heavy electrical cabling, floor connectors, designated charging area) and assess ventilation and proximity to combustibles. Assess combustible loading including plastic resin, finished goods, rack storage height (high-piled storage >3.6m is a separate hazard class). Note any hazardous materials in chemical storage areas.' +
-      ' MAGNETIC SEPARATORS: If a magnetic separator or eddy current separator is visible on conveyors or infeed equipment — brands include Steinert, Eriez, Bunting, Goudsmit — note the brand and confirm this as a COMPLIANT fire prevention control for tramp metal removal. Steinert UME/UMS are eddy current separators used specifically in waste/recycling separation. If magnetic separation equipment IS present and installed, do NOT flag absence of magnetic separators as a hazard — instead note it as a positive control measure. Only flag absence of magnetic separators as HIGH hazard if grinding/shredding of combustible materials is present AND no magnetic separation equipment is observed.' +
       ' PROTECTION — MANDATORY: For sprinkler systems, ALWAYS start the description with "The building is protected by an automatic sprinkler system." Do NOT state wet pipe or dry pipe — do not guess the system type.' +
       ' SPRINKLER CONTROL VALVE: Examine the riser assembly carefully. Identify the control valve type precisely — a BUTTERFLY VALVE appears as a circular disc valve with a lever handle or gear operator (often orange, red, or yellow lever arm), typically has an electrical tamper switch wired to the alarm panel, and looks distinctly different from a wheel handwheel; an OS&Y valve has a threaded rising stem through a yoke with a handwheel. State the valve type as observed. If a Tyco, Viking, or other brand nameplate is visible on the valve or alarm valve, state the brand. Note valve position (open = lever parallel to pipe; closed = lever perpendicular to pipe).' +
       ' SPARE SPRINKLER CABINET — THIS IS A REQUIRED NUMBERED STEP. You MUST complete this step before writing your protection assessment: STEP 1 — Go through every single photo submitted. STEP 2 — Look specifically for a RED metal box approximately 30cm wide. It may appear open or closed. STEP 3 — If the box is OPEN, look inside for: rows of sprinkler heads with orange, red, or yellow glass bulbs held in metal clips, and a black sprinkler head wrench. STEP 4 — If you find this cabinet open with heads and wrench visible, you MUST write: "A spare sprinkler head cabinet is present, photographed open and stocked with spare sprinkler heads and a sprinkler wrench, confirming compliance with NFPA 25 requirements." STEP 5 — If you include this cabinet in your report, you MUST NOT generate any recommendation regarding spare sprinkler heads.' +
@@ -2500,7 +2816,10 @@
       ? fetchInsuredProfile(data.insured, data.city, data.province)
       : Promise.resolve();
 
-    const btn = document.getElementById('btn-analyse');
+    // Start Registry Intel in parallel — fires and forgets, renders its own section
+    runRegistryIntel(data);
+
+    var btn = document.getElementById('btn-analyse');
     btn.disabled = true;
     document.getElementById('btn-analyse-text').textContent = 'Analysing \u2014 please wait\u2026';
     document.getElementById('progress-wrap').style.display = 'block';
