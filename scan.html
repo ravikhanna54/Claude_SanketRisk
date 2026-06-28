@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 306 — 2026-06-28 — TASK 2 rewritten with Scenario 1/2/3 charging station rules, prohibition on false not-found -->
+<!-- SanketRisk SCAN ONE — Deploy 308 — 2026-06-28 — max_tokens 100000 for thorough 89-photo assessment -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2068,21 +2068,17 @@
   function getFormatInstruction() {
     var fmt = getReportFormat();
     if (fmt === 'structured') {
-      return 'OUTPUT: Structured COPE assessment. Write each narrative section as a detailed professional paragraph. IMPORTANT: the "construction" field requires THREE paragraphs (use \\n\\n to separate them as specified in the schema). All other narrative fields are single paragraphs of 3-5 sentences. Be specific and technical. Follow these mandatory assessment rules:' +
-      ' CONSTRUCTION CLASS — MANDATORY RULE: You MUST apply the most conservative classification supportable by photographic evidence. Class 1 Fire Resistive requires VISIBLE spray-applied fireproofing OR concrete encasement on ALL structural steel members — if fireproofing is not clearly visible on columns, beams AND deck, do NOT assign Class 1. Exposed steel columns, beams, or deck = Class 2 Non-Combustible MINIMUM. Pre-engineered metal buildings = Class 2. Combustible wood framing = Class 3 or 5. When ANY doubt exists between Class 1 and Class 2, assign Class 2. State explicitly in your assessment what evidence you used to determine the class.' +
-      ' ELECTRICAL: The electrical_system field is MANDATORY and separate from the construction paragraphs. Do NOT include electrical information in the construction paragraphs — put ALL electrical observations in the electrical_system field only. Examine exterior photos carefully for pad-mount transformers on concrete pads — these are very common at industrial facilities and often missed.' +
-      ' OCCUPANCY: for manufacturing/industrial — inventory major equipment visible (overhead cranes, extrusion machines, chiller/cooling units, boilers, furnaces, quality control ovens, air compressors, printing equipment, rail unloading). Assess combustible loading including plastic resin, finished goods, rack storage height (high-piled storage >3.6m is a separate hazard class). Note any hazardous materials in chemical storage areas.' +
-      ' PROTECTION — MANDATORY: For sprinkler systems, ALWAYS start the description with "The building is protected by an automatic sprinkler system." Do NOT state wet pipe or dry pipe — do not guess the system type.' +
-      ' SPRINKLER CONTROL VALVE: Examine the riser assembly carefully. Identify the control valve type precisely — a BUTTERFLY VALVE appears as a circular disc valve with a lever handle or gear operator (often orange, red, or yellow lever arm), typically has an electrical tamper switch wired to the alarm panel, and looks distinctly different from a wheel handwheel; an OS&Y valve has a threaded rising stem through a yoke with a handwheel. State the valve type as observed. If a Tyco, Viking, or other brand nameplate is visible on the valve or alarm valve, state the brand. Note valve position (open = lever parallel to pipe; closed = lever perpendicular to pipe).' +
-      ' SPARE SPRINKLER CABINET — THIS IS A REQUIRED NUMBERED STEP. You MUST complete this step before writing your protection assessment: STEP 1 — Go through every single photo submitted. STEP 2 — Look specifically for a RED metal box approximately 30cm wide. It may appear open or closed. STEP 3 — If the box is OPEN, look inside for: rows of sprinkler heads with orange, red, or yellow glass bulbs held in metal clips, and a black sprinkler head wrench. STEP 4 — If you find this cabinet open with heads and wrench visible, you MUST write: "A spare sprinkler head cabinet is present, photographed open and stocked with spare sprinkler heads and a sprinkler wrench, confirming compliance with NFPA 25 requirements." STEP 5 — If you include this cabinet in your report, you MUST NOT generate any recommendation regarding spare sprinkler heads.' +
-      ' CYCLONE DUST COLLECTORS: If large cyclone dust collectors are present handling combustible dust, assess whether automatic sprinkler protection is installed inside the cyclone body — if not confirmed, flag as HIGH severity.' +
-      ' HAZARDS: list each hazard specifically — welding/hot work, flammable liquid storage (identify if safety cabinets present), compressed gas cylinders (note if secured/chained upright and separated by type), combustible dust (woodworking/plastic dust collection systems), high-piled storage, propane-powered equipment, battery charging stations (electric forklifts/vehicles — hydrogen off-gassing and electrical arc hazard), chemical mixing areas. For grinding/shredding of combustible materials — flag absence of magnetic separators as HIGH ONLY if no magnetic separation equipment is observed. Assign severity to each.' +
-      ' Populate ALL structured fields (construction_class, roof_type, sprinkler_type, alarm_type, occupancy_class, all scores) accurately. Scores 0-100.';
+      return 'OUTPUT: Structured COPE assessment. Each narrative section must be a detailed professional paragraph. The "construction" field requires THREE paragraphs separated by \\n\\n. All other narrative fields are single focused paragraphs. Be specific — name equipment brands, note dimensions, state evidence used.\n\n' +
+      'CONSTRUCTION CLASS: Apply the most conservative classification supportable by photographic evidence. Class 1 requires VISIBLE spray-applied fireproofing on ALL structural steel — if not clearly visible, assign Class 2 minimum. Exposed steel = Class 2. Pre-engineered metal = Class 2. State what evidence determined the class.\n\n' +
+      'ELECTRICAL: The electrical_system field is MANDATORY and completely separate from construction paragraphs — all electrical observations go there only. Check exterior photos carefully for pad-mount transformers.\n\n' +
+      'SPRINKLER CONTROL VALVE: Identify precisely — BUTTERFLY VALVE has a lever arm (orange/red/yellow), disc-shaped, often has a tamper switch. OS&Y has a wheel handwheel on a rising threaded stem. State valve type, position (open/closed), and brand if readable. OPEN butterfly valve = lever parallel to pipe. CLOSED = lever perpendicular.\n\n' +
+      'HAZARDS: One line per hazard, max 10 words each. Format: SEVERITY: description. Severity options: CRITICAL/HIGH/MEDIUM/LOW/ADVISORY.\n\n' +
+      'Populate ALL structured fields accurately. Scores 0-100.';
     }
     if (fmt === 'narrative') {
-      return 'OUTPUT: Narrative COPE report. Write each section (construction, occupancy, protection, exposure, hazards) as a focused professional paragraph of 3-5 sentences covering key observations. Be specific — mention equipment brands, dimensions, conditions observed. For structured fields (construction_class, roof_type etc) still populate with your best assessed value. Keep total response under 2000 words.';
+      return 'OUTPUT: Narrative COPE report. Each section (construction, occupancy, protection, exposure, hazards) is a focused paragraph of 3-5 sentences. Be specific — name brands, state dimensions, note conditions. Populate all structured fields with best assessed values.';
     }
-    return 'OUTPUT: Both structured summary and narrative. Write each narrative section (construction, occupancy, protection, exposure, hazards) as 2-3 focused sentences — specific and factual, not padded. Populate all structured fields accurately. Keep total response under 1500 words.';
+    return 'OUTPUT: Structured and narrative COPE assessment. Each narrative section is 2-3 focused factual sentences. Populate all structured fields accurately.';
   }
 
   function getReportFormat() {
@@ -2126,6 +2122,12 @@
       (photoIndex ? 'Photo descriptions (inspector-added context — use to guide your analysis): ' + photoIndex + '\n' : '') +
       '\n' +
       getFormatInstruction() + getDynamicPromptAdditions(data) + '\n\n' +
+      'BEFORE YOU WRITE THE JSON — complete this consistency check:\n' +
+      '1. Sprinkler valve: What position did you observe? If open — do NOT flag as deficiency. If closed — flag as CRITICAL.\n' +
+      '2. Magnetic separator: Did you find one (STEINERT or similar)? If YES — occupancy says present, hazards does NOT list absence, recommendations does NOT recommend installing one, executive_summary does NOT say absent.\n' +
+      '3. Battery charging station: Did you find one? If YES — occupancy says present, recommendations addresses ventilation only if inadequate, does NOT say "no charging station observed".\n' +
+      '4. Spare sprinkler cabinet: Did you find the red box with heads and wrench? If YES — protection says compliant, recommendations does NOT mention spare heads.\n' +
+      'Your JSON must reflect your actual visual findings — not template assumptions.\n\n' +
       'Respond with ONLY valid JSON — no markdown, no backticks. Complete ALL fields. Schema:\n' +
       '{\n' +
       '  "executive_summary":"2-3 sentence professional underwriting paragraph summarising: construction class and building type, occupancy and primary process hazards, overall risk quality. IMPORTANT: The executive summary MUST be consistent with the occupancy, hazards, and recommendations fields — if a magnetic separator, fire suppression system, or other positive control is noted in occupancy, do NOT contradict this in the executive summary. The executive summary reflects the COMPLETE picture including positive controls found.",\n' +
@@ -2676,7 +2678,7 @@
   async function callProxy(messages, storagePaths, prompt) {
     // Text-only or inline-image call — send messages directly to proxy
     if (!storagePaths || storagePaths.length === 0) {
-      var mtokens = (function(){ var f=getReportFormat(); return f==='structured'?16000:f==='narrative'?16000:16000; })();
+      var mtokens = 100000;
       const response = await fetch('/.netlify/functions/scan-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2697,7 +2699,7 @@
     }
 
     // Storage-mode — v3 async: Lambda saves result to scan_jobs, browser polls Supabase
-    var maxTokens = (function(){ var f=getReportFormat(); return f==='structured'?16000:f==='narrative'?16000:16000; })();
+    var maxTokens = 100000;
 
     var jobId = 'job-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
     console.log('v3 job:', jobId, 'paths:', storagePaths.length);
