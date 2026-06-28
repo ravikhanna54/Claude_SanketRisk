@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 300 — 2026-06-28 — Registry Intel debug toasts, Steinert block shortened for consistency -->
+<!-- SanketRisk SCAN ONE — Deploy 301 — 2026-06-28 — Registry debug toasts, no AbortController, max_tokens 16000, incomplete COPE warning+retry -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1622,7 +1622,7 @@
     var section = document.getElementById('res-registry-section');
     var body    = document.getElementById('res-registry-body');
     if (!section || !body) {
-      showToast('\u26A0 Registry Intel: results section not found in DOM');
+      showToast('\u26A0 Registry Intel: DOM section not found');
       return;
     }
 
@@ -1631,7 +1631,7 @@
     var corpChecked = corpEl ? corpEl.checked : true;
     var bcaChecked  = bcaEl  ? bcaEl.checked  : false;
 
-    showToast('\u1F50D Registry Intel starting — Corp:' + corpChecked + ' BCA:' + bcaChecked);
+    showToast('Registry Intel: Corp=' + corpChecked + ' BCA=' + bcaChecked);
 
     if (!corpChecked && !bcaChecked) {
       showToast('\u2139 Registry Intel: no services selected');
@@ -1656,40 +1656,45 @@
   }
 
   // ── Corporations Canada via OpenCorporates (proxied via Netlify function) ───
-  // ── Corporations Canada via OpenCorporates (proxied via Netlify function) ───
   async function runCorpCanada(body, insured, city, province) {
     var el = _riAddService(body, 'corp', '&#x1F3DB;', 'Corporations Canada', 'OpenCorporates / ISED Canada');
 
     if (!insured) {
-      el.innerHTML = _riMsg('Business name is required for Corporations Canada lookup. Please enter the Insured / Property Name in the form.', 'warn');
+      el.innerHTML = _riMsg('Business name is required for Corporations Canada lookup.', 'warn');
       return;
     }
 
     try {
-      var controller = new AbortController();
-      var timer = setTimeout(function(){ controller.abort(); }, 15000);
+      showToast('Querying Corporations Canada for: ' + insured);
 
+      // No AbortController — not reliably supported on all mobile browsers
       var resp = await fetch('/.netlify/functions/registry-intel', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal:  controller.signal,
         body: JSON.stringify({ service: 'corporations_canada', insured: insured, city: city, province: province })
       });
-      clearTimeout(timer);
+
+      // Log raw response for diagnosis
+      var rawText = await resp.text();
+      showToast('Registry response: HTTP ' + resp.status + ' — ' + rawText.substring(0, 80));
 
       if (!resp.ok) {
-        var errText = await resp.text();
         el.innerHTML = _riMsg(
-          'Registry function returned HTTP ' + resp.status + ': ' + (errText ? errText.substring(0,150) : 'No detail.') + ' — Netlify function may not be deployed yet.',
+          'Registry function HTTP ' + resp.status + ': ' + rawText.substring(0, 200),
           'error'
         ) + _riManualLink('corp', insured);
         return;
       }
 
-      var json = await resp.json();
+      var json;
+      try { json = JSON.parse(rawText); }
+      catch(pe) {
+        el.innerHTML = _riMsg('Registry response parse error: ' + rawText.substring(0, 200), 'error') + _riManualLink('corp', insured);
+        return;
+      }
 
       if (json.status === 'error') {
-        el.innerHTML = _riMsg('Registry query error: ' + (json.message || 'Unknown error.'), 'error') + _riManualLink('corp', insured);
+        el.innerHTML = _riMsg('Registry error: ' + (json.message || 'Unknown.'), 'error') + _riManualLink('corp', insured);
         return;
       }
 
@@ -1727,17 +1732,14 @@
       if (results.length > 1) {
         html += '<div style="font-size:11px;color:#718096;margin-top:6px;">&#x2139; ' + results.length +
           ' registrations found \u2014 showing best match. ' +
-          '<a href="https://opencorporates.com/companies?q=' + encodeURIComponent(insured) + '&jurisdiction_code=ca" target="_blank" style="color:#0891b2;">View all &#x2197;</a></div>';
+          '<a href="https://opencorporates.com/companies?q=' + encodeURIComponent(insured) +
+          '&jurisdiction_code=ca" target="_blank" style="color:#0891b2;">View all &#x2197;</a></div>';
       }
 
       el.innerHTML = html;
 
     } catch(e) {
-      var isTimeout = e.name === 'AbortError';
-      el.innerHTML = _riMsg(
-        isTimeout ? 'Registry lookup timed out (15s). Service may be temporarily unavailable.' : 'Registry lookup error: ' + e.message,
-        'error'
-      ) + _riManualLink('corp', insured);
+      el.innerHTML = _riMsg('Registry lookup error: ' + e.message, 'error') + _riManualLink('corp', insured);
     }
   }
 
@@ -1766,27 +1768,28 @@
     }
 
     try {
-      var controller2 = new AbortController();
-      var timer2 = setTimeout(function(){ controller2.abort(); }, 15000);
-
+      // No AbortController — not reliably supported on all mobile browsers
       var resp = await fetch('/.netlify/functions/registry-intel', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal:  controller2.signal,
         body: JSON.stringify({ service: 'bc_assessment', address: address, city: city, province: province })
       });
-      clearTimeout(timer2);
 
+      var rawText2 = await resp.text();
       if (!resp.ok) {
-        var errText2 = await resp.text();
         el.innerHTML = _riMsg(
-          'Registry function returned HTTP ' + resp.status + ': ' + (errText2 ? errText2.substring(0,150) : 'No detail.') + ' — Netlify function may not be deployed yet.',
+          'Registry function HTTP ' + resp.status + ': ' + rawText2.substring(0,150),
           'error'
         ) + '<div style="font-size:11px;margin-top:8px;"><a href="https://evaluebc.bcassessment.ca/" target="_blank" style="color:#0891b2;">&#x1F50D; Search BC Assessment eValue &#x2197;</a></div>';
         return;
       }
 
-      var json = await resp.json();
+      var json;
+      try { json = JSON.parse(rawText2); }
+      catch(pe2) {
+        el.innerHTML = _riMsg('BC Assessment response parse error: ' + rawText2.substring(0,150), 'error');
+        return;
+      }
 
       if (json.status === 'error' || json.status === 'not_found') {
         el.innerHTML = _riMsg(
@@ -2600,7 +2603,7 @@
   async function callProxy(messages, storagePaths, prompt) {
     // Text-only or inline-image call — send messages directly to proxy
     if (!storagePaths || storagePaths.length === 0) {
-      var mtokens = (function(){ var f=getReportFormat(); return f==='structured'?12000:f==='narrative'?12000:12000; })();
+      var mtokens = (function(){ var f=getReportFormat(); return f==='structured'?16000:f==='narrative'?16000:16000; })();
       const response = await fetch('/.netlify/functions/scan-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2621,7 +2624,7 @@
     }
 
     // Storage-mode — v3 async: Lambda saves result to scan_jobs, browser polls Supabase
-    var maxTokens = (function(){ var f=getReportFormat(); return f==='structured'?12000:f==='narrative'?12000:12000; })();
+    var maxTokens = (function(){ var f=getReportFormat(); return f==='structured'?16000:f==='narrative'?16000:16000; })();
 
     var jobId = 'job-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
     console.log('v3 job:', jobId, 'paths:', storagePaths.length);
@@ -2937,6 +2940,24 @@
       // Wait for profile search to complete before rendering (runs in parallel, so little extra delay)
       await _profilePromise;
       renderResults(finalResult, data);
+
+      // Completeness check — if key COPE fields are missing the response was likely truncated
+      var _emptyFields = [];
+      var _checkFields = ['construction','occupancy','protection','exposure','executive_summary'];
+      _checkFields.forEach(function(f) {
+        if (!finalResult[f] || finalResult[f].toString().trim().length < 20) _emptyFields.push(f);
+      });
+      if (_emptyFields.length >= 2) {
+        showToast('\u26A0 Incomplete response: ' + _emptyFields.join(', ') + ' — try Re-analyse');
+        var warnEl = document.createElement('div');
+        warnEl.style.cssText = 'background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:12px;color:#92400e;';
+        warnEl.innerHTML = '<strong>&#x26A0; Incomplete AI Response</strong> — The following fields appear incomplete: <strong>' + _emptyFields.join(', ') + '</strong>. ' +
+          'This usually means the AI response was cut off. Please click <strong>Analyse with AI</strong> again to get a complete report. ' +
+          '<button onclick="runAnalysis()" style="margin-left:8px;background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:700;">Re-analyse Now</button>';
+        var resultsEl = document.getElementById('results-wrap');
+        if (resultsEl) resultsEl.insertBefore(warnEl, resultsEl.firstChild);
+      }
+
       // Auto-save to dashboard after successful analysis
       try { await saveToDashboard(); } catch(e2) { console.warn('Auto-save failed:', e2.message); }
 
