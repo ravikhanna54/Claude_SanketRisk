@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 302 — 2026-06-28 — Always-on TASK blocks for Steinert/forklift/battery, Registry permanent debug panel -->
+<!-- SanketRisk SCAN ONE — Deploy 303 — 2026-06-28 — Registry: https module (no node-fetch), AI: cross-section consistency rules for Steinert/forklift/charger -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1988,26 +1988,36 @@
 
     // ── ALWAYS-ON: MAGNETIC SEPARATOR IDENTIFICATION ──────────────────────
     blocks.push(
-      'TASK 1 — MAGNETIC SEPARATOR: Look at every photo showing conveyors or overhead equipment.\n' +
-      'STEINERT separators are WHITE RECTANGULAR BOXES suspended ABOVE conveyor belts, with "STEINERT" printed in large black text on the side.\n' +
-      'IF you see any equipment labelled STEINERT, Eriez, Bunting, or Goudsmit above a conveyor:\n' +
-      '→ Write in Occupancy: "[Brand] magnetic/eddy current separator confirmed on infeed conveyor — tramp metal removal is a compliant fire prevention control."\n' +
-      '→ Do NOT recommend magnetic separators in Hazards or Recommendations if one is found.\n' +
-      'ONLY flag absence as HIGH hazard if grinding/shredding operations are confirmed AND no separator appears in any photo.'
+      'TASK 1 — MAGNETIC SEPARATOR (complete this before writing any section):\n' +
+      'Scan every photo. Look for a large WHITE RECTANGULAR BOX suspended ABOVE a conveyor belt.\n' +
+      'The word "STEINERT" (or Eriez, Bunting, Goudsmit) will be printed in large text on the side.\n' +
+      'IF FOUND: You MUST include ALL of the following in your response:\n' +
+      '  (a) In the occupancy field — write: "A Steinert [or brand] magnetic/eddy current separator is installed on the infeed conveyor, providing tramp metal removal as a fire prevention control."\n' +
+      '  (b) In the hazards field — do NOT list magnetic separator absence as a hazard.\n' +
+      '  (c) In recommendations — do NOT recommend installing a magnetic separator.\n' +
+      'IF NOT FOUND and grinding/shredding operations are present — flag absence as HIGH hazard.\n' +
+      'RULE: Your occupancy, hazards, and recommendations sections MUST be consistent on this point.'
     );
 
     // ── ALWAYS-ON: FORKLIFT TYPE AND BATTERY CHARGING ─────────────────────
     blocks.push(
-      'TASK 2 — FORKLIFT TYPE AND BATTERY CHARGING STATIONS:\n' +
-      'Step A — IDENTIFY FORKLIFT TYPE from photos:\n' +
-      '  · PROPANE forklift: has a propane cylinder (silver/white tank) mounted on the rear counterweight. Exhaust pipe visible. Larger engine compartment.\n' +
-      '  · BATTERY-ELECTRIC forklift: NO propane tank. Has a large rectangular battery compartment (often visible as a heavy black or grey box). Charging port on the side. Quieter, no exhaust.\n' +
-      '  · If unsure, describe what is visible — do NOT assume propane if no propane cylinder is visible.\n' +
-      'Step B — IF battery-electric forklifts are present, look for CHARGING STATIONS:\n' +
-      '  · Charging stations appear as: a bank of rectangular charger units mounted on the wall, heavy orange or black electrical cables on the floor, floor-mounted connectors, or a designated charging bay.\n' +
-      '  · Write in Occupancy: "Battery-electric forklifts observed. Charging station [present/not observed] — [describe location and ventilation if present]."\n' +
-      '  · Write in Hazards: "Battery charging — hydrogen gas generation during charging cycle; electrical arc ignition risk. Severity: MEDIUM."\n' +
-      'Step C — PROHIBITION: Do NOT write a recommendation to replace battery forklifts with propane or vice versa unless there is a specific safety issue. Do NOT misidentify a battery forklift as propane.'
+      'TASK 2 — FORKLIFT TYPE AND BATTERY CHARGING (complete this before writing any section):\n' +
+      'Step A — Identify forklift type:\n' +
+      '  PROPANE forklift = silver propane cylinder visible on rear. Has exhaust pipe.\n' +
+      '  BATTERY-ELECTRIC forklift = NO propane cylinder. Has large rectangular battery compartment. No exhaust.\n' +
+      '  If you cannot confirm a propane cylinder is present — do NOT call it a propane forklift.\n' +
+      'Step B — Look for battery charging stations (only if battery-electric forklifts identified):\n' +
+      '  Charging stations = wall-mounted charger units, heavy cables, floor connectors, marked bay.\n' +
+      '  Battery chargers are often mounted on the wall and may be compact units with indicator lights.\n' +
+      'Step C — CONSISTENCY RULE — your response must be consistent across ALL sections:\n' +
+      '  If battery-electric forklifts are identified:\n' +
+      '    · occupancy field MUST mention: forklift type AND charging station status (present or not observed)\n' +
+      '    · hazards field MUST include: "Battery charging — hydrogen off-gassing and electrical arc risk."\n' +
+      '    · recommendations field MUST address: charging station ventilation if present\n' +
+      '    · Do NOT say "no charging station noted" in occupancy while recommending ventilation in recommendations — these must agree.\n' +
+      '  If propane forklifts are identified:\n' +
+      '    · occupancy field MUST confirm: propane cylinder observed on forklift\n' +
+      '    · Do NOT flag as propane if no cylinder is visible.'
     );
 
     // ── ALWAYS-ON: SPARE SPRINKLER CABINET ────────────────────────────────
