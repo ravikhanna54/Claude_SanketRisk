@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 297 — 2026-06-27 — Sanket Registry Intel: form card, results section, Corporations Canada + BC Assessment live -->
+<!-- SanketRisk SCAN ONE — Deploy 298 — 2026-06-27 — Registry Intel: proxy via Netlify function to fix CORS, graceful fallbacks -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1647,72 +1647,79 @@
     if (lastResult) lastResult.registryIntel = body.innerHTML;
   }
 
-  // ── Corporations Canada via OpenCorporates ─────────────────────────────────
+  // ── Corporations Canada via OpenCorporates (proxied via Netlify function) ───
   async function runCorpCanada(body, insured, city, province, retrieved) {
     var el = _riAddService(body, 'corp', '&#x1F3DB;', 'Corporations Canada', 'OpenCorporates / ISED Canada');
     if (!insured) { el.innerHTML = _riMsg('Business name required for registry lookup.', 'warn'); return; }
 
     try {
-      // OpenCorporates free API — no key required for basic search
-      var url = 'https://api.opencorporates.com/v0.4/companies/search' +
-        '?q=' + encodeURIComponent(insured) +
-        '&jurisdiction_code=ca' +
-        '&per_page=5';
+      var resp = await fetch('/.netlify/functions/registry-intel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service:  'corporations_canada',
+          insured:  insured,
+          city:     city,
+          province: province
+        })
+      });
 
-      var resp = await fetch(url);
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      if (!resp.ok) throw new Error('Registry function error HTTP ' + resp.status);
       var json = await resp.json();
-      var results = (json.results && json.results.companies) || [];
 
-      if (!results.length) {
-        // Try without jurisdiction restriction
-        var url2 = 'https://api.opencorporates.com/v0.4/companies/search?q=' + encodeURIComponent(insured) + '&per_page=5';
-        var resp2 = await fetch(url2);
-        var json2 = await resp2.json();
-        results = (json2.results && json2.results.companies) || [];
-      }
-
-      if (!results.length) {
-        el.innerHTML = _riMsg('No registration found for "' + insured + '" in Canadian registries.', 'warn');
+      if (json.status === 'error') {
+        el.innerHTML = _riMsg('Registry lookup error: ' + json.message, 'error') +
+          '<div style="font-size:11px;margin-top:8px;"><a href="https://opencorporates.com/companies?q=' + encodeURIComponent(insured) + '&jurisdiction_code=ca" target="_blank" style="color:#0891b2;">Search manually on OpenCorporates &#x2197;</a></div>';
         return;
       }
 
-      // Find best match — prefer active companies
+      var results = json.results || [];
+
+      if (!results.length) {
+        el.innerHTML = _riMsg('No registration found for "' + insured + '" in Canadian registries.', 'warn') +
+          '<div style="font-size:11px;margin-top:8px;"><a href="https://opencorporates.com/companies?q=' + encodeURIComponent(insured) + '&jurisdiction_code=ca" target="_blank" style="color:#0891b2;">Search manually on OpenCorporates &#x2197;</a></div>';
+        return;
+      }
+
+      // Find best match — prefer active Canadian companies
       var best = results.find(function(r) {
         return r.company && (r.company.current_status || '').toLowerCase().indexOf('active') !== -1;
       }) || results[0];
       var co = best.company;
 
       var statusColor = (co.current_status || '').toLowerCase().indexOf('active') !== -1 ? '#16a34a' : '#dc2626';
+      var jurDisplay = (co.jurisdiction_code || '—').toUpperCase().replace('CA_','').replace(/^CA$/,'Federal');
+
       var html =
         '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
-        _riRow('Registered Name', '<strong>' + (co.name || '—') + '</strong>') +
-        _riRow('Company Number',  co.company_number || '—') +
-        _riRow('Status',          '<span style="color:' + statusColor + ';font-weight:700;">' + (co.current_status || '—') + '</span>') +
-        _riRow('Jurisdiction',    co.jurisdiction_code ? co.jurisdiction_code.toUpperCase().replace('CA_','').replace('CA','Federal') : '—') +
+        _riRow('Registered Name',    '<strong>' + (co.name || '—') + '</strong>') +
+        _riRow('Company Number',     co.company_number || '—') +
+        _riRow('Status',             '<span style="color:' + statusColor + ';font-weight:700;">' + (co.current_status || '—') + '</span>') +
+        _riRow('Jurisdiction',       jurDisplay) +
         _riRow('Incorporation Date', co.incorporation_date || '—') +
-        _riRow('Company Type',    co.company_type || '—') +
-        _riRow('Registered Address', co.registered_address ? co.registered_address.street_address || '—' : '—') +
+        _riRow('Company Type',       co.company_type || '—') +
+        _riRow('Registered Address', co.registered_address ? (co.registered_address.street_address || co.registered_address.in_full || '—') : '—') +
         '</table>';
 
       if (results.length > 1) {
-        html += '<div style="font-size:11px;color:#718096;margin-top:8px;">&#x2139; ' + results.length + ' registrations found — showing best match. ';
-        html += '<a href="https://opencorporates.com/companies?q=' + encodeURIComponent(insured) + '&jurisdiction_code=ca" target="_blank" style="color:#0891b2;">View all on OpenCorporates &#x2197;</a></div>';
+        html += '<div style="font-size:11px;color:#718096;margin-top:8px;">&#x2139; ' + results.length +
+          ' registrations found — showing best match. <a href="https://opencorporates.com/companies?q=' +
+          encodeURIComponent(insured) + '&jurisdiction_code=ca" target="_blank" style="color:#0891b2;">View all &#x2197;</a></div>';
       }
 
       el.innerHTML = html;
 
     } catch(e) {
       console.warn('Corp Canada error:', e.message);
-      el.innerHTML = _riMsg('Registry lookup temporarily unavailable. ' + e.message, 'error');
+      el.innerHTML = _riMsg('Registry lookup unavailable: ' + e.message, 'error') +
+        '<div style="font-size:11px;margin-top:8px;"><a href="https://opencorporates.com/companies?q=' + encodeURIComponent(insured) + '&jurisdiction_code=ca" target="_blank" style="color:#0891b2;">Search manually on OpenCorporates &#x2197;</a></div>';
     }
   }
 
-  // ── BC Assessment ──────────────────────────────────────────────────────────
+  // ── BC Assessment (proxied via Netlify function) ───────────────────────────
   async function runBcAssessment(body, address, city, province, retrieved) {
     var el = _riAddService(body, 'bca', '&#x1F3E0;', 'BC Assessment', 'BC Assessment Authority');
 
-    // BC Assessment is only relevant for BC properties
     if (province && province.toUpperCase() !== 'BC' && province.toLowerCase() !== 'british columbia') {
       el.innerHTML = _riMsg('BC Assessment is only available for British Columbia properties. Province entered: ' + (province || 'not specified') + '.', 'warn');
       return;
@@ -1723,47 +1730,48 @@
     }
 
     try {
-      // BC Assessment eValue API — public, no key required
-      var searchAddr = encodeURIComponent(address + ' ' + city);
-      var url = 'https://evaluebc.bcassessment.ca/api/address/suggest?q=' + searchAddr + '&maxResults=5';
-      var resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      var resp = await fetch('/.netlify/functions/registry-intel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service:  'bc_assessment',
+          address:  address,
+          city:     city,
+          province: province
+        })
+      });
 
-      if (!resp.ok) throw new Error('BC Assessment API returned HTTP ' + resp.status);
-      var suggestions = await resp.json();
+      if (!resp.ok) throw new Error('Registry function error HTTP ' + resp.status);
+      var json = await resp.json();
 
-      if (!suggestions || !suggestions.length) {
-        el.innerHTML = _riMsg('Property not found in BC Assessment records for: ' + address + ', ' + city + '.', 'warn') +
-          '<div style="font-size:11px;margin-top:8px;"><a href="https://evaluebc.bcassessment.ca/" target="_blank" style="color:#0891b2;">Search manually on eValue BC &#x2197;</a></div>';
+      if (json.status === 'error' || json.status === 'not_found') {
+        el.innerHTML = _riMsg(json.message || 'Property not found.', 'warn') +
+          '<div style="font-size:11px;margin-top:8px;"><a href="https://evaluebc.bcassessment.ca/" target="_blank" style="color:#0891b2;">Search BC Assessment eValue &#x2197;</a></div>';
         return;
       }
 
-      // Fetch full property details for top result
-      var folio = suggestions[0].pid || suggestions[0].rollNumber || suggestions[0].parcelId;
-      var detailUrl = 'https://evaluebc.bcassessment.ca/api/property/' + encodeURIComponent(folio);
-      var detailResp = await fetch(detailUrl, { headers: { 'Accept': 'application/json' } });
-
-      if (!detailResp.ok) throw new Error('Property detail fetch failed: HTTP ' + detailResp.status);
-      var prop = await detailResp.json();
+      var prop = json.property || {};
+      var sug  = json.suggestion || {};
 
       var html =
         '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
-        _riRow('Address',           prop.address || suggestions[0].address || address + ', ' + city) +
-        _riRow('PID / Roll Number', prop.pid || prop.rollNumber || folio || '—') +
-        _riRow('Property Class',    prop.propertyClass || prop.actualUseDescription || '—') +
-        _riRow('Land Value',        prop.landValue    ? '$' + Number(prop.landValue).toLocaleString('en-CA')        : '—') +
-        _riRow('Improvement Value', prop.improvementValue ? '$' + Number(prop.improvementValue).toLocaleString('en-CA') : '—') +
-        _riRow('Total Assessed Value', prop.totalAssessedValue ? '<strong>$' + Number(prop.totalAssessedValue).toLocaleString('en-CA') + '</strong>' : '—') +
-        _riRow('Assessment Year',   prop.assessmentYear || new Date().getFullYear()) +
-        _riRow('Lot Size',          prop.landSize || prop.lotArea ? (prop.landSize || prop.lotArea) + ' m²' : '—') +
-        _riRow('Legal Description', prop.legalDescription || '—') +
-        '</table>';
+        _riRow('Address',              prop.address || sug.address || (address + ', ' + city)) +
+        _riRow('PID / Roll Number',    prop.pid || prop.rollNumber || sug.pid || sug.rollNumber || '—') +
+        _riRow('Property Class',       prop.propertyClass || prop.actualUseDescription || sug.propertyClass || '—') +
+        _riRow('Land Value',           prop.landValue           ? '$' + Number(prop.landValue).toLocaleString('en-CA')           : '—') +
+        _riRow('Improvement Value',    prop.improvementValue    ? '$' + Number(prop.improvementValue).toLocaleString('en-CA')    : '—') +
+        _riRow('Total Assessed Value', prop.totalAssessedValue  ? '<strong>$' + Number(prop.totalAssessedValue).toLocaleString('en-CA') + '</strong>' : '—') +
+        _riRow('Assessment Year',      prop.assessmentYear || new Date().getFullYear()) +
+        _riRow('Lot Size',             prop.landSize || prop.lotArea ? (prop.landSize || prop.lotArea) + ' m\u00B2' : '—') +
+        _riRow('Legal Description',    prop.legalDescription || '—') +
+        '</table>' +
+        '<div style="font-size:11px;margin-top:8px;"><a href="https://evaluebc.bcassessment.ca/" target="_blank" style="color:#0891b2;">View on eValue BC &#x2197;</a></div>';
 
       el.innerHTML = html;
 
     } catch(e) {
       console.warn('BC Assessment error:', e.message);
-      // Graceful fallback — link to manual search
-      el.innerHTML = _riMsg('Automated BC Assessment lookup encountered an error. Please search manually.', 'warn') +
+      el.innerHTML = _riMsg('BC Assessment lookup unavailable: ' + e.message, 'warn') +
         '<div style="font-size:11px;margin-top:8px;"><a href="https://evaluebc.bcassessment.ca/Default.aspx?address=' + encodeURIComponent(address + ' ' + city) + '" target="_blank" style="color:#0891b2;">Search BC Assessment eValue &#x2197;</a></div>';
     }
   }
