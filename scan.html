@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 301 — 2026-06-28 — Registry debug toasts, no AbortController, max_tokens 16000, incomplete COPE warning+retry -->
+<!-- SanketRisk SCAN ONE — Deploy 302 — 2026-06-28 — Always-on TASK blocks for Steinert/forklift/battery, Registry permanent debug panel -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1621,22 +1621,14 @@
   async function runRegistryIntel(data) {
     var section = document.getElementById('res-registry-section');
     var body    = document.getElementById('res-registry-body');
-    if (!section || !body) {
-      showToast('\u26A0 Registry Intel: DOM section not found');
-      return;
-    }
+    if (!section || !body) return;
 
     var corpEl = document.getElementById('ri-corp');
     var bcaEl  = document.getElementById('ri-bca');
     var corpChecked = corpEl ? corpEl.checked : true;
     var bcaChecked  = bcaEl  ? bcaEl.checked  : false;
 
-    showToast('Registry Intel: Corp=' + corpChecked + ' BCA=' + bcaChecked);
-
-    if (!corpChecked && !bcaChecked) {
-      showToast('\u2139 Registry Intel: no services selected');
-      return;
-    }
+    if (!corpChecked && !bcaChecked) return;
 
     section.style.display = 'block';
     body.innerHTML = '';
@@ -1652,7 +1644,6 @@
     await Promise.allSettled(promises);
 
     if (lastResult) lastResult.registryIntel = body.innerHTML;
-    showToast('\u2713 Registry Intel complete');
   }
 
   // ── Corporations Canada via OpenCorporates (proxied via Netlify function) ───
@@ -1665,22 +1656,23 @@
     }
 
     try {
-      showToast('Querying Corporations Canada for: ' + insured);
+      // Show live status permanently in the section (visible regardless of toast timing)
+      el.innerHTML = '<div style="font-size:11px;color:#0891b2;padding:6px 0;">&#x23F3; Querying Corporations Canada for: <strong>' + insured + '</strong>&hellip;</div>';
 
-      // No AbortController — not reliably supported on all mobile browsers
       var resp = await fetch('/.netlify/functions/registry-intel', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ service: 'corporations_canada', insured: insured, city: city, province: province })
       });
 
-      // Log raw response for diagnosis
       var rawText = await resp.text();
-      showToast('Registry response: HTTP ' + resp.status + ' — ' + rawText.substring(0, 80));
+
+      // Show raw response for permanent diagnosis — stays visible in the section
+      el.innerHTML += '<div style="font-size:10px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:4px 8px;margin-top:4px;word-break:break-all;">HTTP ' + resp.status + ' | ' + rawText.substring(0, 200) + '</div>';
 
       if (!resp.ok) {
         el.innerHTML = _riMsg(
-          'Registry function HTTP ' + resp.status + ': ' + rawText.substring(0, 200),
+          'Registry function returned HTTP ' + resp.status + '. Response: ' + rawText.substring(0, 200),
           'error'
         ) + _riManualLink('corp', insured);
         return;
@@ -1996,14 +1988,26 @@
 
     // ── ALWAYS-ON: MAGNETIC SEPARATOR IDENTIFICATION ──────────────────────
     blocks.push(
-      'MAGNETIC SEPARATOR CHECK — scan every photo showing conveyor systems or material handling equipment:\n' +
-      'A STEINERT magnetic separator is a large white rectangular box suspended above a conveyor. ' +
-      'The word "STEINERT" is printed on the side in black letters. ' +
-      'Other brands: Eriez, Bunting, Goudsmit — similar box-shaped units over conveyors.\n' +
-      'RULE: If ANY photo shows equipment labelled STEINERT or any magnetic/eddy current separator above a conveyor — ' +
-      'write in the Occupancy section: "[Brand] magnetic separator installed — tramp metal removal confirmed as a fire prevention control." ' +
-      'Do NOT flag magnetic separator absence as a hazard if one is found.\n' +
-      'Only flag absence as HIGH hazard if grinding/shredding of combustibles is confirmed AND no separator is visible in any photo.'
+      'TASK 1 — MAGNETIC SEPARATOR: Look at every photo showing conveyors or overhead equipment.\n' +
+      'STEINERT separators are WHITE RECTANGULAR BOXES suspended ABOVE conveyor belts, with "STEINERT" printed in large black text on the side.\n' +
+      'IF you see any equipment labelled STEINERT, Eriez, Bunting, or Goudsmit above a conveyor:\n' +
+      '→ Write in Occupancy: "[Brand] magnetic/eddy current separator confirmed on infeed conveyor — tramp metal removal is a compliant fire prevention control."\n' +
+      '→ Do NOT recommend magnetic separators in Hazards or Recommendations if one is found.\n' +
+      'ONLY flag absence as HIGH hazard if grinding/shredding operations are confirmed AND no separator appears in any photo.'
+    );
+
+    // ── ALWAYS-ON: FORKLIFT TYPE AND BATTERY CHARGING ─────────────────────
+    blocks.push(
+      'TASK 2 — FORKLIFT TYPE AND BATTERY CHARGING STATIONS:\n' +
+      'Step A — IDENTIFY FORKLIFT TYPE from photos:\n' +
+      '  · PROPANE forklift: has a propane cylinder (silver/white tank) mounted on the rear counterweight. Exhaust pipe visible. Larger engine compartment.\n' +
+      '  · BATTERY-ELECTRIC forklift: NO propane tank. Has a large rectangular battery compartment (often visible as a heavy black or grey box). Charging port on the side. Quieter, no exhaust.\n' +
+      '  · If unsure, describe what is visible — do NOT assume propane if no propane cylinder is visible.\n' +
+      'Step B — IF battery-electric forklifts are present, look for CHARGING STATIONS:\n' +
+      '  · Charging stations appear as: a bank of rectangular charger units mounted on the wall, heavy orange or black electrical cables on the floor, floor-mounted connectors, or a designated charging bay.\n' +
+      '  · Write in Occupancy: "Battery-electric forklifts observed. Charging station [present/not observed] — [describe location and ventilation if present]."\n' +
+      '  · Write in Hazards: "Battery charging — hydrogen gas generation during charging cycle; electrical arc ignition risk. Severity: MEDIUM."\n' +
+      'Step C — PROHIBITION: Do NOT write a recommendation to replace battery forklifts with propane or vice versa unless there is a specific safety issue. Do NOT misidentify a battery forklift as propane.'
     );
 
     // ── ALWAYS-ON: SPARE SPRINKLER CABINET ────────────────────────────────
@@ -2047,12 +2051,11 @@
       return 'OUTPUT: Structured COPE assessment. Write each narrative section as a detailed professional paragraph. IMPORTANT: the "construction" field requires THREE paragraphs (use \\n\\n to separate them as specified in the schema). All other narrative fields are single paragraphs of 3-5 sentences. Be specific and technical. Follow these mandatory assessment rules:' +
       ' CONSTRUCTION CLASS — MANDATORY RULE: You MUST apply the most conservative classification supportable by photographic evidence. Class 1 Fire Resistive requires VISIBLE spray-applied fireproofing OR concrete encasement on ALL structural steel members — if fireproofing is not clearly visible on columns, beams AND deck, do NOT assign Class 1. Exposed steel columns, beams, or deck = Class 2 Non-Combustible MINIMUM. Pre-engineered metal buildings = Class 2. Combustible wood framing = Class 3 or 5. When ANY doubt exists between Class 1 and Class 2, assign Class 2. State explicitly in your assessment what evidence you used to determine the class.' +
       ' ELECTRICAL: The electrical_system field is MANDATORY and separate from the construction paragraphs. Do NOT include electrical information in the construction paragraphs — put ALL electrical observations in the electrical_system field only. Examine exterior photos carefully for pad-mount transformers on concrete pads — these are very common at industrial facilities and often missed.' +
-      ' OCCUPANCY: for manufacturing/industrial — inventory major equipment visible (overhead cranes, extrusion machines, chiller/cooling units, boilers, furnaces, quality control ovens, air compressors, printing equipment, rail unloading). Identify forklift type — propane-powered forklifts (higher hazard: combustion, CO risk, fuel storage) vs battery-electric forklifts (hydrogen off-gassing during charging, electrical arc hazard at charging station). If battery-electric forklifts are present, look for charging stations (bank of charger units on wall, heavy electrical cabling, floor connectors, designated charging area) and assess ventilation and proximity to combustibles. Assess combustible loading including plastic resin, finished goods, rack storage height (high-piled storage >3.6m is a separate hazard class). Note any hazardous materials in chemical storage areas.' +
+      ' OCCUPANCY: for manufacturing/industrial — inventory major equipment visible (overhead cranes, extrusion machines, chiller/cooling units, boilers, furnaces, quality control ovens, air compressors, printing equipment, rail unloading). Assess combustible loading including plastic resin, finished goods, rack storage height (high-piled storage >3.6m is a separate hazard class). Note any hazardous materials in chemical storage areas.' +
       ' PROTECTION — MANDATORY: For sprinkler systems, ALWAYS start the description with "The building is protected by an automatic sprinkler system." Do NOT state wet pipe or dry pipe — do not guess the system type.' +
       ' SPRINKLER CONTROL VALVE: Examine the riser assembly carefully. Identify the control valve type precisely — a BUTTERFLY VALVE appears as a circular disc valve with a lever handle or gear operator (often orange, red, or yellow lever arm), typically has an electrical tamper switch wired to the alarm panel, and looks distinctly different from a wheel handwheel; an OS&Y valve has a threaded rising stem through a yoke with a handwheel. State the valve type as observed. If a Tyco, Viking, or other brand nameplate is visible on the valve or alarm valve, state the brand. Note valve position (open = lever parallel to pipe; closed = lever perpendicular to pipe).' +
       ' SPARE SPRINKLER CABINET — THIS IS A REQUIRED NUMBERED STEP. You MUST complete this step before writing your protection assessment: STEP 1 — Go through every single photo submitted. STEP 2 — Look specifically for a RED metal box approximately 30cm wide. It may appear open or closed. STEP 3 — If the box is OPEN, look inside for: rows of sprinkler heads with orange, red, or yellow glass bulbs held in metal clips, and a black sprinkler head wrench. STEP 4 — If you find this cabinet open with heads and wrench visible, you MUST write: "A spare sprinkler head cabinet is present, photographed open and stocked with spare sprinkler heads and a sprinkler wrench, confirming compliance with NFPA 25 requirements." STEP 5 — If you include this cabinet in your report, you MUST NOT generate any recommendation regarding spare sprinkler heads.' +
       ' CYCLONE DUST COLLECTORS: If large cyclone dust collectors are present handling combustible dust, assess whether automatic sprinkler protection is installed inside the cyclone body — if not confirmed, flag as HIGH severity.' +
-      ' BATTERY CHARGING STATIONS: Look for battery charging equipment for electric forklifts or other vehicles — typically visible as a bank of charger units on the wall, heavy electrical cabling to floor-level connectors, or designated charging areas marked on the floor. Battery charging generates hydrogen gas during charging and presents fire risk from electrical arcing. Note the charging station location, proximity to combustibles, and whether ventilation appears adequate.' +
       ' HAZARDS: list each hazard specifically — welding/hot work, flammable liquid storage (identify if safety cabinets present), compressed gas cylinders (note if secured/chained upright and separated by type), combustible dust (woodworking/plastic dust collection systems), high-piled storage, propane-powered equipment, battery charging stations (electric forklifts/vehicles — hydrogen off-gassing and electrical arc hazard), chemical mixing areas. For grinding/shredding of combustible materials — flag absence of magnetic separators as HIGH ONLY if no magnetic separation equipment is observed. Assign severity to each.' +
       ' Populate ALL structured fields (construction_class, roof_type, sprinkler_type, alarm_type, occupancy_class, all scores) accurately. Scores 0-100.';
     }
