@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 303 — 2026-06-28 — Registry: https module (no node-fetch), AI: cross-section consistency rules for Steinert/forklift/charger -->
+<!-- SanketRisk SCAN ONE — Deploy 304 — 2026-06-28 — Add supplementary photos to existing submission, append/replace dialog, merged paths saved to DB -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -750,7 +750,7 @@
           <input type="file" id="photo-input" accept="image/*,application/pdf" multiple onchange="handlePhotoUpload(this)">
           <div class="photo-zone-icon">&#x1F4F7;</div>
           <div class="photo-zone-title">Click or drag photos here</div>
-          <div class="photo-zone-sub">Select photos or a PDF document &mdash; JPG, PNG, HEIC, PDF accepted. For PDF reports, a single file is recommended. The AI will analyze all submitted files together.</div>
+          <div class="photo-zone-sub">Select photos or a PDF document &mdash; JPG, PNG, HEIC, PDF accepted. For PDF reports, a single file is recommended. The AI will analyze all submitted files together.<br><strong>To add supplementary photos to an existing submission:</strong> select the new photos, then click Step 1 — you will be asked whether to add to or replace the existing photos.</div>
         </div>
 
         <div id="photo-preview-wrap" style="display:none;margin-top:4px">
@@ -2503,6 +2503,56 @@
   }
 
   // ── UPLOAD FILE TO SUPABASE STORAGE ──
+  // ── APPEND SUPPLEMENTARY PHOTOS TO EXISTING SUBMISSION ────────────────────
+  // Uploads new photos to a new session folder and MERGES paths with existing _storagePaths.
+  // Used when inspector adds close-up or supplementary photos to a recalled submission.
+  async function appendPhotosToSubmission(newPhotos, statusDiv, btn, analyseBtn) {
+    if (!newPhotos || !newPhotos.length) return;
+
+    if (btn) { btn.disabled = true; document.getElementById('btn-upload-text').textContent = 'Uploading supplementary photos\u2026'; }
+    if (statusDiv) { statusDiv.style.display = 'block'; statusDiv.textContent = 'Uploading ' + newPhotos.length + ' new photo(s)\u2026'; }
+
+    try {
+      // Use a new session ID for supplementary photos so they don't overwrite originals
+      var suppSessionId = 'supp-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
+      var newPaths = [];
+
+      for (var si = 0; si < newPhotos.length; si++) {
+        if (statusDiv) statusDiv.textContent = 'Uploading supplementary photo ' + (si+1) + ' of ' + newPhotos.length + '\u2026';
+        var suppPath = await uploadToStorage(newPhotos[si], suppSessionId, si);
+        newPaths.push(suppPath);
+      }
+
+      // Merge new paths with existing _storagePaths
+      var mergedPaths = _storagePaths.concat(newPaths);
+      _storagePaths = mergedPaths;
+      _sessionId    = suppSessionId;  // needed for runAnalysis
+
+      // Persist merged paths back to DB so the submission record is updated
+      if (_reviewId) {
+        await _supabase.from('scan_submissions')
+          .update({ storage_paths: JSON.stringify(mergedPaths) })
+          .eq('id', _reviewId);
+        showToast('\u2713 ' + newPaths.length + ' supplementary photo(s) added — ' + mergedPaths.length + ' total');
+      }
+
+      if (statusDiv) {
+        statusDiv.textContent = '\u2713 ' + newPaths.length + ' supplementary photo(s) added to submission. ' + mergedPaths.length + ' total photos now in analysis.';
+        statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
+      }
+      if (btn) { btn.disabled = false; document.getElementById('btn-upload-text').textContent = '\u2713 Photos updated \u2014 Click Step 2 to re-analyse'; }
+      if (analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
+
+      // Show merged photo grid
+      renderStoragePhotosIntoGrid(mergedPaths);
+
+    } catch(e) {
+      showToast('\u26A0 Supplementary upload failed: ' + e.message);
+      if (btn) { btn.disabled = false; document.getElementById('btn-upload-text').textContent = 'Step 1 \u2014 Upload Photos'; }
+      if (statusDiv) statusDiv.textContent = 'Upload failed: ' + e.message;
+    }
+  }
+
   async function uploadToStorage(photo, sessionId, index) {
     const ext    = photo.type === 'pdf' ? 'pdf' : 'jpg';
     const path   = sessionId + '/' + index + '.' + ext;
@@ -2745,27 +2795,43 @@
   let _autosaveTimer = null;  // debounce handle for autosave
 
   async function uploadPhotos() {
-    // ── If photos already in storage from recall — just show and return ──
+    var btn = document.getElementById('btn-upload');
+    var statusDiv = document.getElementById('upload-status');
+    var analyseBtn = document.getElementById('btn-analyse');
+
+    // ── If photos already in storage from recall AND new photos selected — offer to append ──
     if (_storagePaths && _storagePaths.length > 0 && _reviewId) {
-      const btn = document.getElementById('btn-upload');
-      const statusDiv = document.getElementById('upload-status');
-      const analyseBtn = document.getElementById('btn-analyse');
-      if (btn) btn.disabled = false;
-      document.getElementById('btn-upload-text').textContent = '\u2713 Photos on file \u2014 Upload Again to refresh';
-      if (statusDiv) {
-        statusDiv.style.display = 'block';
-        statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
-        statusDiv.textContent = '\u2713 ' + _storagePaths.length + ' photos on file. Click Step 2 to run analysis.';
+      if (uploadedPhotos.length > 0) {
+        // New photos have been selected — ask whether to append or replace
+        var action = confirm(
+          uploadedPhotos.length + ' new photo(s) selected.\n\n' +
+          'Click OK to ADD these to the existing ' + _storagePaths.length + ' submission photos.\n' +
+          'Click Cancel to replace all existing photos with the new selection only.'
+        );
+        if (action) {
+          // APPEND — upload new photos and merge with existing _storagePaths
+          await appendPhotosToSubmission(uploadedPhotos, statusDiv, btn, analyseBtn);
+          return;
+        } else {
+          // REPLACE — fall through to normal upload below
+        }
+      } else {
+        // No new photos — just show existing and enable Step 2
+        if (btn) btn.disabled = false;
+        document.getElementById('btn-upload-text').textContent = '\u2713 Photos on file \u2014 Upload Again to refresh';
+        if (statusDiv) {
+          statusDiv.style.display = 'block';
+          statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
+          statusDiv.textContent = '\u2713 ' + _storagePaths.length + ' photos on file. Click Step 2 to run analysis.';
+        }
+        if (analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
+        renderStoragePhotosIntoGrid(_storagePaths);
+        return;
       }
-      if (analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
-      renderStoragePhotosIntoGrid(_storagePaths);
-      return;
     }
 
     // ── Lazy-fetch photos from Supabase if opened from dashboard review ──
     if (_reviewId && uploadedPhotos.length === 0) {
-      const btn = document.getElementById('btn-upload');
-      const statusDiv = document.getElementById('upload-status');
       btn.disabled = true;
       document.getElementById('btn-upload-text').textContent = 'Fetching photos\u2026';
       statusDiv.style.display = 'block';
@@ -2840,8 +2906,6 @@
       showToast('Please select photos first.');
       return;
     }
-    const btn = document.getElementById('btn-upload');
-    const statusDiv = document.getElementById('upload-status');
     btn.disabled = true;
     document.getElementById('btn-upload-text').textContent = 'Uploading\u2026';
     statusDiv.style.display = 'block';
