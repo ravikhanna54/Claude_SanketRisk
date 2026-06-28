@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 299 — 2026-06-28 — Registry Intel: full error display, timeout, meaningful not-found messages, Node 18 fetch -->
+<!-- SanketRisk SCAN ONE — Deploy 300 — 2026-06-28 — Registry Intel debug toasts, Steinert block shortened for consistency -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1621,15 +1621,22 @@
   async function runRegistryIntel(data) {
     var section = document.getElementById('res-registry-section');
     var body    = document.getElementById('res-registry-body');
-    if (!section || !body) return;
+    if (!section || !body) {
+      showToast('\u26A0 Registry Intel: results section not found in DOM');
+      return;
+    }
 
-    // Check checkboxes — may be null if form card is hidden in recalled mode
     var corpEl = document.getElementById('ri-corp');
     var bcaEl  = document.getElementById('ri-bca');
-    var corpChecked = corpEl ? corpEl.checked : true;  // default ON if card not visible
+    var corpChecked = corpEl ? corpEl.checked : true;
     var bcaChecked  = bcaEl  ? bcaEl.checked  : false;
 
-    if (!corpChecked && !bcaChecked) return;
+    showToast('\u1F50D Registry Intel starting — Corp:' + corpChecked + ' BCA:' + bcaChecked);
+
+    if (!corpChecked && !bcaChecked) {
+      showToast('\u2139 Registry Intel: no services selected');
+      return;
+    }
 
     section.style.display = 'block';
     body.innerHTML = '';
@@ -1639,14 +1646,13 @@
     var city     = (data.city     || '').trim();
     var province = (data.province || '').trim();
 
-    // Run selected services in parallel
     var promises = [];
     if (corpChecked) promises.push(runCorpCanada(body, insured, city, province));
     if (bcaChecked)  promises.push(runBcAssessment(body, address, city, province));
     await Promise.allSettled(promises);
 
-    // Save registry results into lastResult for DB persistence
     if (lastResult) lastResult.registryIntel = body.innerHTML;
+    showToast('\u2713 Registry Intel complete');
   }
 
   // ── Corporations Canada via OpenCorporates (proxied via Netlify function) ───
@@ -1987,15 +1993,14 @@
 
     // ── ALWAYS-ON: MAGNETIC SEPARATOR IDENTIFICATION ──────────────────────
     blocks.push(
-      'MAGNETIC SEPARATOR / EDDY CURRENT SEPARATOR — EQUIPMENT IDENTIFICATION:\n' +
-      'Look in every photo at equipment mounted above or alongside conveyors, infeed chutes, or material handling systems.\n' +
-      'A magnetic separator or eddy current separator appears as:\n' +
-      '  - A large box-shaped unit (typically white, grey, or black) suspended above a conveyor belt\n' +
-      '  - May have the brand name "STEINERT", "Eriez", "Bunting", or "Goudsmit" on the body\n' +
-      '  - Steinert UME/UMS models are common in waste/recycling — white rectangular units with the STEINERT logo\n' +
-      '  - May have a separate belt running underneath the main conveyor to carry away extracted metal\n' +
-      'If ANY such equipment is visible: note the brand and model if readable, and describe it as a magnetic separator or eddy current separator used for tramp metal removal — this is a COMPLIANT and positive fire prevention control. State: "[Brand] magnetic/eddy current separator installed on infeed conveyor — tramp metal removal confirmed as a fire prevention control."\n' +
-      'CRITICAL: If magnetic separation equipment IS found, do NOT flag absence of magnetic separators as a hazard in the Hazards section. Only flag absence as HIGH hazard if grinding/shredding of combustible materials is present AND no such equipment is visible in any photo.'
+      'MAGNETIC SEPARATOR CHECK — scan every photo showing conveyor systems or material handling equipment:\n' +
+      'A STEINERT magnetic separator is a large white rectangular box suspended above a conveyor. ' +
+      'The word "STEINERT" is printed on the side in black letters. ' +
+      'Other brands: Eriez, Bunting, Goudsmit — similar box-shaped units over conveyors.\n' +
+      'RULE: If ANY photo shows equipment labelled STEINERT or any magnetic/eddy current separator above a conveyor — ' +
+      'write in the Occupancy section: "[Brand] magnetic separator installed — tramp metal removal confirmed as a fire prevention control." ' +
+      'Do NOT flag magnetic separator absence as a hazard if one is found.\n' +
+      'Only flag absence as HIGH hazard if grinding/shredding of combustibles is confirmed AND no separator is visible in any photo.'
     );
 
     // ── ALWAYS-ON: SPARE SPRINKLER CABINET ────────────────────────────────
