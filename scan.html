@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 304 — 2026-06-28 — Add supplementary photos to existing submission, append/replace dialog, merged paths saved to DB -->
+<!-- SanketRisk SCAN ONE — Deploy 305 — 2026-06-28 — Registry Intel fires from renderResults (not runAnalysis), exec summary consistency rule -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2118,7 +2118,7 @@
       getFormatInstruction() + getDynamicPromptAdditions(data) + '\n\n' +
       'Respond with ONLY valid JSON — no markdown, no backticks. Complete ALL fields. Schema:\n' +
       '{\n' +
-      '  "executive_summary":"2-3 sentence professional underwriting paragraph: construction class, occupancy, risk score, risk quality, 1-2 most critical findings.",\n' +
+      '  "executive_summary":"2-3 sentence professional underwriting paragraph summarising: construction class and building type, occupancy and primary process hazards, overall risk quality. IMPORTANT: The executive summary MUST be consistent with the occupancy, hazards, and recommendations fields — if a magnetic separator, fire suppression system, or other positive control is noted in occupancy, do NOT contradict this in the executive summary. The executive summary reflects the COMPLETE picture including positive controls found.",\n' +
       '  "construction_class":"Class 2 — Non-Combustible",\n' +
       '  "year_built_assessed":"2018",\n' +
       '  "stories":"1",\n' +
@@ -2949,9 +2949,6 @@
       ? fetchInsuredProfile(data.insured, data.city, data.province)
       : Promise.resolve();
 
-    // Start Registry Intel in parallel — fires and forgets, renders its own section
-    runRegistryIntel(data);
-
     var btn = document.getElementById('btn-analyse');
     btn.disabled = true;
     document.getElementById('btn-analyse-text').textContent = 'Analysing \u2014 please wait\u2026';
@@ -3080,6 +3077,11 @@
     var _pendingElectrical = null;
     document.getElementById('progress-wrap').style.display = 'none';
     document.getElementById('results-wrap').style.display  = 'block';
+
+    // Preserve Registry Intel content — it may have already rendered from the parallel call
+    var _registrySection = document.getElementById('res-registry-section');
+    var _registrySavedHTML = _registrySection ? _registrySection.outerHTML : '';
+    var _registryWasVisible = _registrySection && _registrySection.style.display !== 'none';
 
     const name = data.insured || data.address || 'Subject Property';
     document.getElementById('res-title').textContent = name + '\u2014 SCAN ONE Assessment';
@@ -4054,6 +4056,12 @@
           });
       });
       photoGrid.appendChild(sec);
+    }
+
+    // ── Fire Registry Intel NOW — results-wrap is visible, section won't be wiped ──
+    // Small delay to let the DOM settle before the async fetch starts
+    if (lastResult && lastResult.formData) {
+      setTimeout(function() { runRegistryIntel(lastResult.formData); }, 500);
     }
   }
 
