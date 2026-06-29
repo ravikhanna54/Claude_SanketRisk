@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 322 — 2026-06-29 — Cover photo: persist selection, green checkmark, sort photos by number sequence -->
+<!-- SanketRisk SCAN ONE — Deploy 323 — 2026-06-29 — Fix 178 images: skip fromStorage re-upload, reuse existing paths, only upload genuinely new photos -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2958,7 +2958,7 @@
               var fr = new FileReader(); fr.onload = function() { res(fr.result); }; fr.readAsDataURL(blob);
             });
             var fname = paths[pi].split('/').pop();
-            uploadedPhotos.push({ file: { name: fname, type: blob.type, size: blob.size }, dataUrl: dataUrl, type: blob.type.startsWith('image') ? 'image' : 'pdf' });
+            uploadedPhotos.push({ file: { name: fname, type: blob.type, size: blob.size }, dataUrl: dataUrl, type: blob.type.startsWith('image') ? 'image' : 'pdf', fromStorage: true, storagePath: paths[pi] });
           }
         } else if (sub.photos) {
           // Old format: base64 in photos column (small submissions only)
@@ -3006,22 +3006,44 @@
     try {
       var checkedIdxs2 = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
       var allPhotos2 = (checkedIdxs2.length > 0 ? checkedIdxs2.map(function(i){ return uploadedPhotos[i]; }) : uploadedPhotos).filter(Boolean);
+
+      // Separate already-stored photos from new uploads
+      var existingPaths = [];
+      var newPhotos = [];
+      allPhotos2.forEach(function(p) {
+        if (p.fromStorage && p.storagePath) {
+          existingPaths.push(p.storagePath);  // already in storage — reuse path
+        } else {
+          newPhotos.push(p);  // genuinely new — needs uploading
+        }
+      });
+
       var sessionId2 = 'scan-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
-      var paths2 = [];
-      for (var i2 = 0; i2 < allPhotos2.length; i2++) {
-        statusDiv.textContent = 'Uploading file ' + (i2+1) + ' of ' + allPhotos2.length + '\u2026';
-        var path2 = await uploadToStorage(allPhotos2[i2], sessionId2, i2);
-        paths2.push(path2);
+      var newPaths = [];
+      for (var i2 = 0; i2 < newPhotos.length; i2++) {
+        statusDiv.textContent = 'Uploading file ' + (i2+1) + ' of ' + newPhotos.length + '\u2026';
+        var path2 = await uploadToStorage(newPhotos[i2], sessionId2, i2);
+        newPaths.push(path2);
       }
-      _sessionId = sessionId2;
-      _storagePaths = paths2;
-      statusDiv.textContent = '\u2713 ' + paths2.length + ' file' + (paths2.length!==1?'s':'') + ' uploaded. Click Step 2 to generate the COPE assessment.';
+
+      // Combine: existing storage paths + any newly uploaded paths
+      var allPaths = existingPaths.concat(newPaths);
+      _sessionId   = sessionId2 || _sessionId;
+      _storagePaths = allPaths;
+
+      var uploadedCount = newPaths.length;
+      var reusedCount   = existingPaths.length;
+      var msg2 = uploadedCount > 0
+        ? '\u2713 ' + uploadedCount + ' new file' + (uploadedCount !== 1 ? 's' : '') + ' uploaded' + (reusedCount > 0 ? ' + ' + reusedCount + ' existing photos included' : '') + '. Click Step 2 to generate the COPE assessment.'
+        : '\u2713 ' + reusedCount + ' photos ready (no new uploads needed). Click Step 2 to generate the COPE assessment.';
+
+      statusDiv.textContent = msg2;
       statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
       btn.disabled = false;
-      document.getElementById('btn-upload-text').textContent = '\u2713 Uploaded \u2014 Upload Again';
+      document.getElementById('btn-upload-text').textContent = '\u2713 Ready \u2014 Click Step 2';
       var analyseBtn3 = document.getElementById('btn-analyse');
       if (analyseBtn3) { analyseBtn3.disabled = false; analyseBtn3.style.opacity = '1'; }
-      showToast('\u2713 ' + paths2.length + ' files uploaded! Click Step 2 to analyse.');
+      showToast('\u2713 ' + allPaths.length + ' photos ready. Click Step 2 to analyse.');
       saveDraft(true);
     } catch(e) {
       btn.disabled = false;
