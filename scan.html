@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 328 — 2026-06-29 — Step 1 disabled for recalled submissions, green info button, caption workflow guidance -->
+<!-- SanketRisk SCAN ONE — Deploy 329 — 2026-06-29 — Cover photo contain+320px, Add New Photo button, max_tokens 24000, caption loader guard fix -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -251,7 +251,7 @@
       padding: 36px 44px !important;
     }
     /* Cover photo: constrained so logo + text + meta footer all fit */
-    #scan-cover-page img { max-height: 190px !important; object-fit: cover !important; }
+    #scan-cover-page img { max-height: 360px !important; object-fit: contain !important; background:#0d1b2a; }
 
     /* ── Brand header + result header = Page 2, kept together ── */
     #res-brand-header {
@@ -858,8 +858,8 @@
       <!-- SanketRisk ONE Brand Header -->
       <div id="res-brand-header" style="background:var(--navy);border-radius:12px 12px 0 0;overflow:hidden;border-bottom:3px solid var(--gold);">
         <!-- Cover photo strip — shown when a front photo is available -->
-        <div id="res-cover-photo-wrap" style="display:none;position:relative;width:100%;height:200px;overflow:hidden;">
-          <img id="res-cover-photo" src="" alt="Property front elevation" style="width:100%;height:100%;object-fit:cover;display:block;opacity:.8;">
+        <div id="res-cover-photo-wrap" style="display:none;position:relative;width:100%;height:320px;overflow:hidden;background:#0d1b2a;">
+          <img id="res-cover-photo" src="" alt="Property front elevation" style="width:100%;height:100%;object-fit:contain;display:block;opacity:.9;">
           <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(13,27,42,.15) 0%,rgba(13,27,42,.65) 100%);"></div>
           <div style="position:absolute;bottom:10px;left:16px;font-size:10px;color:rgba(255,255,255,.65);font-family:'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;">Property Photo</div>
         </div>
@@ -2385,9 +2385,12 @@
           if (statusDiv) {
             statusDiv.style.display = 'block';
             statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
-            statusDiv.textContent = '\u2713 ' + photoPaths.length + ' photo' + (photoPaths.length !== 1 ? 's' : '') +
+            statusDiv.innerHTML = '\u2713 ' + photoPaths.length + ' photo' + (photoPaths.length !== 1 ? 's' : '') +
               (docPaths.length ? ' + ' + docPaths.length + ' document' + (docPaths.length !== 1 ? 's' : '') : '') +
-              ' on file. To add captions: click \u201CLoad Photos for Captioning\u201D below, add descriptions, then click Step 2. Or click Step 2 directly to re-run without captions.';
+              ' on file. Add captions below then click Step 2, or click Step 2 directly to re-run.' +
+              ' &nbsp;<button onclick="document.getElementById(\'photo-input\').click()" ' +
+              'style="background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:IBM Plex Sans,sans-serif;vertical-align:middle;" ' +
+              'title="Add a new supplementary photo to this submission">+ Add New Photo</button>';
           }
         }
 
@@ -2779,7 +2782,7 @@
   async function callProxy(messages, storagePaths, prompt) {
     // Text-only or inline-image call — send messages directly to proxy
     if (!storagePaths || storagePaths.length === 0) {
-      var mtokens = 16000; // claude-sonnet-4-5 max is 64000
+      var mtokens = 24000; // claude-sonnet-4-5 max is 64000
       const response = await fetch('/.netlify/functions/scan-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2800,7 +2803,7 @@
     }
 
     // Storage-mode — v3 async: Lambda saves result to scan_jobs, browser polls Supabase
-    var maxTokens = 16000; // claude-sonnet-4-5 max is 64000
+    var maxTokens = 24000; // claude-sonnet-4-5 max is 64000
 
     var jobId = 'job-' + Date.now() + '-' + Math.random().toString(36).substring(2,7);
     console.log('v3 job:', jobId, 'paths:', storagePaths.length);
@@ -4095,7 +4098,7 @@
       cpWrap.style.cssText = 'width:100%;max-height:280px;overflow:hidden;border-radius:12px;margin-bottom:40px;';
       var cpImg = document.createElement('img');
       cpImg.src = coverPhotoEl.src;
-      cpImg.style.cssText = 'width:100%;object-fit:cover;max-height:280px;opacity:.85;display:block;';
+      cpImg.style.cssText = 'width:100%;object-fit:contain;max-height:360px;opacity:.9;display:block;background:#0d1b2a;';
       cpWrap.appendChild(cpImg);
       cover.appendChild(cpWrap);
     }
@@ -4258,9 +4261,8 @@
     var pdfPaths   = photoPaths.filter(function(p){return p.endsWith('.pdf');});
 
     // ── Show "Load for Captioning" button instead of auto-loading ──
-    // Auto-loading caused duplication issues. Inspector clicks button when needed.
     var previewWrap = document.getElementById('photo-preview-wrap');
-    if (previewWrap && uploadedPhotos.filter(Boolean).length === 0) {
+    if (previewWrap && !_storagePreviewLoaded) {
       var loadBtn = document.getElementById('btn-load-for-caption');
       if (!loadBtn) {
         loadBtn = document.createElement('button');
@@ -4269,9 +4271,10 @@
         loadBtn.innerHTML = '&#x1F4F7; Load Photos for Captioning';
         loadBtn.title = 'Load submitted photos into the preview grid so you can add captions before re-analysis';
         loadBtn.onclick = function() {
+          if (_storagePreviewLoaded) { showToast('\u2139 Photos already loaded — scroll up to see caption boxes.'); return; }
           loadBtn.disabled = true;
           loadBtn.textContent = 'Loading\u2026';
-          uploadedPhotos = [];
+          uploadedPhotos = uploadedPhotos.filter(function(p){ return p && !p.fromStorage; });
           _storagePreviewLoaded = false;
           loadStoragePhotosIntoPreviewGrid(imgPaths, pdfPaths);
         };
