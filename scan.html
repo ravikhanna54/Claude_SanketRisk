@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 321 — 2026-06-29 — Replace auto-load with Load Photos for Captioning button to fix duplication completely -->
+<!-- SanketRisk SCAN ONE — Deploy 322 — 2026-06-29 — Cover photo: persist selection, green checkmark, sort photos by number sequence -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1114,6 +1114,7 @@
 
   let uploadedPhotos = []; // Array of {file, dataUrl}
   var _storagePreviewLoaded = false; // prevent duplicate loads into preview grid
+  var _selectedCoverDataUrl = null;  // user-selected cover photo — persists across renders
   let uploadedDocs    = []; // Array of {file, dataUrl, name} — additional support documents
   let currentUser = null;
   let lastResult = null;
@@ -1534,8 +1535,9 @@
         label = 'Photo ' + (i+1);
       }
       // Cover button — only for images
+      var isCoverSelected = _selectedCoverDataUrl && p.dataUrl && _selectedCoverDataUrl === p.dataUrl;
       var coverBtnHtml = (p.type !== 'pdf')
-        ? '<button onclick="setCoverPhoto(' + i + ')" style="position:absolute;bottom:4px;right:4px;background:rgba(184,134,11,.85);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:700;cursor:pointer;z-index:2;font-family:IBM Plex Sans,sans-serif;" title="Use as report cover photo">Cover</button>'
+        ? '<button onclick="setCoverPhoto(' + i + ')" class="cover-btn" style="position:absolute;bottom:4px;right:4px;background:' + (isCoverSelected ? '#16a34a' : 'rgba(184,134,11,.85)') + ';color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:700;cursor:pointer;z-index:2;font-family:IBM Plex Sans,sans-serif;" title="Use as report cover photo">' + (isCoverSelected ? '\u2713 Cover' : 'Cover') + '</button>'
         : '';
       var desc = (p.description) ? p.description : '';
       var placeholder = p.fromPdf
@@ -1557,14 +1559,25 @@
 
   function setCoverPhoto(idx) {
     if (!uploadedPhotos[idx] || !uploadedPhotos[idx].dataUrl) return;
+    _selectedCoverDataUrl = uploadedPhotos[idx].dataUrl;  // persist selection
     var ci = document.getElementById('res-cover-photo');
     var cw = document.getElementById('res-cover-photo-wrap');
-    if (ci) ci.src = uploadedPhotos[idx].dataUrl;
+    if (ci) ci.src = _selectedCoverDataUrl;
     if (cw) cw.style.display = 'block';
     if (typeof lastResult !== 'undefined' && lastResult && lastResult.formData) {
       buildCoverPage(lastResult.formData, _draftInspId || null);
     }
-    showToast('\u2713 Cover photo set to Page ' + (uploadedPhotos[idx].pdfPage || (idx + 1)));
+    // Update cover button states — highlight selected
+    document.querySelectorAll('.cover-btn').forEach(function(btn) {
+      btn.style.background = 'rgba(184,134,11,.85)';
+      btn.textContent = 'Cover';
+    });
+    var selectedBtn = document.querySelector('#thumb-' + idx + ' .cover-btn');
+    if (selectedBtn) {
+      selectedBtn.style.background = '#16a34a';
+      selectedBtn.textContent = '\u2713 Cover';
+    }
+    showToast('\u2713 Cover photo set — will be used on final report');
   }
 
   // ── ADDITIONAL DOCUMENT UPLOAD ──
@@ -3166,17 +3179,24 @@
     const name = data.insured || data.address || 'Subject Property';
     document.getElementById('res-title').textContent = name + '\u2014 SCAN ONE Assessment';
 
-    // ── Cover Photo — use first image photo (skip PDFs) ──
+    // ── Cover Photo — use user-selected photo if set, otherwise first image ──
     (function() {
       var coverWrap  = document.getElementById('res-cover-photo-wrap');
       var coverImg   = document.getElementById('res-cover-photo');
       if (!coverWrap || !coverImg) return;
-      var firstImage = uploadedPhotos.find(function(p) { return p.type !== 'pdf' && p.dataUrl; });
-      if (firstImage) {
-        coverImg.src = firstImage.dataUrl;
+      // User has explicitly selected a cover — always respect that choice
+      if (_selectedCoverDataUrl) {
+        coverImg.src = _selectedCoverDataUrl;
         coverWrap.style.display = 'block';
       } else {
-        coverWrap.style.display = 'none';
+        // No selection yet — default to first image
+        var firstImage = uploadedPhotos.find(function(p) { return p && p.type !== 'pdf' && p.dataUrl; });
+        if (firstImage) {
+          coverImg.src = firstImage.dataUrl;
+          coverWrap.style.display = 'block';
+        } else {
+          coverWrap.style.display = 'none';
+        }
       }
     })();
     // Build cover page (print only) — pass file number so it shows immediately
@@ -3864,10 +3884,10 @@
       fromPdf: true
     });
 
-    // Set cover photo from very first extracted photo
+    // Set cover photo from very first extracted photo — only if no user selection yet
     var coverImg = document.getElementById('res-cover-photo');
     var coverWrap = document.getElementById('res-cover-photo-wrap');
-    if (coverImg && (!coverImg.src || coverImg.src.length < 10 || coverImg.src === window.location.href)) {
+    if (!_selectedCoverDataUrl && coverImg && (!coverImg.src || coverImg.src.length < 10 || coverImg.src === window.location.href)) {
       coverImg.src = dataUrl;
       if (coverWrap) coverWrap.style.display = 'block';
       if (typeof lastResult !== 'undefined' && lastResult && lastResult.formData) {
@@ -4191,7 +4211,8 @@
           if (!blob) return;
           var objUrl = URL.createObjectURL(blob);
           // Set cover photo from first image and rebuild cover page
-          if (!coverSet) {
+          // Set cover photo from first image — only if no user selection
+          if (!_selectedCoverDataUrl && !coverSet) {
             coverSet = true;
             var coverWrap = document.getElementById('res-cover-photo-wrap');
             var coverImg  = document.getElementById('res-cover-photo');
@@ -4287,10 +4308,17 @@
     function onOneComplete() {
       pendingLoads--;
       if (pendingLoads <= 0) {
+        // Sort by numeric filename to ensure correct sequence (0.jpg, 1.jpg, 2.jpg...)
+        uploadedPhotos.sort(function(a, b) {
+          if (!a || !b) return 0;
+          var aNum = parseInt((a.file && a.file.name || '').replace(/\D/g,'') || a.pdfPage || 0);
+          var bNum = parseInt((b.file && b.file.name || '').replace(/\D/g,'') || b.pdfPage || 0);
+          return aNum - bNum;
+        });
         renderPhotoPreview();
         if (previewWrap) previewWrap.style.display = 'block';
         var loadBtn = document.getElementById('btn-load-for-caption');
-        if (loadBtn) loadBtn.style.display = 'none';  // hide button once loaded
+        if (loadBtn) loadBtn.style.display = 'none';
         showToast('\u2713 ' + uploadedPhotos.filter(Boolean).length + ' photos loaded — add captions and click Step 2 to re-analyse');
       }
     }
@@ -4852,6 +4880,7 @@
   function resetForm() {
     uploadedPhotos = [];
     _storagePreviewLoaded = false;
+    _selectedCoverDataUrl = null;
     uploadedDocs   = [];
     lastResult     = null;
     _draftId       = null;
