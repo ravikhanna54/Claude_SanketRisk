@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 323 — 2026-06-29 — Fix 178 images: skip fromStorage re-upload, reuse existing paths, only upload genuinely new photos -->
+<!-- SanketRisk SCAN ONE — Deploy 326 — 2026-06-29 — Caption mapping by storage path filename, captions travel as text not as re-uploads -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2160,23 +2160,46 @@
   }
 
   function buildPrompt(data) {
-    const age = data.yearBuilt ? (2026 - parseInt(data.yearBuilt)) + 'y (built ' + data.yearBuilt + ')' : 'unknown age';
-    const upgStr = 'Roof:' + data.upgrades.roof + ' Elec:' + data.upgrades.elec + ' Plmb:' + data.upgrades.plmb + ' HVAC:' + data.upgrades.hvac + ' Spk:' + data.upgrades.spk + ' Env:' + data.upgrades.env;
-    const imgCt = uploadedPhotos.filter(x=>x.type!=='pdf').length;
-    const pdfCt = uploadedPhotos.filter(x=>x.type==='pdf').length;
-    const docCt = uploadedDocs.length;
-    const attachDesc = [imgCt ? imgCt+' photos' : '', pdfCt ? pdfCt+' PDF' : '', docCt ? docCt+' supporting doc'+(docCt!==1?'s':'') : ''].filter(Boolean).join(' + ');
-    // Build photo index with descriptions for AI context
+    var age = data.yearBuilt ? (2026 - parseInt(data.yearBuilt)) + 'y (built ' + data.yearBuilt + ')' : 'unknown age';
+    var upgStr = 'Roof:' + data.upgrades.roof + ' Elec:' + data.upgrades.elec + ' Plmb:' + data.upgrades.plmb + ' HVAC:' + data.upgrades.hvac + ' Spk:' + data.upgrades.spk + ' Env:' + data.upgrades.env;
+    var imgCt = uploadedPhotos.filter(function(x){ return x && x.type !== 'pdf'; }).length;
+    var pdfCt = uploadedPhotos.filter(function(x){ return x && x.type === 'pdf'; }).length;
+    var docCt = uploadedDocs.length;
+    var attachDesc = [imgCt ? imgCt+' photos' : '', pdfCt ? pdfCt+' PDF' : '', docCt ? docCt+' supporting doc'+(docCt!==1?'s':'') : ''].filter(Boolean).join(' + ');
+
+    // Build photo caption index — maps captions to photos by position
+    // Works for both individual uploads (uploadedPhotos) and storage path recalls
     var checkedForPrompt = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
     var photoIndex = '';
-    if (uploadedPhotos.length > 0) {
-      photoIndex = (checkedForPrompt.length > 0 ? checkedForPrompt : uploadedPhotos.map(function(_,i){ return i; }))
-        .filter(function(i){ return uploadedPhotos[i]; })
-        .map(function(i, n){
-          var desc = uploadedPhotos[i].description || '';
-          return 'Photo ' + (n+1) + (desc ? ': ' + desc : '');
-        }).filter(function(s){ return s.indexOf(':') !== -1; }) // only include photos with descriptions
-        .join(' | ');
+
+    // Collect captions from uploadedPhotos (set by inspector via description textareas)
+    var captionMap = {};  // idx → caption
+    uploadedPhotos.forEach(function(p, i) {
+      if (p && p.description && p.description.trim()) {
+        // For fromStorage photos, use storagePath filename to map to correct photo
+        var key = p.storagePath ? p.storagePath.split('/').pop().replace(/\.[^.]+$/, '') : String(i);
+        captionMap[key] = p.description.trim();
+      }
+    });
+
+    var hasCaptions = Object.keys(captionMap).length > 0;
+    if (hasCaptions) {
+      // Build caption list — either by storage path filename or by index
+      var captionLines = [];
+      if (_storagePaths && _storagePaths.length > 0) {
+        _storagePaths.forEach(function(path, n) {
+          var fname = path.split('/').pop().replace(/\.[^.]+$/, '');  // e.g. "14" from "scan-xxx/14.jpg"
+          var caption = captionMap[fname] || captionMap[String(n)] || '';
+          if (caption) captionLines.push('Photo ' + (n+1) + ' (' + fname + '): ' + caption);
+        });
+      } else {
+        uploadedPhotos.forEach(function(p, n) {
+          if (p && p.description && p.description.trim()) {
+            captionLines.push('Photo ' + (n+1) + ': ' + p.description.trim());
+          }
+        });
+      }
+      photoIndex = captionLines.join(' | ');
     }
 
     // Compact property block — every token saved = more room for AI response
@@ -2892,35 +2915,39 @@
     var statusDiv = document.getElementById('upload-status');
     var analyseBtn = document.getElementById('btn-analyse');
 
-    // ── If photos already in storage from recall AND new photos selected — offer to append ──
+    // ── If photos already in storage from recall ──────────────────────────
     if (_storagePaths && _storagePaths.length > 0 && _reviewId) {
-      if (uploadedPhotos.length > 0) {
-        // New photos have been selected — ask whether to append or replace
-        var action = confirm(
-          uploadedPhotos.length + ' new photo(s) selected.\n\n' +
-          'Click OK to ADD these to the existing ' + _storagePaths.length + ' submission photos.\n' +
-          'Click Cancel to replace all existing photos with the new selection only.'
-        );
-        if (action) {
-          // APPEND — upload new photos and merge with existing _storagePaths
-          await appendPhotosToSubmission(uploadedPhotos, statusDiv, btn, analyseBtn);
-          return;
-        } else {
-          // REPLACE — fall through to normal upload below
-        }
-      } else {
-        // No new photos — just show existing and enable Step 2
+
+      // Check if uploadedPhotos contains only fromStorage photos (captioned but not new)
+      var genuinelyNew = uploadedPhotos.filter(function(p) { return p && !p.fromStorage; });
+
+      if (genuinelyNew.length === 0) {
+        // All photos are already in storage — no upload needed, just enable Step 2
         if (btn) btn.disabled = false;
-        document.getElementById('btn-upload-text').textContent = '\u2713 Photos on file \u2014 Upload Again to refresh';
+        document.getElementById('btn-upload-text').textContent = '\u2713 Photos on file \u2014 Ready';
         if (statusDiv) {
           statusDiv.style.display = 'block';
           statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
-          statusDiv.textContent = '\u2713 ' + _storagePaths.length + ' photos on file. Click Step 2 to run analysis.';
+          statusDiv.textContent = '\u2713 ' + _storagePaths.length + ' photos on file' +
+            (uploadedPhotos.length > 0 ? ' — captions added. Click Step 2 to re-analyse.' : '. Click Step 2 to run analysis.');
         }
         if (analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
         renderStoragePhotosIntoGrid(_storagePaths);
         return;
       }
+
+      // There ARE genuinely new photos — ask to append or replace
+      var action = confirm(
+        genuinelyNew.length + ' new photo(s) selected.\n\n' +
+        'Click OK to ADD these to the existing ' + _storagePaths.length + ' submission photos.\n' +
+        'Click Cancel to replace all existing photos with the new selection only.'
+      );
+      if (action) {
+        await appendPhotosToSubmission(genuinelyNew, statusDiv, btn, analyseBtn);
+        return;
+      }
+      // Cancel = replace — fall through to normal upload with genuinely new only
+      uploadedPhotos = genuinelyNew;
     }
 
     // ── Lazy-fetch photos from Supabase if opened from dashboard review ──
@@ -3066,6 +3093,20 @@
 
     var btn = document.getElementById('btn-analyse');
     btn.disabled = true;
+
+    // ── Cap at 90 images — Claude hard limit is 100, keep 10 for safety ──
+    var storagePaths = _storagePaths;
+    var cappedWarning = false;
+    if (storagePaths && storagePaths.length > 90) {
+      var imgPaths  = storagePaths.filter(function(p){ return !p.endsWith('.pdf') && !p.includes('/doc-'); });
+      var pdfPaths  = storagePaths.filter(function(p){ return p.endsWith('.pdf'); });
+      var docPaths  = storagePaths.filter(function(p){ return p.includes('/doc-'); });
+      if (imgPaths.length > 90) {
+        cappedWarning = true;
+        storagePaths = pdfPaths.concat(imgPaths.slice(0, 90)).concat(docPaths);
+        showToast('\u26A0 ' + imgPaths.length + ' photos — sending first 90 to AI (Claude limit). Use PDF submission for full analysis.');
+      }
+    }
     document.getElementById('btn-analyse-text').textContent = 'Analysing \u2014 please wait\u2026';
     document.getElementById('progress-wrap').style.display = 'block';
     document.getElementById('results-wrap').style.display  = 'none';
@@ -3145,6 +3186,16 @@
           '<button onclick="runAnalysis()" style="margin-left:8px;background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:700;">Re-analyse Now</button>';
         var resultsEl = document.getElementById('results-wrap');
         if (resultsEl) resultsEl.insertBefore(warnEl, resultsEl.firstChild);
+      }
+
+      // Show capped photo warning if applicable
+      if (cappedWarning) {
+        var capEl = document.createElement('div');
+        capEl.style.cssText = 'background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:12px;color:#1e40af;';
+        capEl.innerHTML = '<strong>&#x2139; Photo Limit Note</strong> — This submission has more than 90 individual photos. Only the first 90 were sent to the AI for analysis. ' +
+          'For submissions with many photos, <strong>submit as a single PDF</strong> — PDFs are counted as document pages (not images) and bypass the 100-image limit entirely.';
+        var resultsEl2 = document.getElementById('results-wrap');
+        if (resultsEl2) resultsEl2.insertBefore(capEl, resultsEl2.firstChild);
       }
 
       // Auto-save to dashboard — fire and forget, do NOT await (PDF generation takes minutes)
