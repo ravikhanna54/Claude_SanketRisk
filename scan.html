@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 320 — 2026-06-29 — Fix photo accumulation: clear fromStorage photos before each reload, reset flag on every call -->
+<!-- SanketRisk SCAN ONE — Deploy 321 — 2026-06-29 — Replace auto-load with Load Photos for Captioning button to fix duplication completely -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -4159,11 +4159,27 @@
     var imgPaths   = photoPaths.filter(function(p){return !p.endsWith('.pdf');});
     var pdfPaths   = photoPaths.filter(function(p){return p.endsWith('.pdf');});
 
-    // ── Also populate the upload photo preview grid with description boxes ──
-    // Clear any previously loaded storage photos first to prevent accumulation
-    uploadedPhotos = uploadedPhotos.filter(function(p) { return p && !p.fromStorage; });
-    _storagePreviewLoaded = false;  // reset so this load always runs fresh
-    loadStoragePhotosIntoPreviewGrid(imgPaths, pdfPaths);
+    // ── Show "Load for Captioning" button instead of auto-loading ──
+    // Auto-loading caused duplication issues. Inspector clicks button when needed.
+    var previewWrap = document.getElementById('photo-preview-wrap');
+    if (previewWrap && uploadedPhotos.filter(Boolean).length === 0) {
+      var loadBtn = document.getElementById('btn-load-for-caption');
+      if (!loadBtn) {
+        loadBtn = document.createElement('button');
+        loadBtn.id = 'btn-load-for-caption';
+        loadBtn.style.cssText = 'margin:10px 0;padding:8px 18px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;';
+        loadBtn.innerHTML = '&#x1F4F7; Load Photos for Captioning';
+        loadBtn.title = 'Load submitted photos into the preview grid so you can add captions before re-analysis';
+        loadBtn.onclick = function() {
+          loadBtn.disabled = true;
+          loadBtn.textContent = 'Loading\u2026';
+          uploadedPhotos = [];
+          _storagePreviewLoaded = false;
+          loadStoragePhotosIntoPreviewGrid(imgPaths, pdfPaths);
+        };
+        previewWrap.parentNode.insertBefore(loadBtn, previewWrap);
+      }
+    }
 
     var coverSet   = false;  // track whether cover photo has been set yet
     // Individual images
@@ -4271,9 +4287,10 @@
     function onOneComplete() {
       pendingLoads--;
       if (pendingLoads <= 0) {
-        // All done — render once
         renderPhotoPreview();
         if (previewWrap) previewWrap.style.display = 'block';
+        var loadBtn = document.getElementById('btn-load-for-caption');
+        if (loadBtn) loadBtn.style.display = 'none';  // hide button once loaded
         showToast('\u2713 ' + uploadedPhotos.filter(Boolean).length + ' photos loaded — add captions and click Step 2 to re-analyse');
       }
     }
