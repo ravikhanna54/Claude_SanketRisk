@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 319 — 2026-06-29 — Fix 267 duplicate photos: _storagePreviewLoaded flag, single renderPhotoPreview at end -->
+<!-- SanketRisk SCAN ONE — Deploy 320 — 2026-06-29 — Fix photo accumulation: clear fromStorage photos before each reload, reset flag on every call -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -4160,7 +4160,9 @@
     var pdfPaths   = photoPaths.filter(function(p){return p.endsWith('.pdf');});
 
     // ── Also populate the upload photo preview grid with description boxes ──
-    // This allows QA inspectors to add captions to existing submissions
+    // Clear any previously loaded storage photos first to prevent accumulation
+    uploadedPhotos = uploadedPhotos.filter(function(p) { return p && !p.fromStorage; });
+    _storagePreviewLoaded = false;  // reset so this load always runs fresh
     loadStoragePhotosIntoPreviewGrid(imgPaths, pdfPaths);
 
     var coverSet   = false;  // track whether cover photo has been set yet
@@ -4255,15 +4257,13 @@
     var previewGrid = document.getElementById('photo-preview-grid');
     if (!previewGrid) return;
 
-    // Prevent duplicate loads — only run once per session
+    // Prevent duplicate loads within same renderStoragePhotosIntoGrid call
     if (_storagePreviewLoaded) return;
-    // Only populate if uploadedPhotos is empty (don't override fresh uploads)
-    if (uploadedPhotos.filter(Boolean).length > 0) return;
 
     var toLoad = (imgPaths || []).length + (pdfPaths || []).length;
     if (!toLoad) return;
 
-    _storagePreviewLoaded = true;  // set flag immediately to prevent re-entry
+    _storagePreviewLoaded = true;
     showToast('\u23F3 Loading photos into preview\u2026');
 
     // Track completion across all async loads
