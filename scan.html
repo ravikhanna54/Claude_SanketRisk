@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 317 — 2026-06-29 — PDF pages extracted into photo preview grid with description boxes, Cover button, stripPhotoRefs -->
+<!-- SanketRisk SCAN ONE — Deploy 318 — 2026-06-29 — Load existing submission photos into preview grid with description boxes for QA captioning -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -4157,6 +4157,11 @@
     var docPaths   = storagePaths.filter(function(p){return p.includes('/doc-');});
     var imgPaths   = photoPaths.filter(function(p){return !p.endsWith('.pdf');});
     var pdfPaths   = photoPaths.filter(function(p){return p.endsWith('.pdf');});
+
+    // ── Also populate the upload photo preview grid with description boxes ──
+    // This allows QA inspectors to add captions to existing submissions
+    loadStoragePhotosIntoPreviewGrid(imgPaths, pdfPaths);
+
     var coverSet   = false;  // track whether cover photo has been set yet
     // Individual images
     imgPaths.forEach(function(path, i) {
@@ -4238,10 +4243,70 @@
     }
 
     // ── Fire Registry Intel NOW — results-wrap is visible, section won't be wiped ──
-    // Small delay to let the DOM settle before the async fetch starts
     if (lastResult && lastResult.formData) {
       setTimeout(function() { runRegistryIntel(lastResult.formData); }, 500);
     }
+  }
+
+  // ── LOAD STORAGE PHOTOS INTO UPLOAD PREVIEW GRID ──
+  // Fetches photos from Supabase Storage and populates the upload photo preview
+  // grid with description boxes — allows QA inspectors to add captions to
+  // existing submissions before re-running analysis.
+  function loadStoragePhotosIntoPreviewGrid(imgPaths, pdfPaths) {
+    var previewWrap = document.getElementById('photo-preview-wrap');
+    var previewGrid = document.getElementById('photo-preview-grid');
+    if (!previewGrid) return;
+
+    // Only populate if uploadedPhotos is empty (don't override fresh uploads)
+    if (uploadedPhotos.filter(Boolean).length > 0) return;
+
+    var toLoad = (imgPaths || []).length + (pdfPaths || []).length;
+    if (!toLoad) return;
+
+    showToast('\u23F3 Loading ' + toLoad + ' photo file(s) into preview\u2026');
+
+    // Load individual images
+    (imgPaths || []).forEach(function(path, idx) {
+      fetch(SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + path)
+        .then(function(r) { return r.ok ? r.blob() : null; })
+        .then(function(blob) {
+          if (!blob) return;
+          var fr = new FileReader();
+          fr.onload = function() {
+            var fname = path.split('/').pop();
+            uploadedPhotos.push({
+              file: { name: fname, size: blob.size, type: blob.type || 'image/jpeg' },
+              dataUrl: fr.result,
+              type: 'image',
+              description: '',
+              fromStorage: true
+            });
+            renderPhotoPreview();
+            if (previewWrap) previewWrap.style.display = 'block';
+          };
+          fr.readAsDataURL(blob);
+        }).catch(function(e) { console.warn('Preview load failed:', path, e.message); });
+    });
+
+    // Load and extract PDF pages
+    (pdfPaths || []).forEach(function(path) {
+      fetch(SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + path)
+        .then(function(r) { return r.ok ? r.blob() : null; })
+        .then(function(blob) {
+          if (!blob) return;
+          var fr = new FileReader();
+          fr.onload = function() {
+            var fname = path.split('/').pop();
+            showToast('\u23F3 Extracting pages from ' + fname + ' for preview\u2026');
+            extractPdfIntoPhotoPreview(fr.result, fname, function() {
+              renderPhotoPreview();
+              if (previewWrap) previewWrap.style.display = 'block';
+              showToast('\u2713 Photos loaded — add captions and click Analyse with AI to re-run');
+            });
+          };
+          fr.readAsDataURL(blob);
+        }).catch(function(e) { console.warn('PDF preview load failed:', path, e.message); });
+    });
   }
 
   // ── PRINT REPORT ──
