@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 314 — 2026-06-28 — max_tokens 16000 confirmed safe for sonnet-4-5 (64K limit) -->
+<!-- SanketRisk SCAN ONE — Deploy 315 — 2026-06-29 — Poll timeout 14min to match Lambda 15min, fixes premature timeout on large submissions -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2723,9 +2723,9 @@
 
     // Fetch matching recommendations from library
 
-    // Poll scan_jobs table in Supabase every 6 seconds (up to 8 minutes)
+    // Poll scan_jobs table in Supabase every 6 seconds (up to 14 minutes — Lambda timeout is 15min)
     var pollStart = Date.now();
-    var pollMax   = 480000; // 8 minutes
+    var pollMax   = 840000; // 14 minutes
     var pollInterval = 6000;
 
     while (Date.now() - pollStart < pollMax) {
