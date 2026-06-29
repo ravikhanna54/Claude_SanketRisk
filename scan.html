@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 330 — 2026-06-29 — Fix 178 photos: clear uploadedPhotos before captioning load, skip lazy-fetch when paths set, Upload New Photos separate button -->
+<!-- SanketRisk SCAN ONE — Deploy 331 — 2026-06-29 — Fix captions for PDF, MANDATORY caption instruction, cover 400px, count scoped to preview grid, cover page idx persists -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -858,7 +858,7 @@
       <!-- SanketRisk ONE Brand Header -->
       <div id="res-brand-header" style="background:var(--navy);border-radius:12px 12px 0 0;overflow:hidden;border-bottom:3px solid var(--gold);">
         <!-- Cover photo strip — shown when a front photo is available -->
-        <div id="res-cover-photo-wrap" style="display:none;position:relative;width:100%;height:320px;overflow:hidden;background:#0d1b2a;">
+        <div id="res-cover-photo-wrap" style="display:none;position:relative;width:100%;height:400px;overflow:hidden;background:#0d1b2a;">
           <img id="res-cover-photo" src="" alt="Property front elevation" style="width:100%;height:100%;object-fit:contain;display:block;opacity:.9;">
           <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(13,27,42,.15) 0%,rgba(13,27,42,.65) 100%);"></div>
           <div style="position:absolute;bottom:10px;left:16px;font-size:10px;color:rgba(255,255,255,.65);font-family:'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;">Property Photo</div>
@@ -1115,6 +1115,7 @@
   let uploadedPhotos = []; // Array of {file, dataUrl}
   var _storagePreviewLoaded = false; // prevent duplicate loads into preview grid
   var _selectedCoverDataUrl = null;  // user-selected cover photo — persists across renders
+  var _selectedCoverPageIdx = null;  // page index of selected cover (for PDF submissions)
   let uploadedDocs    = []; // Array of {file, dataUrl, name} — additional support documents
   let currentUser = null;
   let lastResult = null;
@@ -1559,7 +1560,8 @@
 
   function setCoverPhoto(idx) {
     if (!uploadedPhotos[idx] || !uploadedPhotos[idx].dataUrl) return;
-    _selectedCoverDataUrl = uploadedPhotos[idx].dataUrl;  // persist selection
+    _selectedCoverDataUrl = uploadedPhotos[idx].dataUrl;
+    _selectedCoverPageIdx = idx;  // remember which page was selected
     var ci = document.getElementById('res-cover-photo');
     var cw = document.getElementById('res-cover-photo-wrap');
     if (ci) ci.src = _selectedCoverDataUrl;
@@ -1567,7 +1569,7 @@
     if (typeof lastResult !== 'undefined' && lastResult && lastResult.formData) {
       buildCoverPage(lastResult.formData, _draftInspId || null);
     }
-    // Update cover button states — highlight selected
+    // Update cover button states
     document.querySelectorAll('.cover-btn').forEach(function(btn) {
       btn.style.background = 'rgba(184,134,11,.85)';
       btn.textContent = 'Cover';
@@ -1633,8 +1635,10 @@
   }
 
   function updateSelectedCount() {
-    var total = document.querySelectorAll('.photo-chk').length;
-    var selected = document.querySelectorAll('.photo-chk:checked').length;
+    var previewGrid = document.getElementById('photo-preview-grid');
+    if (!previewGrid) return;
+    var total    = previewGrid.querySelectorAll('.photo-chk').length;
+    var selected = previewGrid.querySelectorAll('.photo-chk:checked').length;
     var el = document.getElementById('photo-selected-count');
     if (el) el.textContent = selected + ' of ' + total + ' selected for analysis';
   }
@@ -2173,24 +2177,41 @@
     var photoIndex = '';
 
     // Collect captions from uploadedPhotos (set by inspector via description textareas)
-    var captionMap = {};  // idx → caption
+    var captionMap = {};  // key → caption
     uploadedPhotos.forEach(function(p, i) {
       if (p && p.description && p.description.trim()) {
-        // For fromStorage photos, use storagePath filename to map to correct photo
-        var key = p.storagePath ? p.storagePath.split('/').pop().replace(/\.[^.]+$/, '') : String(i);
+        // For fromStorage photos with storagePath, key by filename number
+        // For PDF-extracted pages, key by pdfPage number or index
+        var key;
+        if (p.storagePath) {
+          key = p.storagePath.split('/').pop().replace(/\.[^.]+$/, '');
+        } else if (p.pdfPage !== undefined) {
+          key = String(p.pdfPage - 1);  // pdfPage is 1-based, use 0-based for mapping
+        } else {
+          key = String(i);
+        }
         captionMap[key] = p.description.trim();
       }
     });
 
     var hasCaptions = Object.keys(captionMap).length > 0;
+    var captionLines = [];
     if (hasCaptions) {
-      // Build caption list — either by storage path filename or by index
-      var captionLines = [];
-      if (_storagePaths && _storagePaths.length > 0) {
+      // For PDF submissions (single file): captions keyed by page index
+      var isPdfSubmission = _storagePaths && _storagePaths.length === 1 && _storagePaths[0].endsWith('.pdf');
+      if (isPdfSubmission) {
+        // Map captions by page number (uploadedPhotos[i].pdfPage - 1 matches page index)
+        uploadedPhotos.forEach(function(p, i) {
+          if (p && p.description && p.description.trim()) {
+            var pageNum = p.pdfPage || (i + 1);
+            captionLines.push('Page ' + pageNum + ': ' + p.description.trim());
+          }
+        });
+      } else if (_storagePaths && _storagePaths.length > 0) {
         _storagePaths.forEach(function(path, n) {
-          var fname = path.split('/').pop().replace(/\.[^.]+$/, '');  // e.g. "14" from "scan-xxx/14.jpg"
+          var fname = path.split('/').pop().replace(/\.[^.]+$/, '');
           var caption = captionMap[fname] || captionMap[String(n)] || '';
-          if (caption) captionLines.push('Photo ' + (n+1) + ' (' + fname + '): ' + caption);
+          if (caption) captionLines.push('Photo ' + (n+1) + ': ' + caption);
         });
       } else {
         uploadedPhotos.forEach(function(p, n) {
@@ -2203,7 +2224,7 @@
     }
 
     // Compact property block — every token saved = more room for AI response
-    const docContextNote = docCt > 0
+    var docContextNote = docCt > 0
       ? 'Supporting documents included: ' + uploadedDocs.map(function(d){return d.name;}).join(', ') + '. These documents have been passed to you alongside the photographs as additional reference context. Where relevant (e.g. prior inspection reports, loss runs, sprinkler certificates) incorporate findings from these documents into your assessment.\n'
       : '';
     return 'PROPERTY: ' + (data.insured||'Unknown') + ' | ' + (data.address||'') + ', ' + (data.city||'') + ' ' + (data.province||'') + '\n' +
@@ -2215,7 +2236,7 @@
       'Context: ' + (data.context||'none') + '\n' +
       'Files: ' + attachDesc + '\n' +
       (docContextNote ? docContextNote : '') +
-      (photoIndex ? 'Photo descriptions (inspector-added context — use to guide your analysis): ' + photoIndex + '\n' : '') +
+      (photoIndex ? 'INSPECTOR CAPTIONS — MANDATORY: The inspector has identified the following specific items in the photos. These captions are authoritative — treat them as confirmed facts and incorporate them directly into your assessment. Do NOT contradict or ignore these captions:\n' + photoIndex + '\n' : '') +
       '\n' +
       getFormatInstruction() + getDynamicPromptAdditions(data) + '\n\n' +
       'CONSISTENCY CHECK — before writing JSON confirm:\n' +
@@ -4404,7 +4425,7 @@
     function onOneComplete() {
       pendingLoads--;
       if (pendingLoads <= 0) {
-        // Sort by numeric filename to ensure correct sequence (0.jpg, 1.jpg, 2.jpg...)
+        // Sort by numeric filename to ensure correct sequence
         uploadedPhotos.sort(function(a, b) {
           if (!a || !b) return 0;
           var aNum = parseInt((a.file && a.file.name || '').replace(/\D/g,'') || a.pdfPage || 0);
@@ -4415,6 +4436,10 @@
         if (previewWrap) previewWrap.style.display = 'block';
         var loadBtn = document.getElementById('btn-load-for-caption');
         if (loadBtn) loadBtn.style.display = 'none';
+        // Restore cover photo selection if a page was previously selected
+        if (_selectedCoverPageIdx !== null && uploadedPhotos[_selectedCoverPageIdx]) {
+          setTimeout(function() { setCoverPhoto(_selectedCoverPageIdx); }, 300);
+        }
         showToast('\u2713 ' + uploadedPhotos.filter(Boolean).length + ' photos loaded — add captions and click Step 2 to re-analyse');
       }
     }
@@ -4977,6 +5002,7 @@
     uploadedPhotos = [];
     _storagePreviewLoaded = false;
     _selectedCoverDataUrl = null;
+    _selectedCoverPageIdx = null;
     uploadedDocs   = [];
     lastResult     = null;
     _draftId       = null;
