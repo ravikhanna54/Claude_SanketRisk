@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 318 — 2026-06-29 — Load existing submission photos into preview grid with description boxes for QA captioning -->
+<!-- SanketRisk SCAN ONE — Deploy 319 — 2026-06-29 — Fix 267 duplicate photos: _storagePreviewLoaded flag, single renderPhotoPreview at end -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1113,6 +1113,7 @@
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let uploadedPhotos = []; // Array of {file, dataUrl}
+  var _storagePreviewLoaded = false; // prevent duplicate loads into preview grid
   let uploadedDocs    = []; // Array of {file, dataUrl, name} — additional support documents
   let currentUser = null;
   let lastResult = null;
@@ -4249,28 +4250,40 @@
   }
 
   // ── LOAD STORAGE PHOTOS INTO UPLOAD PREVIEW GRID ──
-  // Fetches photos from Supabase Storage and populates the upload photo preview
-  // grid with description boxes — allows QA inspectors to add captions to
-  // existing submissions before re-running analysis.
   function loadStoragePhotosIntoPreviewGrid(imgPaths, pdfPaths) {
     var previewWrap = document.getElementById('photo-preview-wrap');
     var previewGrid = document.getElementById('photo-preview-grid');
     if (!previewGrid) return;
 
+    // Prevent duplicate loads — only run once per session
+    if (_storagePreviewLoaded) return;
     // Only populate if uploadedPhotos is empty (don't override fresh uploads)
     if (uploadedPhotos.filter(Boolean).length > 0) return;
 
     var toLoad = (imgPaths || []).length + (pdfPaths || []).length;
     if (!toLoad) return;
 
-    showToast('\u23F3 Loading ' + toLoad + ' photo file(s) into preview\u2026');
+    _storagePreviewLoaded = true;  // set flag immediately to prevent re-entry
+    showToast('\u23F3 Loading photos into preview\u2026');
+
+    // Track completion across all async loads
+    var pendingLoads = toLoad;
+    function onOneComplete() {
+      pendingLoads--;
+      if (pendingLoads <= 0) {
+        // All done — render once
+        renderPhotoPreview();
+        if (previewWrap) previewWrap.style.display = 'block';
+        showToast('\u2713 ' + uploadedPhotos.filter(Boolean).length + ' photos loaded — add captions and click Step 2 to re-analyse');
+      }
+    }
 
     // Load individual images
-    (imgPaths || []).forEach(function(path, idx) {
+    (imgPaths || []).forEach(function(path) {
       fetch(SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + path)
         .then(function(r) { return r.ok ? r.blob() : null; })
         .then(function(blob) {
-          if (!blob) return;
+          if (!blob) { onOneComplete(); return; }
           var fr = new FileReader();
           fr.onload = function() {
             var fname = path.split('/').pop();
@@ -4281,31 +4294,34 @@
               description: '',
               fromStorage: true
             });
-            renderPhotoPreview();
-            if (previewWrap) previewWrap.style.display = 'block';
+            onOneComplete();
           };
           fr.readAsDataURL(blob);
-        }).catch(function(e) { console.warn('Preview load failed:', path, e.message); });
+        }).catch(function(e) {
+          console.warn('Preview load failed:', path, e.message);
+          onOneComplete();
+        });
     });
 
-    // Load and extract PDF pages
+    // Load and extract PDF pages — counts as 1 pending, but may add many photos
     (pdfPaths || []).forEach(function(path) {
       fetch(SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + path)
         .then(function(r) { return r.ok ? r.blob() : null; })
         .then(function(blob) {
-          if (!blob) return;
+          if (!blob) { onOneComplete(); return; }
           var fr = new FileReader();
           fr.onload = function() {
             var fname = path.split('/').pop();
-            showToast('\u23F3 Extracting pages from ' + fname + ' for preview\u2026');
+            showToast('\u23F3 Extracting pages from ' + fname + '\u2026');
             extractPdfIntoPhotoPreview(fr.result, fname, function() {
-              renderPhotoPreview();
-              if (previewWrap) previewWrap.style.display = 'block';
-              showToast('\u2713 Photos loaded — add captions and click Analyse with AI to re-run');
+              onOneComplete();
             });
           };
           fr.readAsDataURL(blob);
-        }).catch(function(e) { console.warn('PDF preview load failed:', path, e.message); });
+        }).catch(function(e) {
+          console.warn('PDF preview load failed:', path, e.message);
+          onOneComplete();
+        });
     });
   }
 
@@ -4818,6 +4834,7 @@
   // ── RESET ──
   function resetForm() {
     uploadedPhotos = [];
+    _storagePreviewLoaded = false;
     uploadedDocs   = [];
     lastResult     = null;
     _draftId       = null;
