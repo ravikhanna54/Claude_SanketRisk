@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 315 — 2026-06-29 — Poll timeout 14min to match Lambda 15min, fixes premature timeout on large submissions -->
+<!-- SanketRisk SCAN ONE — Deploy 316 — 2026-06-29 — Remove photo number refs: prompt instruction + stripPhotoRefs post-processor on all sections -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2023,8 +2023,10 @@
 
   function getFormatInstruction() {
     var fmt = getReportFormat();
+    var noPhotoRef = 'IMPORTANT — DO NOT reference photo numbers in any narrative field. Do not write "in photo 32", "visible in photo 14", "photos 49, 50, 51", "as seen in photo", "photo shows", or any similar reference. Write as a professional inspector\'s report using location descriptions instead — e.g. "in the sprinkler room", "on the warehouse wall", "adjacent to the main entrance", "in the processing area". The reader does not have photo numbers — describe location and context instead.\n\n';
     if (fmt === 'structured') {
-      return 'OUTPUT: Structured COPE assessment. Each narrative section must be a detailed professional paragraph. The "construction" field requires THREE paragraphs separated by \\n\\n. All other narrative fields are single focused paragraphs. Be specific — name equipment brands, note dimensions, state evidence used.\n\n' +
+      return noPhotoRef +
+      'OUTPUT: Structured COPE assessment. Each narrative section must be a detailed professional paragraph. The "construction" field requires THREE paragraphs separated by \\n\\n. All other narrative fields are single focused paragraphs. Be specific — name equipment brands, note dimensions, state evidence used.\n\n' +
       'CONSTRUCTION CLASS: Apply the most conservative classification supportable by photographic evidence. Class 1 requires VISIBLE spray-applied fireproofing on ALL structural steel — if not clearly visible, assign Class 2 minimum. Exposed steel = Class 2. Pre-engineered metal = Class 2. State what evidence determined the class.\n\n' +
       'ELECTRICAL: The electrical_system field is MANDATORY and completely separate from construction paragraphs — all electrical observations go there only. Check exterior photos carefully for pad-mount transformers.\n\n' +
       'SPRINKLER CONTROL VALVE: Identify precisely — BUTTERFLY VALVE has a lever arm (orange/red/yellow), disc-shaped, often has a tamper switch. OS&Y has a wheel handwheel on a rising threaded stem. State valve type, position (open/closed), and brand if readable. OPEN butterfly valve = lever parallel to pipe. CLOSED = lever perpendicular.\n\n' +
@@ -2032,9 +2034,11 @@
       'Populate ALL structured fields accurately. Scores 0-100.';
     }
     if (fmt === 'narrative') {
-      return 'OUTPUT: Narrative COPE report. Each section (construction, occupancy, protection, exposure, hazards) is a focused paragraph of 3-5 sentences. Be specific — name brands, state dimensions, note conditions. Populate all structured fields with best assessed values.';
+      return noPhotoRef +
+      'OUTPUT: Narrative COPE report. Each section (construction, occupancy, protection, exposure, hazards) is a focused paragraph of 3-5 sentences. Be specific — name brands, state dimensions, note conditions. Populate all structured fields with best assessed values.';
     }
-    return 'OUTPUT: Structured and narrative COPE assessment. Each narrative section is 2-3 focused factual sentences. Populate all structured fields accurately.';
+    return noPhotoRef +
+    'OUTPUT: Structured and narrative COPE assessment. Each narrative section is 2-3 focused factual sentences. Populate all structured fields accurately.';
   }
 
   function getReportFormat() {
@@ -3174,7 +3178,7 @@
     var constructionEl = document.getElementById('res-construction');
     if (constructionEl) {
       if (r.construction) {
-        constructionEl.innerHTML = r.construction
+        constructionEl.innerHTML = stripPhotoRefs(r.construction)
           .split(/\n\n+/)
           .map(function(p) { return '<p style="margin:0 0 10px 0;">' + p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') + '</p>'; })
           .join('');
@@ -3187,14 +3191,30 @@
     var elecEl = document.getElementById('res-electrical');
     if (elecEl) {
       if (r.electrical_system) {
-        // Use addSubheadings + highlightSeverity after they are defined below
-        _pendingElectrical = r.electrical_system;
+        _pendingElectrical = stripPhotoRefs(r.electrical_system);
         document.getElementById('res-electrical-section').style.display = 'block';
       } else {
         document.getElementById('res-electrical-section').style.display = 'none';
       }
     }
     // Helper: highlight severity keywords in text
+    // Strip photo number references from AI output — safety net in case prompt instruction is ignored
+    // Converts "in photo 32" / "in photos 49, 50, 51" → "" and cleans up double spaces
+    function stripPhotoRefs(text) {
+      if (!text) return text;
+      return text
+        // "in photo 32" / "in photos 14, 15" / "visible in photo 32" / "as seen in photo 7"
+        .replace(/\b(?:visible\s+)?(?:in|as seen in|per|from|shown in|see)\s+photos?\s+[\d,\s]+(?:and\s+\d+)?/gi, '')
+        // "photo 32 shows" / "photo 14 reveals"
+        .replace(/\bphotos?\s+[\d,\s]+(?:and\s+\d+)?\s+(?:shows?|reveals?|indicates?|confirms?|depicts?)/gi, 'The photo')
+        // "in photos 49, 50, 51, 54, 55, and 56"
+        .replace(/\bphotos?\s+[\d][\d,\s]*(?:and\s+\d+)?/gi, '')
+        // Clean up any resulting double spaces or leading/trailing commas
+        .replace(/\s{2,}/g, ' ')
+        .replace(/\(\s*\)/g, '')
+        .trim();
+    }
+
     function highlightSeverity(text) {
       if (!text) return '';
       var escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -3254,11 +3274,11 @@
     }
 
     var occEl = document.getElementById('res-occupancy');
-    if (occEl) occEl.innerHTML = highlightSeverity(r.occupancy) || '\u2014';
+    if (occEl) occEl.innerHTML = highlightSeverity(stripPhotoRefs(r.occupancy)) || '\u2014';
     var protEl = document.getElementById('res-protection');
-    if (protEl) protEl.innerHTML = addSubheadings(highlightSeverity(r.protection)) || '\u2014';
+    if (protEl) protEl.innerHTML = addSubheadings(highlightSeverity(stripPhotoRefs(r.protection))) || '\u2014';
     var expEl = document.getElementById('res-exposure');
-    if (expEl) expEl.innerHTML = addSubheadings(highlightSeverity(r.exposure)) || '\u2014';
+    if (expEl) expEl.innerHTML = addSubheadings(highlightSeverity(stripPhotoRefs(r.exposure))) || '\u2014';
     // Hazards may be string or array of objects
     var _haz = r.hazards;
     if (Array.isArray(_haz)) {
@@ -3270,7 +3290,7 @@
       }).join('\n');
     }
     var hazEl = document.getElementById('res-hazards');
-    if (hazEl) hazEl.innerHTML = highlightSeverity(_haz) || 'No significant hazards identified from submitted photographs.';
+    if (hazEl) hazEl.innerHTML = highlightSeverity(stripPhotoRefs(_haz)) || 'No significant hazards identified from submitted photographs.';
 
     // Recommendations
     const recWrap = document.getElementById('res-recommendations');
@@ -3285,7 +3305,7 @@
         var seqNo = yyyymm + '-' + String(idx + 1).padStart(3, '0');
         var code  = rec.code  ? ' [' + rec.code + ']' : '';
         var title = rec.title ? '<strong>' + rec.title + '</strong><br>' : '';
-        var body  = rec.text  || rec.description || '';
+        var body  = stripPhotoRefs(rec.text  || rec.description || '');
         return '<div class="rec-item">' +
           '<div style="min-width:90px;display:flex;flex-direction:column;gap:4px;align-items:flex-start;">' +
             '<span class="rec-priority ' + cls + '">' + (rec.priority||'') + '</span>' +
@@ -3310,7 +3330,7 @@
       var eTxt = document.getElementById('res-exec-text');
       if (!eDiv || !eTxt) return;
       if (r.executive_summary) {
-        eTxt.textContent = r.executive_summary;
+        eTxt.textContent = stripPhotoRefs(r.executive_summary);
       } else {
         var parts = [];
         if (r.construction_class && r.occupancy_class) parts.push(r.construction_class + ' ' + r.occupancy_class + ' facility');
