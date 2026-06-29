@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 329 — 2026-06-29 — Cover photo contain+320px, Add New Photo button, max_tokens 24000, caption loader guard fix -->
+<!-- SanketRisk SCAN ONE — Deploy 330 — 2026-06-29 — Fix 178 photos: clear uploadedPhotos before captioning load, skip lazy-fetch when paths set, Upload New Photos separate button -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2385,12 +2385,26 @@
           if (statusDiv) {
             statusDiv.style.display = 'block';
             statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
-            statusDiv.innerHTML = '\u2713 ' + photoPaths.length + ' photo' + (photoPaths.length !== 1 ? 's' : '') +
+            statusDiv.textContent = '\u2713 ' + photoPaths.length + ' photo' + (photoPaths.length !== 1 ? 's' : '') +
               (docPaths.length ? ' + ' + docPaths.length + ' document' + (docPaths.length !== 1 ? 's' : '') : '') +
-              ' on file. Add captions below then click Step 2, or click Step 2 directly to re-run.' +
-              ' &nbsp;<button onclick="document.getElementById(\'photo-input\').click()" ' +
-              'style="background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:IBM Plex Sans,sans-serif;vertical-align:middle;" ' +
-              'title="Add a new supplementary photo to this submission">+ Add New Photo</button>';
+              ' on file. Add captions below then click Step 2, or click Step 2 directly to re-run.';
+          }
+
+          // Add "Upload New Photos" button — separate, below Step 1
+          var uploadNewBtn = document.getElementById('btn-upload-new');
+          if (!uploadNewBtn) {
+            uploadNewBtn = document.createElement('button');
+            uploadNewBtn.id = 'btn-upload-new';
+            uploadNewBtn.style.cssText = 'width:100%;padding:10px 20px;margin-top:8px;background:linear-gradient(135deg,#5b21b6,#7c3aed);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:IBM Plex Sans,sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;';
+            uploadNewBtn.innerHTML = '&#x1F4F8; Upload New Supplementary Photos';
+            uploadNewBtn.title = 'Select new photos to add to this submission — these will be uploaded and included in the next analysis';
+            uploadNewBtn.onclick = function() {
+              document.getElementById('photo-input').click();
+            };
+            // Insert after the Step 1 button
+            if (uploadBtn && uploadBtn.parentNode) {
+              uploadBtn.parentNode.insertBefore(uploadNewBtn, uploadBtn.nextSibling);
+            }
           }
         }
 
@@ -2959,7 +2973,8 @@
     }
 
     // ── Lazy-fetch photos from Supabase if opened from dashboard review ──
-    if (_reviewId && uploadedPhotos.length === 0) {
+    // Skip if _storagePaths already set (checkViewReportMode already handled this)
+    if (_reviewId && uploadedPhotos.length === 0 && (!_storagePaths || _storagePaths.length === 0)) {
       btn.disabled = true;
       document.getElementById('btn-upload-text').textContent = 'Fetching photos\u2026';
       statusDiv.style.display = 'block';
@@ -4274,7 +4289,7 @@
           if (_storagePreviewLoaded) { showToast('\u2139 Photos already loaded — scroll up to see caption boxes.'); return; }
           loadBtn.disabled = true;
           loadBtn.textContent = 'Loading\u2026';
-          uploadedPhotos = uploadedPhotos.filter(function(p){ return p && !p.fromStorage; });
+          uploadedPhotos = [];  // clear ALL — start fresh for captioning
           _storagePreviewLoaded = false;
           loadStoragePhotosIntoPreviewGrid(imgPaths, pdfPaths);
         };
