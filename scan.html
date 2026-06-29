@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 327 — 2026-06-29 — Photo grid 3 cols desktop/2 mobile, larger thumbnails and description textarea -->
+<!-- SanketRisk SCAN ONE — Deploy 328 — 2026-06-29 — Step 1 disabled for recalled submissions, green info button, caption workflow guidance -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2363,27 +2363,32 @@
           }
         })();
 
-        // 3. Restore storage paths so Step 1 is skipped and re-analysis works
+        // 3. Restore storage paths so Step 2 works directly — Step 1 not needed
         if (photoPaths.length || docPaths.length) {
           var syntheticSessionId = photoPaths.length ? photoPaths[0].split('/')[0] : ('view-' + viewId);
           _sessionId    = syntheticSessionId;
           _storagePaths = photoPaths.concat(docPaths);
-          // Show upload button as already done
+
+          // Hide Step 1 — photos already in storage, no upload needed
           var uploadBtn  = document.getElementById('btn-upload');
           var uploadText = document.getElementById('btn-upload-text');
           var statusDiv  = document.getElementById('upload-status');
           var analyseBtn = document.getElementById('btn-analyse');
-          if (uploadText) uploadText.textContent = '\u2713 Photos on file \u2014 Upload Again to refresh';
-          if (uploadBtn)  uploadBtn.disabled = false;
+
+          // Replace Step 1 button with informational message — cannot be clicked
+          if (uploadBtn) {
+            uploadBtn.style.cssText += ';background:linear-gradient(135deg,#276749,#38a169);cursor:default;';
+            uploadBtn.onclick = function(e) { e.preventDefault(); showToast('\u2139 Photos already in storage \u2014 click Step 2 to re-analyse, or use the caption loader below.'); };
+          }
+          if (uploadText) uploadText.textContent = '\u2713 ' + photoPaths.length + ' photo' + (photoPaths.length !== 1 ? 's' : '') + ' on file \u2014 Step 1 not required';
           if (analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
           if (statusDiv) {
             statusDiv.style.display = 'block';
             statusDiv.style.cssText += ';background:#f0fff4;border-color:#38a169;color:#276749;';
             statusDiv.textContent = '\u2713 ' + photoPaths.length + ' photo' + (photoPaths.length !== 1 ? 's' : '') +
               (docPaths.length ? ' + ' + docPaths.length + ' document' + (docPaths.length !== 1 ? 's' : '') : '') +
-              ' on file from original submission. Click Step 2 to re-run analysis, or view saved report below.';
+              ' on file. To add captions: click \u201CLoad Photos for Captioning\u201D below, add descriptions, then click Step 2. Or click Step 2 directly to re-run without captions.';
           }
-          // Photos are rendered into the results grid below (inside if(savedResult) block) — do not render here
         }
 
         // 4. Restore doc list display (names from form_data.additionalDocs)
