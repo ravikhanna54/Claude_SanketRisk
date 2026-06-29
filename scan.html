@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 316 — 2026-06-29 — Remove photo number refs: prompt instruction + stripPhotoRefs post-processor on all sections -->
+<!-- SanketRisk SCAN ONE — Deploy 317 — 2026-06-29 — PDF pages extracted into photo preview grid with description boxes, Cover button, stripPhotoRefs -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1399,10 +1399,9 @@
     // Build a set of existing file signatures to detect duplicates
     var _existing = {};
     uploadedPhotos.forEach(function(p) {
-      if (p.file) _existing[p.file.name + ':' + p.file.size] = true;
+      if (p && p.file) _existing[p.file.name + ':' + p.file.size] = true;
     });
     var skipped = 0;
-    var loaded = 0;
     var toLoad = [];
     files.forEach(function(file) {
       var sig = file.name + ':' + file.size;
@@ -1412,21 +1411,87 @@
     });
     if (skipped) showToast('\u2139 ' + skipped + ' duplicate photo' + (skipped !== 1 ? 's' : '') + ' skipped.');
     if (!toLoad.length) { input.value = ''; return; }
+
+    var loaded = 0;
     toLoad.forEach(function(file) {
       var isPDF = file.type === 'application/pdf';
       var reader = new FileReader();
       reader.onload = function(e) {
-        uploadedPhotos.push({
-          file: file,
-          dataUrl: e.target.result,
-          type: isPDF ? 'pdf' : 'image',
-        });
-        loaded++;
-        if (loaded === toLoad.length) renderPhotoPreview();
+        if (isPDF && typeof pdfjsLib !== 'undefined') {
+          // ── PDF: extract pages immediately into uploadedPhotos with description boxes ──
+          showToast('\u23F3 Extracting pages from ' + file.name + '\u2026');
+          extractPdfIntoPhotoPreview(e.target.result, file.name, function() {
+            loaded++;
+            if (loaded === toLoad.length) renderPhotoPreview();
+          });
+        } else {
+          uploadedPhotos.push({
+            file: file,
+            dataUrl: e.target.result,
+            type: isPDF ? 'pdf' : 'image',
+          });
+          loaded++;
+          if (loaded === toLoad.length) renderPhotoPreview();
+        }
       };
       reader.readAsDataURL(file);
     });
     input.value = '';
+  }
+
+  // ── EXTRACT PDF PAGES INTO PHOTO PREVIEW ──
+  // Extracts each page of a PDF as an individual image in uploadedPhotos,
+  // giving the inspector description boxes for each page before analysis.
+  function extractPdfIntoPhotoPreview(dataUrl, fileName, onComplete) {
+    if (typeof pdfjsLib === 'undefined') {
+      showToast('\u26A0 PDF.js not loaded — PDF stored as single file');
+      uploadedPhotos.push({ file: { name: fileName, size: dataUrl.length, type: 'application/pdf' }, dataUrl: dataUrl, type: 'pdf' });
+      if (onComplete) onComplete();
+      return;
+    }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    var b64 = dataUrl.split(',')[1];
+    var bin = atob(b64);
+    var ba = new Uint8Array(bin.length);
+    for (var bi = 0; bi < bin.length; bi++) ba[bi] = bin.charCodeAt(bi);
+
+    pdfjsLib.getDocument({ data: ba }).promise.then(function(pdDoc) {
+      var total = pdDoc.numPages;
+      showToast('\u23F3 Extracting ' + total + ' pages from PDF\u2026');
+      var pageNums = [];
+      for (var pg = 1; pg <= total; pg++) pageNums.push(pg);
+      // Process pages sequentially
+      return pageNums.reduce(function(chain, pgNum) {
+        return chain.then(function() {
+          return pdDoc.getPage(pgNum).then(function(page) {
+            var vp = page.getViewport({ scale: 1.5 });
+            var cv = document.createElement('canvas');
+            cv.width = vp.width; cv.height = vp.height;
+            return page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise.then(function() {
+              var pageDataUrl = cv.toDataURL('image/jpeg', 0.88);
+              var baseName = fileName.replace(/\.pdf$/i, '');
+              uploadedPhotos.push({
+                file: { name: baseName + '_p' + pgNum + '.jpg', size: pageDataUrl.length, type: 'image/jpeg' },
+                dataUrl: pageDataUrl,
+                type: 'image',
+                description: '',
+                fromPdf: true,
+                pdfPage: pgNum,
+                pdfTotal: total
+              });
+            });
+          });
+        });
+      }, Promise.resolve());
+    }).then(function() {
+      showToast('\u2713 PDF extracted — add captions then click Analyse with AI');
+      if (onComplete) onComplete();
+    }).catch(function(e) {
+      console.warn('PDF extraction error:', e.message);
+      showToast('\u26A0 PDF extraction failed — storing as single file');
+      uploadedPhotos.push({ file: { name: fileName, size: dataUrl.length, type: 'application/pdf' }, dataUrl: dataUrl, type: 'pdf' });
+      if (onComplete) onComplete();
+    });
   }
 
   function renderPhotoPreview() {
@@ -1454,17 +1519,51 @@
       grid.parentNode.insertBefore(selWrap, grid);
     }
     grid.innerHTML = uploadedPhotos.map(function(p, i) {
+      if (!p) return '';  // skip null entries (removed photos)
       var preview = p.type === 'pdf'
         ? '<div style="width:100%;height:100%;background:linear-gradient(135deg,#1a2e42,#0d1b2a);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><div style="font-size:24px">&#x1F4C4;</div><div style="font-size:8px;color:var(--gold);font-family:\'IBM Plex Mono\',monospace;font-weight:700">PDF</div><div style="font-size:7px;color:rgba(255,255,255,.5);text-align:center;padding:0 4px">' + p.file.name.substring(0,20) + '</div></div>'
         : '<img src="' + p.dataUrl + '" alt="Photo ' + (i+1) + '">';
-      var label = p.type === 'pdf' ? 'PDF Doc ' + (i+1) : 'Photo ' + (i+1);
-      var desc = (uploadedPhotos[i] && uploadedPhotos[i].description) ? uploadedPhotos[i].description : '';
-      return '<div class="photo-thumb" id="thumb-' + i + '"><div class="photo-thumb-img-wrap">' + preview + '<button class="photo-thumb-remove" onclick="removePhoto(' + i + ')">&#x2715;</button><label style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;display:flex;align-items:center;gap:3px;cursor:pointer;z-index:2;"><input type="checkbox" class="photo-chk" data-idx="' + i + '" checked style="width:13px;height:13px;cursor:pointer;" onchange="updateSelectedCount()"></label></div><div class="photo-thumb-label">' + label + '</div><textarea class="photo-thumb-desc" data-idx="' + i + '" placeholder="Add description (e.g. Front elevation, Sprinkler riser, Electrical panel...)" rows="2" onchange="savePhotoDesc(' + i + ',this.value)" oninput="savePhotoDesc(' + i + ',this.value)">' + desc + '</textarea></div>';
+      // Label — show PDF page info if extracted from PDF
+      var label;
+      if (p.fromPdf && p.pdfPage) {
+        label = 'Page ' + p.pdfPage + (p.pdfTotal ? ' / ' + p.pdfTotal : '') + ' <span style="background:#b8860b;color:#fff;font-size:7px;padding:1px 4px;border-radius:3px;font-weight:700;vertical-align:middle;">PDF</span>';
+      } else if (p.type === 'pdf') {
+        label = 'PDF Doc ' + (i+1);
+      } else {
+        label = 'Photo ' + (i+1);
+      }
+      // Cover button — only for images
+      var coverBtnHtml = (p.type !== 'pdf')
+        ? '<button onclick="setCoverPhoto(' + i + ')" style="position:absolute;bottom:4px;right:4px;background:rgba(184,134,11,.85);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:700;cursor:pointer;z-index:2;font-family:IBM Plex Sans,sans-serif;" title="Use as report cover photo">Cover</button>'
+        : '';
+      var desc = (p.description) ? p.description : '';
+      var placeholder = p.fromPdf
+        ? 'Caption this page (e.g. Sprinkler riser, Forklift charger, Exterior south wall...)'
+        : 'Add description (e.g. Front elevation, Sprinkler riser, Electrical panel...)';
+      return '<div class="photo-thumb" id="thumb-' + i + '"><div class="photo-thumb-img-wrap">' + preview +
+        '<button class="photo-thumb-remove" onclick="removePhoto(' + i + ')">&#x2715;</button>' +
+        '<label style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;display:flex;align-items:center;gap:3px;cursor:pointer;z-index:2;">' +
+        '<input type="checkbox" class="photo-chk" data-idx="' + i + '" checked style="width:13px;height:13px;cursor:pointer;" onchange="updateSelectedCount()"></label>' +
+        coverBtnHtml +
+        '</div><div class="photo-thumb-label">' + label + '</div>' +
+        '<textarea class="photo-thumb-desc" data-idx="' + i + '" placeholder="' + placeholder + '" rows="2" onchange="savePhotoDesc(' + i + ',this.value)" oninput="savePhotoDesc(' + i + ',this.value)">' + desc + '</textarea></div>';
     }).join('');
   }
 
   function savePhotoDesc(idx, val) {
     if (uploadedPhotos[idx]) uploadedPhotos[idx].description = val.trim();
+  }
+
+  function setCoverPhoto(idx) {
+    if (!uploadedPhotos[idx] || !uploadedPhotos[idx].dataUrl) return;
+    var ci = document.getElementById('res-cover-photo');
+    var cw = document.getElementById('res-cover-photo-wrap');
+    if (ci) ci.src = uploadedPhotos[idx].dataUrl;
+    if (cw) cw.style.display = 'block';
+    if (typeof lastResult !== 'undefined' && lastResult && lastResult.formData) {
+      buildCoverPage(lastResult.formData, _draftInspId || null);
+    }
+    showToast('\u2713 Cover photo set to Page ' + (uploadedPhotos[idx].pdfPage || (idx + 1)));
   }
 
   // ── ADDITIONAL DOCUMENT UPLOAD ──
@@ -3753,27 +3852,111 @@
 
   function appendPhotoCard(canvas, label, grid, num) {
     var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-    // Set cover photo from very first extracted photo if not already set, then rebuild cover page
+
+    // Push into uploadedPhotos so descriptions carry through to AI prompt
+    var photoIdx = uploadedPhotos.length;
+    uploadedPhotos.push({
+      file: { name: label + '_' + num + '.jpg', size: dataUrl.length, type: 'image/jpeg' },
+      dataUrl: dataUrl,
+      type: 'image',
+      description: '',
+      fromPdf: true
+    });
+
+    // Set cover photo from very first extracted photo
+    var coverImg = document.getElementById('res-cover-photo');
     var coverWrap = document.getElementById('res-cover-photo-wrap');
-    var coverImg  = document.getElementById('res-cover-photo');
-    if (coverWrap && coverImg && (!coverImg.src || coverImg.src.length < 10 || coverImg.src === window.location.href)) {
+    if (coverImg && (!coverImg.src || coverImg.src.length < 10 || coverImg.src === window.location.href)) {
       coverImg.src = dataUrl;
-      coverWrap.style.display = 'block';
-      // Rebuild the cover page now that we have the first photo
+      if (coverWrap) coverWrap.style.display = 'block';
       if (typeof lastResult !== 'undefined' && lastResult && lastResult.formData) {
         buildCoverPage(lastResult.formData, _draftInspId || null);
       }
     }
+
+    // Build card matching photo-thumb style
+    var thumb = document.createElement('div');
+    thumb.className = 'photo-thumb';
+    thumb.id = 'pdf-thumb-' + photoIdx;
+
+    // Image wrap with controls
+    var imgWrap = document.createElement('div');
+    imgWrap.className = 'photo-thumb-img-wrap';
+
     var img = document.createElement('img');
     img.src = dataUrl;
-    img.style.cssText = 'width:100%;aspect-ratio:4/3;object-fit:cover;display:block;';
-    var cap = document.createElement('div');
-    cap.style.cssText = "padding:5px 7px;background:#f8f9fb;border-top:1px solid var(--border);font-size:10px;font-weight:700;color:var(--slate);font-family:'IBM Plex Mono',monospace;";
-    cap.textContent = label + ' ' + num;
-    var wrap = document.createElement('div');
-    wrap.style.cssText = 'border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f8f9fb;display:flex;flex-direction:column;page-break-inside:avoid;break-inside:avoid;';
-    wrap.appendChild(img); wrap.appendChild(cap);
-    grid.appendChild(wrap);
+    img.alt = label + ' ' + num;
+
+    // Remove button
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'photo-thumb-remove';
+    removeBtn.innerHTML = '&#x2715;';
+    removeBtn.title = 'Remove this photo';
+    removeBtn.onclick = (function(idx, thumbEl) {
+      return function() {
+        uploadedPhotos[idx] = null;
+        thumbEl.remove();
+        updateSelectedCount();
+      };
+    })(photoIdx, thumb);
+
+    // Checkbox for AI analysis inclusion
+    var chkLabel = document.createElement('label');
+    chkLabel.style.cssText = 'position:absolute;top:4px;left:4px;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;display:flex;align-items:center;gap:3px;cursor:pointer;z-index:2;';
+    var chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.className = 'photo-chk';
+    chk.dataset.idx = photoIdx;
+    chk.checked = true;
+    chk.style.cssText = 'width:13px;height:13px;cursor:pointer;';
+    chk.onchange = updateSelectedCount;
+    chkLabel.appendChild(chk);
+
+    // Set as Cover button
+    var coverBtn = document.createElement('button');
+    coverBtn.style.cssText = 'position:absolute;bottom:4px;right:4px;background:rgba(184,134,11,.85);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:700;cursor:pointer;z-index:2;font-family:IBM Plex Sans,sans-serif;';
+    coverBtn.textContent = 'Cover';
+    coverBtn.title = 'Use as report cover photo';
+    coverBtn.onclick = (function(dUrl) {
+      return function() {
+        var ci = document.getElementById('res-cover-photo');
+        var cw = document.getElementById('res-cover-photo-wrap');
+        if (ci) { ci.src = dUrl; }
+        if (cw) cw.style.display = 'block';
+        if (typeof lastResult !== 'undefined' && lastResult && lastResult.formData) {
+          buildCoverPage(lastResult.formData, _draftInspId || null);
+        }
+        showToast('\u2713 Cover photo updated');
+      };
+    })(dataUrl);
+
+    imgWrap.appendChild(img);
+    imgWrap.appendChild(removeBtn);
+    imgWrap.appendChild(chkLabel);
+    imgWrap.appendChild(coverBtn);
+
+    // Label bar
+    var labelBar = document.createElement('div');
+    labelBar.className = 'photo-thumb-label';
+    labelBar.textContent = label + ' ' + num;
+
+    // Description textarea
+    var desc = document.createElement('textarea');
+    desc.className = 'photo-thumb-desc';
+    desc.dataset.idx = photoIdx;
+    desc.placeholder = 'Add description (e.g. Sprinkler riser, Forklift charging station, Exterior south elevation...)';
+    desc.rows = 2;
+    desc.oninput = (function(idx) {
+      return function() {
+        if (uploadedPhotos[idx]) uploadedPhotos[idx].description = desc.value.trim();
+      };
+    })(photoIdx);
+    desc.onchange = desc.oninput;
+
+    thumb.appendChild(imgWrap);
+    thumb.appendChild(labelBar);
+    thumb.appendChild(desc);
+    grid.appendChild(thumb);
   }
 
   // ── COVER PAGE ──
