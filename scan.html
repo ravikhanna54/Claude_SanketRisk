@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 334 — 2026-06-30 — Captioning grid: 2 columns, object-fit:contain, no cropping, full image visible -->
+<!-- SanketRisk SCAN ONE — Deploy 335 — 2026-06-30 — Cover photo persists to DB (__cover__ key), auto-resaves stored PDF when changed, restored on recall -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1580,7 +1580,18 @@
       selectedBtn.style.background = '#16a34a';
       selectedBtn.textContent = '\u2713 Cover';
     }
-    showToast('\u2713 Cover photo set — will be used on final report');
+    showToast('\u2713 Cover photo set — updating saved report\u2026');
+
+    // Auto re-save so the stored PDF reflects the new cover immediately
+    if (lastResult && (_reviewId || _draftId)) {
+      setTimeout(function() {
+        saveToDashboard().then(function() {
+          showToast('\u2713 Cover photo updated in saved report');
+        }).catch(function(e) {
+          console.warn('Cover photo auto-save failed:', e.message);
+        });
+      }, 600);
+    }
   }
 
   // ── ADDITIONAL DOCUMENT UPLOAD ──
@@ -4439,6 +4450,7 @@
 
         // ── Restore saved captions from DB (set in checkViewReportMode) ──
         if (_savedPhotoCaptions && Object.keys(_savedPhotoCaptions).length > 0) {
+          var savedCoverKey = _savedPhotoCaptions['__cover__'];
           uploadedPhotos.forEach(function(p) {
             if (!p) return;
             var capKey = p.pdfPage ? ('page-' + p.pdfPage)
@@ -4447,7 +4459,21 @@
             if (capKey && _savedPhotoCaptions[capKey]) {
               p.description = _savedPhotoCaptions[capKey];
             }
+            // Restore cover selection if this photo matches the saved cover key
+            if (capKey && savedCoverKey && capKey === savedCoverKey) {
+              _selectedCoverDataUrl = p.dataUrl;
+            }
           });
+          // Apply restored cover to the visible report immediately
+          if (_selectedCoverDataUrl) {
+            var ciRestore = document.getElementById('res-cover-photo');
+            var cwRestore = document.getElementById('res-cover-photo-wrap');
+            if (ciRestore) ciRestore.src = _selectedCoverDataUrl;
+            if (cwRestore) cwRestore.style.display = 'block';
+            if (typeof lastResult !== 'undefined' && lastResult && lastResult.formData) {
+              buildCoverPage(lastResult.formData, _draftInspId || null);
+            }
+          }
         }
 
         renderPhotoPreview();
@@ -4977,6 +5003,7 @@
       // Build photo captions map — keyed by page number (PDF) or filename (individual photos)
       // Persisted so captions survive across sessions and are pre-filled on next load
       var photoCaptions = {};
+      var selectedCoverKey = null;
       uploadedPhotos.forEach(function(p, i) {
         if (p && p.description && p.description.trim()) {
           var capKey = p.pdfPage ? ('page-' + p.pdfPage)
@@ -4984,7 +5011,14 @@
                      : ('idx-' + i);
           photoCaptions[capKey] = p.description.trim();
         }
+        // Track which photo is the selected cover, by the same key scheme
+        if (p && _selectedCoverDataUrl && p.dataUrl === _selectedCoverDataUrl) {
+          selectedCoverKey = p.pdfPage ? ('page-' + p.pdfPage)
+                           : p.storagePath ? p.storagePath.split('/').pop().replace(/\.[^.]+$/, '')
+                           : ('idx-' + i);
+        }
       });
+      if (selectedCoverKey) photoCaptions['__cover__'] = selectedCoverKey;
 
       // Save or update scan_submissions
       if (_reviewId) {
