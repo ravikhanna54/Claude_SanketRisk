@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 342 — 2026-06-30 — Google Building Outlines (fallback OSM), fire hydrant proximity via Overpass, bold Exposure sub-headings (SEISMIC/WIND/FLOOD/WILDFIRE) -->
+<!-- SanketRisk SCAN ONE — Deploy 343 — 2026-06-30 — Fix fetch failed: route Google Geocoding through Netlify proxy (CORS blocked), wrap OSM calls in try/catch -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1876,34 +1876,29 @@
     var footprintSource = null;
 
     try {
-      // ── Step 1 — try Google Geocoding API with Building Outlines (more current imagery) ──
+      // ── Step 1 — try Google Geocoding API with Building Outlines (proxied — Google Geocoding blocks direct browser CORS) ──
       try {
-        var gUrl = 'https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(fullAddr) +
-          '&extra_computations=BUILDING_AND_ENTRANCES&key=' + GMAPS_KEY;
-        var gResp = await fetch(gUrl);
+        var gResp = await fetch('/.netlify/functions/registry-intel', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ service: 'google_geocode', fullAddress: fullAddr })
+        });
         if (gResp.ok) {
-          var gData = await gResp.json();
-          if (gData.status === 'OK' && gData.results && gData.results.length) {
-            var gRes = gData.results[0];
-            lat = gRes.geometry.location.lat;
-            lon = gRes.geometry.location.lng;
-
-            var buildings = gRes.buildings || gRes.geometry.buildings || null;
-            if (buildings && buildings.length && buildings[0].building_outlines && buildings[0].building_outlines.length) {
-              var outline = buildings[0].building_outlines[0].display_polygon;
-              if (outline && outline.coordinates && outline.coordinates[0]) {
-                var pts = outline.coordinates[0].map(function(c) { return [c[0], c[1]]; });
-                var areaM2 = _polygonAreaSqM(pts);
-                var areaSqFtG = areaM2 * 10.7639;
-                footprintSource = 'Google';
-                footprintHtml =
-                  '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
-                  _riRow('Mapped Footprint Area', '<strong>' + Math.round(areaSqFtG).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(areaM2).toLocaleString('en-CA') + ' m\u00B2)') +
-                  (declaredArea ? _riRow('Declared Building Area', declaredArea + (isNaN(parseFloat(declaredArea)) ? '' : ' sq ft')) : '') +
-                  _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
-                  '</table>' +
-                  _compareFootprintArea(declaredArea, areaSqFtG);
-              }
+          var gJson = await gResp.json();
+          if (gJson.status === 'ok' && gJson.lat !== undefined) {
+            lat = gJson.lat;
+            lon = gJson.lon;
+            if (gJson.footprintAreaSqM) {
+              var areaM2 = gJson.footprintAreaSqM;
+              var areaSqFtG = areaM2 * 10.7639;
+              footprintSource = 'Google';
+              footprintHtml =
+                '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
+                _riRow('Mapped Footprint Area', '<strong>' + Math.round(areaSqFtG).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(areaM2).toLocaleString('en-CA') + ' m\u00B2)') +
+                (declaredArea ? _riRow('Declared Building Area', declaredArea + (isNaN(parseFloat(declaredArea)) ? '' : ' sq ft')) : '') +
+                _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
+                '</table>' +
+                _compareFootprintArea(declaredArea, areaSqFtG);
             }
             // Even without a building outline, Google's geocode gives us a reliable lat/lon for hydrant search
           }
@@ -1913,48 +1908,52 @@
       // ── Step 2 — fallback to OSM/Nominatim + Overpass if Google had no outline ──
       if (!footprintSource) {
         if (lat === null) {
-          var geoUrl = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=' + encodeURIComponent(fullAddr);
-          var geoResp = await fetch(geoUrl, { headers: { 'Accept': 'application/json' } });
-          if (geoResp.ok) {
-            var geoResults = await geoResp.json();
-            if (geoResults && geoResults.length) {
-              lat = parseFloat(geoResults[0].lat);
-              lon = parseFloat(geoResults[0].lon);
+          try {
+            var geoUrl = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=' + encodeURIComponent(fullAddr);
+            var geoResp = await fetch(geoUrl, { headers: { 'Accept': 'application/json' } });
+            if (geoResp.ok) {
+              var geoResults = await geoResp.json();
+              if (geoResults && geoResults.length) {
+                lat = parseFloat(geoResults[0].lat);
+                lon = parseFloat(geoResults[0].lon);
+              }
             }
-          }
+          } catch(nomErr) { console.warn('Nominatim geocode error:', nomErr.message); }
         }
 
         if (lat !== null) {
-          var overpassQuery = '[out:json][timeout:15];way["building"](around:40,' + lat + ',' + lon + ');out geom;';
-          var overpassUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(overpassQuery);
-          var ovResp = await fetch(overpassUrl);
-          if (ovResp.ok) {
-            var ovData = await ovResp.json();
-            var ways = (ovData.elements || []).filter(function(e) { return e.type === 'way' && e.geometry && e.geometry.length > 2; });
-            if (ways.length) {
-              var best = null, bestArea = 0;
-              ways.forEach(function(w) {
-                var pts2 = w.geometry.map(function(g) { return [g.lon, g.lat]; });
-                var area2 = _polygonAreaSqM(pts2);
-                if (area2 > bestArea) { bestArea = area2; best = w; }
-              });
-              var areaSqFt = bestArea * 10.7639;
-              var tags = (best && best.tags) || {};
-              var buildingType = tags['building'] && tags['building'] !== 'yes' ? tags['building'] : null;
-              var levels = tags['building:levels'] || null;
-              footprintSource = 'OSM';
-              footprintHtml =
-                '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
-                _riRow('Mapped Footprint Area', '<strong>' + Math.round(areaSqFt).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(bestArea).toLocaleString('en-CA') + ' m\u00B2)') +
-                (declaredArea ? _riRow('Declared Building Area', declaredArea + (isNaN(parseFloat(declaredArea)) ? '' : ' sq ft')) : '') +
-                (buildingType ? _riRow('Building Type (OSM tag)', buildingType) : '') +
-                (levels ? _riRow('Levels (OSM tag)', levels) : '') +
-                _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
-                '</table>' +
-                _compareFootprintArea(declaredArea, areaSqFt) +
-                '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Note: Google building outline not available for this address \u2014 showing OpenStreetMap data, which may be less current for rural/industrial properties.</div>';
+          try {
+            var overpassQuery = '[out:json][timeout:15];way["building"](around:40,' + lat + ',' + lon + ');out geom;';
+            var overpassUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(overpassQuery);
+            var ovResp = await fetch(overpassUrl);
+            if (ovResp.ok) {
+              var ovData = await ovResp.json();
+              var ways = (ovData.elements || []).filter(function(e) { return e.type === 'way' && e.geometry && e.geometry.length > 2; });
+              if (ways.length) {
+                var best = null, bestArea = 0;
+                ways.forEach(function(w) {
+                  var pts2 = w.geometry.map(function(g) { return [g.lon, g.lat]; });
+                  var area2 = _polygonAreaSqM(pts2);
+                  if (area2 > bestArea) { bestArea = area2; best = w; }
+                });
+                var areaSqFt = bestArea * 10.7639;
+                var tags = (best && best.tags) || {};
+                var buildingType = tags['building'] && tags['building'] !== 'yes' ? tags['building'] : null;
+                var levels = tags['building:levels'] || null;
+                footprintSource = 'OSM';
+                footprintHtml =
+                  '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
+                  _riRow('Mapped Footprint Area', '<strong>' + Math.round(areaSqFt).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(bestArea).toLocaleString('en-CA') + ' m\u00B2)') +
+                  (declaredArea ? _riRow('Declared Building Area', declaredArea + (isNaN(parseFloat(declaredArea)) ? '' : ' sq ft')) : '') +
+                  (buildingType ? _riRow('Building Type (OSM tag)', buildingType) : '') +
+                  (levels ? _riRow('Levels (OSM tag)', levels) : '') +
+                  _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
+                  '</table>' +
+                  _compareFootprintArea(declaredArea, areaSqFt) +
+                  '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Note: Google building outline not available for this address \u2014 showing OpenStreetMap data, which may be less current for rural/industrial properties.</div>';
+              }
             }
-          }
+          } catch(ovErr) { console.warn('Overpass building query error:', ovErr.message); }
         }
       }
 
