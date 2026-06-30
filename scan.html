@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 341 — 2026-06-30 — Captioning button now appears in ?review= recall mode too (was only in ?view_report= mode) -->
+<!-- SanketRisk SCAN ONE — Deploy 342 — 2026-06-30 — Google Building Outlines (fallback OSM), fire hydrant proximity via Overpass, bold Exposure sub-headings (SEISMIC/WIND/FLOOD/WILDFIRE) -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1863,101 +1863,182 @@
 
   // ── OpenStreetMap Building Footprint ─────────────────────────────────────────
   async function runOpenStreetMap(body, address, city, province, declaredArea) {
-    var el = _riAddService(body, 'osm', '&#x1F4D0;', 'Building Footprint', 'OpenStreetMap');
+    var el = _riAddService(body, 'osm', '&#x1F4D0;', 'Building Footprint &amp; Fire Hydrants', 'Google Maps / OpenStreetMap');
 
     if (!address || !city) {
       el.innerHTML = _riMsg('Street address and city are required for building footprint lookup.', 'warn');
       return;
     }
 
+    var fullAddr = address + ', ' + city + (province ? ', ' + province : '') + ', Canada';
+    var lat = null, lon = null;
+    var footprintHtml = '';
+    var footprintSource = null;
+
     try {
-      // Step 1 — geocode the address using Nominatim (OSM's free geocoder)
-      var fullAddr = address + ', ' + city + (province ? ', ' + province : '') + ', Canada';
-      var geoUrl = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=' + encodeURIComponent(fullAddr);
-      var geoResp = await fetch(geoUrl, { headers: { 'Accept': 'application/json' } });
+      // ── Step 1 — try Google Geocoding API with Building Outlines (more current imagery) ──
+      try {
+        var gUrl = 'https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(fullAddr) +
+          '&extra_computations=BUILDING_AND_ENTRANCES&key=' + GMAPS_KEY;
+        var gResp = await fetch(gUrl);
+        if (gResp.ok) {
+          var gData = await gResp.json();
+          if (gData.status === 'OK' && gData.results && gData.results.length) {
+            var gRes = gData.results[0];
+            lat = gRes.geometry.location.lat;
+            lon = gRes.geometry.location.lng;
 
-      if (!geoResp.ok) {
-        el.innerHTML = _riMsg('Geocoding service returned HTTP ' + geoResp.status + '. Building footprint lookup unavailable.', 'warn');
-        return;
-      }
-      var geoResults = await geoResp.json();
-      if (!geoResults || !geoResults.length) {
-        el.innerHTML = _riMsg('Address could not be geocoded: "' + fullAddr + '". Building footprint not available for this address.', 'warn');
-        return;
-      }
+            var buildings = gRes.buildings || gRes.geometry.buildings || null;
+            if (buildings && buildings.length && buildings[0].building_outlines && buildings[0].building_outlines.length) {
+              var outline = buildings[0].building_outlines[0].display_polygon;
+              if (outline && outline.coordinates && outline.coordinates[0]) {
+                var pts = outline.coordinates[0].map(function(c) { return [c[0], c[1]]; });
+                var areaM2 = _polygonAreaSqM(pts);
+                var areaSqFtG = areaM2 * 10.7639;
+                footprintSource = 'Google';
+                footprintHtml =
+                  '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
+                  _riRow('Mapped Footprint Area', '<strong>' + Math.round(areaSqFtG).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(areaM2).toLocaleString('en-CA') + ' m\u00B2)') +
+                  (declaredArea ? _riRow('Declared Building Area', declaredArea + (isNaN(parseFloat(declaredArea)) ? '' : ' sq ft')) : '') +
+                  _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
+                  '</table>' +
+                  _compareFootprintArea(declaredArea, areaSqFtG);
+              }
+            }
+            // Even without a building outline, Google's geocode gives us a reliable lat/lon for hydrant search
+          }
+        }
+      } catch(gErr) { console.warn('Google building outline error:', gErr.message); }
 
-      var lat = parseFloat(geoResults[0].lat);
-      var lon = parseFloat(geoResults[0].lon);
+      // ── Step 2 — fallback to OSM/Nominatim + Overpass if Google had no outline ──
+      if (!footprintSource) {
+        if (lat === null) {
+          var geoUrl = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=' + encodeURIComponent(fullAddr);
+          var geoResp = await fetch(geoUrl, { headers: { 'Accept': 'application/json' } });
+          if (geoResp.ok) {
+            var geoResults = await geoResp.json();
+            if (geoResults && geoResults.length) {
+              lat = parseFloat(geoResults[0].lat);
+              lon = parseFloat(geoResults[0].lon);
+            }
+          }
+        }
 
-      // Step 2 — query Overpass API for building polygons within ~40m of the geocoded point
-      var overpassQuery = '[out:json][timeout:15];way["building"](around:40,' + lat + ',' + lon + ');out geom;';
-      var overpassUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(overpassQuery);
-      var ovResp = await fetch(overpassUrl);
-
-      if (!ovResp.ok) {
-        el.innerHTML = _riMsg(
-          'Building outline service returned HTTP ' + ovResp.status + '. Address was geocoded (' + lat.toFixed(5) + ', ' + lon.toFixed(5) + ') but footprint data unavailable.',
-          'warn'
-        );
-        return;
-      }
-
-      var ovData = await ovResp.json();
-      var ways = (ovData.elements || []).filter(function(e) { return e.type === 'way' && e.geometry && e.geometry.length > 2; });
-
-      if (!ways.length) {
-        el.innerHTML = _riMsg(
-          'No mapped building outline found near this address in OpenStreetMap (geocoded to ' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '). ' +
-          'Many rural and industrial buildings are not yet digitised in OSM — this does not indicate any issue with the property.',
-          'info'
-        ) + '<div style="font-size:11px;margin-top:8px;"><a href="https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lon + '&zoom=18" target="_blank" style="color:#0891b2;">View location on OpenStreetMap &#x2197;</a></div>';
-        return;
-      }
-
-      // Pick the largest building polygon (closest match to the actual building)
-      var best = null, bestArea = 0;
-      ways.forEach(function(w) {
-        var pts = w.geometry.map(function(g) { return [g.lon, g.lat]; });
-        var area = _polygonAreaSqM(pts);
-        if (area > bestArea) { bestArea = area; best = w; }
-      });
-
-      var areaSqFt = bestArea * 10.7639;  // m² to sq ft
-      var tags = (best && best.tags) || {};
-      var buildingType = tags['building'] && tags['building'] !== 'yes' ? tags['building'] : null;
-      var levels = tags['building:levels'] || null;
-
-      var html =
-        '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
-        _riRow('Mapped Footprint Area', '<strong>' + Math.round(areaSqFt).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(bestArea).toLocaleString('en-CA') + ' m\u00B2)') +
-        (declaredArea ? _riRow('Declared Building Area', declaredArea + (isNaN(parseFloat(declaredArea)) ? '' : ' sq ft')) : '') +
-        (buildingType ? _riRow('Building Type (OSM tag)', buildingType) : '') +
-        (levels ? _riRow('Levels (OSM tag)', levels) : '') +
-        _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
-        '</table>';
-
-      // Compare declared vs mapped if both available
-      var declaredNum = parseFloat((declaredArea || '').replace(/[^\d.]/g, ''));
-      if (declaredNum && areaSqFt) {
-        var diffPct = Math.abs((declaredNum - areaSqFt) / declaredNum * 100);
-        if (diffPct > 25) {
-          html += _riMsg(
-            'Mapped footprint area differs from declared area by approximately ' + Math.round(diffPct) + '%. ' +
-            'This may reflect multi-storey construction, building additions not yet mapped, or OSM data covering only part of the structure — recommend on-site verification.',
-            'warn'
-          );
-        } else {
-          html += _riMsg('Mapped footprint area is broadly consistent with the declared building area.', 'info');
+        if (lat !== null) {
+          var overpassQuery = '[out:json][timeout:15];way["building"](around:40,' + lat + ',' + lon + ');out geom;';
+          var overpassUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(overpassQuery);
+          var ovResp = await fetch(overpassUrl);
+          if (ovResp.ok) {
+            var ovData = await ovResp.json();
+            var ways = (ovData.elements || []).filter(function(e) { return e.type === 'way' && e.geometry && e.geometry.length > 2; });
+            if (ways.length) {
+              var best = null, bestArea = 0;
+              ways.forEach(function(w) {
+                var pts2 = w.geometry.map(function(g) { return [g.lon, g.lat]; });
+                var area2 = _polygonAreaSqM(pts2);
+                if (area2 > bestArea) { bestArea = area2; best = w; }
+              });
+              var areaSqFt = bestArea * 10.7639;
+              var tags = (best && best.tags) || {};
+              var buildingType = tags['building'] && tags['building'] !== 'yes' ? tags['building'] : null;
+              var levels = tags['building:levels'] || null;
+              footprintSource = 'OSM';
+              footprintHtml =
+                '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
+                _riRow('Mapped Footprint Area', '<strong>' + Math.round(areaSqFt).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(bestArea).toLocaleString('en-CA') + ' m\u00B2)') +
+                (declaredArea ? _riRow('Declared Building Area', declaredArea + (isNaN(parseFloat(declaredArea)) ? '' : ' sq ft')) : '') +
+                (buildingType ? _riRow('Building Type (OSM tag)', buildingType) : '') +
+                (levels ? _riRow('Levels (OSM tag)', levels) : '') +
+                _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
+                '</table>' +
+                _compareFootprintArea(declaredArea, areaSqFt) +
+                '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Note: Google building outline not available for this address \u2014 showing OpenStreetMap data, which may be less current for rural/industrial properties.</div>';
+            }
+          }
         }
       }
 
-      html += '<div style="font-size:11px;margin-top:8px;"><a href="https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lon + '&zoom=18" target="_blank" style="color:#0891b2;">View building on OpenStreetMap &#x2197;</a></div>';
+      if (!footprintSource) {
+        if (lat === null) {
+          el.innerHTML = _riMsg('Address could not be geocoded: "' + fullAddr + '". Building footprint not available for this address.', 'warn');
+          return;
+        }
+        footprintHtml = _riMsg(
+          'No mapped building outline found near this address (geocoded to ' + lat.toFixed(5) + ', ' + lon.toFixed(5) + ') in either Google Maps or OpenStreetMap. ' +
+          'Many rural and industrial buildings are not yet digitised \u2014 this does not indicate any issue with the property.',
+          'info'
+        );
+      }
 
-      el.innerHTML = html;
+      // ── Step 3 — fire hydrant proximity via OSM Overpass (independent of footprint source) ──
+      var hydrantHtml = '';
+      try {
+        var hydrantQuery = '[out:json][timeout:15];node["emergency"="fire_hydrant"](around:300,' + lat + ',' + lon + ');out;';
+        var hydrantUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(hydrantQuery);
+        var hResp = await fetch(hydrantUrl);
+        if (hResp.ok) {
+          var hData = await hResp.json();
+          var hydrants = (hData.elements || []).filter(function(e) { return e.type === 'node'; });
+          if (hydrants.length) {
+            // Find nearest hydrant
+            var nearest = null, nearestDist = Infinity;
+            hydrants.forEach(function(h) {
+              var d = _haversineMeters(lat, lon, h.lat, h.lon);
+              if (d < nearestDist) { nearestDist = d; nearest = h; }
+            });
+            hydrantHtml =
+              '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0;">' +
+              '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">&#x1F692; Fire Hydrant Proximity (OpenStreetMap)</div>' +
+              '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+              _riRow('Hydrants Mapped Within 300m', hydrants.length) +
+              _riRow('Nearest Hydrant', Math.round(nearestDist) + ' m from geocoded location') +
+              '</table>' +
+              '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Hydrant data is community-mapped and may be incomplete \u2014 absence of mapped hydrants does not confirm absence of hydrants on site. Verify with municipal fire department for underwriting purposes.</div>' +
+              '</div>';
+          } else {
+            hydrantHtml =
+              '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0;">' +
+              '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">&#x1F692; Fire Hydrant Proximity (OpenStreetMap)</div>' +
+              _riMsg('No fire hydrants mapped within 300m in OpenStreetMap. This is common in rural areas with limited municipal water supply, or where hydrants simply have not yet been mapped \u2014 verify directly with the local fire department.', 'info') +
+              '</div>';
+          }
+        }
+      } catch(hErr) { console.warn('Hydrant lookup error:', hErr.message); }
+
+      var finalHtml = footprintHtml + hydrantHtml +
+        '<div style="font-size:11px;margin-top:10px;"><a href="https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lon + '&zoom=18" target="_blank" style="color:#0891b2;">View location on OpenStreetMap &#x2197;</a> &nbsp;|&nbsp; <a href="https://www.google.com/maps/@' + lat + ',' + lon + ',19z" target="_blank" style="color:#0891b2;">View on Google Maps &#x2197;</a></div>' +
+        '<div style="font-size:10px;color:#94a3b8;margin-top:6px;">Footprint source: ' + (footprintSource || 'Not available') + '. Hydrant source: OpenStreetMap community data.</div>';
+
+      el.innerHTML = finalHtml;
 
     } catch(e) {
       el.innerHTML = _riMsg('Building footprint lookup error: ' + e.message, 'error');
     }
+  }
+
+  function _compareFootprintArea(declaredArea, mappedAreaSqFt) {
+    var declaredNum = parseFloat((declaredArea || '').replace(/[^\d.]/g, ''));
+    if (!declaredNum || !mappedAreaSqFt) return '';
+    var diffPct = Math.abs((declaredNum - mappedAreaSqFt) / declaredNum * 100);
+    if (diffPct > 25) {
+      return _riMsg(
+        'Mapped footprint area differs from declared area by approximately ' + Math.round(diffPct) + '%. ' +
+        'This may reflect multi-storey construction, building additions not yet mapped, or partial coverage \u2014 recommend on-site verification.',
+        'warn'
+      );
+    }
+    return _riMsg('Mapped footprint area is broadly consistent with the declared building area.', 'info');
+  }
+
+  function _haversineMeters(lat1, lon1, lat2, lon2) {
+    var R = 6371000;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
   }
 
   // Shoelace formula approximation for polygon area in m² (good enough at building scale)
@@ -2697,7 +2778,7 @@
       '  "electrical_system":"TRANSFORMER: [pad-mount/pole-mount visible or Not visible — check exterior photos carefully]\\nMAIN SERVICE: [brand, amps, voltage, breakers or fuses, condition]\\nWIRING: [conduit type, copper or aluminum, condition]\\nSUB-PANELS: [any sub-panels or MCCs visible]\\nDEFICIENCIES: [Federal Pacific/Zinsco=HIGH hazard; open knockouts; double-tapping; amateur wiring; or None observed]",\n' +
       '  "occupancy":"[Paragraph: operations, major equipment visible with brands/models, combustible loading, forklift type, housekeeping, storage heights, hazardous materials. If grinding/shredding combustibles: note magnetic separator presence or absence]",\n' +
       '  "protection":"[SPRINKLER PROTECTION: Always open with: The building is protected by an automatic sprinkler system. Describe: (a) RISER CONTROL VALVE -- identify type: butterfly valve (circular disc with lever arm, often orange/red/yellow lever, with tamper switch -- the lever handle distinguishes it from an OS&Y), OS&Y (wheel handwheel on rising stem through yoke), or gate valve -- state type, position open/closed, brand if readable (e.g. Tyco, Viking); (b) PRESSURE GAUGE readings; (c) HYDRAULIC DATA PLATE details if visible; (d) SPRINKLER HEADS -- type (pendant/upright/sidewall/ESFR), condition; (e) PIPING -- steel or CPVC; (f) SPARE HEAD CABINET -- REQUIRED CHECK: scan every photo for a red metal box (approx 30cm wide). If found OPEN with orange/yellow-bulbed heads in clips and a black wrench inside, write exactly: A spare sprinkler head cabinet is present photographed open and stocked with spare sprinkler heads and a sprinkler wrench confirming compliance with NFPA 25. Do NOT create any recommendation for spare heads if this cabinet is found. (g) CYCLONE COLLECTORS -- assess sprinkler inside cyclone, flag HIGH if unconfirmed. FIRE ALARM: Note panel brand/model -- Edwards (tan/beige panel with LCD and keypad labelled EDWARDS) is a common brand -- state if observed. List ALL fire alarm devices seen across all photos: smoke detectors (white dome ceiling devices ~10-15cm), heat detectors, horn/strobes, pull stations. Even if panel and devices are in different photos, include all in this section. FIRE EXTINGUISHERS: count, type (ABC/CO2/Class K), size, tags yes/no. SPECIAL EXTINGUISHING SYSTEMS: kitchen hood, clean agent, CO2, foam -- or None observed. BATTERY CHARGING STATIONS: if chargers visible note location and ventilation. Overall protection adequacy. Use headings: SPRINKLER PROTECTION, FIRE ALARM, FIRE EXTINGUISHERS, SPECIAL EXTINGUISHING SYSTEMS]",\n' +
-      '  "exposure":"[EXTERIOR BUILDING ASSESSMENT: wall cladding condition, roof condition from exterior, doors/windows/openings condition, signage, site drainage, maintenance level, exterior storage or hazards adjacent to building. EXPOSURE AND NATURAL HAZARDS: neighbouring buildings and separation distances, construction type of nearest exposures, site access for fire apparatus, geographic risks (flood, wildfire, seismic), municipal fire protection (paid/volunteer, estimated response time, water supply). Use these exact headings in your output: EXTERIOR BUILDING ASSESSMENT, EXPOSURE AND NATURAL HAZARDS]",' +
+      '  "exposure":"[EXTERIOR BUILDING ASSESSMENT: wall cladding condition, roof condition from exterior, doors/windows/openings condition, signage, site drainage, maintenance level, exterior storage or hazards adjacent to building. EXPOSURE AND NATURAL HAZARDS: neighbouring buildings and separation distances, construction type of nearest exposures, site access for fire apparatus, municipal fire protection (paid/volunteer, estimated response time, water supply). Then add these labelled sub-points: SEISMIC: brief note on visible seismic considerations (construction era, bracing if visible). WIND/STORM: roof and cladding wind exposure observations. FLOOD/WATER: site elevation, drainage, watercourse proximity if visible. WILDFIRE: vegetation proximity and any visible smoke/haze. Use these exact headings in your output: EXTERIOR BUILDING ASSESSMENT, EXPOSURE AND NATURAL HAZARDS, SEISMIC, WIND/STORM, FLOOD/WATER, WILDFIRE]",' +
       (natCatRequestedForPrompt ? (
       '  "nat_cat_observations":{\n' +
       '    "construction_era_vs_code":"Post-2005|1990s-2000s|1970s-1980s|Pre-1970|Unknown — base on visible construction style, signage dates, or stated year built",\n' +
@@ -3933,6 +4014,12 @@
         // Exposure subheadings
         'EXTERIOR BUILDING ASSESSMENT',
         'EXPOSURE AND NATURAL HAZARDS',
+        'SEISMIC',
+        'WIND/STORM',
+        'WIND / STORM',
+        'FLOOD/WATER',
+        'FLOOD / WATER',
+        'WILDFIRE',
         // Electrical subheadings — all variants the AI may produce
         'TRANSFORMER',
         'MAIN SERVICE',
