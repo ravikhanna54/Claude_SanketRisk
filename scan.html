@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 344 — 2026-06-30 — Better "not found" messages for Google footprint Preview coverage gap, suggest satellite + BC Assessment cross-reference -->
+<!-- SanketRisk SCAN ONE — Deploy 345 — 2026-06-30 — Fix captions not reaching AI: buildPrompt now reads _savedPhotoCaptions directly when uploadedPhotos empty (Step 2 without loading captioning) -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2704,16 +2704,34 @@
     });
 
     var hasCaptions = Object.keys(captionMap).length > 0;
+
+    // ── FALLBACK: use _savedPhotoCaptions directly if uploadedPhotos has no descriptions ──
+    // This happens when the user clicks Step 2 without first loading photos for captioning.
+    // _savedPhotoCaptions is always populated from the DB in checkViewReportMode.
+    if (!hasCaptions && typeof _savedPhotoCaptions !== 'undefined' && Object.keys(_savedPhotoCaptions).length > 0) {
+      Object.keys(_savedPhotoCaptions).forEach(function(key) {
+        if (key !== '__cover__') captionMap[key] = _savedPhotoCaptions[key];
+      });
+      hasCaptions = Object.keys(captionMap).length > 0;
+    }
+
     var captionLines = [];
     if (hasCaptions) {
-      // For PDF submissions (single file): captions keyed by page index
+      // For PDF submissions (single file): captions keyed by page-N keys
       var isPdfSubmission = _storagePaths && _storagePaths.length === 1 && _storagePaths[0].endsWith('.pdf');
       if (isPdfSubmission) {
-        // Map captions by page number (uploadedPhotos[i].pdfPage - 1 matches page index)
-        uploadedPhotos.forEach(function(p, i) {
-          if (p && p.description && p.description.trim()) {
-            var pageNum = p.pdfPage || (i + 1);
-            captionLines.push('Page ' + pageNum + ': ' + p.description.trim());
+        // _savedPhotoCaptions keys are 'page-1', 'page-2' etc — sort numerically
+        var pageKeys = Object.keys(captionMap).filter(function(k){ return k.indexOf('page-') === 0; });
+        pageKeys.sort(function(a,b){ return parseInt(a.replace('page-','')) - parseInt(b.replace('page-','')); });
+        pageKeys.forEach(function(k) {
+          var pageNum = k.replace('page-','');
+          captionLines.push('Page ' + pageNum + ': ' + captionMap[k]);
+        });
+        // Also include any from uploadedPhotos (in case loaded for captioning)
+        uploadedPhotos.forEach(function(p) {
+          if (p && p.description && p.description.trim() && p.pdfPage) {
+            var pKey = 'page-' + p.pdfPage;
+            if (!captionMap[pKey]) captionLines.push('Page ' + p.pdfPage + ': ' + p.description.trim());
           }
         });
       } else if (_storagePaths && _storagePaths.length > 0) {
