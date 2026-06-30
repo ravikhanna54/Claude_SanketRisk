@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 343 — 2026-06-30 — Fix fetch failed: route Google Geocoding through Netlify proxy (CORS blocked), wrap OSM calls in try/catch -->
+<!-- SanketRisk SCAN ONE — Deploy 344 — 2026-06-30 — Better "not found" messages for Google footprint Preview coverage gap, suggest satellite + BC Assessment cross-reference -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1950,7 +1950,7 @@
                   _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
                   '</table>' +
                   _compareFootprintArea(declaredArea, areaSqFt) +
-                  '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Note: Google building outline not available for this address \u2014 showing OpenStreetMap data, which may be less current for rural/industrial properties.</div>';
+                  '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Google building outline not available for this address (Preview coverage limited for rural/industrial CA properties) \u2014 footprint from OpenStreetMap community data.</div>';
               }
             }
           } catch(ovErr) { console.warn('Overpass building query error:', ovErr.message); }
@@ -1963,8 +1963,9 @@
           return;
         }
         footprintHtml = _riMsg(
-          'No mapped building outline found near this address (geocoded to ' + lat.toFixed(5) + ', ' + lon.toFixed(5) + ') in either Google Maps or OpenStreetMap. ' +
-          'Many rural and industrial buildings are not yet digitised \u2014 this does not indicate any issue with the property.',
+          'No mapped building outline found near this address (geocoded to ' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '). ' +
+          'Google building outlines are in Preview and have limited coverage in rural Canadian areas. OpenStreetMap data is also unavailable for this location. ' +
+          'The satellite aerial image in the Site Location section provides a visual footprint reference \u2014 cross-reference with BC Assessment lot size for area estimation.',
           'info'
         );
       }
