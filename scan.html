@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 345 — 2026-06-30 — Fix captions not reaching AI: buildPrompt now reads _savedPhotoCaptions directly when uploadedPhotos empty (Step 2 without loading captioning) -->
+<!-- SanketRisk SCAN ONE — Deploy 346 — 2026-06-30 — Fix redirect after captioning: only redirect on fresh submissions, not updates. Fix bold subheadings: match anywhere not just line start -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -4020,7 +4020,7 @@
     }
 
     // Bold subheadings: converts ALL-CAPS section labels to bold styled headings
-    // Matches patterns like "TRANSFORMER:" or "FIRE ALARM:" at start of line or after <br>
+    // Matches patterns like "TRANSFORMER:" or "FIRE ALARM:" anywhere in the text
     function addSubheadings(html) {
       if (!html) return html;
       var headings = [
@@ -4029,6 +4029,7 @@
         'FIRE ALARM',
         'FIRE EXTINGUISHERS',
         'SPECIAL EXTINGUISHING SYSTEMS',
+        'BATTERY CHARGING STATIONS',
         // Exposure subheadings
         'EXTERIOR BUILDING ASSESSMENT',
         'EXPOSURE AND NATURAL HAZARDS',
@@ -4051,12 +4052,18 @@
         'DISTRIBUTION PANEL',
         'DEFICIENCIES',
         'ELECTRICAL DEFICIENCIES',
-        'PANEL'
+        'PANEL',
+        // Protection extras
+        'OVERALL PROTECTION ADEQUACY',
+        'SPECIAL SYSTEMS'
       ];
       headings.forEach(function(h) {
-        var re = new RegExp('((?:^|<br>)\\s*)(' + h + ')(\\s*:)', 'gi');
-        html = html.replace(re, function(match, prefix, heading, colon) {
-          return prefix + '<strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">' + heading.toUpperCase() + colon + '</strong>';
+        // Match heading with colon preceded by: start of string, <br>, or a period+space (end of prior sentence)
+        var re = new RegExp('((?:^|<br\\s*/?>|(?<=\\.\\s))|(?=\\s*' + h + '))(' + h + ')(\\s*:)', 'gi');
+        // Simpler approach — replace anywhere the heading appears followed by colon
+        var re2 = new RegExp('(' + h + ')(\\s*:)', 'gi');
+        html = html.replace(re2, function(match, heading, colon) {
+          return '<br><strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">' + heading.toUpperCase() + colon + '</strong>';
         });
       });
       return html;
@@ -5623,8 +5630,10 @@
         window._reportPdfPath = pdfPath;
       }
 
-      showToast('\u2713 Saved as ' + inspId + ' \u2014 redirecting\u2026');
-      setTimeout(function(){ window.location.href = '/dashboard.html'; }, 2000);
+      showToast('\u2713 Saved as ' + inspId + ((_reviewId || _draftId) ? ' \u2014 report updated' : ' \u2014 redirecting\u2026'));
+      if (!_reviewId && !_draftId) {
+        setTimeout(function(){ window.location.href = '/dashboard.html'; }, 2000);
+      }
     } catch(e) {
       showToast('\u26A0 Save failed: ' + e.message);
     }
