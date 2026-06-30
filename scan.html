@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 340 — 2026-06-30 — AI Nat-Cat visual observations: stilts/elevated foundation, hillside/mountain siting, wildfire interface, full demerit mapping -->
+<!-- SanketRisk SCAN ONE — Deploy 341 — 2026-06-30 — Captioning button now appears in ?review= recall mode too (was only in ?view_report= mode) -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1290,6 +1290,25 @@
       var zoneSub   = document.querySelector('.photo-zone-sub');
       if (zoneTitle) zoneTitle.textContent = '\u2601\ufe0f ' + photoCount + ' photo' + (photoCount !== 1 ? 's' : '') + ' from submission — click Step 1 to load & upload for AI analysis';
       if (zoneSub)   zoneSub.style.display = 'none';
+
+      // ── Fetch storage_paths lightly (no photo blobs) to enable "Load Photos for Captioning" now ──
+      _supabase.from('scan_submissions').select('storage_paths, doc_paths').eq('id', reviewId).single()
+        .then(function(r) {
+          if (!r.data) return;
+          var pPaths = [], dPaths = [];
+          try { pPaths = r.data.storage_paths ? (typeof r.data.storage_paths === 'string' ? JSON.parse(r.data.storage_paths) : r.data.storage_paths) : []; } catch(e) {}
+          try { dPaths = r.data.doc_paths     ? (typeof r.data.doc_paths     === 'string' ? JSON.parse(r.data.doc_paths)     : r.data.doc_paths)     : []; } catch(e) {}
+          if (pPaths.length) {
+            _storagePaths = pPaths.concat(dPaths);
+            _sessionId    = pPaths[0].split('/')[0];
+            _addLoadForCaptionButton(
+              pPaths.filter(function(p){ return !p.endsWith('.pdf'); }),
+              pPaths.filter(function(p){ return p.endsWith('.pdf'); })
+            );
+            var analyseBtn0 = document.getElementById('btn-analyse');
+            if (analyseBtn0) { analyseBtn0.disabled = false; analyseBtn0.style.opacity = '1'; }
+          }
+        }).catch(function(e) { console.warn('Lightweight storage_paths fetch failed:', e.message); });
     }
 
     // Add a review banner
@@ -4718,6 +4737,30 @@
     }, 30000);
   }
 
+  // ── REUSABLE: Add "Load Photos for Captioning" button ──
+  // Used by both renderStoragePhotosIntoGrid (view_report mode) and
+  // preloadSubmission (review/edit mode) so the button appears in either recall path.
+  function _addLoadForCaptionButton(imgPaths, pdfPaths) {
+    var previewWrap = document.getElementById('photo-preview-wrap');
+    if (!previewWrap || _storagePreviewLoaded) return;
+    var loadBtn = document.getElementById('btn-load-for-caption');
+    if (loadBtn) return;  // already exists
+    loadBtn = document.createElement('button');
+    loadBtn.id = 'btn-load-for-caption';
+    loadBtn.style.cssText = 'margin:10px 0;padding:8px 18px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;';
+    loadBtn.innerHTML = '&#x1F4F7; Load Photos for Captioning';
+    loadBtn.title = 'Load submitted photos into the preview grid so you can add captions before re-analysis';
+    loadBtn.onclick = function() {
+      if (_storagePreviewLoaded) { showToast('\u2139 Photos already loaded — scroll up to see caption boxes.'); return; }
+      loadBtn.disabled = true;
+      loadBtn.textContent = 'Loading\u2026';
+      uploadedPhotos = [];  // clear ALL — start fresh for captioning
+      _storagePreviewLoaded = false;
+      loadStoragePhotosIntoPreviewGrid(imgPaths, pdfPaths);
+    };
+    previewWrap.parentNode.insertBefore(loadBtn, previewWrap);
+  }
+
   // ── RENDER STORAGE PHOTOS INTO GRID (saved report view) ──
   function renderStoragePhotosIntoGrid(storagePaths) {
     var photoSection = document.getElementById('res-photo-section');
@@ -4731,26 +4774,7 @@
     var pdfPaths   = photoPaths.filter(function(p){return p.endsWith('.pdf');});
 
     // ── Show "Load for Captioning" button instead of auto-loading ──
-    var previewWrap = document.getElementById('photo-preview-wrap');
-    if (previewWrap && !_storagePreviewLoaded) {
-      var loadBtn = document.getElementById('btn-load-for-caption');
-      if (!loadBtn) {
-        loadBtn = document.createElement('button');
-        loadBtn.id = 'btn-load-for-caption';
-        loadBtn.style.cssText = 'margin:10px 0;padding:8px 18px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;';
-        loadBtn.innerHTML = '&#x1F4F7; Load Photos for Captioning';
-        loadBtn.title = 'Load submitted photos into the preview grid so you can add captions before re-analysis';
-        loadBtn.onclick = function() {
-          if (_storagePreviewLoaded) { showToast('\u2139 Photos already loaded — scroll up to see caption boxes.'); return; }
-          loadBtn.disabled = true;
-          loadBtn.textContent = 'Loading\u2026';
-          uploadedPhotos = [];  // clear ALL — start fresh for captioning
-          _storagePreviewLoaded = false;
-          loadStoragePhotosIntoPreviewGrid(imgPaths, pdfPaths);
-        };
-        previewWrap.parentNode.insertBefore(loadBtn, previewWrap);
-      }
-    }
+    _addLoadForCaptionButton(imgPaths, pdfPaths);
 
     var coverSet   = false;  // track whether cover photo has been set yet
     // Individual images
