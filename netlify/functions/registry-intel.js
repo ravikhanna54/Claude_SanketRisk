@@ -44,11 +44,70 @@ exports.handler = async function(event) {
   try { body = JSON.parse(event.body || '{}'); }
   catch(e) { return { statusCode: 400, headers: headers, body: JSON.stringify({ error: 'Invalid JSON' }) }; }
 
-  var service  = body.service  || '';
-  var insured  = body.insured  || '';
-  var address  = body.address  || '';
-  var city     = body.city     || '';
-  var province = body.province || '';
+  var service     = body.service     || '';
+  var insured     = body.insured     || '';
+  var address     = body.address     || '';
+  var city        = body.city        || '';
+  var province    = body.province    || '';
+  var fullAddress = body.fullAddress || '';
+
+  // ── Google Geocoding + Building Outlines (server-side — Google Geocoding API does not allow direct browser CORS) ──
+  if (service === 'google_geocode') {
+    if (!fullAddress) {
+      return { statusCode: 400, headers: headers, body: JSON.stringify({ error: 'fullAddress required' }) };
+    }
+    var GMAPS_KEY = 'AIzaSyDAHNS9_C-NLzVhAUDhD9HfSP-7X-xTVkI';
+    try {
+      var gUrl = 'https://maps.googleapis.com/maps/api/geocode/json?address=' +
+        encodeURIComponent(fullAddress) + '&extra_computations=BUILDING_AND_ENTRANCES&key=' + GMAPS_KEY;
+      var gR = await httpsGet(gUrl);
+      var gData = {};
+      try { gData = JSON.parse(gR.text); } catch(e) {}
+
+      if (gData.status !== 'OK' || !gData.results || !gData.results.length) {
+        return {
+          statusCode: 200, headers: headers,
+          body: JSON.stringify({ service: 'google_geocode', status: 'not_found', message: gData.status || 'No results' })
+        };
+      }
+
+      var gRes = gData.results[0];
+      var lat = gRes.geometry.location.lat;
+      var lon = gRes.geometry.location.lng;
+      var footprintAreaSqM = null;
+
+      var buildings = gRes.buildings || (gRes.geometry && gRes.geometry.buildings) || null;
+      if (buildings && buildings.length && buildings[0].building_outlines && buildings[0].building_outlines.length) {
+        var outline = buildings[0].building_outlines[0].display_polygon;
+        if (outline && outline.coordinates && outline.coordinates[0]) {
+          var pts = outline.coordinates[0];
+          // Shoelace formula approximation (server-side, same as client _polygonAreaSqM)
+          var R = 6378137;
+          var area = 0;
+          for (var i = 0; i < pts.length - 1; i++) {
+            var p1 = pts[i], p2 = pts[i+1];
+            var x1 = p1[0] * Math.PI / 180 * R * Math.cos(p1[1] * Math.PI / 180);
+            var y1 = p1[1] * Math.PI / 180 * R;
+            var x2 = p2[0] * Math.PI / 180 * R * Math.cos(p2[1] * Math.PI / 180);
+            var y2 = p2[1] * Math.PI / 180 * R;
+            area += (x1 * y2 - x2 * y1);
+          }
+          footprintAreaSqM = Math.abs(area / 2);
+        }
+      }
+
+      return {
+        statusCode: 200, headers: headers,
+        body: JSON.stringify({ service: 'google_geocode', status: 'ok', lat: lat, lon: lon, footprintAreaSqM: footprintAreaSqM })
+      };
+
+    } catch(e) {
+      return {
+        statusCode: 200, headers: headers,
+        body: JSON.stringify({ service: 'google_geocode', status: 'error', message: e.message })
+      };
+    }
+  }
 
   // ── Corporations Canada via OpenCorporates ──────────────────────────────
   if (service === 'corporations_canada') {
