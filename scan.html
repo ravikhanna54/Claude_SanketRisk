@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 335 — 2026-06-30 — Cover photo persists to DB (__cover__ key), auto-resaves stored PDF when changed, restored on recall -->
+<!-- SanketRisk SCAN ONE — Deploy 340 — 2026-06-30 — AI Nat-Cat visual observations: stilts/elevated foundation, hillside/mountain siting, wildfire interface, full demerit mapping -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -604,7 +604,7 @@
 
           <!-- BC Assessment — LIVE -->
           <label id="ri-bca-label" style="display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid #0891b2;border-radius:10px;cursor:pointer;background:#f0f9ff;transition:all .2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='#f0f9ff'">
-            <input type="checkbox" id="ri-bca" style="margin-top:2px;width:16px;height:16px;accent-color:#0891b2;cursor:pointer;">
+            <input type="checkbox" id="ri-bca" style="margin-top:2px;width:16px;height:16px;accent-color:#0891b2;cursor:pointer;" checked>
             <div style="flex:1;">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
                 <span style="font-size:14px;">&#x1F3E0;</span>
@@ -613,6 +613,20 @@
               </div>
               <div style="font-size:11px;color:#475569;line-height:1.5;">Assessed value, lot size, legal description, property class, improvement value.</div>
               <div style="font-size:10px;color:#0891b2;margin-top:4px;font-family:'IBM Plex Mono',monospace;">Source: BC Assessment Authority</div>
+            </div>
+          </label>
+
+          <!-- OpenStreetMap Building Footprint — LIVE -->
+          <label id="ri-osm-label" style="display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid #0891b2;border-radius:10px;cursor:pointer;background:#f0f9ff;transition:all .2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='#f0f9ff'">
+            <input type="checkbox" id="ri-osm" style="margin-top:2px;width:16px;height:16px;accent-color:#0891b2;cursor:pointer;" checked>
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-size:14px;">&#x1F4D0;</span>
+                <strong style="font-size:13px;color:#0c4a6e;">Building Footprint</strong>
+                <span style="background:#0891b2;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;font-family:'IBM Plex Mono',monospace;">LIVE</span>
+              </div>
+              <div style="font-size:11px;color:#475569;line-height:1.5;">Estimated building footprint area from mapped polygon data — independent cross-check against declared area.</div>
+              <div style="font-size:10px;color:#0891b2;margin-top:4px;font-family:'IBM Plex Mono',monospace;">Source: OpenStreetMap</div>
             </div>
           </label>
 
@@ -673,6 +687,43 @@
           </div>
 
         </div><!-- end service grid -->
+
+      </div>
+    </div>
+
+    <!-- SECTION 5b: Sanket Nat-Cat Grading -->
+    <div class="card" id="natcat-card">
+      <div class="card-header" style="background:linear-gradient(135deg,#1a3a2e,#0d2518);">
+        <div class="card-header-icon">&#x1F30B;</div>
+        <div style="flex:1;">
+          <div class="card-header-title" style="font-family:'IBM Plex Sans',sans-serif;letter-spacing:.02em;">Sanket Nat-Cat Grading</div>
+          <div class="card-header-sub">Natural catastrophe exposure assessment — seismic, wind/storm, and flood/water hazard grading per NBC 2025</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#15803d,#16a34a);color:#fff;font-size:9px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;white-space:nowrap;">NAT-CAT</div>
+      </div>
+      <div class="card-body">
+
+        <label id="natcat-label" style="display:flex;gap:14px;align-items:flex-start;padding:16px;border:1.5px solid #16a34a;border-radius:10px;cursor:pointer;background:#f0fdf4;transition:all .2s;" onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
+          <input type="checkbox" id="natcat-enabled" style="margin-top:2px;width:18px;height:18px;accent-color:#16a34a;cursor:pointer;flex-shrink:0;">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+              <span style="font-size:16px;">&#x1F30B;</span>
+              <strong style="font-size:14px;color:#14532d;">Full Nat-Cat Grading Assessment</strong>
+              <span style="background:#16a34a;color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;font-family:'IBM Plex Mono',monospace;">LIVE</span>
+            </div>
+            <div style="font-size:12px;color:#166534;line-height:1.6;">
+              Includes site-specific seismic hazard tier (NBC 2025 Appendix C), wind/storm exposure grading, and flood/water risk assessment.
+              Produces a demerit-weighted Nat-Cat score out of 100 with a colour-coded Grade 1&ndash;5 rating &mdash; consistent with the
+              Property and Sprinkler grading methodology used across the SanketRisk platform.
+            </div>
+            <div style="font-size:10px;color:#16a34a;margin-top:6px;font-family:'IBM Plex Mono',monospace;">Source: NBC 2025 Appendix C Climatic &amp; Seismic Design Data (680 Canadian locations)</div>
+          </div>
+        </label>
+
+        <div class="callout callout-info" style="margin-top:14px;font-size:12px;">
+          <strong>If not selected:</strong> the report will include only basic location and municipal fire protection information.
+          <strong>Full Nat-Cat Grading is available upon request</strong> &mdash; contact Sanket Risk Consultants to add this assessment to any submission.
+        </div>
 
       </div>
     </div>
@@ -936,6 +987,18 @@
       <div class="result-section">
         <div class="result-section-header"><div class="result-section-icon">&#x1F30D;</div><div class="result-section-title">Exposure Assessment</div></div>
         <div class="result-section-body" id="res-exposure">&#x2014;</div>
+      </div>
+
+      <!-- Sanket Nat-Cat Grading -->
+      <div class="result-section" id="res-natcat-section">
+        <div class="result-section-header">
+          <div class="result-section-icon">&#x1F30B;</div>
+          <div class="result-section-title">Sanket Nat-Cat Grading</div>
+          <div style="margin-left:auto;background:linear-gradient(135deg,#15803d,#16a34a);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;font-family:'IBM Plex Mono',monospace;letter-spacing:.05em;">NAT-CAT</div>
+        </div>
+        <div class="result-section-body" id="res-natcat-body">
+          <!-- Populated by renderNatCatSection() -->
+        </div>
       </div>
 
       <!-- Site Location Map -->
@@ -1754,10 +1817,12 @@
 
     var corpEl = document.getElementById('ri-corp');
     var bcaEl  = document.getElementById('ri-bca');
+    var osmEl  = document.getElementById('ri-osm');
     var corpChecked = corpEl ? corpEl.checked : true;
     var bcaChecked  = bcaEl  ? bcaEl.checked  : false;
+    var osmChecked  = osmEl  ? osmEl.checked  : false;
 
-    if (!corpChecked && !bcaChecked) return;
+    if (!corpChecked && !bcaChecked && !osmChecked) return;
 
     section.style.display = 'block';
     body.innerHTML = '';
@@ -1766,13 +1831,326 @@
     var address  = (data.address  || '').trim();
     var city     = (data.city     || '').trim();
     var province = (data.province || '').trim();
+    var declaredArea = (data.area || '').trim();
 
     var promises = [];
     if (corpChecked) promises.push(runCorpCanada(body, insured, city, province));
     if (bcaChecked)  promises.push(runBcAssessment(body, address, city, province));
+    if (osmChecked)  promises.push(runOpenStreetMap(body, address, city, province, declaredArea));
     await Promise.allSettled(promises);
 
     if (lastResult) lastResult.registryIntel = body.innerHTML;
+  }
+
+  // ── OpenStreetMap Building Footprint ─────────────────────────────────────────
+  async function runOpenStreetMap(body, address, city, province, declaredArea) {
+    var el = _riAddService(body, 'osm', '&#x1F4D0;', 'Building Footprint', 'OpenStreetMap');
+
+    if (!address || !city) {
+      el.innerHTML = _riMsg('Street address and city are required for building footprint lookup.', 'warn');
+      return;
+    }
+
+    try {
+      // Step 1 — geocode the address using Nominatim (OSM's free geocoder)
+      var fullAddr = address + ', ' + city + (province ? ', ' + province : '') + ', Canada';
+      var geoUrl = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=' + encodeURIComponent(fullAddr);
+      var geoResp = await fetch(geoUrl, { headers: { 'Accept': 'application/json' } });
+
+      if (!geoResp.ok) {
+        el.innerHTML = _riMsg('Geocoding service returned HTTP ' + geoResp.status + '. Building footprint lookup unavailable.', 'warn');
+        return;
+      }
+      var geoResults = await geoResp.json();
+      if (!geoResults || !geoResults.length) {
+        el.innerHTML = _riMsg('Address could not be geocoded: "' + fullAddr + '". Building footprint not available for this address.', 'warn');
+        return;
+      }
+
+      var lat = parseFloat(geoResults[0].lat);
+      var lon = parseFloat(geoResults[0].lon);
+
+      // Step 2 — query Overpass API for building polygons within ~40m of the geocoded point
+      var overpassQuery = '[out:json][timeout:15];way["building"](around:40,' + lat + ',' + lon + ');out geom;';
+      var overpassUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(overpassQuery);
+      var ovResp = await fetch(overpassUrl);
+
+      if (!ovResp.ok) {
+        el.innerHTML = _riMsg(
+          'Building outline service returned HTTP ' + ovResp.status + '. Address was geocoded (' + lat.toFixed(5) + ', ' + lon.toFixed(5) + ') but footprint data unavailable.',
+          'warn'
+        );
+        return;
+      }
+
+      var ovData = await ovResp.json();
+      var ways = (ovData.elements || []).filter(function(e) { return e.type === 'way' && e.geometry && e.geometry.length > 2; });
+
+      if (!ways.length) {
+        el.innerHTML = _riMsg(
+          'No mapped building outline found near this address in OpenStreetMap (geocoded to ' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '). ' +
+          'Many rural and industrial buildings are not yet digitised in OSM — this does not indicate any issue with the property.',
+          'info'
+        ) + '<div style="font-size:11px;margin-top:8px;"><a href="https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lon + '&zoom=18" target="_blank" style="color:#0891b2;">View location on OpenStreetMap &#x2197;</a></div>';
+        return;
+      }
+
+      // Pick the largest building polygon (closest match to the actual building)
+      var best = null, bestArea = 0;
+      ways.forEach(function(w) {
+        var pts = w.geometry.map(function(g) { return [g.lon, g.lat]; });
+        var area = _polygonAreaSqM(pts);
+        if (area > bestArea) { bestArea = area; best = w; }
+      });
+
+      var areaSqFt = bestArea * 10.7639;  // m² to sq ft
+      var tags = (best && best.tags) || {};
+      var buildingType = tags['building'] && tags['building'] !== 'yes' ? tags['building'] : null;
+      var levels = tags['building:levels'] || null;
+
+      var html =
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
+        _riRow('Mapped Footprint Area', '<strong>' + Math.round(areaSqFt).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(bestArea).toLocaleString('en-CA') + ' m\u00B2)') +
+        (declaredArea ? _riRow('Declared Building Area', declaredArea + (isNaN(parseFloat(declaredArea)) ? '' : ' sq ft')) : '') +
+        (buildingType ? _riRow('Building Type (OSM tag)', buildingType) : '') +
+        (levels ? _riRow('Levels (OSM tag)', levels) : '') +
+        _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
+        '</table>';
+
+      // Compare declared vs mapped if both available
+      var declaredNum = parseFloat((declaredArea || '').replace(/[^\d.]/g, ''));
+      if (declaredNum && areaSqFt) {
+        var diffPct = Math.abs((declaredNum - areaSqFt) / declaredNum * 100);
+        if (diffPct > 25) {
+          html += _riMsg(
+            'Mapped footprint area differs from declared area by approximately ' + Math.round(diffPct) + '%. ' +
+            'This may reflect multi-storey construction, building additions not yet mapped, or OSM data covering only part of the structure — recommend on-site verification.',
+            'warn'
+          );
+        } else {
+          html += _riMsg('Mapped footprint area is broadly consistent with the declared building area.', 'info');
+        }
+      }
+
+      html += '<div style="font-size:11px;margin-top:8px;"><a href="https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lon + '&zoom=18" target="_blank" style="color:#0891b2;">View building on OpenStreetMap &#x2197;</a></div>';
+
+      el.innerHTML = html;
+
+    } catch(e) {
+      el.innerHTML = _riMsg('Building footprint lookup error: ' + e.message, 'error');
+    }
+  }
+
+  // Shoelace formula approximation for polygon area in m² (good enough at building scale)
+  function _polygonAreaSqM(pts) {
+    if (!pts || pts.length < 3) return 0;
+    var R = 6378137; // Earth radius in metres
+    var area = 0;
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p1 = pts[i], p2 = pts[i+1];
+      var x1 = p1[0] * Math.PI / 180 * R * Math.cos(p1[1] * Math.PI / 180);
+      var y1 = p1[1] * Math.PI / 180 * R;
+      var x2 = p2[0] * Math.PI / 180 * R * Math.cos(p2[1] * Math.PI / 180);
+      var y2 = p2[1] * Math.PI / 180 * R;
+      area += (x1 * y2 - x2 * y1);
+    }
+    return Math.abs(area / 2);
+  }
+
+  // ── SANKET NAT-CAT GRADING ───────────────────────────────────────────────────
+  // Matches the exact methodology and table structure used in app.html's COPE
+  // Nat-Cat module. Table: climatic_design_data, keyed by 'location' + 'province'.
+  // Seismic tiers and grade boundaries are identical to app.html for consistency
+  // across the SanketRisk platform.
+  function cddTier(smax) {
+    var v = parseFloat(smax);
+    if (isNaN(v)) return '';
+    if (v < 0.2) return 'Low';
+    if (v < 0.47) return 'Moderate';
+    if (v <= 0.75) return 'High';
+    return 'Very High';
+  }
+
+  function natCatGradeFromScore(score) {
+    if (score >= 90) return { grade: 1, label: 'Minimal Nat-Cat Exposure', color: '#276749',
+      desc: 'Building and site are well suited to the local hazard environment. No significant vulnerabilities observed. Standard terms applicable.' };
+    if (score >= 75) return { grade: 2, label: 'Low Nat-Cat Exposure', color: '#7B5E00',
+      desc: 'Minor vulnerabilities relative to local hazards. Standard terms with recommendations noted.' };
+    if (score >= 55) return { grade: 3, label: 'Moderate Nat-Cat Exposure', color: '#C05621',
+      desc: 'Notable vulnerabilities relative to the local hazard tier. Recommendations required — review Nat-Cat deductibles and sublimits.' };
+    if (score >= 35) return { grade: 4, label: 'Elevated Nat-Cat Exposure', color: '#C53030',
+      desc: 'Significant vulnerabilities across one or more perils. Refer to underwriter — consider peril-specific deductibles, sublimits, or engineering review.' };
+    return { grade: 5, label: 'Severe Nat-Cat Exposure', color: '#C53030',
+      desc: 'Building poorly suited to the local hazard environment or major unresolved vulnerabilities. Detailed engineering review required — consider restrictive terms or declination.' };
+  }
+
+  async function renderNatCatSection(data) {
+    var body = document.getElementById('res-natcat-body');
+    if (!body) return;
+
+    var natCatEl = document.getElementById('natcat-enabled');
+    var natCatRequested = natCatEl ? natCatEl.checked : false;
+
+    if (!natCatRequested) {
+      body.innerHTML =
+        '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 18px;">' +
+        '<div style="font-size:13px;color:#1a2e42;line-height:1.7;">' +
+        '<strong>&#x2139; ONLY BASIC INFORMATION IS PROVIDED.</strong> This assessment includes general location and municipal fire protection ' +
+        'context only (see Exposure Assessment above). It does not include seismic hazard tier, wind/storm exposure grading, or flood/water risk scoring.' +
+        '</div>' +
+        '<div style="font-size:13px;color:#166534;font-weight:700;margin-top:10px;">&#x1F30B; FULL NAT-CAT GRADING AVAILABLE UPON REQUEST.</div>' +
+        '<div style="font-size:11px;color:#64748b;margin-top:6px;">Contact Sanket Risk Consultants to add a full natural catastrophe exposure assessment to this or any submission.</div>' +
+        '</div>';
+      return;
+    }
+
+    body.innerHTML = '<div style="font-size:12px;color:#718096;font-style:italic;padding:8px 0;">&#x23F3; Looking up NBC 2025 climatic and seismic design data\u2026</div>';
+
+    var city     = (data.city || '').trim();
+    var province = (data.province || '').trim();
+
+    if (!city || !province) {
+      body.innerHTML = _riMsg('City and province are required for Nat-Cat grading lookup.', 'warn');
+      return;
+    }
+
+    try {
+      // Query climatic_design_data — matched by 'location' field (NBC 2025 Appendix C, 680 locations)
+      var url = SUPABASE_URL + '/rest/v1/climatic_design_data' +
+        '?location=ilike.*' + encodeURIComponent(city) + '*' +
+        '&province=eq.' + encodeURIComponent(province) +
+        '&select=*&limit=1';
+      var resp = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } });
+
+      if (!resp.ok) {
+        body.innerHTML = _riMsg('Climatic design data lookup failed (HTTP ' + resp.status + ').', 'warn');
+        return;
+      }
+
+      var rows = await resp.json();
+      if (!rows || !rows.length) {
+        body.innerHTML = _riMsg(
+          'No NBC 2025 climatic/seismic design data found for "' + city + ', ' + province + '". ' +
+          'This location may not be among the 680 mapped municipalities — try the nearest larger town for manual lookup.',
+          'warn'
+        );
+        return;
+      }
+
+      var d = rows[0];
+      var smax = parseFloat(d.smax_unknown);
+      var tier = cddTier(smax);
+      var tierMult = tier === 'Low' ? 0.25 : tier === 'Moderate' ? 0.5 : tier === 'High' ? 0.75 : tier === 'Very High' ? 1.0 : 0.5;
+
+      // ── AI-derived demerits from nat_cat_observations (photo-based visual assessment) ──
+      // Maps directly onto the app.html demerit tables for full methodology consistency.
+      var obs = (lastResult && lastResult.nat_cat_observations) || {};
+
+      function _mapDem(val, map, fallback) {
+        if (!val) return fallback;
+        for (var key in map) { if (val.indexOf(key) === 0) return map[key]; }
+        return fallback;
+      }
+
+      var eqIncomplete = !obs.construction_era_vs_code && !obs.structural_vulnerability;
+
+      var eqRaw = 0;
+      eqRaw += _mapDem(obs.construction_era_vs_code, { 'Post-2005': 0, '1990': 4, '1970': 9, 'Pre-1970': 14, 'Unknown': 7 }, 7);
+      eqRaw += _mapDem(obs.structural_vulnerability, { 'Low': 0, 'Moderate': 4, 'Elevated': 12, 'High': 20, 'Unknown': 8 }, 8);
+      eqRaw += _mapDem(obs.equipment_racking_anchorage, { 'Anchored': 0, 'Partially': 4, 'Not anchored': 8, 'Not applicable': 0 }, 4);
+      eqRaw += _mapDem(obs.sprinkler_seismic_bracing, { 'Braced': 0, 'Partial': 3, 'No seismic': 6, 'Not applicable': 0, 'Unable': 3 }, 3);
+
+      var windDem = 0;
+      windDem += _mapDem(obs.roof_covering_condition, { 'Excellent': 0, 'Good': 1, 'Fair': 4, 'Poor': 9, 'Unable': 4 }, 4);
+      windDem += _mapDem(obs.roof_deck_attachment, { 'Engineered': 0, 'Conventional': 2, 'Ballasted': 7, 'Unknown': 3 }, 3);
+      windDem += _mapDem(obs.cladding_flashing_condition, { 'Secure': 0, 'Minor': 2, 'Loose': 6 }, 2);
+      windDem += _mapDem(obs.large_openings_doors, { 'None': 0, 'Overhead doors wind-rated': 1, 'Overhead doors standard': 4, 'Large unprotected': 6 }, 2);
+      windDem += _mapDem(obs.tree_debris_exposure, { 'Minimal': 0, 'Moderate': 2, 'Significant': 5 }, 1);
+
+      var floodDem = 0;
+      floodDem += _mapDem(obs.site_elevation_vs_surroundings, { 'Elevated': 0, 'Level': 2, 'Low-lying': 7, 'In mapped': 12 }, 2);
+      floodDem += _mapDem(obs.watercourse_proximity, { 'None visible': 0, 'Watercourse beyond 100m': 2, 'Watercourse within 100m': 5, 'Adjacent to watercourse': 8 }, 2);
+      floodDem += _mapDem(obs.site_drainage, { 'Good': 0, 'Adequate': 1, 'Poor': 5 }, 1);
+      floodDem += _mapDem(obs.lowest_level_use, { 'Slab on grade': 0, 'Basement mechanical only': 2, 'Basement with stock': 6, 'Below-grade level present': 5 }, 1);
+
+      // ── Additional hazard categories beyond app.html's standard set ──
+      var supplementalDem = 0;
+      var supplementalNotes = [];
+      if (obs.elevated_foundation_stilts && obs.elevated_foundation_stilts.indexOf('Building on piers') === 0) {
+        supplementalDem += 6;
+        supplementalNotes.push('Building on piers/stilts — elevated foundation increases wind and seismic vulnerability at support points (+6)');
+      } else if (obs.elevated_foundation_stilts && obs.elevated_foundation_stilts.indexOf('Elevated foundation due to') === 0) {
+        supplementalDem += 8;
+        supplementalNotes.push('Elevated foundation due to flood/slope risk — confirms heightened site hazard (+8)');
+      }
+      if (obs.hillside_mountain_siting && obs.hillside_mountain_siting.indexOf('Steep hillside') === 0) {
+        supplementalDem += 7;
+        supplementalNotes.push('Steep hillside/mountainside siting — landslide and debris flow exposure (+7)');
+      } else if (obs.hillside_mountain_siting && obs.hillside_mountain_siting.indexOf('Building cut into slope') === 0) {
+        supplementalDem += 9;
+        supplementalNotes.push('Building cut into slope — significant grading/retention exposure (+9)');
+      } else if (obs.hillside_mountain_siting && obs.hillside_mountain_siting.indexOf('Moderate slope') === 0) {
+        supplementalDem += 3;
+        supplementalNotes.push('Moderate slope siting (+3)');
+      }
+      if (obs.wildfire_interface_exposure && obs.wildfire_interface_exposure.indexOf('Adjacent forest or wildland <30m') === 0) {
+        supplementalDem += 6;
+        supplementalNotes.push('Wildland vegetation within 30m of building (+6)');
+      } else if (obs.wildfire_interface_exposure && obs.wildfire_interface_exposure.indexOf('Surrounded by dense forest') === 0) {
+        supplementalDem += 10;
+        supplementalNotes.push('Building surrounded by dense forest — high wildfire interface exposure (+10)');
+      } else if (obs.wildfire_interface_exposure && obs.wildfire_interface_exposure.indexOf('Adjacent forest or wildland >30m') === 0) {
+        supplementalDem += 2;
+        supplementalNotes.push('Forest/wildland present beyond 30m (+2)');
+      }
+      floodDem += supplementalDem;  // supplemental hazards folded into flood/water category total for now
+
+      var eqDem = Math.round(eqRaw * tierMult * 10) / 10;
+
+      var totalDem = Math.min(Math.round((eqDem + windDem + floodDem) * 10) / 10, 100);
+      var score = Math.max(0, Math.round((100 - totalDem) * 10) / 10);
+      var grading = natCatGradeFromScore(score);
+
+      var html =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">' +
+        '<div style="background:#f8fafc;border-radius:8px;padding:14px;text-align:center;">' +
+        '<div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Nat-Cat Score</div>' +
+        '<div style="font-size:32px;font-weight:700;color:' + grading.color + ';">' + score + '</div>' +
+        '<div style="font-size:11px;color:#64748b;">out of 100</div>' +
+        '</div>' +
+        '<div style="background:#f8fafc;border-radius:8px;padding:14px;text-align:center;">' +
+        '<div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Grade</div>' +
+        '<div style="font-size:32px;font-weight:700;color:' + grading.color + ';">' + grading.grade + '</div>' +
+        '<div style="font-size:11px;color:#64748b;">' + grading.label + '</div>' +
+        '</div>' +
+        '</div>' +
+        '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:14px;">' + grading.desc + '</div>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+        _riRow('NBC Reference Location', (d.location || city) + ', ' + (d.province || province)) +
+        _riRow('Seismic Hazard Tier', tier ? '<span style="font-weight:700;">' + tier + '</span> (Smax ' + (isNaN(smax) ? '\u2014' : smax.toFixed(2)) + ', \u00d7' + tierMult + ' demerit weight)' : 'Smax not available') +
+        _riRow('Wind Pressure 1/50 (kPa)', d.wind_q_1_50_kpa !== undefined && d.wind_q_1_50_kpa !== null ? d.wind_q_1_50_kpa : '\u2014') +
+        _riRow('Snow Load Ss 1/50 (kPa)', d.snow_ss_1_50_kpa !== undefined && d.snow_ss_1_50_kpa !== null ? d.snow_ss_1_50_kpa : '\u2014') +
+        _riRow('1-Day Rain 1/50 (mm)', d.rain_1day_1_50_mm !== undefined && d.rain_1day_1_50_mm !== null ? d.rain_1day_1_50_mm : '\u2014') +
+        '</table>' +
+        '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0;">' +
+        '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Demerit Breakdown</div>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+        _riRow('Earthquake (tier-weighted)', eqDem + ' &mdash; raw ' + eqRaw + ' \u00d7 ' + tierMult) +
+        _riRow('Wind / Storm', windDem - (obs.lowest_level_use ? 0 : 0)) +
+        _riRow('Flood / Water (incl. supplemental)', floodDem) +
+        _riRow('<strong>Total Demerits</strong>', '<strong>' + totalDem + '</strong>') +
+        '</table>' +
+        '</div>' +
+        (supplementalNotes.length ? '<div style="margin-top:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;"><div style="font-size:11px;font-weight:700;color:#9a3412;margin-bottom:4px;">Additional Site Hazards Identified</div><div style="font-size:12px;color:#7c2d12;line-height:1.6;">' + supplementalNotes.join('<br>') + '</div></div>' : '') +
+        (eqIncomplete ? '<div style="font-size:11px;color:#94a3b8;margin-top:10px;font-style:italic;">Some demerit categories not confirmed from submitted photos \u2014 moderate baseline applied where visual evidence was insufficient. For a fully assessed grade, request an on-site Nat-Cat inspection.</div>' : '<div style="font-size:11px;color:#94a3b8;margin-top:10px;font-style:italic;">Demerits derived from AI visual assessment of submitted photographs (see nat_cat_observations).</div>') +
+        '<div style="font-size:11px;color:#94a3b8;margin-top:6px;">Source: NBC 2025 Appendix C Climatic &amp; Seismic Design Data. Methodology consistent with SanketRisk Property and Sprinkler grading systems.</div>';
+
+      body.innerHTML = html;
+      if (lastResult) lastResult.natCatGrading = html;
+
+    } catch(e) {
+      body.innerHTML = _riMsg('Nat-Cat grading lookup error: ' + e.message, 'error');
+    }
   }
 
   // ── Corporations Canada via OpenCorporates (proxied via Netlify function) ───
@@ -1990,6 +2368,22 @@
     var yr   = new Date().getFullYear();
     var bldgAge = age > 0 ? yr - age : 0;
 
+    // ── NAT-CAT OBSERVATIONS (only if Nat-Cat Grading was requested) ───────
+    var natCatCheckEl = document.getElementById('natcat-enabled');
+    if (natCatCheckEl && natCatCheckEl.checked) {
+      blocks.push(
+        'TASK — NAT-CAT VISUAL OBSERVATIONS (Full Nat-Cat Grading was requested for this submission):\n' +
+        'Populate the nat_cat_observations object in your JSON response using ONLY what is visually assessable from photos. Do not guess values you cannot support from the images.\n' +
+        'SEISMIC: Look for visible seismic bracing on overhead sprinkler piping (diagonal lateral braces near the riser or at pipe runs), anchor brackets on tall storage racking or rooftop equipment, and construction style suggesting era (e.g. modern pre-engineered steel = newer; unreinforced masonry walls = older/higher vulnerability).\n' +
+        'WIND/STORM: Examine roof covering condition, note if the roof is BALLASTED (loose stone or paver ballast visible on a flat roof — this is a significant wind-uplift hazard), check cladding/flashing security, count large unprotected openings (oversized overhead doors), and note any nearby trees that could become storm debris.\n' +
+        'FLOOD/WATER: Assess site elevation relative to surrounding grade, look for any visible watercourse, creek, river, or drainage channel near the property, evaluate site drainage (ponding, grading), and determine if the lowest occupied level is slab-on-grade or has a basement.\n' +
+        'ELEVATED FOUNDATION / STILTS: Check if the building or any part of it is constructed on piers, posts, or stilts raising it above natural grade — this is common in floodplain construction or on steep terrain and significantly changes flood and seismic exposure. Note in elevated_foundation_stilts field.\n' +
+        'HILLSIDE / MOUNTAIN SITING: Assess the site topography from any photos showing the building exterior, surrounding terrain, or background landscape. A building cut into a slope, built on a steep hillside, or sited in mountainous terrain has elevated landslide, debris flow, and wildfire run-up exposure — note in hillside_mountain_siting field.\n' +
+        'WILDFIRE INTERFACE: Note proximity of forest, wildland vegetation, or dense tree cover to the building, and any visible smoke or haze in photos suggesting active regional wildfire activity.\n' +
+        'If a category cannot be assessed from the photos provided, use "Unknown" or "Unable to determine" rather than guessing — this keeps the Nat-Cat grade honest about its limitations.'
+      );
+    }
+
     // ── OCCUPANCY-BASED BLOCKS ─────────────────────────────────────────────
 
     // Heavy / Light Manufacturing
@@ -2183,6 +2577,9 @@
     var docCt = uploadedDocs.length;
     var attachDesc = [imgCt ? imgCt+' photos' : '', pdfCt ? pdfCt+' PDF' : '', docCt ? docCt+' supporting doc'+(docCt!==1?'s':'') : ''].filter(Boolean).join(' + ');
 
+    var natCatEl2 = document.getElementById('natcat-enabled');
+    var natCatRequestedForPrompt = natCatEl2 ? natCatEl2.checked : false;
+
     // Build photo caption index — maps captions to photos by position
     // Works for both individual uploads (uploadedPhotos) and storage path recalls
     var checkedForPrompt = Array.from(document.querySelectorAll('.photo-chk:checked')).map(function(c){ return parseInt(c.dataset.idx); });
@@ -2282,6 +2679,28 @@
       '  "occupancy":"[Paragraph: operations, major equipment visible with brands/models, combustible loading, forklift type, housekeeping, storage heights, hazardous materials. If grinding/shredding combustibles: note magnetic separator presence or absence]",\n' +
       '  "protection":"[SPRINKLER PROTECTION: Always open with: The building is protected by an automatic sprinkler system. Describe: (a) RISER CONTROL VALVE -- identify type: butterfly valve (circular disc with lever arm, often orange/red/yellow lever, with tamper switch -- the lever handle distinguishes it from an OS&Y), OS&Y (wheel handwheel on rising stem through yoke), or gate valve -- state type, position open/closed, brand if readable (e.g. Tyco, Viking); (b) PRESSURE GAUGE readings; (c) HYDRAULIC DATA PLATE details if visible; (d) SPRINKLER HEADS -- type (pendant/upright/sidewall/ESFR), condition; (e) PIPING -- steel or CPVC; (f) SPARE HEAD CABINET -- REQUIRED CHECK: scan every photo for a red metal box (approx 30cm wide). If found OPEN with orange/yellow-bulbed heads in clips and a black wrench inside, write exactly: A spare sprinkler head cabinet is present photographed open and stocked with spare sprinkler heads and a sprinkler wrench confirming compliance with NFPA 25. Do NOT create any recommendation for spare heads if this cabinet is found. (g) CYCLONE COLLECTORS -- assess sprinkler inside cyclone, flag HIGH if unconfirmed. FIRE ALARM: Note panel brand/model -- Edwards (tan/beige panel with LCD and keypad labelled EDWARDS) is a common brand -- state if observed. List ALL fire alarm devices seen across all photos: smoke detectors (white dome ceiling devices ~10-15cm), heat detectors, horn/strobes, pull stations. Even if panel and devices are in different photos, include all in this section. FIRE EXTINGUISHERS: count, type (ABC/CO2/Class K), size, tags yes/no. SPECIAL EXTINGUISHING SYSTEMS: kitchen hood, clean agent, CO2, foam -- or None observed. BATTERY CHARGING STATIONS: if chargers visible note location and ventilation. Overall protection adequacy. Use headings: SPRINKLER PROTECTION, FIRE ALARM, FIRE EXTINGUISHERS, SPECIAL EXTINGUISHING SYSTEMS]",\n' +
       '  "exposure":"[EXTERIOR BUILDING ASSESSMENT: wall cladding condition, roof condition from exterior, doors/windows/openings condition, signage, site drainage, maintenance level, exterior storage or hazards adjacent to building. EXPOSURE AND NATURAL HAZARDS: neighbouring buildings and separation distances, construction type of nearest exposures, site access for fire apparatus, geographic risks (flood, wildfire, seismic), municipal fire protection (paid/volunteer, estimated response time, water supply). Use these exact headings in your output: EXTERIOR BUILDING ASSESSMENT, EXPOSURE AND NATURAL HAZARDS]",' +
+      (natCatRequestedForPrompt ? (
+      '  "nat_cat_observations":{\n' +
+      '    "construction_era_vs_code":"Post-2005|1990s-2000s|1970s-1980s|Pre-1970|Unknown — base on visible construction style, signage dates, or stated year built",\n' +
+      '    "structural_vulnerability":"Low|Moderate|Elevated|High|Unknown — unreinforced masonry or unbraced tall narrow walls = High; engineered steel/concrete = Low",\n' +
+      '    "equipment_racking_anchorage":"Anchored|Partially|Not anchored|Not applicable — check storage racking and rooftop/floor equipment for visible seismic anchor brackets or bracing",\n' +
+      '    "sprinkler_seismic_bracing":"Braced|Partial|No seismic bracing|Not applicable|Unable to determine — look for lateral sway braces on overhead sprinkler piping near risers",\n' +
+      '    "roof_covering_condition":"Excellent|Good|Fair|Poor|Unable to determine — from exterior roof photos",\n' +
+      '    "roof_deck_attachment":"Engineered|Conventional|Ballasted|Unknown — note if ballasted roof (loose stone/pavers) is visible, this is high wind-uplift risk",\n' +
+      '    "cladding_flashing_condition":"Secure|Minor issues|Loose/damaged — exterior wall panels and flashing",\n' +
+      '    "large_openings_doors":"None|Overhead doors wind-rated|Overhead doors standard|Large unprotected openings",\n' +
+      '    "tree_debris_exposure":"Minimal|Moderate|Significant — overhanging trees or storm debris sources near building",\n' +
+      '    "site_elevation_vs_surroundings":"Elevated|Level|Low-lying|In mapped floodplain — assess from site grading visible in photos",\n' +
+      '    "watercourse_proximity":"None visible|Watercourse beyond 100m|Watercourse within 100m|Adjacent to watercourse",\n' +
+      '    "site_drainage":"Good|Adequate|Poor — based on grading, ponding, or drainage infrastructure visible",\n' +
+      '    "lowest_level_use":"Slab on grade|Basement mechanical only|Basement with stock/equipment|Below-grade level present",\n' +
+      '    "elevated_foundation_stilts":"Not applicable — slab/standard foundation|Building on piers or stilts observed|Elevated foundation due to flood/slope risk — note if building appears raised on posts, piers, or stilts above grade, common in floodplain or steep terrain construction",\n' +
+      '    "hillside_mountain_siting":"Flat/level site|Moderate slope|Steep hillside or mountainside siting|Building cut into slope — assess from site topography visible in photos; steep siting increases landslide, debris flow, and wildfire run-up exposure",\n' +
+      '    "wildfire_interface_exposure":"Urban/cleared — minimal|Adjacent forest or wildland >30m|Adjacent forest or wildland <30m|Surrounded by dense forest — assess vegetation proximity and any visible smoke/haze in photos",\n' +
+      '    "snow_load_roof_condition":"No visible snow load concern|Flat roof with unclear drainage|Visible roof sagging or ponding risk — only assess if relevant to region",\n' +
+      '    "demerit_notes":"One sentence summarising the most significant Nat-Cat vulnerability observed, or None observed if site appears well-suited to local hazards."\n' +
+      '  },\n'
+      ) : '') +
       '  "hazards":"[SEVERITY: brief one-line description. One line per hazard. Use CRITICAL/HIGH/MEDIUM/LOW/ADVISORY. Keep each entry to 10 words max — full details go in recommendations only. Example format: HIGH: Sprinkler annual inspection records not confirmed. MEDIUM: Combustible dust accumulation on horizontal surfaces. LOW: Single fire extinguisher for 21000 sq ft facility.]",\n' +
       '  "recommendations":[{"priority":"High","code":"FP-SP-001","title":"Sprinkler System — Annual Inspection Records Not Confirmed","text":"No annual inspection service tags visible on sprinkler riser or control valves. Per NFPA 25 and National Fire Code of Canada, annual inspection and testing by a licensed sprinkler contractor is required. Provide documentation of current annual inspection within 30 days. Engage licensed contractor to conduct ITM per NFPA 25 and affix current service tags to all assemblies."},{"priority":"Medium","code":"HS-CD-001","title":"Combustible Dust — Housekeeping Program Required","text":"Dust accumulation on horizontal surfaces and equipment from manufacturing operations. Per NFPA 652, combustible dust accumulation must not exceed 1/32 inch over 5% of floor area. Implement documented cleaning program using HEPA vacuum equipment. Never use compressed air to clean — this disperses dust and creates explosive atmosphere."}],\n' +
       '  "insured_profile_search":true\n' +
@@ -4417,6 +4836,7 @@
     // ── Fire Registry Intel NOW — results-wrap is visible, section won't be wiped ──
     if (lastResult && lastResult.formData) {
       setTimeout(function() { runRegistryIntel(lastResult.formData); }, 500);
+      setTimeout(function() { renderNatCatSection(lastResult.formData); }, 500);
     }
   }
 
