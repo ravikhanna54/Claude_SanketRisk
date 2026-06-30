@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 331 — 2026-06-29 — Fix captions for PDF, MANDATORY caption instruction, cover 400px, count scoped to preview grid, cover page idx persists -->
+<!-- SanketRisk SCAN ONE — Deploy 334 — 2026-06-30 — Captioning grid: 2 columns, object-fit:contain, no cropping, full image visible -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -103,10 +103,10 @@
     .req-optional{background:#f0fdf4;color:#166534}
 
     /* PHOTO GRID PREVIEW */
-    .photo-preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
-    .photo-thumb{position:relative;border-radius:6px;overflow:hidden;border:1px solid var(--border);display:flex;flex-direction:column;background:#fff;}
-    .photo-thumb-img-wrap{position:relative;aspect-ratio:4/3;overflow:hidden;flex-shrink:0;}
-    .photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+    .photo-preview-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:16px}
+    .photo-thumb{position:relative;border-radius:6px;overflow:hidden;border:1px solid var(--border);display:flex;flex-direction:column;background:#0d1b2a;}
+    .photo-thumb-img-wrap{position:relative;min-height:220px;max-height:340px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#0d1b2a;}
+    .photo-thumb img{width:100%;height:100%;max-height:340px;object-fit:contain;display:block;}
     .photo-thumb-remove{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;z-index:2;}
     .photo-thumb-label{background:rgba(0,0,0,.55);color:#fff;font-size:8px;padding:3px 6px;font-family:'IBM Plex Mono',monospace;}
     .photo-thumb-desc{width:100%;border:none;border-top:1px solid var(--border);font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--navy);padding:6px 8px;resize:none;outline:none;background:#fafbfc;min-height:42px;box-sizing:border-box;line-height:1.4;}
@@ -212,7 +212,7 @@
       .form-grid{grid-template-columns:1fr}
       .form-grid.cols3{grid-template-columns:1fr}
       .photo-guide{grid-template-columns:1fr 1fr}
-      .photo-preview-grid{grid-template-columns:repeat(2,1fr)}
+      .photo-preview-grid{grid-template-columns:repeat(1,1fr)}
       .check-grid{grid-template-columns:1fr 1fr}
       .result-scores{grid-template-columns:1fr 1fr}
       .result-field-grid{grid-template-columns:1fr}
@@ -1116,6 +1116,7 @@
   var _storagePreviewLoaded = false; // prevent duplicate loads into preview grid
   var _selectedCoverDataUrl = null;  // user-selected cover photo — persists across renders
   var _selectedCoverPageIdx = null;  // page index of selected cover (for PDF submissions)
+  var _savedPhotoCaptions = {};      // captions restored from DB — applied when preview grid loads
   let uploadedDocs    = []; // Array of {file, dataUrl, name} — additional support documents
   let currentUser = null;
   let lastResult = null;
@@ -2301,7 +2302,7 @@
       var res = await fetch(
         SUPABASE_URL + '/rest/v1/scan_submissions?id=eq.' + encodeURIComponent(viewId) +
         '&select=id,insured_name,address,city,province,occupancy,year_built,building_area,' +
-        'photo_count,form_data,storage_paths,doc_paths,scan_result,inspection_id,status,report_pdf_path',
+        'photo_count,form_data,storage_paths,doc_paths,scan_result,inspection_id,status,report_pdf_path,photo_captions',
         { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
       );
       if (!res.ok) throw new Error('Could not fetch report (HTTP ' + res.status + ')');
@@ -2322,6 +2323,9 @@
       var docPaths   = [];
       try { photoPaths = sub.storage_paths ? (typeof sub.storage_paths === 'string' ? JSON.parse(sub.storage_paths) : sub.storage_paths) : []; } catch(e) {}
       try { docPaths   = sub.doc_paths     ? (typeof sub.doc_paths     === 'string' ? JSON.parse(sub.doc_paths)     : sub.doc_paths)     : []; } catch(e) {}
+
+      // ── Parse saved photo captions — restored into preview grid when photos load ──
+      try { _savedPhotoCaptions = sub.photo_captions ? (typeof sub.photo_captions === 'string' ? JSON.parse(sub.photo_captions) : sub.photo_captions) : {}; } catch(e) { _savedPhotoCaptions = {}; }
 
       // ── Parse form_data ──
       var fd = null;
@@ -4432,13 +4436,39 @@
           var bNum = parseInt((b.file && b.file.name || '').replace(/\D/g,'') || b.pdfPage || 0);
           return aNum - bNum;
         });
+
+        // ── Restore saved captions from DB (set in checkViewReportMode) ──
+        if (_savedPhotoCaptions && Object.keys(_savedPhotoCaptions).length > 0) {
+          uploadedPhotos.forEach(function(p) {
+            if (!p) return;
+            var capKey = p.pdfPage ? ('page-' + p.pdfPage)
+                       : p.storagePath ? p.storagePath.split('/').pop().replace(/\.[^.]+$/, '')
+                       : null;
+            if (capKey && _savedPhotoCaptions[capKey]) {
+              p.description = _savedPhotoCaptions[capKey];
+            }
+          });
+        }
+
         renderPhotoPreview();
         if (previewWrap) previewWrap.style.display = 'block';
         var loadBtn = document.getElementById('btn-load-for-caption');
         if (loadBtn) loadBtn.style.display = 'none';
-        // Restore cover photo selection if a page was previously selected
-        if (_selectedCoverPageIdx !== null && uploadedPhotos[_selectedCoverPageIdx]) {
-          setTimeout(function() { setCoverPhoto(_selectedCoverPageIdx); }, 300);
+        // Restore cover photo selection — find by dataUrl match (survives sort reordering)
+        if (_selectedCoverDataUrl) {
+          var matchIdx = -1;
+          for (var ci2 = 0; ci2 < uploadedPhotos.length; ci2++) {
+            if (uploadedPhotos[ci2] && uploadedPhotos[ci2].dataUrl === _selectedCoverDataUrl) { matchIdx = ci2; break; }
+          }
+          if (matchIdx === -1 && _selectedCoverPageIdx !== null) {
+            // Fallback: find by pdfPage number if dataUrl no longer matches (re-extracted)
+            for (var ci3 = 0; ci3 < uploadedPhotos.length; ci3++) {
+              if (uploadedPhotos[ci3] && uploadedPhotos[ci3].pdfPage === _selectedCoverPageIdx + 1) { matchIdx = ci3; break; }
+            }
+          }
+          if (matchIdx !== -1) {
+            setTimeout(function() { setCoverPhoto(matchIdx); }, 300);
+          }
         }
         showToast('\u2713 ' + uploadedPhotos.filter(Boolean).length + ' photos loaded — add captions and click Step 2 to re-analyse');
       }
@@ -4551,6 +4581,11 @@
     var resultsEl = document.getElementById('results-wrap');
     if (!resultsEl) return null;
     if (resultsEl.style.display === 'none') resultsEl.style.display = 'block';
+
+    // Ensure cover page reflects the current res-cover-photo selection before capture
+    if (lastResult && lastResult.formData) {
+      buildCoverPage(lastResult.formData, _draftInspId || null);
+    }
 
     showToast('\u23F3 Generating PDF report\u2026');
 
@@ -4939,6 +4974,18 @@
       var photoStoragePaths = (_storagePaths || []).filter(function(p) { return !p.includes('/doc-'); });
       var docStoragePaths   = (_storagePaths || []).filter(function(p) { return p.includes('/doc-'); });
 
+      // Build photo captions map — keyed by page number (PDF) or filename (individual photos)
+      // Persisted so captions survive across sessions and are pre-filled on next load
+      var photoCaptions = {};
+      uploadedPhotos.forEach(function(p, i) {
+        if (p && p.description && p.description.trim()) {
+          var capKey = p.pdfPage ? ('page-' + p.pdfPage)
+                     : p.storagePath ? p.storagePath.split('/').pop().replace(/\.[^.]+$/, '')
+                     : ('idx-' + i);
+          photoCaptions[capKey] = p.description.trim();
+        }
+      });
+
       // Save or update scan_submissions
       if (_reviewId) {
         var _er2 = await _supabase.from('scan_submissions').update({
@@ -4949,6 +4996,7 @@
           form_data:      JSON.stringify(formDataPayload),
           storage_paths:  JSON.stringify(photoStoragePaths),
           doc_paths:      JSON.stringify(docStoragePaths),
+          photo_captions: JSON.stringify(photoCaptions),
         }).eq('id', _reviewId);
         var error = _er2.error;
         if (error) throw error;
@@ -4970,6 +5018,7 @@
           submitted_at:   now.toISOString(),
           storage_paths:  JSON.stringify(photoStoragePaths),
           doc_paths:      JSON.stringify(docStoragePaths),
+          photo_captions: JSON.stringify(photoCaptions),
         });
         var error = _er1.error;
         if (error) throw error;
@@ -5003,6 +5052,7 @@
     _storagePreviewLoaded = false;
     _selectedCoverDataUrl = null;
     _selectedCoverPageIdx = null;
+    _savedPhotoCaptions = {};
     uploadedDocs   = [];
     lastResult     = null;
     _draftId       = null;
