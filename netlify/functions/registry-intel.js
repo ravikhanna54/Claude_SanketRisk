@@ -58,46 +58,67 @@ exports.handler = async function(event) {
     }
     var GMAPS_KEY = 'AIzaSyDAHNS9_C-NLzVhAUDhD9HfSP-7X-xTVkI';
     try {
-      // Try 1: Geocoding API with BUILDING_AND_ENTRANCES (Preview — limited rural coverage)
-      var gUrl = 'https://maps.googleapis.com/maps/api/geocode/json?address=' +
-        encodeURIComponent(fullAddress) + '&extra_computations=BUILDING_AND_ENTRANCES&key=' + GMAPS_KEY;
-      var gR = await httpsGet(gUrl);
-      var gData = {};
-      try { gData = JSON.parse(gR.text); } catch(e) {}
+      // Step 1: PLAIN geocode — no preview params. This must always succeed on its own
+      // so a rejected/unsupported preview parameter can never take down lat/lon resolution.
+      var baseUrl = 'https://maps.googleapis.com/maps/api/geocode/json?address=' +
+        encodeURIComponent(fullAddress) + '&key=' + GMAPS_KEY;
+      var baseR = await httpsGet(baseUrl);
+      var baseData = {};
+      try { baseData = JSON.parse(baseR.text); } catch(e) {}
 
-      if (gData.status !== 'OK' || !gData.results || !gData.results.length) {
+      if (baseData.status !== 'OK' || !baseData.results || !baseData.results.length) {
         return {
           statusCode: 200, headers: headers,
-          body: JSON.stringify({ service: 'google_geocode', status: 'not_found', message: gData.status || 'No results' })
+          body: JSON.stringify({ service: 'google_geocode', status: 'not_found', message: baseData.status || 'No results' })
         };
       }
 
-      var gRes = gData.results[0];
-      var lat = gRes.geometry.location.lat;
-      var lon = gRes.geometry.location.lng;
+      var baseRes = baseData.results[0];
+      var lat = baseRes.geometry.location.lat;
+      var lon = baseRes.geometry.location.lng;
       var footprintAreaSqM = null;
       var footprintSource = null;
 
-      // Check for building outline from BUILDING_AND_ENTRANCES
-      var buildings = gRes.buildings || (gRes.geometry && gRes.geometry.buildings) || null;
-      if (buildings && buildings.length && buildings[0].building_outlines && buildings[0].building_outlines.length) {
-        var outline = buildings[0].building_outlines[0].display_polygon;
-        if (outline && outline.coordinates && outline.coordinates[0]) {
-          var pts = outline.coordinates[0];
-          var R = 6378137;
-          var area = 0;
-          for (var i = 0; i < pts.length - 1; i++) {
-            var p1 = pts[i], p2 = pts[i+1];
-            var x1 = p1[0] * Math.PI / 180 * R * Math.cos(p1[1] * Math.PI / 180);
-            var y1 = p1[1] * Math.PI / 180 * R;
-            var x2 = p2[0] * Math.PI / 180 * R * Math.cos(p2[1] * Math.PI / 180);
-            var y2 = p2[1] * Math.PI / 180 * R;
-            area += (x1 * y2 - x2 * y1);
+      // Step 2: SEPARATE best-effort attempt at BUILDING_AND_ENTRANCES (Preview — limited
+      // rural coverage, and some accounts/regions reject the param outright). Wrapped so
+      // any failure here never invalidates the lat/lon already resolved above.
+      try {
+        var gUrl = 'https://maps.googleapis.com/maps/api/geocode/json?address=' +
+          encodeURIComponent(fullAddress) + '&extra_computations=BUILDING_AND_ENTRANCES&key=' + GMAPS_KEY;
+        var gR = await httpsGet(gUrl);
+        var gData = {};
+        try { gData = JSON.parse(gR.text); } catch(e) {}
+
+        if (gData.status === 'OK' && gData.results && gData.results.length) {
+          var gRes = gData.results[0];
+          // Building outlines can shift the matched result's lat/lon slightly — prefer it
+          // when present since it's more precise than the plain geocode centroid.
+          lat = gRes.geometry.location.lat;
+          lon = gRes.geometry.location.lng;
+
+          var buildings = gRes.buildings || (gRes.geometry && gRes.geometry.buildings) || null;
+          if (buildings && buildings.length && buildings[0].building_outlines && buildings[0].building_outlines.length) {
+            var outline = buildings[0].building_outlines[0].display_polygon;
+            if (outline && outline.coordinates && outline.coordinates[0]) {
+              var pts = outline.coordinates[0];
+              var R = 6378137;
+              var area = 0;
+              for (var i = 0; i < pts.length - 1; i++) {
+                var p1 = pts[i], p2 = pts[i+1];
+                var x1 = p1[0] * Math.PI / 180 * R * Math.cos(p1[1] * Math.PI / 180);
+                var y1 = p1[1] * Math.PI / 180 * R;
+                var x2 = p2[0] * Math.PI / 180 * R * Math.cos(p2[1] * Math.PI / 180);
+                var y2 = p2[1] * Math.PI / 180 * R;
+                area += (x1 * y2 - x2 * y1);
+              }
+              footprintAreaSqM = Math.abs(area / 2);
+              footprintSource = 'Google Building Outlines';
+            }
           }
-          footprintAreaSqM = Math.abs(area / 2);
-          footprintSource = 'Google Building Outlines';
         }
-      }
+        // If extra_computations request errored or came back non-OK, we simply have no
+        // building outline — lat/lon from Step 1 remains valid and is still used below.
+      } catch(buildingErr) { /* Preview building lookup failed — base geocode still stands */ }
 
       // Try 2: Places API (New) — has richer geometry for commercial properties
       if (!footprintAreaSqM) {
