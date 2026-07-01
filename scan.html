@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 352 — 2026-07-01 — Add on-screen Debug Log panel (bottom-right floating button) so diagnostics are visible without DevTools on Xiaomi/Edge; routed all [Footprint]/[NatCat]/[RegistryIntel] diagnostics through it -->
+<!-- SanketRisk SCAN ONE — Deploy 353 — 2026-07-01 — Fix report photo grid: removed forced aspect-ratio:4/3 + object-fit:cover (was cropping photos to fit a fixed box); photos now render at full width with natural aspect ratio, matching the existing print/PDF CSS behavior -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -4329,7 +4329,7 @@
         img.src = p.dataUrl;
         img.alt = 'Photo ' + (i + 1);
         img.title = p.file ? p.file.name : ('Photo ' + (i + 1));
-        img.style.cssText = 'width:100%;aspect-ratio:4/3;object-fit:cover;display:block;';
+        img.style.cssText = 'width:100%;height:auto;display:block;';
         var cap = document.createElement('div');
         cap.style.cssText = 'padding:5px 7px;background:#f8f9fb;border-top:1px solid var(--border);';
         var capLabel = document.createElement('div');
@@ -5064,7 +5064,7 @@
           wrap.style.cssText='border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#f8f9fb;display:flex;flex-direction:column;page-break-inside:avoid;break-inside:avoid;';
           var img = document.createElement('img');
           img.src = objUrl;
-          img.style.cssText='width:100%;aspect-ratio:4/3;object-fit:cover;display:block;';
+          img.style.cssText='width:100%;height:auto;display:block;';
           var cap = document.createElement('div');
           cap.style.cssText="padding:5px 7px;background:#f8f9fb;border-top:1px solid var(--border);font-size:10px;font-weight:700;color:var(--slate);font-family:'IBM Plex Mono',monospace;";
           cap.textContent='Photo '+(i+1);
