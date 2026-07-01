@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 347 — 2026-07-01 — Fix Nat-Cat/Registry Intel not firing after fresh analysis; save/restore checkbox states; Overpass radius 150/300m; hydrant 500m -->
+<!-- SanketRisk SCAN ONE — Deploy 348 — 2026-07-01 — Fix Nat-Cat province mismatch: map BC→British Columbia to match climatic_design_data table, fallback without province filter -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2136,23 +2136,48 @@
     }
 
     try {
-      // Query climatic_design_data — matched by 'location' field (NBC 2025 Appendix C, 680 locations)
+      // Map province abbreviations to full names as stored in climatic_design_data table
+      var provinceMap = {
+        'AB': 'Alberta', 'BC': 'British Columbia', 'MB': 'Manitoba',
+        'NB': 'New Brunswick', 'NL': 'Newfoundland and Labrador',
+        'NS': 'Nova Scotia', 'NT': 'Northwest Territories', 'NU': 'Nunavut',
+        'ON': 'Ontario', 'PE': 'Prince Edward Island', 'QC': 'Quebec',
+        'SK': 'Saskatchewan', 'YT': 'Yukon'
+      };
+      var provinceFull = provinceMap[province.toUpperCase()] || province;
+
+      // Query climatic_design_data — matched by 'location' field + full province name
       var url = SUPABASE_URL + '/rest/v1/climatic_design_data' +
         '?location=ilike.*' + encodeURIComponent(city) + '*' +
-        '&province=eq.' + encodeURIComponent(province) +
+        '&province=eq.' + encodeURIComponent(provinceFull) +
         '&select=*&limit=1';
       var resp = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } });
 
-      if (!resp.ok) {
+      // If province-filtered query found nothing, try without province filter (catches edge cases)
+      if (resp.ok) {
+        var testRows = await resp.json();
+        if (!testRows || !testRows.length) {
+          var url2 = SUPABASE_URL + '/rest/v1/climatic_design_data' +
+            '?location=ilike.*' + encodeURIComponent(city) + '*' +
+            '&select=*&limit=3';
+          var resp2 = await fetch(url2, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } });
+          if (resp2.ok) {
+            var rows2 = await resp2.json();
+            if (rows2 && rows2.length) {
+              // Use first result — may be a different province but better than nothing
+              testRows = rows2;
+            }
+          }
+        }
+        var rows = testRows;
+      } else {
         body.innerHTML = _riMsg('Climatic design data lookup failed (HTTP ' + resp.status + ').', 'warn');
         return;
       }
-
-      var rows = await resp.json();
       if (!rows || !rows.length) {
         body.innerHTML = _riMsg(
-          'No NBC 2025 climatic/seismic design data found for "' + city + ', ' + province + '". ' +
-          'This location may not be among the 680 mapped municipalities — try the nearest larger town for manual lookup.',
+          'No NBC 2025 climatic/seismic design data found for "' + city + ', ' + provinceFull + '". ' +
+          'The location may be listed under a nearby larger municipality — try re-running with the nearest city that has a weather station.',
           'warn'
         );
         return;
