@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 346 — 2026-06-30 — Fix redirect after captioning: only redirect on fresh submissions, not updates. Fix bold subheadings: match anywhere not just line start -->
+<!-- SanketRisk SCAN ONE — Deploy 347 — 2026-07-01 — Fix Nat-Cat/Registry Intel not firing after fresh analysis; save/restore checkbox states; Overpass radius 150/300m; hydrant 500m -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1279,6 +1279,13 @@
           if (fd.hazards.indexOf(key) !== -1) el.classList.add('selected');
         });
       }
+
+      // ── Restore Nat-Cat and Registry Intel checkbox states ──
+      var setChk = function(id, val) { var el = document.getElementById(id); if (el && val !== undefined) el.checked = val; };
+      if (fd.natCatEnabled !== undefined) setChk('natcat-enabled', fd.natCatEnabled);
+      if (fd.riCorp !== undefined) setChk('ri-corp', fd.riCorp);
+      if (fd.riBca  !== undefined) setChk('ri-bca',  fd.riBca);
+      if (fd.riOsm  !== undefined) setChk('ri-osm',  fd.riOsm);
     }
 
     // Photos are NOT loaded here to avoid large-payload timeouts.
@@ -1771,6 +1778,10 @@
       lossCause:  document.getElementById('s-loss-cause').value,
       lossAmt:    document.getElementById('s-loss-amt').value.trim(),
       upgrades, hazards,
+      natCatEnabled: document.getElementById('natcat-enabled') ? document.getElementById('natcat-enabled').checked : false,
+      riCorp: document.getElementById('ri-corp') ? document.getElementById('ri-corp').checked : true,
+      riBca:  document.getElementById('ri-bca')  ? document.getElementById('ri-bca').checked  : true,
+      riOsm:  document.getElementById('ri-osm')  ? document.getElementById('ri-osm').checked  : true,
     };
   }
 
@@ -1923,13 +1934,20 @@
 
         if (lat !== null) {
           try {
-            var overpassQuery = '[out:json][timeout:15];way["building"](around:40,' + lat + ',' + lon + ');out geom;';
-            var overpassUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(overpassQuery);
-            var ovResp = await fetch(overpassUrl);
-            if (ovResp.ok) {
+            // Try 150m radius first — needed for rural addresses where geocode lands on road centreline
+            // If no building found, retry with 300m for large industrial sites
+            var buildingFound = false;
+            var radii = [150, 300];
+            for (var ri = 0; ri < radii.length && !buildingFound; ri++) {
+              var radius = radii[ri];
+              var overpassQuery = '[out:json][timeout:20];way["building"](around:' + radius + ',' + lat + ',' + lon + ');out geom;';
+              var overpassUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(overpassQuery);
+              var ovResp = await fetch(overpassUrl);
+              if (!ovResp.ok) break;
               var ovData = await ovResp.json();
               var ways = (ovData.elements || []).filter(function(e) { return e.type === 'way' && e.geometry && e.geometry.length > 2; });
               if (ways.length) {
+                buildingFound = true;
                 var best = null, bestArea = 0;
                 ways.forEach(function(w) {
                   var pts2 = w.geometry.map(function(g) { return [g.lon, g.lat]; });
@@ -1948,6 +1966,7 @@
                   (buildingType ? _riRow('Building Type (OSM tag)', buildingType) : '') +
                   (levels ? _riRow('Levels (OSM tag)', levels) : '') +
                   _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
+                  _riRow('Search Radius Used', radius + 'm') +
                   '</table>' +
                   _compareFootprintArea(declaredArea, areaSqFt) +
                   '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Google building outline not available for this address (Preview coverage limited for rural/industrial CA properties) \u2014 footprint from OpenStreetMap community data.</div>';
@@ -1973,7 +1992,7 @@
       // ── Step 3 — fire hydrant proximity via OSM Overpass (independent of footprint source) ──
       var hydrantHtml = '';
       try {
-        var hydrantQuery = '[out:json][timeout:15];node["emergency"="fire_hydrant"](around:300,' + lat + ',' + lon + ');out;';
+        var hydrantQuery = '[out:json][timeout:15];node["emergency"="fire_hydrant"](around:500,' + lat + ',' + lon + ');out;';
         var hydrantUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(hydrantQuery);
         var hResp = await fetch(hydrantUrl);
         if (hResp.ok) {
@@ -1993,7 +2012,7 @@
               _riRow('Hydrants Mapped Within 300m', hydrants.length) +
               _riRow('Nearest Hydrant', Math.round(nearestDist) + ' m from geocoded location') +
               '</table>' +
-              '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Hydrant data is community-mapped and may be incomplete \u2014 absence of mapped hydrants does not confirm absence of hydrants on site. Verify with municipal fire department for underwriting purposes.</div>' +
+              '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Hydrant data is community-mapped and may be incomplete \u2014 absence of mapped hydrants does not confirm absence of hydrants on site. Verify with municipal fire department for underwriting purposes. Search radius: 500m.</div>' +
               '</div>';
           } else {
             hydrantHtml =
@@ -2089,7 +2108,9 @@
     if (!body) return;
 
     var natCatEl = document.getElementById('natcat-enabled');
+    // Read from live checkbox first; fall back to saved formData value
     var natCatRequested = natCatEl ? natCatEl.checked : false;
+    if (!natCatRequested && data && data.natCatEnabled) natCatRequested = true;
 
     if (!natCatRequested) {
       body.innerHTML =
@@ -3796,6 +3817,12 @@
 
       // Auto-save to dashboard — fire and forget, do NOT await (PDF generation takes minutes)
       setTimeout(function() { saveToDashboard().catch(function(e2){ console.warn('Auto-save failed:', e2.message); }); }, 1000);
+
+      // ── Fire Registry Intel and Nat-Cat after fresh analysis ──
+      if (lastResult && lastResult.formData) {
+        setTimeout(function() { runRegistryIntel(lastResult.formData); }, 800);
+        setTimeout(function() { renderNatCatSection(lastResult.formData); }, 900);
+      }
 
     } catch(e) {
       document.getElementById('progress-wrap').style.display = 'none';
