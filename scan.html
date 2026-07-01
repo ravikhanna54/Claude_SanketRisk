@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 351 — 2026-07-01 — Add console diagnostics through building footprint lookup (checkbox gate, Google/Nominatim/Overpass each step) to isolate why footprint is still wrong after registry-intel.js geocode split -->
+<!-- SanketRisk SCAN ONE — Deploy 352 — 2026-07-01 — Add on-screen Debug Log panel (bottom-right floating button) so diagnostics are visible without DevTools on Xiaomi/Edge; routed all [Footprint]/[NatCat]/[RegistryIntel] diagnostics through it -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -313,6 +313,45 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
+
+<!-- ON-SCREEN DEBUG LOG — for use on devices without DevTools console access -->
+<button id="dbg-toggle-btn" onclick="_toggleDebugPanel()" style="position:fixed;bottom:16px;right:16px;z-index:9999;background:#1a2e42;color:#fff;border:none;border-radius:24px;padding:10px 16px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3);">&#x1F41E; Debug Log</button>
+<div id="dbg-panel" style="display:none;position:fixed;bottom:64px;right:16px;left:16px;max-width:600px;margin:0 auto;max-height:60vh;background:#0f172a;color:#e2e8f0;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:9999;overflow:hidden;">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#1e293b;border-bottom:1px solid #334155;">
+    <strong style="font-size:12px;">Debug Log</strong>
+    <div>
+      <button onclick="_clearDebugPanel()" style="background:#334155;color:#e2e8f0;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;margin-right:6px;">Clear</button>
+      <button onclick="_toggleDebugPanel()" style="background:#334155;color:#e2e8f0;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Close</button>
+    </div>
+  </div>
+  <div id="dbg-content" style="padding:10px 14px;font-family:monospace;font-size:11px;line-height:1.6;overflow-y:auto;max-height:calc(60vh - 44px);white-space:pre-wrap;word-break:break-word;"></div>
+</div>
+<script>
+  function _toggleDebugPanel() {
+    var p = document.getElementById('dbg-panel');
+    if (p) p.style.display = (p.style.display === 'none' ? 'block' : 'none');
+  }
+  function _clearDebugPanel() {
+    var c = document.getElementById('dbg-content');
+    if (c) c.innerHTML = '';
+  }
+  function _dbg() {
+    var parts = Array.prototype.slice.call(arguments).map(function(a) {
+      if (typeof a === 'object') { try { return JSON.stringify(a); } catch(e) { return String(a); } }
+      return String(a);
+    });
+    var line = parts.join(' ');
+    console.log(line);
+    var c = document.getElementById('dbg-content');
+    if (c) {
+      var entry = document.createElement('div');
+      entry.style.cssText = 'padding:3px 0;border-bottom:1px solid #1e293b;';
+      entry.textContent = new Date().toLocaleTimeString() + '  ' + line;
+      c.appendChild(entry);
+      c.scrollTop = c.scrollHeight;
+    }
+  }
+</script>
 
 <!-- NAV -->
 <nav class="topnav" id="topnav">
@@ -1851,9 +1890,9 @@
     var corpChecked = corpEl ? corpEl.checked : true;
     var bcaChecked  = bcaEl  ? bcaEl.checked  : false;
     var osmChecked  = osmEl  ? osmEl.checked  : false;
-    console.log('[RegistryIntel] Checkbox states — corp:', corpChecked, 'bca:', bcaChecked, 'osm:', osmChecked, '(osm element found:', !!osmEl, ')');
+    _dbg('[RegistryIntel] Checkbox states — corp:', corpChecked, 'bca:', bcaChecked, 'osm:', osmChecked, '(osm element found:', !!osmEl, ')');
 
-    if (!corpChecked && !bcaChecked && !osmChecked) { console.warn('[RegistryIntel] All checkboxes off — nothing will run.'); return; }
+    if (!corpChecked && !bcaChecked && !osmChecked) { _dbg('[RegistryIntel] All checkboxes off — nothing will run.'); return; }
 
     section.style.display = 'block';
     body.innerHTML = '';
@@ -1878,13 +1917,13 @@
     var el = _riAddService(body, 'osm', '&#x1F4D0;', 'Building Footprint &amp; Fire Hydrants', 'Google Maps / OpenStreetMap');
 
     if (!address || !city) {
-      console.warn('[Footprint] Skipped — address or city missing. address="' + address + '" city="' + city + '"');
+      _dbg('[Footprint] Skipped — address or city missing. address="' + address + '" city="' + city + '"');
       el.innerHTML = _riMsg('Street address and city are required for building footprint lookup.', 'warn');
       return;
     }
 
     var fullAddr = address + ', ' + city + (province ? ', ' + province : '') + ', Canada';
-    console.log('[Footprint] Starting lookup for:', fullAddr);
+    _dbg('[Footprint] Starting lookup for:', fullAddr);
     var lat = null, lon = null;
     var footprintHtml = '';
     var footprintSource = null;
@@ -1892,16 +1931,16 @@
     try {
       // ── Step 1 — try Google Geocoding API with Building Outlines (proxied — Google Geocoding blocks direct browser CORS) ──
       try {
-        console.log('[Footprint] Calling /.netlify/functions/registry-intel (google_geocode)…');
+        _dbg('[Footprint] Calling /.netlify/functions/registry-intel (google_geocode)…');
         var gResp = await fetch('/.netlify/functions/registry-intel', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ service: 'google_geocode', fullAddress: fullAddr })
         });
-        console.log('[Footprint] registry-intel HTTP status:', gResp.status);
+        _dbg('[Footprint] registry-intel HTTP status:', gResp.status);
         if (gResp.ok) {
           var gJson = await gResp.json();
-          console.log('[Footprint] registry-intel response body:', gJson);
+          _dbg('[Footprint] registry-intel response body:', gJson);
           if (gJson.status === 'ok' && gJson.lat !== undefined) {
             lat = gJson.lat;
             lon = gJson.lon;
@@ -1909,7 +1948,7 @@
               var areaM2 = gJson.footprintAreaSqM;
               var areaSqFtG = areaM2 * 10.7639;
               footprintSource = gJson.footprintSource || 'Google';
-              console.log('[Footprint] Using Google footprint:', Math.round(areaSqFtG), 'sq ft, source:', footprintSource, 'at', lat, lon);
+              _dbg('[Footprint] Using Google footprint:', Math.round(areaSqFtG), 'sq ft, source:', footprintSource, 'at', lat, lon);
               footprintHtml =
                 '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
                 _riRow('Mapped Footprint Area', '<strong>' + Math.round(areaSqFtG).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(areaM2).toLocaleString('en-CA') + ' m\u00B2)') +
@@ -1919,21 +1958,21 @@
                 '</table>' +
                 _compareFootprintArea(declaredArea, areaSqFtG);
             } else {
-              console.log('[Footprint] Google geocode ok but no building outline — lat/lon set, will try OSM/Overpass next.');
+              _dbg('[Footprint] Google geocode ok but no building outline — lat/lon set, will try OSM/Overpass next.');
             }
             // Even without a building outline, Google's geocode gives us a reliable lat/lon for hydrant search
           } else {
-            console.warn('[Footprint] registry-intel returned non-ok status:', gJson.status, gJson.message);
+            _dbg('[Footprint] registry-intel returned non-ok status:', gJson.status, gJson.message);
           }
         } else {
-          console.warn('[Footprint] registry-intel fetch not ok — HTTP', gResp.status, '— falling back to Nominatim/OSM entirely.');
+          _dbg('[Footprint] registry-intel fetch not ok — HTTP', gResp.status, '— falling back to Nominatim/OSM entirely.');
         }
-      } catch(gErr) { console.warn('[Footprint] Google building outline error (fetch threw):', gErr.message); }
+      } catch(gErr) { _dbg('[Footprint] Google building outline error (fetch threw):', gErr.message); }
 
       // ── Step 2 — fallback to OSM/Nominatim + Overpass if Google had no outline ──
       if (!footprintSource) {
         if (lat === null) {
-          console.log('[Footprint] No lat/lon yet — falling back to Nominatim geocode for:', fullAddr);
+          _dbg('[Footprint] No lat/lon yet — falling back to Nominatim geocode for:', fullAddr);
           try {
             var geoUrl = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=' + encodeURIComponent(fullAddr);
             var geoResp = await fetch(geoUrl, { headers: { 'Accept': 'application/json' } });
@@ -1942,16 +1981,16 @@
               if (geoResults && geoResults.length) {
                 lat = parseFloat(geoResults[0].lat);
                 lon = parseFloat(geoResults[0].lon);
-                console.log('[Footprint] Nominatim resolved to:', lat, lon, '(this is a less precise fallback than Google — accuracy depends on OSM address data quality)');
+                _dbg('[Footprint] Nominatim resolved to:', lat, lon, '(this is a less precise fallback than Google — accuracy depends on OSM address data quality)');
               } else {
-                console.warn('[Footprint] Nominatim returned no results for:', fullAddr);
+                _dbg('[Footprint] Nominatim returned no results for:', fullAddr);
               }
             } else {
-              console.warn('[Footprint] Nominatim fetch not ok — HTTP', geoResp.status);
+              _dbg('[Footprint] Nominatim fetch not ok — HTTP', geoResp.status);
             }
-          } catch(nomErr) { console.warn('[Footprint] Nominatim geocode error:', nomErr.message); }
+          } catch(nomErr) { _dbg('[Footprint] Nominatim geocode error:', nomErr.message); }
         } else {
-          console.log('[Footprint] Using Google-resolved lat/lon for Overpass search (no Nominatim needed):', lat, lon);
+          _dbg('[Footprint] Using Google-resolved lat/lon for Overpass search (no Nominatim needed):', lat, lon);
         }
 
         if (lat !== null) {
@@ -1964,12 +2003,12 @@
               var radius = radii[ri];
               var overpassQuery = '[out:json][timeout:20];way["building"](around:' + radius + ',' + lat + ',' + lon + ');out geom;';
               var overpassUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(overpassQuery);
-              console.log('[Footprint] Querying Overpass at radius', radius, 'm around', lat, lon);
+              _dbg('[Footprint] Querying Overpass at radius', radius, 'm around', lat, lon);
               var ovResp = await fetch(overpassUrl);
-              if (!ovResp.ok) { console.warn('[Footprint] Overpass fetch not ok — HTTP', ovResp.status); break; }
+              if (!ovResp.ok) { _dbg('[Footprint] Overpass fetch not ok — HTTP', ovResp.status); break; }
               var ovData = await ovResp.json();
               var ways = (ovData.elements || []).filter(function(e) { return e.type === 'way' && e.geometry && e.geometry.length > 2; });
-              console.log('[Footprint] Overpass returned', ways.length, 'candidate building way(s) at radius', radius, 'm');
+              _dbg('[Footprint] Overpass returned', ways.length, 'candidate building way(s) at radius', radius, 'm');
               if (ways.length) {
                 buildingFound = true;
                 var best = null, bestArea = 0;
@@ -1979,7 +2018,7 @@
                   if (area2 > bestArea) { bestArea = area2; best = w; }
                 });
                 var areaSqFt = bestArea * 10.7639;
-                console.log('[Footprint] Selected largest OSM way:', Math.round(areaSqFt), 'sq ft — verify this is actually the subject building, not a neighboring one, since OSM match is nearest-by-radius not address-matched.');
+                _dbg('[Footprint] Selected largest OSM way:', Math.round(areaSqFt), 'sq ft — verify this is actually the subject building, not a neighboring one, since OSM match is nearest-by-radius not address-matched.');
                 var tags = (best && best.tags) || {};
                 var buildingType = tags['building'] && tags['building'] !== 'yes' ? tags['building'] : null;
                 var levels = tags['building:levels'] || null;
@@ -1997,11 +2036,11 @@
                   '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Google building outline not available for this address (Preview coverage limited for rural/industrial CA properties) \u2014 footprint from OpenStreetMap community data.</div>';
               }
             }
-          } catch(ovErr) { console.warn('[Footprint] Overpass building query error:', ovErr.message); }
+          } catch(ovErr) { _dbg('[Footprint] Overpass building query error:', ovErr.message); }
         }
       }
 
-      console.log('[Footprint] Final outcome — source:', footprintSource, 'lat/lon:', lat, lon);
+      _dbg('[Footprint] Final outcome — source:', footprintSource, 'lat/lon:', lat, lon);
 
       if (!footprintSource) {
         if (lat === null) {
@@ -2182,7 +2221,7 @@
         '?location=ilike.' + encodeURIComponent('%' + city + '%') +
         '&province=ilike.' + encodeURIComponent(provinceFull) +
         '&select=*&limit=1';
-      console.log('[NatCat] Query 1 (city+province):', url);
+      _dbg('[NatCat] Query 1 (city+province):', url);
       var resp = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } });
 
       var rows, debugInfo = { q1Status: resp.status, q1Count: null, q2Status: null, q2Count: null, q3Status: null, q3Count: null };
@@ -2191,18 +2230,18 @@
       if (resp.ok) {
         var testRows = await resp.json();
         debugInfo.q1Count = testRows ? testRows.length : 0;
-        console.log('[NatCat] Query 1 returned', debugInfo.q1Count, 'row(s):', testRows);
+        _dbg('[NatCat] Query 1 returned', debugInfo.q1Count, 'row(s):', testRows);
         if (!testRows || !testRows.length) {
           var url2 = SUPABASE_URL + '/rest/v1/climatic_design_data' +
             '?location=ilike.' + encodeURIComponent('%' + city + '%') +
             '&select=*&limit=3';
-          console.log('[NatCat] Query 2 (city only, no province filter):', url2);
+          _dbg('[NatCat] Query 2 (city only, no province filter):', url2);
           var resp2 = await fetch(url2, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } });
           debugInfo.q2Status = resp2.status;
           if (resp2.ok) {
             var rows2 = await resp2.json();
             debugInfo.q2Count = rows2 ? rows2.length : 0;
-            console.log('[NatCat] Query 2 returned', debugInfo.q2Count, 'row(s):', rows2);
+            _dbg('[NatCat] Query 2 returned', debugInfo.q2Count, 'row(s):', rows2);
             if (rows2 && rows2.length) {
               // Use first result — may be a different province but better than nothing
               testRows = rows2;
@@ -2212,14 +2251,14 @@
           // a genuine "no match" vs. the table being unreachable (RLS, schema cache, etc.)
           if (!testRows || !testRows.length) {
             var url3 = SUPABASE_URL + '/rest/v1/climatic_design_data?select=location,province&limit=1';
-            console.log('[NatCat] Query 3 (sanity check — any row at all):', url3);
+            _dbg('[NatCat] Query 3 (sanity check — any row at all):', url3);
             try {
               var resp3 = await fetch(url3, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } });
               debugInfo.q3Status = resp3.status;
               var rows3 = resp3.ok ? await resp3.json() : null;
               debugInfo.q3Count = rows3 ? rows3.length : 0;
-              console.log('[NatCat] Query 3 (sanity check) returned', debugInfo.q3Count, 'row(s):', rows3);
-            } catch(sanityErr) { console.warn('[NatCat] Sanity check failed:', sanityErr.message); }
+              _dbg('[NatCat] Query 3 (sanity check) returned', debugInfo.q3Count, 'row(s):', rows3);
+            } catch(sanityErr) { _dbg('[NatCat] Sanity check failed:', sanityErr.message); }
           }
         }
         rows = testRows;
@@ -2237,7 +2276,7 @@
           sanityNote,
           'warn'
         );
-        console.warn('[NatCat] Lookup failed. Debug info:', debugInfo);
+        _dbg('[NatCat] Lookup failed. Debug info:', debugInfo);
         return;
       }
 
