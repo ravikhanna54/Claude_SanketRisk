@@ -51,13 +51,14 @@ exports.handler = async function(event) {
   var province    = body.province    || '';
   var fullAddress = body.fullAddress || '';
 
-  // ── Google Geocoding + Building Outlines (server-side — Google Geocoding API does not allow direct browser CORS) ──
+  // ── Google Geocoding + Building Outlines + Places API ──────────────────────
   if (service === 'google_geocode') {
     if (!fullAddress) {
       return { statusCode: 400, headers: headers, body: JSON.stringify({ error: 'fullAddress required' }) };
     }
     var GMAPS_KEY = 'AIzaSyDAHNS9_C-NLzVhAUDhD9HfSP-7X-xTVkI';
     try {
+      // Try 1: Geocoding API with BUILDING_AND_ENTRANCES (Preview — limited rural coverage)
       var gUrl = 'https://maps.googleapis.com/maps/api/geocode/json?address=' +
         encodeURIComponent(fullAddress) + '&extra_computations=BUILDING_AND_ENTRANCES&key=' + GMAPS_KEY;
       var gR = await httpsGet(gUrl);
@@ -75,13 +76,14 @@ exports.handler = async function(event) {
       var lat = gRes.geometry.location.lat;
       var lon = gRes.geometry.location.lng;
       var footprintAreaSqM = null;
+      var footprintSource = null;
 
+      // Check for building outline from BUILDING_AND_ENTRANCES
       var buildings = gRes.buildings || (gRes.geometry && gRes.geometry.buildings) || null;
       if (buildings && buildings.length && buildings[0].building_outlines && buildings[0].building_outlines.length) {
         var outline = buildings[0].building_outlines[0].display_polygon;
         if (outline && outline.coordinates && outline.coordinates[0]) {
           var pts = outline.coordinates[0];
-          // Shoelace formula approximation (server-side, same as client _polygonAreaSqM)
           var R = 6378137;
           var area = 0;
           for (var i = 0; i < pts.length - 1; i++) {
@@ -93,12 +95,72 @@ exports.handler = async function(event) {
             area += (x1 * y2 - x2 * y1);
           }
           footprintAreaSqM = Math.abs(area / 2);
+          footprintSource = 'Google Building Outlines';
         }
+      }
+
+      // Try 2: Places API (New) — has richer geometry for commercial properties
+      if (!footprintAreaSqM) {
+        try {
+          var placeUrl = 'https://places.googleapis.com/v1/places:searchText';
+          var placeBody = JSON.stringify({ textQuery: fullAddress, maxResultCount: 1 });
+          var placeR = await new Promise(function(resolve, reject) {
+            var options = {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': GMAPS_KEY,
+                'X-Goog-FieldMask': 'places.id,places.location,places.viewport,places.addressComponents'
+              }
+            };
+            var req = require('https').request('https://places.googleapis.com/v1/places:searchText', options, function(res) {
+              var d = '';
+              res.on('data', function(c){ d += c; });
+              res.on('end', function(){ resolve({ status: res.statusCode, text: d }); });
+            });
+            req.on('error', reject);
+            req.write(placeBody);
+            req.end();
+          });
+
+          var pData = {};
+          try { pData = JSON.parse(placeR.text); } catch(e) {}
+
+          if (pData.places && pData.places.length) {
+            var place = pData.places[0];
+            var vp = place.viewport;
+            if (vp && vp.high && vp.low) {
+              // Estimate building area from viewport bounds (reasonable for single-building queries)
+              var latDiff = Math.abs(vp.high.latitude - vp.low.latitude);
+              var lonDiff = Math.abs(vp.high.longitude - vp.low.longitude);
+              var R2 = 6378137;
+              var heightM = latDiff * Math.PI / 180 * R2;
+              var widthM  = lonDiff * Math.PI / 180 * R2 * Math.cos(lat * Math.PI / 180);
+              var vpArea = heightM * widthM;
+              // Viewport includes some padding — building is typically ~60% of viewport
+              // Only use if viewport suggests a single building (under 10,000 m²)
+              if (vpArea > 50 && vpArea < 10000) {
+                footprintAreaSqM = vpArea * 0.6;
+                footprintSource = 'Google Places (viewport estimate)';
+              }
+            }
+            // Override lat/lon with Places result if more precise
+            if (place.location) {
+              lat = place.location.latitude;
+              lon = place.location.longitude;
+            }
+          }
+        } catch(pErr) { /* Places API failed — continue with geocode lat/lon */ }
       }
 
       return {
         statusCode: 200, headers: headers,
-        body: JSON.stringify({ service: 'google_geocode', status: 'ok', lat: lat, lon: lon, footprintAreaSqM: footprintAreaSqM })
+        body: JSON.stringify({
+          service: 'google_geocode', status: 'ok',
+          lat: lat, lon: lon,
+          footprintAreaSqM: footprintAreaSqM,
+          footprintSource: footprintSource
+        })
       };
 
     } catch(e) {
