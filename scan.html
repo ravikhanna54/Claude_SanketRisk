@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 353 — 2026-07-01 — Fix report photo grid: removed forced aspect-ratio:4/3 + object-fit:cover (was cropping photos to fit a fixed box); photos now render at full width with natural aspect ratio, matching the existing print/PDF CSS behavior -->
+<!-- SanketRisk SCAN ONE — Deploy 354 — 2026-07-01 — Add Infrared (Thermographic) Testing field to submission form (with note to submitters, restored on recall in both preload paths), wired into AI prompt + electrical_system schema with auto-recommendation (NFPA 70B) when not provided, and added as a recognized report subheading -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -514,6 +514,12 @@
             <div class="upgrade-system-label"><span class="upgrade-system-icon">&#x26A1;</span> Electrical (Panel / Wiring Upgrade)</div>
             <div class="field"><label>Year</label><input type="number" id="upg-elec" placeholder="e.g. 2008" min="1950" max="2026"></div>
             <div class="unknown-check"><label><input type="checkbox" id="upg-elec-unk" onchange="toggleUpgrade('elec')"> Unknown / N/A</label></div>
+          </div>
+          <!-- Infrared (Thermographic) Testing -->
+          <div class="upgrade-row">
+            <div class="upgrade-system-label"><span class="upgrade-system-icon">&#x1F321;&#xFE0F;</span> Infrared (Thermographic) Testing &#x2014; Electrical <span style="display:block;font-weight:400;color:var(--slate);text-transform:none;letter-spacing:0;font-size:10px;margin-top:2px;">If tested annually, please provide the most recent date and result</span></div>
+            <div class="field"><label>Date / Findings</label><input type="text" id="s-ir-testing" placeholder="e.g. Mar 2025 &#x2014; no hotspots"></div>
+            <div class="unknown-check"><label><input type="checkbox" id="s-ir-testing-unk" onchange="toggleIrTesting()"> Not tested / Unknown</label></div>
           </div>
           <!-- Plumbing -->
           <div class="upgrade-row">
@@ -1311,6 +1317,16 @@
         });
       }
 
+      // Infrared (thermographic) electrical testing
+      if (fd.infraredTesting) {
+        if (fd.infraredTesting === 'Not tested / Unknown') {
+          var irUnkEl = document.getElementById('s-ir-testing-unk');
+          if (irUnkEl) { irUnkEl.checked = true; irUnkEl.dispatchEvent(new Event('change')); }
+        } else if (fd.infraredTesting !== 'Not provided') {
+          set('s-ir-testing', fd.infraredTesting);
+        }
+      }
+
       // Hazard checkboxes — re-select any that were checked
       if (fd.hazards && fd.hazards.length) {
         document.querySelectorAll('#hazard-checks .check-item').forEach(function(el) {
@@ -1519,6 +1535,14 @@
   function toggleUpgrade(key) {
     const unk = document.getElementById('upg-' + key + '-unk').checked;
     const inp = document.getElementById('upg-' + key);
+    inp.disabled = unk;
+    inp.style.opacity = unk ? '.4' : '1';
+    if (unk) inp.value = '';
+  }
+
+  function toggleIrTesting() {
+    const unk = document.getElementById('s-ir-testing-unk').checked;
+    const inp = document.getElementById('s-ir-testing');
     inp.disabled = unk;
     inp.style.opacity = unk ? '.4' : '1';
     if (unk) inp.value = '';
@@ -1795,6 +1819,8 @@
       const unk = document.getElementById('upg-' + k + '-unk').checked;
       upgrades[k] = unk ? 'Unknown' : (document.getElementById('upg-' + k).value || 'Not provided');
     });
+    const irUnk = document.getElementById('s-ir-testing-unk') ? document.getElementById('s-ir-testing-unk').checked : false;
+    const infraredTesting = irUnk ? 'Not tested / Unknown' : ((document.getElementById('s-ir-testing') ? document.getElementById('s-ir-testing').value.trim() : '') || 'Not provided');
     const hazards = Array.from(document.querySelectorAll('#hazard-checks .check-item.selected'))
       .map(function(el){ return (el.dataset && el.dataset.hazard) ? el.dataset.hazard : el.textContent.trim(); });
     return {
@@ -1808,6 +1834,7 @@
       storeys:    document.getElementById('s-storeys').value,
       area:       document.getElementById('s-area').value,
       construction: document.getElementById('s-construction').value,
+      infraredTesting: infraredTesting,
       fireProtection: document.getElementById('s-fire-protection').value,
       context:    document.getElementById('s-context').value.trim(),
       submitterName:    document.getElementById('s-submitter-name').value.trim(),
@@ -2794,7 +2821,7 @@
       return noPhotoRef +
       'OUTPUT: Structured COPE assessment. Each narrative section must be a detailed professional paragraph. The "construction" field requires THREE paragraphs separated by \\n\\n. All other narrative fields are single focused paragraphs. Be specific — name equipment brands, note dimensions, state evidence used.\n\n' +
       'CONSTRUCTION CLASS: Apply the most conservative classification supportable by photographic evidence. Class 1 requires VISIBLE spray-applied fireproofing on ALL structural steel — if not clearly visible, assign Class 2 minimum. Exposed steel = Class 2. Pre-engineered metal = Class 2. State what evidence determined the class.\n\n' +
-      'ELECTRICAL: The electrical_system field is MANDATORY and completely separate from construction paragraphs — all electrical observations go there only. Check exterior photos carefully for pad-mount transformers.\n\n' +
+      'ELECTRICAL: The electrical_system field is MANDATORY and completely separate from construction paragraphs — all electrical observations go there only. Check exterior photos carefully for pad-mount transformers. INFRARED TESTING: report the submitter-provided value verbatim in the INFRARED TESTING line. If it was not provided (submitter value is "Not provided" or "Not tested / Unknown"), you MUST include a recommendation in the recommendations array for annual infrared thermographic testing of the electrical distribution system and switchgear, referencing NFPA 70B, priority Medium unless the panel/service shows visible deficiencies (then High).\n\n' +
       'SPRINKLER CONTROL VALVE: Identify precisely — BUTTERFLY VALVE has a lever arm (orange/red/yellow), disc-shaped, often has a tamper switch. OS&Y has a wheel handwheel on a rising threaded stem. State valve type, position (open/closed), and brand if readable. OPEN butterfly valve = lever parallel to pipe. CLOSED = lever perpendicular.\n\n' +
       'HAZARDS: One line per hazard, max 10 words each. Format: SEVERITY: description. Severity options: CRITICAL/HIGH/MEDIUM/LOW/ADVISORY.\n\n' +
       'Populate ALL structured fields accurately. Scores 0-100.';
@@ -2901,6 +2928,7 @@
       'Occupancy:' + (data.occupancy||'?') + ' | Tenure:' + (data.tenure||'?') + ' | Age:' + age + ' | Storeys:' + (data.storeys||'?') + ' | Area:' + (data.area ? data.area+'sqft' : '?') + '\n' +
       'Construction:' + (data.construction||'unknown') + ' | Fire protection:' + (data.fireProtection||'?') + '\n' +
       'Upgrades: ' + upgStr + '\n' +
+      'Infrared (thermographic) testing of electrical distribution — submitter-provided: ' + (data.infraredTesting || 'Not provided') + '\n' +
       'Hazards: ' + (data.hazards.length ? data.hazards.join(', ') : 'none') + '\n' +
       'Loss history: ' + (data.losses||'none') + (data.lossCause ? ' cause:'+data.lossCause : '') + (data.lossAmt ? ' $'+data.lossAmt : '') + '\n' +
       'Context: ' + (data.context||'none') + '\n' +
@@ -2936,7 +2964,7 @@
       '  "confidence":"Medium",\n' +
       '  "confidence_note":"Brief note on what on-site inspection would verify.",\n' +
       '  "construction":"[Para 1: construction class with photographic evidence, structural system, cladding, floor, roof, year built, interior finishes by area (office/warehouse/plant), combustible vs non-combustible]\\n\\n[Para 2: HVAC and mechanical — heating type/fuel, cooling, ventilation, dust collection, equipment brands, fuel storage]\\n\\n[Para 3: site layout, building condition, access, outbuildings]",\n' +
-      '  "electrical_system":"TRANSFORMER: [pad-mount/pole-mount visible or Not visible — check exterior photos carefully]\\nMAIN SERVICE: [brand, amps, voltage, breakers or fuses, condition]\\nWIRING: [conduit type, copper or aluminum, condition]\\nSUB-PANELS: [any sub-panels or MCCs visible]\\nDEFICIENCIES: [Federal Pacific/Zinsco=HIGH hazard; open knockouts; double-tapping; amateur wiring; or None observed]",\n' +
+      '  "electrical_system":"TRANSFORMER: [pad-mount/pole-mount visible or Not visible — check exterior photos carefully]\\nMAIN SERVICE: [brand, amps, voltage, breakers or fuses, condition]\\nWIRING: [conduit type, copper or aluminum, condition]\\nSUB-PANELS: [any sub-panels or MCCs visible]\\nINFRARED TESTING: [state the submitter-provided value verbatim if given (e.g. date and findings); if submitter-provided value is \\"Not provided\\" or \\"Not tested / Unknown\\", write exactly: Not provided by submitter — recommended annually per NFPA 70B]\\nDEFICIENCIES: [Federal Pacific/Zinsco=HIGH hazard; open knockouts; double-tapping; amateur wiring; or None observed]",\n' +
       '  "occupancy":"[Paragraph: operations, major equipment visible with brands/models, combustible loading, forklift type, housekeeping, storage heights, hazardous materials. If grinding/shredding combustibles: note magnetic separator presence or absence]",\n' +
       '  "protection":"[SPRINKLER PROTECTION: Always open with: The building is protected by an automatic sprinkler system. Describe: (a) RISER CONTROL VALVE -- identify type: butterfly valve (circular disc with lever arm, often orange/red/yellow lever, with tamper switch -- the lever handle distinguishes it from an OS&Y), OS&Y (wheel handwheel on rising stem through yoke), or gate valve -- state type, position open/closed, brand if readable (e.g. Tyco, Viking); (b) PRESSURE GAUGE readings; (c) HYDRAULIC DATA PLATE details if visible; (d) SPRINKLER HEADS -- type (pendant/upright/sidewall/ESFR), condition; (e) PIPING -- steel or CPVC; (f) SPARE HEAD CABINET -- REQUIRED CHECK: scan every photo for a red metal box (approx 30cm wide). If found OPEN with orange/yellow-bulbed heads in clips and a black wrench inside, write exactly: A spare sprinkler head cabinet is present photographed open and stocked with spare sprinkler heads and a sprinkler wrench confirming compliance with NFPA 25. Do NOT create any recommendation for spare heads if this cabinet is found. (g) CYCLONE COLLECTORS -- assess sprinkler inside cyclone, flag HIGH if unconfirmed. FIRE ALARM: Note panel brand/model -- Edwards (tan/beige panel with LCD and keypad labelled EDWARDS) is a common brand -- state if observed. List ALL fire alarm devices seen across all photos: smoke detectors (white dome ceiling devices ~10-15cm), heat detectors, horn/strobes, pull stations. Even if panel and devices are in different photos, include all in this section. FIRE EXTINGUISHERS: count, type (ABC/CO2/Class K), size, tags yes/no. SPECIAL EXTINGUISHING SYSTEMS: kitchen hood, clean agent, CO2, foam -- or None observed. BATTERY CHARGING STATIONS: if chargers visible note location and ventilation. Overall protection adequacy. Use headings: SPRINKLER PROTECTION, FIRE ALARM, FIRE EXTINGUISHERS, SPECIAL EXTINGUISHING SYSTEMS]",\n' +
       '  "exposure":"[EXTERIOR BUILDING ASSESSMENT: wall cladding condition, roof condition from exterior, doors/windows/openings condition, signage, site drainage, maintenance level, exterior storage or hazards adjacent to building. EXPOSURE AND NATURAL HAZARDS: neighbouring buildings and separation distances, construction type of nearest exposures, site access for fire apparatus, municipal fire protection (paid/volunteer, estimated response time, water supply). Then add these labelled sub-points: SEISMIC: brief note on visible seismic considerations (construction era, bracing if visible). WIND/STORM: roof and cladding wind exposure observations. FLOOD/WATER: site elevation, drainage, watercourse proximity if visible. WILDFIRE: vegetation proximity and any visible smoke/haze. Use these exact headings in your output: EXTERIOR BUILDING ASSESSMENT, EXPOSURE AND NATURAL HAZARDS, SEISMIC, WIND/STORM, FLOOD/WATER, WILDFIRE]",' +
@@ -3069,6 +3097,14 @@
                   s('upg-' + k, val);
                 }
               });
+            }
+            if (fd.infraredTesting) {
+              if (fd.infraredTesting === 'Not tested / Unknown') {
+                var irUnkEl2 = document.getElementById('s-ir-testing-unk');
+                if (irUnkEl2) { irUnkEl2.checked = true; irUnkEl2.dispatchEvent(new Event('change')); }
+              } else if (fd.infraredTesting !== 'Not provided') {
+                s('s-ir-testing', fd.infraredTesting);
+              }
             }
             if (fd.hazards && fd.hazards.length) {
               document.querySelectorAll('#hazard-checks .check-item').forEach(function(el) {
@@ -4199,6 +4235,8 @@
         'SUB-PANEL',
         'MOTOR CONTROL',
         'DISTRIBUTION PANEL',
+        'INFRARED TESTING',
+        'INFRA-RED TESTING',
         'DEFICIENCIES',
         'ELECTRICAL DEFICIENCIES',
         'PANEL',
