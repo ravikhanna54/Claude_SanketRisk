@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 350 — 2026-07-01 — NatCat lookup: case-insensitive province match + on-screen/console diagnostics for repeat failures. Footprint: registry-intel.js base geocode decoupled from BUILDING_AND_ENTRANCES preview call so a rejected preview param can no longer force fallback to imprecise Nominatim/OSM geocoding -->
+<!-- SanketRisk SCAN ONE — Deploy 351 — 2026-07-01 — Add console diagnostics through building footprint lookup (checkbox gate, Google/Nominatim/Overpass each step) to isolate why footprint is still wrong after registry-intel.js geocode split -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1851,8 +1851,9 @@
     var corpChecked = corpEl ? corpEl.checked : true;
     var bcaChecked  = bcaEl  ? bcaEl.checked  : false;
     var osmChecked  = osmEl  ? osmEl.checked  : false;
+    console.log('[RegistryIntel] Checkbox states — corp:', corpChecked, 'bca:', bcaChecked, 'osm:', osmChecked, '(osm element found:', !!osmEl, ')');
 
-    if (!corpChecked && !bcaChecked && !osmChecked) return;
+    if (!corpChecked && !bcaChecked && !osmChecked) { console.warn('[RegistryIntel] All checkboxes off — nothing will run.'); return; }
 
     section.style.display = 'block';
     body.innerHTML = '';
@@ -1877,11 +1878,13 @@
     var el = _riAddService(body, 'osm', '&#x1F4D0;', 'Building Footprint &amp; Fire Hydrants', 'Google Maps / OpenStreetMap');
 
     if (!address || !city) {
+      console.warn('[Footprint] Skipped — address or city missing. address="' + address + '" city="' + city + '"');
       el.innerHTML = _riMsg('Street address and city are required for building footprint lookup.', 'warn');
       return;
     }
 
     var fullAddr = address + ', ' + city + (province ? ', ' + province : '') + ', Canada';
+    console.log('[Footprint] Starting lookup for:', fullAddr);
     var lat = null, lon = null;
     var footprintHtml = '';
     var footprintSource = null;
@@ -1889,13 +1892,16 @@
     try {
       // ── Step 1 — try Google Geocoding API with Building Outlines (proxied — Google Geocoding blocks direct browser CORS) ──
       try {
+        console.log('[Footprint] Calling /.netlify/functions/registry-intel (google_geocode)…');
         var gResp = await fetch('/.netlify/functions/registry-intel', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ service: 'google_geocode', fullAddress: fullAddr })
         });
+        console.log('[Footprint] registry-intel HTTP status:', gResp.status);
         if (gResp.ok) {
           var gJson = await gResp.json();
+          console.log('[Footprint] registry-intel response body:', gJson);
           if (gJson.status === 'ok' && gJson.lat !== undefined) {
             lat = gJson.lat;
             lon = gJson.lon;
@@ -1903,6 +1909,7 @@
               var areaM2 = gJson.footprintAreaSqM;
               var areaSqFtG = areaM2 * 10.7639;
               footprintSource = gJson.footprintSource || 'Google';
+              console.log('[Footprint] Using Google footprint:', Math.round(areaSqFtG), 'sq ft, source:', footprintSource, 'at', lat, lon);
               footprintHtml =
                 '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
                 _riRow('Mapped Footprint Area', '<strong>' + Math.round(areaSqFtG).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(areaM2).toLocaleString('en-CA') + ' m\u00B2)') +
@@ -1911,15 +1918,22 @@
                 _riRow('Data Source', footprintSource) +
                 '</table>' +
                 _compareFootprintArea(declaredArea, areaSqFtG);
+            } else {
+              console.log('[Footprint] Google geocode ok but no building outline — lat/lon set, will try OSM/Overpass next.');
             }
             // Even without a building outline, Google's geocode gives us a reliable lat/lon for hydrant search
+          } else {
+            console.warn('[Footprint] registry-intel returned non-ok status:', gJson.status, gJson.message);
           }
+        } else {
+          console.warn('[Footprint] registry-intel fetch not ok — HTTP', gResp.status, '— falling back to Nominatim/OSM entirely.');
         }
-      } catch(gErr) { console.warn('Google building outline error:', gErr.message); }
+      } catch(gErr) { console.warn('[Footprint] Google building outline error (fetch threw):', gErr.message); }
 
       // ── Step 2 — fallback to OSM/Nominatim + Overpass if Google had no outline ──
       if (!footprintSource) {
         if (lat === null) {
+          console.log('[Footprint] No lat/lon yet — falling back to Nominatim geocode for:', fullAddr);
           try {
             var geoUrl = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=' + encodeURIComponent(fullAddr);
             var geoResp = await fetch(geoUrl, { headers: { 'Accept': 'application/json' } });
@@ -1928,9 +1942,16 @@
               if (geoResults && geoResults.length) {
                 lat = parseFloat(geoResults[0].lat);
                 lon = parseFloat(geoResults[0].lon);
+                console.log('[Footprint] Nominatim resolved to:', lat, lon, '(this is a less precise fallback than Google — accuracy depends on OSM address data quality)');
+              } else {
+                console.warn('[Footprint] Nominatim returned no results for:', fullAddr);
               }
+            } else {
+              console.warn('[Footprint] Nominatim fetch not ok — HTTP', geoResp.status);
             }
-          } catch(nomErr) { console.warn('Nominatim geocode error:', nomErr.message); }
+          } catch(nomErr) { console.warn('[Footprint] Nominatim geocode error:', nomErr.message); }
+        } else {
+          console.log('[Footprint] Using Google-resolved lat/lon for Overpass search (no Nominatim needed):', lat, lon);
         }
 
         if (lat !== null) {
@@ -1943,10 +1964,12 @@
               var radius = radii[ri];
               var overpassQuery = '[out:json][timeout:20];way["building"](around:' + radius + ',' + lat + ',' + lon + ');out geom;';
               var overpassUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(overpassQuery);
+              console.log('[Footprint] Querying Overpass at radius', radius, 'm around', lat, lon);
               var ovResp = await fetch(overpassUrl);
-              if (!ovResp.ok) break;
+              if (!ovResp.ok) { console.warn('[Footprint] Overpass fetch not ok — HTTP', ovResp.status); break; }
               var ovData = await ovResp.json();
               var ways = (ovData.elements || []).filter(function(e) { return e.type === 'way' && e.geometry && e.geometry.length > 2; });
+              console.log('[Footprint] Overpass returned', ways.length, 'candidate building way(s) at radius', radius, 'm');
               if (ways.length) {
                 buildingFound = true;
                 var best = null, bestArea = 0;
@@ -1956,6 +1979,7 @@
                   if (area2 > bestArea) { bestArea = area2; best = w; }
                 });
                 var areaSqFt = bestArea * 10.7639;
+                console.log('[Footprint] Selected largest OSM way:', Math.round(areaSqFt), 'sq ft — verify this is actually the subject building, not a neighboring one, since OSM match is nearest-by-radius not address-matched.');
                 var tags = (best && best.tags) || {};
                 var buildingType = tags['building'] && tags['building'] !== 'yes' ? tags['building'] : null;
                 var levels = tags['building:levels'] || null;
@@ -1973,9 +1997,11 @@
                   '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Google building outline not available for this address (Preview coverage limited for rural/industrial CA properties) \u2014 footprint from OpenStreetMap community data.</div>';
               }
             }
-          } catch(ovErr) { console.warn('Overpass building query error:', ovErr.message); }
+          } catch(ovErr) { console.warn('[Footprint] Overpass building query error:', ovErr.message); }
         }
       }
+
+      console.log('[Footprint] Final outcome — source:', footprintSource, 'lat/lon:', lat, lon);
 
       if (!footprintSource) {
         if (lat === null) {
