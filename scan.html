@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 354 — 2026-07-01 — Add Infrared (Thermographic) Testing field to submission form (with note to submitters, restored on recall in both preload paths), wired into AI prompt + electrical_system schema with auto-recommendation (NFPA 70B) when not provided, and added as a recognized report subheading -->
+<!-- SanketRisk SCAN ONE — Deploy 355 — 2026-07-01 — Moved Fire Hydrant Proximity from Registry Intel into Protection Assessment as its own subheading, simplified to "information obtained from community mapped open sources"; updated Infrared Testing note to reference uploading results below -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -517,7 +517,7 @@
           </div>
           <!-- Infrared (Thermographic) Testing -->
           <div class="upgrade-row">
-            <div class="upgrade-system-label"><span class="upgrade-system-icon">&#x1F321;&#xFE0F;</span> Infrared (Thermographic) Testing &#x2014; Electrical <span style="display:block;font-weight:400;color:var(--slate);text-transform:none;letter-spacing:0;font-size:10px;margin-top:2px;">If tested annually, please provide the most recent date and result</span></div>
+            <div class="upgrade-system-label"><span class="upgrade-system-icon">&#x1F321;&#xFE0F;</span> Infrared (Thermographic) Testing &#x2014; Electrical <span style="display:block;font-weight:400;color:var(--slate);text-transform:none;letter-spacing:0;font-size:10px;margin-top:2px;">If tested annually, please provide the most recent date and upload results below</span></div>
             <div class="field"><label>Date / Findings</label><input type="text" id="s-ir-testing" placeholder="e.g. Mar 2025 &#x2014; no hotspots"></div>
             <div class="unknown-check"><label><input type="checkbox" id="s-ir-testing-unk" onchange="toggleIrTesting()"> Not tested / Unknown</label></div>
           </div>
@@ -1941,7 +1941,7 @@
 
   // ── OpenStreetMap Building Footprint ─────────────────────────────────────────
   async function runOpenStreetMap(body, address, city, province, declaredArea) {
-    var el = _riAddService(body, 'osm', '&#x1F4D0;', 'Building Footprint &amp; Fire Hydrants', 'Google Maps / OpenStreetMap');
+    var el = _riAddService(body, 'osm', '&#x1F4D0;', 'Building Footprint', 'Google Maps / OpenStreetMap');
 
     if (!address || !city) {
       _dbg('[Footprint] Skipped — address or city missing. address="' + address + '" city="' + city + '"');
@@ -2082,50 +2082,83 @@
         );
       }
 
-      // ── Step 3 — fire hydrant proximity via OSM Overpass (independent of footprint source) ──
-      var hydrantHtml = '';
-      try {
-        var hydrantQuery = '[out:json][timeout:15];node["emergency"="fire_hydrant"](around:500,' + lat + ',' + lon + ');out;';
-        var hydrantUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(hydrantQuery);
-        var hResp = await fetch(hydrantUrl);
-        if (hResp.ok) {
-          var hData = await hResp.json();
-          var hydrants = (hData.elements || []).filter(function(e) { return e.type === 'node'; });
-          if (hydrants.length) {
-            // Find nearest hydrant
-            var nearest = null, nearestDist = Infinity;
-            hydrants.forEach(function(h) {
-              var d = _haversineMeters(lat, lon, h.lat, h.lon);
-              if (d < nearestDist) { nearestDist = d; nearest = h; }
-            });
-            hydrantHtml =
-              '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0;">' +
-              '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">&#x1F692; Fire Hydrant Proximity (OpenStreetMap)</div>' +
-              '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
-              _riRow('Hydrants Mapped Within 300m', hydrants.length) +
-              _riRow('Nearest Hydrant', Math.round(nearestDist) + ' m from geocoded location') +
-              '</table>' +
-              '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Hydrant data is community-mapped and may be incomplete \u2014 absence of mapped hydrants does not confirm absence of hydrants on site. Verify with municipal fire department for underwriting purposes. Search radius: 500m.</div>' +
-              '</div>';
-          } else {
-            hydrantHtml =
-              '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0;">' +
-              '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">&#x1F692; Fire Hydrant Proximity (OpenStreetMap)</div>' +
-              _riMsg('No fire hydrants mapped within 300m in OpenStreetMap. This is common in rural areas with limited municipal water supply, or where hydrants simply have not yet been mapped \u2014 verify directly with the local fire department.', 'info') +
-              '</div>';
-          }
-        }
-      } catch(hErr) { console.warn('Hydrant lookup error:', hErr.message); }
-
-      var finalHtml = footprintHtml + hydrantHtml +
+      var finalHtml = footprintHtml +
         '<div style="font-size:11px;margin-top:10px;"><a href="https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lon + '&zoom=18" target="_blank" style="color:#0891b2;">View location on OpenStreetMap &#x2197;</a> &nbsp;|&nbsp; <a href="https://www.google.com/maps/@' + lat + ',' + lon + ',19z" target="_blank" style="color:#0891b2;">View on Google Maps &#x2197;</a></div>' +
-        '<div style="font-size:10px;color:#94a3b8;margin-top:6px;">Footprint source: ' + (footprintSource || 'Not available') + '. Hydrant source: OpenStreetMap community data.</div>';
+        '<div style="font-size:10px;color:#94a3b8;margin-top:6px;">Footprint source: ' + (footprintSource || 'Not available') + '.</div>';
 
       el.innerHTML = finalHtml;
 
     } catch(e) {
       el.innerHTML = _riMsg('Building footprint lookup error: ' + e.message, 'error');
     }
+  }
+
+  // ── Fire Hydrant Proximity — rendered into Protection Assessment, not Registry Intel ──
+  async function renderFireHydrantProximity(data) {
+    var protEl = document.getElementById('res-protection');
+    if (!protEl) return;
+    document.querySelectorAll('.res-hydrant-note').forEach(function(el){ el.remove(); });
+
+    var address = data.address, city = data.city, province = data.province;
+    if (!address || !city) { _dbg('[Hydrant] Skipped — address or city missing.'); return; }
+    var fullAddr = address + ', ' + city + (province ? ', ' + province : '') + ', Canada';
+    var lat = null, lon = null;
+
+    try {
+      var gResp = await fetch('/.netlify/functions/registry-intel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service: 'google_geocode', fullAddress: fullAddr })
+      });
+      if (gResp.ok) {
+        var gJson = await gResp.json();
+        if (gJson.status === 'ok' && gJson.lat !== undefined) { lat = gJson.lat; lon = gJson.lon; }
+      }
+    } catch(gErr) { _dbg('[Hydrant] Geocode proxy error:', gErr.message); }
+
+    if (lat === null) {
+      try {
+        var geoUrl = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=' + encodeURIComponent(fullAddr);
+        var geoResp = await fetch(geoUrl, { headers: { 'Accept': 'application/json' } });
+        if (geoResp.ok) {
+          var geoResults = await geoResp.json();
+          if (geoResults && geoResults.length) { lat = parseFloat(geoResults[0].lat); lon = parseFloat(geoResults[0].lon); }
+        }
+      } catch(nomErr) { _dbg('[Hydrant] Nominatim error:', nomErr.message); }
+    }
+
+    if (lat === null) { _dbg('[Hydrant] Could not geocode address — skipping.'); return; }
+
+    var hydrantText = '';
+    try {
+      var hydrantQuery = '[out:json][timeout:15];node["emergency"="fire_hydrant"](around:500,' + lat + ',' + lon + ');out;';
+      var hydrantUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(hydrantQuery);
+      var hResp = await fetch(hydrantUrl);
+      if (hResp.ok) {
+        var hData = await hResp.json();
+        var hydrants = (hData.elements || []).filter(function(e) { return e.type === 'node'; });
+        if (hydrants.length) {
+          var nearestDist = Infinity;
+          hydrants.forEach(function(h) {
+            var d = _haversineMeters(lat, lon, h.lat, h.lon);
+            if (d < nearestDist) nearestDist = d;
+          });
+          hydrantText = hydrants.length + ' fire hydrant' + (hydrants.length !== 1 ? 's' : '') +
+            ' mapped within 300m of the property; nearest approximately ' + Math.round(nearestDist) + ' m. Information obtained from community mapped open sources.';
+        } else {
+          hydrantText = 'No fire hydrants mapped within 300m of the property. Information obtained from community mapped open sources.';
+        }
+      }
+    } catch(hErr) { _dbg('[Hydrant] Overpass error:', hErr.message); return; }
+
+    if (!hydrantText) return;
+
+    var noteEl = document.createElement('div');
+    noteEl.className = 'res-hydrant-note';
+    noteEl.innerHTML =
+      '<strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">FIRE HYDRANT PROXIMITY</strong>' +
+      '<span style="font-size:12px;color:var(--navy);">' + hydrantText + '</span>';
+    protEl.appendChild(noteEl);
   }
 
   function _compareFootprintArea(declaredArea, mappedAreaSqFt) {
@@ -3980,6 +4013,7 @@
       if (lastResult && lastResult.formData) {
         setTimeout(function() { runRegistryIntel(lastResult.formData); }, 800);
         setTimeout(function() { renderNatCatSection(lastResult.formData); }, 900);
+        setTimeout(function() { renderFireHydrantProximity(lastResult.formData); }, 700);
       }
 
     } catch(e) {
@@ -5160,6 +5194,7 @@
     if (lastResult && lastResult.formData) {
       setTimeout(function() { runRegistryIntel(lastResult.formData); }, 500);
       setTimeout(function() { renderNatCatSection(lastResult.formData); }, 500);
+      setTimeout(function() { renderFireHydrantProximity(lastResult.formData); }, 500);
     }
   }
 
