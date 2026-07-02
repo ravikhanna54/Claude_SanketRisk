@@ -29,8 +29,6 @@
     }
 
     html { scroll-behavior: smooth; }
-    #esi-search-input::placeholder { color: rgba(255,255,255,0.5); }
-    #esi-search-input:focus { background: rgba(255,255,255,0.18) !important; }
 
     body {
       font-family: 'IBM Plex Sans', sans-serif;
@@ -588,46 +586,15 @@
     .filter-pill.active,
     .filter-pill:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
 
-    /* ── SUBJECT INDEX CARDS ── */
-    .index-card {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 16px;
-      cursor: pointer;
-      transition: all .18s;
-    }
-    .index-card:hover {
-      border-color: var(--gold);
-      box-shadow: 0 3px 12px rgba(201,168,76,.15);
-      transform: translateY(-2px);
-    }
-    .index-card-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--navy);
-      margin-bottom: 4px;
-    }
-    .index-card-sub {
-      font-size: 11px;
-      color: var(--slate);
-      line-height: 1.5;
-    }
-    /* ── SEARCH HIGHLIGHT ── */
-    .search-highlight { background: #fff3cd; border-radius: 2px; }
-    /* ── SEARCH RESULT ITEM ── */
-    .search-result-item {
-      padding: 10px 14px;
-      cursor: pointer;
-      border-bottom: 1px solid #f0ece6;
-      transition: background .15s;
-    }
-    .search-result-item:hover { background: #f8f5f0; }
-    .search-result-title { font-size: 13px; font-weight: 600; color: var(--navy); }
-    .search-result-sub { font-size: 11px; color: var(--slate); margin-top: 2px; }
-    .search-result-tag { font-size: 10px; color: var(--gold); font-weight: 700; margin-right: 6px; }
-    .search-no-results { padding: 20px; text-align: center; color: var(--slate); font-size: 13px; }
-
+    .index-card { background:white; border:1px solid var(--border); border-radius:10px; padding:14px 16px; cursor:pointer; transition:all .18s; margin-bottom:0; }
+    .index-card:hover { border-color:var(--gold); box-shadow:0 3px 12px rgba(201,168,76,.15); transform:translateY(-2px); }
+    .index-card-title { font-size:13px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+    .index-card-sub { font-size:11px; color:var(--slate); line-height:1.5; }
+    .search-result-item { padding:10px 14px; cursor:pointer; border-bottom:1px solid #f0ece6; }
+    .search-result-item:hover { background:#f8f5f0; }
+    .search-result-title { font-size:13px; font-weight:600; color:var(--navy); }
+    .search-result-sub { font-size:11px; color:var(--slate); margin-top:2px; }
+    .search-result-tag { font-size:10px; color:var(--gold); font-weight:700; margin-right:4px; }
     .bulletin-empty {
       text-align: center;
       padding: 50px 20px;
@@ -699,12 +666,10 @@
   </div>
   <div class="esi-badge">ESI Reference Guide</div>
   <div style="position:relative;margin-left:16px;">
-    <input type="text" id="esi-search-input" placeholder="🔍 Search ESI..." 
+    <input type="text" id="esi-search-input" placeholder="Search ESI..."
       oninput="runESISearch(this.value)"
-      onfocus="document.getElementById('esi-search-results').style.display='block'"
-      onblur="setTimeout(function(){document.getElementById('esi-search-results').style.display='none'},200)"
-      style="padding:7px 14px;border:1px solid var(--gold);border-radius:20px;background:rgba(255,255,255,0.1);color:white;font-size:12px;width:220px;outline:none;font-family:inherit;">
-    <div id="esi-search-results" style="display:none;position:absolute;right:0;top:38px;width:380px;background:white;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:9999;max-height:400px;overflow-y:auto;"></div>
+      style="padding:7px 14px;border:1px solid var(--gold);border-radius:20px;background:rgba(255,255,255,0.12);color:white;font-size:12px;width:200px;outline:none;font-family:inherit;">
+    <div id="esi-search-results" style="display:none;position:absolute;right:0;top:38px;width:360px;background:white;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:9999;max-height:380px;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -1578,166 +1543,65 @@
 
     </div><!-- end panel-bulletins -->
 
-    <!-- TAB 4: SUBJECT INDEX -->
+    <!-- SUBJECT INDEX PANEL -->
     <div class="tab-panel" id="panel-index">
-      <div style="padding:32px 24px;">
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
-          <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--navy);">📑 Subject Index</h2>
-          <span style="font-size:12px;color:var(--slate);background:#f0f2f5;padding:4px 12px;border-radius:12px;">Quick reference to all ESI topics</span>
-        </div>
+      <div style="padding:32px 24px;max-width:1100px;margin:0 auto;">
+        <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--navy);margin-bottom:20px;">📑 Subject Index</h2>
 
-        <!-- FORM GUIDE INDEX -->
-        <div style="margin-bottom:28px;">
+        <div style="margin-bottom:24px;">
           <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid var(--gold);">📋 Form Guide</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;">
-            <div class="index-card" onclick="goToSection('guide','guide-intro')">
-              <div class="index-card-title">Introduction & Inspection Setup</div>
-              <div class="index-card-sub">Inspection ID · Purpose · Date · Inspector Info</div>
-            </div>
-            <div class="index-card" onclick="goToSection('guide','guide-insured')">
-              <div class="index-card-title">Insured & Property Information</div>
-              <div class="index-card-sub">Legal entity · Address · Contact details</div>
-            </div>
-            <div class="index-card" onclick="goToSection('guide','guide-construction')">
-              <div class="index-card-title">Construction (COPE — C)</div>
-              <div class="index-card-sub">ISO class · Year built · Roof · Building systems</div>
-            </div>
-            <div class="index-card" onclick="goToSection('guide','guide-occupancy')">
-              <div class="index-card-title">Occupancy (COPE — O)</div>
-              <div class="index-card-sub">Operations · Hazardous processes · IBC/SIC/NAICS</div>
-            </div>
-            <div class="index-card" onclick="goToSection('guide','guide-protection')">
-              <div class="index-card-title">Protection (COPE — P)</div>
-              <div class="index-card-sub">Sprinklers · Fire alarm · FUS grading · Security</div>
-            </div>
-            <div class="index-card" onclick="goToSection('guide','guide-exposure')">
-              <div class="index-card-title">Exposure (COPE — E)</div>
-              <div class="index-card-sub">Neighbouring risks · Natural hazards · Flood/Earthquake</div>
-            </div>
-            <div class="index-card" onclick="goToSection('guide','guide-natcat')">
-              <div class="index-card-title">Natural Catastrophe</div>
-              <div class="index-card-sub">NBC 2025 lookup · Seismic · Wind · Flood · Nat-Cat grade</div>
-            </div>
-            <div class="index-card" onclick="goToSection('guide','guide-loss')">
-              <div class="index-card-title">Loss History</div>
-              <div class="index-card-sub">5-year period · Cause of loss · Loss trends</div>
-            </div>
-            <div class="index-card" onclick="goToSection('guide','guide-safety')">
-              <div class="index-card-title">Safety & Compliance</div>
-              <div class="index-card-sub">Egress · Housekeeping · Safety ratings (1–5)</div>
-            </div>
-            <div class="index-card" onclick="goToSection('guide','guide-recommendations')">
-              <div class="index-card-title">Recommendations</div>
-              <div class="index-card-sub">Priority levels · Writing effective recommendations</div>
-            </div>
-            <div class="index-card" onclick="goToSection('guide','guide-photos')">
-              <div class="index-card-title">Photo Documentation</div>
-              <div class="index-card-sub">Required coverage · Bulk loading · PDF upload</div>
-            </div>
-            <div class="index-card" onclick="goToSection('guide','guide-summary')">
-              <div class="index-card-title">Underwriter Summary</div>
-              <div class="index-card-sub">Risk quality · UW recommendation · QA workflow</div>
-            </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;">
+            <div class="index-card" onclick="goToSection('guide','guide-intro')"><div class="index-card-title">Introduction &amp; Setup</div><div class="index-card-sub">Inspection ID · Purpose · Date · Inspector</div></div>
+            <div class="index-card" onclick="goToSection('guide','guide-insured')"><div class="index-card-title">Insured &amp; Property</div><div class="index-card-sub">Legal entity · Address · Contact</div></div>
+            <div class="index-card" onclick="goToSection('guide','guide-construction')"><div class="index-card-title">Construction (COPE — C)</div><div class="index-card-sub">ISO class · Year built · Roof · Systems</div></div>
+            <div class="index-card" onclick="goToSection('guide','guide-occupancy')"><div class="index-card-title">Occupancy (COPE — O)</div><div class="index-card-sub">Operations · Hazardous processes · IBC/NAICS</div></div>
+            <div class="index-card" onclick="goToSection('guide','guide-protection')"><div class="index-card-title">Protection (COPE — P)</div><div class="index-card-sub">Sprinklers · Fire alarm · FUS · Security</div></div>
+            <div class="index-card" onclick="goToSection('guide','guide-exposure')"><div class="index-card-title">Exposure (COPE — E)</div><div class="index-card-sub">Neighbouring risks · Natural hazards</div></div>
+            <div class="index-card" onclick="goToSection('guide','guide-natcat')"><div class="index-card-title">Natural Catastrophe</div><div class="index-card-sub">NBC 2025 · Seismic · Wind · Flood</div></div>
+            <div class="index-card" onclick="goToSection('guide','guide-loss')"><div class="index-card-title">Loss History</div><div class="index-card-sub">5-year period · Cause of loss · Trends</div></div>
+            <div class="index-card" onclick="goToSection('guide','guide-safety')"><div class="index-card-title">Safety &amp; Compliance</div><div class="index-card-sub">Egress · Housekeeping · Ratings</div></div>
+            <div class="index-card" onclick="goToSection('guide','guide-recommendations')"><div class="index-card-title">Recommendations</div><div class="index-card-sub">Priority levels · Effective writing</div></div>
+            <div class="index-card" onclick="goToSection('guide','guide-photos')"><div class="index-card-title">Photo Documentation</div><div class="index-card-sub">Coverage · Bulk load · PDF upload</div></div>
+            <div class="index-card" onclick="goToSection('guide','guide-summary')"><div class="index-card-title">Underwriter Summary</div><div class="index-card-sub">Risk quality · UW rec · QA workflow</div></div>
           </div>
         </div>
 
-        <!-- TECHNICAL REFERENCE INDEX -->
-        <div style="margin-bottom:28px;">
+        <div style="margin-bottom:24px;">
           <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid var(--gold);">🔬 Technical Reference</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;">
-            <div class="index-card" onclick="goToSection('technical','tech-nfpa')">
-              <div class="index-card-title">NFPA Hazard Classification</div>
-              <div class="index-card-sub">Light · Ordinary · Extra hazard classifications</div>
-            </div>
-            <div class="index-card" onclick="goToSection('technical','tech-cooking')">
-              <div class="index-card-title">Cooking / Open Flame</div>
-              <div class="index-card-sub">Hood suppression · NFPA 96 · Cleaning requirements</div>
-            </div>
-            <div class="index-card" onclick="goToSection('technical','tech-welding')">
-              <div class="index-card-title">Welding & Cutting</div>
-              <div class="index-card-sub">Hot work permits · Fire watch · Designated areas</div>
-            </div>
-            <div class="index-card" onclick="goToSection('technical','tech-spray')">
-              <div class="index-card-title">Spray Painting / Coating</div>
-              <div class="index-card-sub">Spray booths · Ventilation · Flammable coatings</div>
-            </div>
-            <div class="index-card" onclick="goToSection('technical','tech-chemical')">
-              <div class="index-card-title">Chemical Mixing</div>
-              <div class="index-card-sub">SDS requirements · Storage · Secondary containment</div>
-            </div>
-            <div class="index-card" onclick="goToSection('technical','tech-wooddust')">
-              <div class="index-card-title">Woodworking / Dust</div>
-              <div class="index-card-sub">Dust collection · Accumulation · NFPA 664</div>
-            </div>
-            <div class="index-card" onclick="goToSection('technical','tech-compgas')">
-              <div class="index-card-title">Compressed Gas</div>
-              <div class="index-card-sub">Cylinder storage · Securing · Fuel vs oxidizer</div>
-            </div>
-            <div class="index-card" onclick="goToSection('technical','tech-flamliq')">
-              <div class="index-card-title">Flammable Liquid Storage</div>
-              <div class="index-card-sub">Classification · Approved cabinets · Bonding/grounding</div>
-            </div>
-            <div class="index-card" onclick="goToSection('technical','tech-cryogen')">
-              <div class="index-card-title">Cryogenics</div>
-              <div class="index-card-sub">Storage vessels · Oxygen deficiency monitors · Ventilation</div>
-            </div>
-            <div class="index-card" onclick="goToSection('technical','tech-printing')">
-              <div class="index-card-title">Printing & Ink</div>
-              <div class="index-card-sub">Solvent storage · Exhaust systems · Ink hazards</div>
-            </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;">
+            <div class="index-card" onclick="goToSection('technical','tech-nfpa')"><div class="index-card-title">NFPA Hazard Classification</div><div class="index-card-sub">Light · Ordinary · Extra hazard</div></div>
+            <div class="index-card" onclick="goToSection('technical','tech-cooking')"><div class="index-card-title">Cooking / Open Flame</div><div class="index-card-sub">Hood suppression · NFPA 96</div></div>
+            <div class="index-card" onclick="goToSection('technical','tech-welding')"><div class="index-card-title">Welding &amp; Cutting</div><div class="index-card-sub">Hot work permits · Fire watch</div></div>
+            <div class="index-card" onclick="goToSection('technical','tech-spray')"><div class="index-card-title">Spray Painting / Coating</div><div class="index-card-sub">Spray booths · Ventilation</div></div>
+            <div class="index-card" onclick="goToSection('technical','tech-chemical')"><div class="index-card-title">Chemical Mixing</div><div class="index-card-sub">SDS · Storage · Containment</div></div>
+            <div class="index-card" onclick="goToSection('technical','tech-wooddust')"><div class="index-card-title">Woodworking / Dust</div><div class="index-card-sub">Dust collection · NFPA 664</div></div>
+            <div class="index-card" onclick="goToSection('technical','tech-compgas')"><div class="index-card-title">Compressed Gas</div><div class="index-card-sub">Cylinders · Securing · Storage</div></div>
+            <div class="index-card" onclick="goToSection('technical','tech-flamliq')"><div class="index-card-title">Flammable Liquid Storage</div><div class="index-card-sub">Classification · Cabinets · Bonding</div></div>
+            <div class="index-card" onclick="goToSection('technical','tech-cryogen')"><div class="index-card-title">Cryogenics</div><div class="index-card-sub">Vessels · Oxygen monitors</div></div>
+            <div class="index-card" onclick="goToSection('technical','tech-printing')"><div class="index-card-title">Printing &amp; Ink</div><div class="index-card-sub">Solvents · Exhaust systems</div></div>
           </div>
         </div>
 
-        <!-- BULLETINS INDEX -->
-        <div style="margin-bottom:28px;">
-          <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid var(--gold);">📣 Bulletins & Updates</div>
-          <div id="index-bulletin-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;">
-            <div style="color:var(--slate);font-size:13px;padding:16px;background:#f8f8f6;border-radius:8px;grid-column:1/-1;">
-              Loading bulletin index...
-            </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid var(--gold);">📣 Bulletins &amp; Updates</div>
+          <div id="index-bulletin-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
+            <div style="color:var(--slate);font-size:13px;padding:12px;grid-column:1/-1;">Loading bulletins...</div>
           </div>
         </div>
       </div>
     </div><!-- end panel-index -->
 
-    <!-- TAB 5: KNOWLEDGE BASE -->
+    <!-- KNOWLEDGE BASE PANEL -->
     <div class="tab-panel" id="panel-knowledge">
-      <div style="padding:32px 24px;">
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
-          <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--navy);">📚 Knowledge Base</h2>
-          <span style="font-size:12px;color:var(--slate);background:#f0f2f5;padding:4px 12px;border-radius:12px;">Expanding reference library</span>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
-          <div class="index-card" style="border-left:4px solid var(--gold);">
-            <div class="index-card-title">🏗 ISO Construction Classification Guide</div>
-            <div class="index-card-sub">Classes 1–6 explained with Canadian examples and underwriting implications</div>
-            <div style="margin-top:10px;font-size:11px;color:var(--slate-light);">Coming soon</div>
-          </div>
-          <div class="index-card" style="border-left:4px solid var(--gold);">
-            <div class="index-card-title">🔥 FUS Grading Methodology</div>
-            <div class="index-card-sub">Fire Underwriters Survey grading system, fire hall grades, water supply</div>
-            <div style="margin-top:10px;font-size:11px;color:var(--slate-light);">Coming soon</div>
-          </div>
-          <div class="index-card" style="border-left:4px solid var(--gold);">
-            <div class="index-card-title">🌊 NBC 2025 Climatic Design Data</div>
-            <div class="index-card-sub">How to interpret ground snow loads, wind pressures, seismic hazard</div>
-            <div style="margin-top:10px;font-size:11px;color:var(--slate-light);">Coming soon</div>
-          </div>
-          <div class="index-card" style="border-left:4px solid var(--gold);">
-            <div class="index-card-title">💧 Sprinkler System Types & NFPA 13</div>
-            <div class="index-card-sub">Wet pipe, dry pipe, pre-action, deluge — inspection requirements</div>
-            <div style="margin-top:10px;font-size:11px;color:var(--slate-light);">Coming soon</div>
-          </div>
-          <div class="index-card" style="border-left:4px solid var(--gold);">
-            <div class="index-card-title">📋 IBC Occupancy Code Reference</div>
-            <div class="index-card-sub">Insurance Bureau of Canada codes — full reference with SIC/NAICS cross-reference</div>
-            <div style="margin-top:10px;font-size:11px;color:var(--slate-light);">Coming soon</div>
-          </div>
-          <div class="index-card" style="border-left:4px solid var(--gold);">
-            <div class="index-card-title">⚠️ Underwriting Red Flags Guide</div>
-            <div class="index-card-sub">Common conditions that trigger referral, declination or special terms</div>
-            <div style="margin-top:10px;font-size:11px;color:var(--slate-light);">Coming soon</div>
-          </div>
+      <div style="padding:32px 24px;max-width:1100px;margin:0 auto;">
+        <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--navy);margin-bottom:20px;">📚 Knowledge Base</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;">
+          <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">🏗 ISO Construction Classification Guide</div><div class="index-card-sub">Classes 1–6 with Canadian examples</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
+          <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">🔥 FUS Grading Methodology</div><div class="index-card-sub">Fire Underwriters Survey system</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
+          <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">🌊 NBC 2025 Climatic Design Data</div><div class="index-card-sub">Snow loads, wind, seismic hazard</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
+          <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">💧 Sprinkler Systems &amp; NFPA 13</div><div class="index-card-sub">Wet, dry, pre-action, deluge types</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
+          <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">📋 IBC Occupancy Code Reference</div><div class="index-card-sub">Full reference with SIC/NAICS</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
+          <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">⚠️ Underwriting Red Flags Guide</div><div class="index-card-sub">Conditions triggering referral/declination</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
         </div>
       </div>
     </div><!-- end panel-knowledge -->
@@ -2148,9 +2012,9 @@ create policy "Admins only can delete bulletins"
     ],
     index: [
       { title: 'Subject Index', links: [
-        { id: null, label: '📋 Form Guide',       action: function() { document.getElementById('panel-index').scrollTop = 0; } },
-        { id: null, label: '🔬 Technical Ref',    action: function() {} },
-        { id: null, label: '📣 Bulletins Index',  action: function() { document.getElementById('index-bulletin-list') && document.getElementById('index-bulletin-list').scrollIntoView(); } },
+        { id: null, label: '📋 Form Guide Sections', action: function() {} },
+        { id: null, label: '🔬 Technical Reference', action: function() {} },
+        { id: null, label: '📣 Bulletins Index',     action: function() {} },
       ]},
     ],
     knowledge: [
@@ -2198,7 +2062,19 @@ create policy "Admins only can delete bulletins"
     });
   }
 
-  // ── SEARCH & INDEX HELPERS ──
+  function switchMainTab(tab, btn) {
+    currentTab = tab;
+    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+    buildSidebar(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (tab === 'bulletins') loadBulletins();
+    if (tab === 'index') { loadBulletins(); setTimeout(renderIndexBulletins, 800); }
+  }
+
+  // ── SUBJECT INDEX & SEARCH FUNCTIONS ──
   function goToSection(tab, sectionId) {
     var tabEl = document.querySelector('.main-tab[onclick*="' + tab + '"]');
     if (tabEl) switchMainTab(tab, tabEl);
@@ -2221,44 +2097,45 @@ create policy "Admins only can delete bulletins"
     var container = document.getElementById('index-bulletin-list');
     if (!container) return;
     if (!allBulletins || !allBulletins.length) {
-      container.innerHTML = '<div style="color:var(--slate);font-size:13px;padding:16px;background:#f8f8f6;border-radius:8px;grid-column:1/-1;">No bulletins posted yet.</div>';
+      container.innerHTML = '<div style="color:var(--slate);font-size:13px;padding:12px;grid-column:1/-1;">No bulletins posted yet.</div>';
       return;
     }
-    var catColors = { 'Technical Update':'#1a3a5c','Platform Update':'#276749','Policy & Procedure':'#c05621','General Notice':'#4a6580' };
+    var catColors = { 'Technical Update':'#1a3a5c', 'Platform Update':'#276749', 'Policy & Procedure':'#c05621', 'General Notice':'#4a6580' };
     container.innerHTML = allBulletins.map(function(b) {
       var color = catColors[b.category] || '#4a6580';
-      var date = b.created_at ? new Date(b.created_at).toLocaleDateString('en-CA',{year:'numeric',month:'short',day:'numeric'}) : '';
-      return '<div class="index-card" onclick="goToBulletin('' + b.id + '')" style="border-left:3px solid ' + color + ';">' +
+      var date = b.created_at ? new Date(b.created_at).toLocaleDateString('en-CA', { year:'numeric', month:'short', day:'numeric' }) : '';
+      var id = b.id;
+      return '<div class="index-card" onclick="goToBulletin('' + id + '')" style="border-left:3px solid ' + color + ';">' +
         '<div class="index-card-title">' + escHtml(b.title) + '</div>' +
-        '<div class="index-card-sub"><span style="color:' + color + ';font-weight:600;font-size:10px;">' + (b.category||'') + '</span>' +
-        (b.ref_number ? ' · Ref: ' + escHtml(b.ref_number) : '') + (date ? ' · ' + date : '') + '</div>' +
-        '</div>';
+        '<div class="index-card-sub"><span style="color:' + color + ';font-weight:600;font-size:10px;">' + (b.category || '') + '</span>' +
+        (b.ref_number ? ' &middot; Ref: ' + escHtml(b.ref_number) : '') +
+        (date ? ' &middot; ' + date : '') + '</div></div>';
     }).join('');
   }
 
   var ESI_SEARCH_INDEX = [
-    { tab:'guide', id:'guide-intro', title:'Introduction & Inspection Setup', keywords:'inspection id purpose date inspector assignment intro' },
-    { tab:'guide', id:'guide-insured', title:'Insured & Property Information', keywords:'insured legal entity address contact mailing location' },
-    { tab:'guide', id:'guide-construction', title:'Construction (COPE — C)', keywords:'construction iso class year built roof building systems electrical heating' },
-    { tab:'guide', id:'guide-occupancy', title:'Occupancy (COPE — O)', keywords:'occupancy operations hazardous ibc sic naics tenant owner' },
-    { tab:'guide', id:'guide-protection', title:'Protection (COPE — P)', keywords:'sprinkler fire alarm fus hydrant security monitoring' },
-    { tab:'guide', id:'guide-exposure', title:'Exposure (COPE — E)', keywords:'exposure neighbouring flood earthquake wind wildfire' },
-    { tab:'guide', id:'guide-natcat', title:'Natural Catastrophe (Nat-Cat)', keywords:'natcat nbc 2025 seismic climatic wind snow flood grade' },
-    { tab:'guide', id:'guide-loss', title:'Loss History', keywords:'loss history claims 5 year cause peril trend' },
-    { tab:'guide', id:'guide-safety', title:'Safety & Compliance', keywords:'safety egress housekeeping compliance rating exit' },
-    { tab:'guide', id:'guide-recommendations', title:'Recommendations & Requirements', keywords:'recommendations requirements priority high medium low' },
-    { tab:'guide', id:'guide-photos', title:'Photo Documentation', keywords:'photos bulk upload pdf documentation coverage' },
-    { tab:'guide', id:'guide-summary', title:'Underwriter Summary', keywords:'summary underwriter risk quality recommendation score qa review' },
-    { tab:'technical', id:'tech-nfpa', title:'NFPA Hazard Classification', keywords:'nfpa hazard light ordinary extra classification' },
-    { tab:'technical', id:'tech-cooking', title:'Cooking / Open Flame', keywords:'cooking flame hood suppression nfpa 96 cleaning restaurant' },
-    { tab:'technical', id:'tech-welding', title:'Welding & Cutting', keywords:'welding cutting hot work permit fire watch' },
-    { tab:'technical', id:'tech-spray', title:'Spray Painting / Coating', keywords:'spray paint booth ventilation flammable coating' },
-    { tab:'technical', id:'tech-chemical', title:'Chemical Mixing', keywords:'chemical mixing sds safety data sheet storage containment' },
-    { tab:'technical', id:'tech-wooddust', title:'Woodworking / Dust', keywords:'woodworking dust collection sawdust nfpa 664 accumulation' },
-    { tab:'technical', id:'tech-compgas', title:'Compressed Gas', keywords:'compressed gas cylinder oxygen propane securing storage' },
-    { tab:'technical', id:'tech-flamliq', title:'Flammable Liquid Storage', keywords:'flammable liquid storage cabinet bonding grounding class' },
-    { tab:'technical', id:'tech-cryogen', title:'Cryogenics', keywords:'cryogenic liquid nitrogen oxygen deficiency monitor' },
-    { tab:'technical', id:'tech-printing', title:'Printing & Ink', keywords:'printing ink solvent exhaust ventilation' },
+    { tab:'guide', id:'guide-intro',           title:'Introduction & Inspection Setup',  keywords:'inspection id purpose date inspector assignment' },
+    { tab:'guide', id:'guide-insured',          title:'Insured & Property Information',   keywords:'insured legal entity address contact mailing' },
+    { tab:'guide', id:'guide-construction',     title:'Construction COPE C',              keywords:'construction iso class year built roof building electrical heating' },
+    { tab:'guide', id:'guide-occupancy',        title:'Occupancy COPE O',                 keywords:'occupancy operations hazardous ibc sic naics tenant owner' },
+    { tab:'guide', id:'guide-protection',       title:'Protection COPE P',                keywords:'sprinkler fire alarm fus hydrant security monitoring' },
+    { tab:'guide', id:'guide-exposure',         title:'Exposure COPE E',                  keywords:'exposure neighbouring flood earthquake wind wildfire' },
+    { tab:'guide', id:'guide-natcat',           title:'Natural Catastrophe Nat-Cat',      keywords:'natcat nbc 2025 seismic climatic wind snow flood grade' },
+    { tab:'guide', id:'guide-loss',             title:'Loss History',                     keywords:'loss history claims 5 year cause peril trend' },
+    { tab:'guide', id:'guide-safety',           title:'Safety Compliance',                keywords:'safety egress housekeeping compliance rating exit' },
+    { tab:'guide', id:'guide-recommendations',  title:'Recommendations Requirements',     keywords:'recommendations requirements priority high medium low' },
+    { tab:'guide', id:'guide-photos',           title:'Photo Documentation',              keywords:'photos bulk upload pdf documentation coverage' },
+    { tab:'guide', id:'guide-summary',          title:'Underwriter Summary',              keywords:'summary underwriter risk quality recommendation score qa' },
+    { tab:'technical', id:'tech-nfpa',      title:'NFPA Hazard Classification',       keywords:'nfpa hazard light ordinary extra classification' },
+    { tab:'technical', id:'tech-cooking',   title:'Cooking Open Flame',               keywords:'cooking flame hood suppression nfpa 96 cleaning restaurant' },
+    { tab:'technical', id:'tech-welding',   title:'Welding Cutting',                  keywords:'welding cutting hot work permit fire watch' },
+    { tab:'technical', id:'tech-spray',     title:'Spray Painting Coating',           keywords:'spray paint booth ventilation flammable coating' },
+    { tab:'technical', id:'tech-chemical',  title:'Chemical Mixing',                  keywords:'chemical mixing sds safety data sheet storage' },
+    { tab:'technical', id:'tech-wooddust',  title:'Woodworking Dust',                 keywords:'woodworking dust collection sawdust nfpa 664' },
+    { tab:'technical', id:'tech-compgas',   title:'Compressed Gas',                   keywords:'compressed gas cylinder oxygen propane securing' },
+    { tab:'technical', id:'tech-flamliq',   title:'Flammable Liquid Storage',         keywords:'flammable liquid storage cabinet bonding grounding' },
+    { tab:'technical', id:'tech-cryogen',   title:'Cryogenics',                       keywords:'cryogenic liquid nitrogen oxygen deficiency' },
+    { tab:'technical', id:'tech-printing',  title:'Printing Ink',                     keywords:'printing ink solvent exhaust ventilation' },
   ];
 
   function runESISearch(query) {
@@ -2267,48 +2144,53 @@ create policy "Admins only can delete bulletins"
     resultsDiv.style.display = 'block';
     var q = query.toLowerCase().trim();
     var staticResults = ESI_SEARCH_INDEX.filter(function(item) {
-      return item.title.toLowerCase().includes(q) || item.keywords.includes(q);
+      return item.title.toLowerCase().indexOf(q) >= 0 || item.keywords.indexOf(q) >= 0;
     });
     var bulletinResults = (allBulletins || []).filter(function(b) {
-      return (b.title||'').toLowerCase().includes(q) || (b.content||'').toLowerCase().includes(q);
+      return ((b.title || '').toLowerCase().indexOf(q) >= 0) || ((b.content || '').toLowerCase().indexOf(q) >= 0);
     }).slice(0, 5);
     if (!staticResults.length && !bulletinResults.length) {
-      resultsDiv.innerHTML = '<div class="search-no-results">No results for "' + escHtml(query) + '"</div>';
+      resultsDiv.innerHTML = '<div style="padding:16px;text-align:center;color:var(--slate);font-size:13px;">No results for &ldquo;' + escHtml(query) + '&rdquo;</div>';
       return;
     }
     var html = '';
     if (staticResults.length) {
       html += '<div style="padding:6px 14px;font-size:10px;font-weight:700;color:var(--slate);text-transform:uppercase;background:#f8f8f6;">ESI Sections</div>';
-      html += staticResults.map(function(item) {
-        var tag = item.tab === 'guide' ? '📋' : '🔬';
-        return '<div class="search-result-item" onclick="goToSection('' + item.tab + '','' + item.id + '');document.getElementById('esi-search-results').style.display='none';document.getElementById('esi-search-input').value=''">' +
-          '<div class="search-result-title"><span class="search-result-tag">' + tag + '</span>' + escHtml(item.title) + '</div></div>';
-      }).join('');
+      staticResults.forEach(function(item) {
+        var icon = item.tab === 'guide' ? '📋' : '🔬';
+        html += '<div class="search-result-item" onclick="closeSearch();goToSection('' + item.tab + '','' + item.id + '')">' +
+          '<div class="search-result-title"><span class="search-result-tag">' + icon + '</span>' + escHtml(item.title) + '</div></div>';
+      });
     }
     if (bulletinResults.length) {
       html += '<div style="padding:6px 14px;font-size:10px;font-weight:700;color:var(--slate);text-transform:uppercase;background:#f8f8f6;border-top:1px solid #eee;">📣 Bulletins</div>';
-      html += bulletinResults.map(function(b) {
-        return '<div class="search-result-item" onclick="goToBulletin('' + b.id + '');document.getElementById('esi-search-results').style.display='none';document.getElementById('esi-search-input').value=''">' +
+      bulletinResults.forEach(function(b) {
+        var bid = b.id;
+        html += '<div class="search-result-item" onclick="closeSearch();goToBulletin('' + bid + '')">' +
           '<div class="search-result-title"><span class="search-result-tag">📣</span>' + escHtml(b.title) + '</div>' +
-          '<div class="search-result-sub">' + escHtml(b.category||'') + '</div></div>';
-      }).join('');
+          '<div class="search-result-sub">' + escHtml(b.category || '') + '</div></div>';
+      });
     }
     resultsDiv.innerHTML = html;
   }
 
-  function switchMainTab(tab, btn) {
-    currentTab = tab;
-    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    document.getElementById('panel-' + tab).classList.add('active');
-    buildSidebar(tab);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (tab === 'bulletins') loadBulletins();
-    if (tab === 'index') { setTimeout(function() { loadBulletins(); setTimeout(renderIndexBulletins, 600); }, 100); }
+  function closeSearch() {
+    var r = document.getElementById('esi-search-results');
+    var i = document.getElementById('esi-search-input');
+    if (r) r.style.display = 'none';
+    if (i) i.value = '';
   }
 
-  // Intersection observer to highlight active sidebar link on scroll
+  // Close search on outside click
+  document.addEventListener('click', function(e) {
+    var search = document.getElementById('esi-search-input');
+    var results = document.getElementById('esi-search-results');
+    if (search && results && !search.contains(e.target) && !results.contains(e.target)) {
+      results.style.display = 'none';
+    }
+  });
+
+  // ── INTERSECTION OBSERVER to highlight active sidebar link on scroll
   function setupScrollSpy() {
     const sections = document.querySelectorAll('.esi-section');
     const observer = new IntersectionObserver(entries => {
