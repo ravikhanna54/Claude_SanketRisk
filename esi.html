@@ -1579,7 +1579,7 @@
     </div><!-- end panel-bulletins -->
 
     <!-- TAB 4: SUBJECT INDEX -->
-    <div class="tab-panel" id="panel-index" style="display:none;">
+    <div class="tab-panel" id="panel-index">
       <div style="padding:32px 24px;">
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
           <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--navy);">📑 Subject Index</h2>
@@ -1701,7 +1701,7 @@
     </div><!-- end panel-index -->
 
     <!-- TAB 5: KNOWLEDGE BASE -->
-    <div class="tab-panel" id="panel-knowledge" style="display:none;">
+    <div class="tab-panel" id="panel-knowledge">
       <div style="padding:32px 24px;">
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
           <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--navy);">📚 Knowledge Base</h2>
@@ -2165,6 +2165,7 @@ create policy "Admins only can delete bulletins"
   function buildSidebar(tab) {
     const nav = document.getElementById('esi-sidebar');
     nav.innerHTML = '';
+    if (!sidebars[tab]) return;
     sidebars[tab].forEach(group => {
       const title = document.createElement('div');
       title.className = 'sidebar-section-title';
