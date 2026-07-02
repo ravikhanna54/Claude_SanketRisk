@@ -339,6 +339,51 @@
         }).catch(function(){});
     }
 
+    // ── COPY INSPECTION (COPE) ──
+    function copyInspection(id) {
+      if (!confirm('Copy this inspection to a new file? A new file number will be assigned.')) return;
+      // Fetch the inspection data
+      _supabase.from('inspections').select('*').eq('id', id).single()
+        .then(function(res) {
+          if (res.error || !res.data) { showToast('⚠ Could not load inspection data.'); return; }
+          var src = res.data;
+          // Get next file number
+          _supabase.rpc('get_next_file_number', { p_category: 100 })
+            .then(function(seqRes) {
+              var newId = (!seqRes.error && seqRes.data) ? seqRes.data : 'SRC100' + String(Math.floor(Math.random()*9000)+1000);
+              // Build new inspection payload - copy all fields, reset status/qa
+              var now = new Date().toISOString();
+              var payload = {
+                inspection_id:   newId,
+                insured_name:    src.insured_name,
+                location:        src.location,
+                city:            src.city,
+                province_state:  src.province_state,
+                occupancy_class: src.occupancy_class,
+                inspector_name:  src.inspector_name,
+                user_id:         src.user_id,
+                user_email:      src.user_email,
+                lob:             src.lob,
+                form_data:       src.form_data,
+                report_status:   'draft',
+                qa_status:       'draft',
+                qa_reviewer:     null,
+                qa_notes:        null,
+                qa_date:         null,
+                created_at:      now,
+                updated_at:      now,
+              };
+              _supabase.from('inspections').insert(payload)
+                .then(function(ins) {
+                  if (ins.error) { showToast('⚠ Copy failed: ' + ins.error.message); return; }
+                  showToast('✓ Copied to new file: ' + newId);
+                  loadInspections();
+                }).catch(function(e) { showToast('⚠ ' + e.message); });
+            }).catch(function(e) { showToast('⚠ ' + e.message); });
+        }).catch(function(e) { showToast('⚠ ' + e.message); });
+    }
+
+
     function assignReviewer(inspectionId, reviewerName) {
       if (!reviewerName) return;
       _supabase.from('inspections')
@@ -493,7 +538,9 @@
             adminCell +
             reviewerCell +
             '<td style="font-size:11px;color:var(--slate-light);font-family:monospace;">' + formatDate(r.updated_at) + '</td>' +
-            '<td style="white-space:nowrap;"><button class="btn-open" onclick="event.stopPropagation();openInspection(\'' + r.id + '\')">Open →</button>' + deleteBtn + '</td>' +
+            '<td style="white-space:nowrap;"><button class="btn-open" onclick="event.stopPropagation();openInspection(\'' + r.id + '\')">Open →</button>' +
+            '<button class="btn-open" onclick="event.stopPropagation();copyInspection(\'' + r.id + '\')" style="margin-left:4px;background:#c9a84c;color:#0d1b2a;border-color:#c9a84c;" title="Copy to new file">📋 Copy</button>' +
+            deleteBtn + '</td>' +
             '</tr>';
         }).join('') + '</tbody></table>';
     }
@@ -616,6 +663,7 @@
                   '<button class="btn-open" style="background:#7c3aed;color:#fff;border-color:#7c3aed;font-size:11px;display:block;width:100%;margin-bottom:3px" onclick="openEmailModal(_scanRowData[\'' + r.id + '\'])">📧 Email Report</button>'
                 : '') +
               '<button class="btn-open" style="background:#0891b2;color:#fff;border-color:#0891b2;font-size:11px;display:block;width:100%;margin-bottom:3px" data-scan-id="' + r.id + '">📂 Open Submission</button>' +
+              
               '<button class="btn-open" style="color:#c53030;border-color:#c53030;font-size:11px;display:block;width:100%;" data-del-id="' + r.id + '">🗑 Delete</button>' +
             '</td>';
 
