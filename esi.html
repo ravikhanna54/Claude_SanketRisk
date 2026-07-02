@@ -2105,12 +2105,15 @@ create policy "Admins only can delete bulletins"
       var color = catColors[b.category] || '#4a6580';
       var date = b.created_at ? new Date(b.created_at).toLocaleDateString('en-CA', { year:'numeric', month:'short', day:'numeric' }) : '';
       var id = b.id;
-      return '<div class="index-card" onclick="goToBulletin('' + id + '')" style="border-left:3px solid ' + color + ';">' +
+      return '<div class="index-card" data-bid="' + b.id + '" style="border-left:3px solid ' + color + ';">' +
         '<div class="index-card-title">' + escHtml(b.title) + '</div>' +
         '<div class="index-card-sub"><span style="color:' + color + ';font-weight:600;font-size:10px;">' + (b.category || '') + '</span>' +
         (b.ref_number ? ' &middot; Ref: ' + escHtml(b.ref_number) : '') +
         (date ? ' &middot; ' + date : '') + '</div></div>';
     }).join('');
+    Array.from(container.querySelectorAll('[data-bid]')).forEach(function(el) {
+      el.onclick = function() { goToBulletin(this.getAttribute('data-bid')); };
+    });
   }
 
   var ESI_SEARCH_INDEX = [
@@ -2158,7 +2161,7 @@ create policy "Admins only can delete bulletins"
       html += '<div style="padding:6px 14px;font-size:10px;font-weight:700;color:var(--slate);text-transform:uppercase;background:#f8f8f6;">ESI Sections</div>';
       staticResults.forEach(function(item) {
         var icon = item.tab === 'guide' ? '📋' : '🔬';
-        html += '<div class="search-result-item" onclick="closeSearch();goToSection('' + item.tab + '','' + item.id + '')">' +
+        html += '<div class="search-result-item" data-tab="' + item.tab + '" data-id="' + item.id + '">' +
           '<div class="search-result-title"><span class="search-result-tag">' + icon + '</span>' + escHtml(item.title) + '</div></div>';
       });
     }
@@ -2166,7 +2169,7 @@ create policy "Admins only can delete bulletins"
       html += '<div style="padding:6px 14px;font-size:10px;font-weight:700;color:var(--slate);text-transform:uppercase;background:#f8f8f6;border-top:1px solid #eee;">📣 Bulletins</div>';
       bulletinResults.forEach(function(b) {
         var bid = b.id;
-        html += '<div class="search-result-item" onclick="closeSearch();goToBulletin('' + bid + '')">' +
+        html += '<div class="search-result-item" data-bid="' + bid + '">' +
           '<div class="search-result-title"><span class="search-result-tag">📣</span>' + escHtml(b.title) + '</div>' +
           '<div class="search-result-sub">' + escHtml(b.category || '') + '</div></div>';
       });
@@ -2180,6 +2183,14 @@ create policy "Admins only can delete bulletins"
     if (r) r.style.display = 'none';
     if (i) i.value = '';
   }
+
+  // Unified event delegation for dynamic items
+  document.addEventListener('click', function(e) {
+    var target = e.target.closest('[data-bid]');
+    if (target) { closeSearch(); goToBulletin(target.getAttribute('data-bid')); return; }
+    var stgt = e.target.closest('[data-tab]');
+    if (stgt) { closeSearch(); goToSection(stgt.getAttribute('data-tab'), stgt.getAttribute('data-sid')); return; }
+  });
 
   // Close search on outside click
   document.addEventListener('click', function(e) {
