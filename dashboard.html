@@ -342,41 +342,44 @@
     // ── COPY INSPECTION (COPE) ──
     function copyInspection(id) {
       if (!confirm('Copy this inspection to a new file? A new file number will be assigned.')) return;
-      // Fetch the inspection data
       _supabase.from('inspections').select('*').eq('id', id).single()
         .then(function(res) {
           if (res.error || !res.data) { showToast('⚠ Could not load inspection data.'); return; }
           var src = res.data;
-          // Get next file number
           _supabase.rpc('get_next_file_number', { p_category: 100 })
             .then(function(seqRes) {
-              var newId = (!seqRes.error && seqRes.data) ? seqRes.data : 'SRC100' + String(Math.floor(Math.random()*9000)+1000);
-              // Build new inspection payload - copy all fields, reset status/qa
+              var newFileNum = (!seqRes.error && seqRes.data) ? seqRes.data : 'SRC100' + String(Math.floor(Math.random()*9000)+1000);
               var now = new Date().toISOString();
               var payload = {
-                inspection_id:   newId,
-                insured_name:    src.insured_name,
-                location:        src.location,
-                city:            src.city,
-                province_state:  src.province_state,
-                occupancy_class: src.occupancy_class,
-                inspector_name:  src.inspector_name,
-                user_id:         src.user_id,
-                user_email:      src.user_email,
-                lob:             src.lob,
-                form_data:       src.form_data,
-                report_status:   'draft',
-                qa_status:       'draft',
-                qa_reviewer:     null,
-                qa_notes:        null,
-                qa_date:         null,
-                created_at:      now,
-                updated_at:      now,
+                inspection_id:    newFileNum,
+                file_number:      newFileNum,
+                inspection_date:  src.inspection_date,
+                insured_name:     src.insured_name,
+                location:         src.location,
+                city:             src.city,
+                province_state:   src.province_state,
+                occupancy_class:  src.occupancy_class,
+                uw_recommendation: src.uw_recommendation,
+                risk_quality:     src.risk_quality,
+                inspector_name:   src.inspector_name,
+                lob:              src.lob,
+                form_data:        src.form_data,
+                user_id:          src.user_id,
+                user_email:       src.user_email,
+                user_role:        src.user_role,
+                account_number:   src.account_number,
+                policy_number:    src.policy_number,
+                report_published: false,
+                report_status:    'draft',
+                qa_reviewer:      null,
+                qa_notes:         null,
+                qa_date:          null,
+                updated_at:       now,
               };
               _supabase.from('inspections').insert(payload)
                 .then(function(ins) {
                   if (ins.error) { showToast('⚠ Copy failed: ' + ins.error.message); return; }
-                  showToast('✓ Copied to new file: ' + newId);
+                  showToast('✓ Copied to new file: ' + newFileNum);
                   loadInspections();
                 }).catch(function(e) { showToast('⚠ ' + e.message); });
             }).catch(function(e) { showToast('⚠ ' + e.message); });
