@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 355 — 2026-07-01 — Moved Fire Hydrant Proximity from Registry Intel into Protection Assessment as its own subheading, simplified to "information obtained from community mapped open sources"; updated Infrared Testing note to reference uploading results below -->
+<!-- SanketRisk SCAN ONE — Deploy 356 — 2026-07-03 — Fixed stale "8 minutes" timeout message (actual timeout is 14 min). Lambda index.mjs: added retry-with-backoff wrapper around Anthropic API call and all Supabase fetch calls to survive transient "fetch failed" network blips on long PDF/multi-photo jobs -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -3707,7 +3707,7 @@
         console.warn('Poll error:', pollErr.message);
       }
     }
-    throw new Error('Analysis timed out after 8 minutes. Please try again — if the problem persists check AWS CloudWatch logs for the Lambda function.');
+    throw new Error('Analysis timed out after 14 minutes. Please try again — if the problem persists check AWS CloudWatch logs for the Lambda function.');
   }
 
     // Session state
