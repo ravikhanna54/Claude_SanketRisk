@@ -10,6 +10,8 @@
 <title>Sanket Risk Consultants — Commercial Inspection Platform</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
     --navy: #0d1b2a;
@@ -1429,9 +1431,10 @@
     <button class="btn-save" onclick="window.open('/esi.html','_blank')" style="background:#276749;color:#fff;border-color:#276749;margin-right:6px;" title="Engineering Service Instructions — Inspector Reference Guide">📖 ESI</button>
     <div id="reports-menu-wrap" style="position:relative;display:inline-block;margin-right:6px;">
       <button class="btn-save" onclick="toggleReportsMenu(event)" style="background:var(--navy-light);border:1px solid var(--gold);color:var(--gold);" title="Generate reports from anywhere in the form">🖨 Reports ▾</button>
-      <div id="reports-menu" style="display:none;position:absolute;right:0;top:44px;background:white;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.22);min-width:210px;overflow:hidden;z-index:600;">
-        <button onclick="document.getElementById('reports-menu').style.display='none';generateFormalReport()" style="display:block;width:100%;text-align:left;padding:13px 16px;background:white;border:none;border-bottom:1px solid #f0ece2;font-family:inherit;font-size:13px;color:var(--navy);cursor:pointer;">📋 Formal Report</button>
-        <button onclick="document.getElementById('reports-menu').style.display='none';generateNarrativeReport()" style="display:block;width:100%;text-align:left;padding:13px 16px;background:white;border:none;border-bottom:1px solid #f0ece2;font-family:inherit;font-size:13px;color:var(--navy);cursor:pointer;">📖 Narrative Report</button>
+      <div id="reports-menu" style="display:none;position:absolute;right:0;top:44px;background:white;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.22);min-width:230px;overflow:hidden;z-index:600;">
+        <div id="reports-menu-requested-note" style="display:none;padding:8px 16px;font-size:10px;color:#4a6580;background:#f7f8fc;border-bottom:1px solid #f0ece2;"></div>
+        <button id="reports-menu-formal-btn" onclick="document.getElementById('reports-menu').style.display='none';requestReportGeneration('formal')" style="display:block;width:100%;text-align:left;padding:13px 16px;background:white;border:none;border-bottom:1px solid #f0ece2;font-family:inherit;font-size:13px;color:var(--navy);cursor:pointer;">📋 Formal Report</button>
+        <button id="reports-menu-narrative-btn" onclick="document.getElementById('reports-menu').style.display='none';requestReportGeneration('narrative')" style="display:block;width:100%;text-align:left;padding:13px 16px;background:white;border:none;border-bottom:1px solid #f0ece2;font-family:inherit;font-size:13px;color:var(--navy);cursor:pointer;">📖 Narrative Report</button>
         <button onclick="document.getElementById('reports-menu').style.display='none';exportPDF()" style="display:block;width:100%;text-align:left;padding:13px 16px;background:white;border:none;font-family:inherit;font-size:13px;color:var(--navy);cursor:pointer;">🖨 Screen Print</button>
       </div>
     </div>
@@ -1529,6 +1532,12 @@
             <label>Inspection ID <span class="req">*</span></label>
             <input type="text" value="NEW" id="inspection-id" oninput="document.getElementById('inspection-id-badge').textContent=this.value">
           </div>
+          <!-- Hidden — carries requestor email + originating request id through from Convert, for dashboard "Email Report" -->
+          <input type="hidden" id="requestor-email">
+          <input type="hidden" id="source-request-id">
+          <input type="hidden" id="requestor-name">
+          <input type="hidden" id="requestor-company">
+          <input type="hidden" id="report-type-requested">
           <div class="field">
             <label>Account Number</label>
             <input type="text" id="account-number" placeholder="e.g. ACC-2026-0001" oninput="const b=document.getElementById('account-badge');b.textContent=this.value;b.style.display=this.value?'block':'none';">
@@ -8509,10 +8518,123 @@
     if (box && !e.target.closest('.cdd-wrap')) { box.classList.remove('open'); }
   });
   // ── Header Reports dropdown ──
+  // Renders a full report HTML string to a paginated PDF (offscreen, independent
+  // of whatever tab/window is shown to the inspector) and stores it in Supabase
+  // Storage, then records the path on the inspection row — matching Scan One's
+  // architecture so the dashboard's View Report / Email Report can use it.
+  // NOTE: this does not currently include attached supporting-document PDF pages
+  // (those render asynchronously into the separate report tab via PDF.js) — the
+  // stored PDF covers the core report content only.
+  async function generateAndStoreReportPdf(htmlString, format) {
+    if (!currentInspectionId) {
+      showToast && showToast('⚠ Save the inspection first — PDF storage needs an inspection ID.');
+      return;
+    }
+    var iframe = null;
+    try {
+      showToast && showToast('⏳ Preparing ' + (format === 'narrative' ? 'Narrative' : 'Formal') + ' Report PDF…');
+
+      iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;top:-10000px;left:-10000px;width:960px;height:1200px;border:0;';
+      document.body.appendChild(iframe);
+
+      await new Promise(function(resolve) {
+        iframe.onload = function() { setTimeout(resolve, 900); };
+        iframe.srcdoc = htmlString;
+        setTimeout(resolve, 4000); // safety fallback if onload never fires
+      });
+
+      var targetDoc = iframe.contentDocument;
+      var bodyEl = targetDoc && targetDoc.body;
+      if (!bodyEl) throw new Error('Could not access report content for PDF capture');
+
+      var canvas = await html2canvas(bodyEl, {
+        scale: 1.5, useCORS: true, allowTaint: true, logging: false,
+        backgroundColor: '#ffffff', windowWidth: 960,
+        height: bodyEl.scrollHeight, imageTimeout: 15000
+      });
+
+      document.body.removeChild(iframe);
+      iframe = null;
+
+      var jsPDFObj = window.jspdf.jsPDF;
+      var pdf = new jsPDFObj({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      var pageW = pdf.internal.pageSize.getWidth();
+      var pageH = pdf.internal.pageSize.getHeight();
+      var imgData = canvas.toDataURL('image/jpeg', 0.88);
+      var imgW = pageW, imgH = (canvas.height * imgW) / canvas.width, yPos = 0;
+      var firstPage = true;
+      while (yPos < imgH) {
+        if (imgH - yPos < 5) break;
+        if (!firstPage) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, -yPos, imgW, imgH);
+        yPos += pageH;
+        firstPage = false;
+      }
+
+      var pdfBlob = pdf.output('blob');
+      var fileName = 'report-' + format + '-' + Date.now() + '.pdf';
+      var storagePath = currentInspectionId + '/' + fileName;
+
+      var upRes = await _supabase.storage
+        .from('inspection-reports')
+        .upload(storagePath, pdfBlob, { contentType: 'application/pdf', upsert: true });
+      if (upRes.error) throw upRes.error;
+
+      var updRes = await _supabase
+        .from('inspections')
+        .update({ report_pdf_path: storagePath, report_format: format, report_generated_at: new Date().toISOString() })
+        .eq('id', currentInspectionId);
+      if (updRes.error) throw updRes.error;
+
+      showToast && showToast('✓ ' + (format === 'narrative' ? 'Narrative' : 'Formal') + ' Report PDF saved — available on the Dashboard for View/Email');
+    } catch (e) {
+      if (iframe && iframe.parentNode) document.body.removeChild(iframe);
+      console.error('Report PDF storage error:', e.message);
+      showToast && showToast('⚠ Report generated, but PDF storage failed: ' + e.message);
+    }
+  }
+
   function toggleReportsMenu(e) {
     if (e) e.stopPropagation();
     var m = document.getElementById('reports-menu');
-    if (m) m.style.display = (m.style.display === 'block') ? 'none' : 'block';
+    if (!m) return;
+    var opening = m.style.display !== 'block';
+    m.style.display = opening ? 'block' : 'none';
+    if (opening) {
+      var reqType = (document.getElementById('report-type-requested') || {}).value || '';
+      var note = document.getElementById('reports-menu-requested-note');
+      var formalBtn = document.getElementById('reports-menu-formal-btn');
+      var narrBtn   = document.getElementById('reports-menu-narrative-btn');
+      if (formalBtn) formalBtn.style.background = 'white';
+      if (narrBtn)   narrBtn.style.background   = 'white';
+      if (reqType === 'formal' || reqType === 'narrative') {
+        if (note) {
+          note.style.display = 'block';
+          note.textContent = '✓ Customer requested: ' + (reqType === 'narrative' ? 'Narrative Report' : 'Formal Report');
+        }
+        var reqBtn = document.getElementById(reqType === 'narrative' ? 'reports-menu-narrative-btn' : 'reports-menu-formal-btn');
+        if (reqBtn) reqBtn.style.background = '#fffbf0';
+      } else if (note) {
+        note.style.display = 'none';
+      }
+    }
+  }
+
+  // Gate report generation to the customer's originally requested type — the
+  // other type remains available but requires an explicit confirmation, since
+  // the customer's request should be the default path, not a hard restriction.
+  function requestReportGeneration(type) {
+    var reqType = (document.getElementById('report-type-requested') || {}).value || '';
+    if (reqType && reqType !== type) {
+      var reqLabel = reqType === 'narrative' ? 'Narrative Report' : 'Formal Report';
+      var thisLabel = type === 'narrative' ? 'Narrative Report' : 'Formal Report';
+      if (!confirm('This inspection was requested as a ' + reqLabel + '.\n\nGenerate a ' + thisLabel + ' instead? This will become the report stored and emailed for this inspection.')) {
+        return;
+      }
+    }
+    if (type === 'narrative') generateNarrativeReport();
+    else generateFormalReport();
   }
   document.addEventListener('click', function(e) {
     var m = document.getElementById('reports-menu');
@@ -9281,6 +9403,13 @@
       set('account-number',  r.account_number);
       set('policy-number',   r.policy_number);
       set('inspection-date', new Date().toISOString().split('T')[0]);
+      // Carry requestor identity through so the dashboard's Email Report button
+      // can find who to send the finished report back to
+      set('requestor-email',   r.requestor_email);
+      set('source-request-id', r.id);
+      set('requestor-name',    r.requestor_name);
+      set('requestor-company', r.requestor_company);
+      set('report-type-requested', r.report_format);
       // Insured section
       set('legal-entity',    r.insured_name);
       set('street-address',  r.address);
@@ -9330,6 +9459,7 @@
             'Submitted: ' + (r.submitted_at ? r.submitted_at.substring(0,10) : '—') + '\n' +
             'Urgency: ' + (r.urgency || '—') + '\n' +
             'Site Contact: ' + (r.site_contact || '—') + '\n' +
+            'Requested Report Format: ' + (r.report_format === 'narrative' ? 'Narrative Report' : 'Formal Report') + '\n' +
             'Instructions: ' + (r.special_instructions || '—') + '\n' +
             'Comments: ' + (r.comments || '—');
         }
@@ -11975,6 +12105,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
     w.document.open();
     w.document.write(reportPage);
     w.document.close();
+    generateAndStoreReportPdf(reportPage, 'narrative');
 
     // ── Render attached PDFs as images using PDF.js (same mechanism as Formal Report) ──
     if (attachedPDFs && attachedPDFs.length > 0) {
@@ -13928,6 +14059,7 @@ ${activeSuppHTML}
   var fblobUrl = URL.createObjectURL(fblob);
   var w = window.open(fblobUrl, '_blank');
   if (!w) { document.open(); document.write(html); document.close(); return; }
+  generateAndStoreReportPdf(html, 'formal');
 
   // After report opens, render PDFs as images using PDF.js
   if (attachedPDFs && attachedPDFs.length > 0) {
