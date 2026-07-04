@@ -8577,7 +8577,7 @@
       var storagePath = currentInspectionId + '/' + fileName;
 
       var upRes = await _supabase.storage
-        .from('inspection-reports')
+        .from('reports')
         .upload(storagePath, pdfBlob, { contentType: 'application/pdf', upsert: true });
       if (upRes.error) throw upRes.error;
 
