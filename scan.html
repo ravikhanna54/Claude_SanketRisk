@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 356 — 2026-07-03 — Fixed stale "8 minutes" timeout message (actual timeout is 14 min). Lambda index.mjs: added retry-with-backoff wrapper around Anthropic API call and all Supabase fetch calls to survive transient "fetch failed" network blips on long PDF/multi-photo jobs -->
+<!-- SanketRisk SCAN ONE — Deploy 357 — 2026-07-03 — Fixed construction class prompt: pre-engineered/steel-on-steel buildings now correctly classified as Class 3 Non-Combustible (was incorrectly instructed as Class 2, and Class 1 was wrongly tied to fireproofed steel instead of wood-frame). Fixed hydrant proximity radius label mismatch (was hardcoded "300m" text against an actual 500m search radius, producing inconsistent results like "2 hydrants within 300m, nearest 439m") -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -2131,7 +2131,8 @@
 
     var hydrantText = '';
     try {
-      var hydrantQuery = '[out:json][timeout:15];node["emergency"="fire_hydrant"](around:500,' + lat + ',' + lon + ');out;';
+      var hydrantRadiusM = 500;
+      var hydrantQuery = '[out:json][timeout:15];node["emergency"="fire_hydrant"](around:' + hydrantRadiusM + ',' + lat + ',' + lon + ');out;';
       var hydrantUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(hydrantQuery);
       var hResp = await fetch(hydrantUrl);
       if (hResp.ok) {
@@ -2144,9 +2145,9 @@
             if (d < nearestDist) nearestDist = d;
           });
           hydrantText = hydrants.length + ' fire hydrant' + (hydrants.length !== 1 ? 's' : '') +
-            ' mapped within 300m of the property; nearest approximately ' + Math.round(nearestDist) + ' m. Information obtained from community mapped open sources.';
+            ' mapped within ' + hydrantRadiusM + 'm of the property; nearest approximately ' + Math.round(nearestDist) + ' m. Information obtained from community mapped open sources.';
         } else {
-          hydrantText = 'No fire hydrants mapped within 300m of the property. Information obtained from community mapped open sources.';
+          hydrantText = 'No fire hydrants mapped within ' + hydrantRadiusM + 'm of the property. Information obtained from community mapped open sources.';
         }
       }
     } catch(hErr) { _dbg('[Hydrant] Overpass error:', hErr.message); return; }
@@ -2853,7 +2854,7 @@
     if (fmt === 'structured') {
       return noPhotoRef +
       'OUTPUT: Structured COPE assessment. Each narrative section must be a detailed professional paragraph. The "construction" field requires THREE paragraphs separated by \\n\\n. All other narrative fields are single focused paragraphs. Be specific — name equipment brands, note dimensions, state evidence used.\n\n' +
-      'CONSTRUCTION CLASS: Apply the most conservative classification supportable by photographic evidence. Class 1 requires VISIBLE spray-applied fireproofing on ALL structural steel — if not clearly visible, assign Class 2 minimum. Exposed steel = Class 2. Pre-engineered metal = Class 2. State what evidence determined the class.\n\n' +
+      'CONSTRUCTION CLASS: Use the standard 6-class ISO/insurance scheme — Class 1 Frame (combustible wood-frame walls/roof); Class 2 Joisted Masonry (masonry walls, combustible wood floor/roof); Class 3 Non-Combustible (metal frame and metal skin, no fire-resistance rating — this is the correct class for pre-engineered steel/metal buildings, steel-on-steel construction, and exposed structural steel without fireproofing); Class 4 Masonry Non-Combustible (masonry/concrete walls, non-combustible roof); Class 5 Modified Fire Resistive (floor/roof assemblies rated 1-2hr fire resistance); Class 6 Fire Resistive (assemblies rated 2hr+, typically high-rise). Apply the most conservative classification supportable by photographic evidence. Do NOT assign Class 5 or 6 unless spray-applied fireproofing is CLEARLY VISIBLE on structural steel achieving a fire-resistance rating — absent that, steel-frame buildings (including all pre-engineered metal buildings) are Class 3, never Class 1 or 2 (those classes are for wood-frame and masonry construction respectively, not steel). State what evidence determined the class.\n\n' +
       'ELECTRICAL: The electrical_system field is MANDATORY and completely separate from construction paragraphs — all electrical observations go there only. Check exterior photos carefully for pad-mount transformers. INFRARED TESTING: report the submitter-provided value verbatim in the INFRARED TESTING line. If it was not provided (submitter value is "Not provided" or "Not tested / Unknown"), you MUST include a recommendation in the recommendations array for annual infrared thermographic testing of the electrical distribution system and switchgear, referencing NFPA 70B, priority Medium unless the panel/service shows visible deficiencies (then High).\n\n' +
       'SPRINKLER CONTROL VALVE: Identify precisely — BUTTERFLY VALVE has a lever arm (orange/red/yellow), disc-shaped, often has a tamper switch. OS&Y has a wheel handwheel on a rising threaded stem. State valve type, position (open/closed), and brand if readable. OPEN butterfly valve = lever parallel to pipe. CLOSED = lever perpendicular.\n\n' +
       'HAZARDS: One line per hazard, max 10 words each. Format: SEVERITY: description. Severity options: CRITICAL/HIGH/MEDIUM/LOW/ADVISORY.\n\n' +
@@ -2979,7 +2980,7 @@
       'Respond with ONLY valid JSON — no markdown, no backticks. Complete ALL fields. Schema:\n' +
       '{\n' +
       '  "executive_summary":"2-3 sentence professional underwriting paragraph summarising: construction class and building type, occupancy and primary process hazards, overall risk quality. IMPORTANT: The executive summary MUST be consistent with the occupancy, hazards, and recommendations fields — if a magnetic separator, fire suppression system, or other positive control is noted in occupancy, do NOT contradict this in the executive summary. The executive summary reflects the COMPLETE picture including positive controls found.",\n' +
-      '  "construction_class":"Class 2 — Non-Combustible",\n' +
+      '  "construction_class":"Class 3 — Non-Combustible",\n' +
       '  "year_built_assessed":"2018",\n' +
       '  "stories":"1",\n' +
       '  "area_sqft":"21,000 sq ft (declared)",\n' +
