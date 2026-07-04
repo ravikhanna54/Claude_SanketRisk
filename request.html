@@ -265,7 +265,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
               <div class="svc-pill" onclick="togglePill(this)">🌡 Thermal Imaging Survey</div>
               <div class="svc-pill" onclick="togglePill(this)">📷 360° Virtual Walkthrough</div>
               <div class="svc-pill" onclick="togglePill(this)">📁 Re-Inspection Documentation</div>
-              <div class="svc-pill" onclick="togglePill(this)">📝 Narrative Report</div>
             </div>
           </div>
 
@@ -281,25 +280,18 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
                 📋 Preferred Report Format
               </label>
               <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 16px;border:1.5px solid #ddd8d0;border-radius:8px;flex:1;min-width:140px;transition:border-color .15s;" id="fmt-both-label">
-                  <input type="radio" name="report-format" id="fmt-both" value="both" checked onchange="updateFormatLabel()">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 16px;border:1.5px solid #ddd8d0;border-radius:8px;flex:1;min-width:140px;transition:border-color .15s;" id="fmt-formal-label">
+                  <input type="radio" name="report-format" id="fmt-formal" value="formal" checked onchange="updateFormatLabel()">
                   <span>
-                    <span style="font-weight:700;font-size:13px;">Both</span><br>
-                    <span style="font-size:11px;color:#666;">Structured + Narrative</span>
-                  </span>
-                </label>
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 16px;border:1.5px solid #ddd8d0;border-radius:8px;flex:1;min-width:140px;" id="fmt-structured-label">
-                  <input type="radio" name="report-format" id="fmt-structured" value="structured" onchange="updateFormatLabel()">
-                  <span>
-                    <span style="font-weight:700;font-size:13px;">📋 Structured COPE</span><br>
-                    <span style="font-size:11px;color:#666;">Quick tabular summary</span>
+                    <span style="font-weight:700;font-size:13px;">📋 Formal Report</span><br>
+                    <span style="font-size:11px;color:#666;">Structured COPE tables and grading</span>
                   </span>
                 </label>
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 16px;border:1.5px solid #ddd8d0;border-radius:8px;flex:1;min-width:140px;" id="fmt-narrative-label">
                   <input type="radio" name="report-format" id="fmt-narrative" value="narrative" onchange="updateFormatLabel()">
                   <span>
-                    <span style="font-weight:700;font-size:13px;">📝 Narrative Report</span><br>
-                    <span style="font-size:11px;color:#666;">Detailed paragraphs</span>
+                    <span style="font-weight:700;font-size:13px;">📖 Narrative Report</span><br>
+                    <span style="font-size:11px;color:#666;">Detailed prose, paragraph-form</span>
                   </span>
                 </label>
               </div>
@@ -361,7 +353,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
   }
 
   function updateFormatLabel() {
-    ['both','structured','narrative'].forEach(function(v) {
+    ['formal','narrative'].forEach(function(v) {
       var label = document.getElementById('fmt-' + v + '-label');
       var input = document.getElementById('fmt-' + v);
       if (label && input) {
@@ -407,7 +399,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
         return base ? base + (svcStr ? '\n\n' + svcStr : '') : svcStr;
       })(),
       comments:          document.getElementById('comments').value.trim(),
-      report_format:     (document.querySelector('input[name="report-format"]:checked') || {value:'both'}).value,
+      report_format:     (document.querySelector('input[name="report-format"]:checked') || {value:'formal'}).value,
     };
     try {
       const { error } = await _supabase.from('inspection_requests').insert([payload]);
