@@ -2525,7 +2525,7 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-title">Hazardous Operations & Materials</div>
+        <div class="card-title">Special Hazards</div>
         <div class="field" style="margin-bottom:16px">
           <label>Hazardous Processes Present (select all that apply)</label>
           <div class="check-group" id="haz-processes">
@@ -2538,6 +2538,7 @@
             <label class="check-btn" onclick="toggleCheck(this);toggleHazDetail('flamliq',this)">Flammable Liquid Storage</label>
             <label class="check-btn" onclick="toggleCheck(this);toggleHazDetail('cryogen',this)">Cryogenics</label>
             <label class="check-btn" onclick="toggleCheck(this);toggleHazDetail('printing',this)">Printing / Ink</label>
+            <label class="check-btn" onclick="toggleCheck(this);toggleHazDetail('procheat',this)">Process Heat</label>
             <label class="check-btn" onclick="toggleCheck(this)">None</label>
           </div>
         </div>
@@ -2982,6 +2983,124 @@
             <div class="field form-full">
               <label>Printing / Ink Hazard Notes</label>
               <textarea spellcheck="true" id="haz-print-notes" placeholder="Press types, ink volumes, waste disposal, rag / wipe accumulation, static controls..."></textarea>
+            </div>
+          </div>
+        </div>
+        <!-- Process Heat -->
+        <div class="haz-detail-panel" id="haz-detail-procheat" style="display:none;">
+          <div class="haz-detail-header">♨️ Process Heat — Detail</div>
+          <div class="form-grid">
+            <div class="field form-full" style="margin-bottom:4px">
+              <label>Type of Process (select all that apply)</label>
+              <div class="check-group" id="haz-procheat-type">
+                <label class="check-btn" onclick="toggleCheck(this)">Boilers</label>
+                <label class="check-btn" onclick="toggleCheck(this)">Ovens</label>
+                <label class="check-btn" onclick="toggleCheck(this)">Heated Elements</label>
+                <label class="check-btn" onclick="toggleCheck(this)">Heated Oil</label>
+                <label class="check-btn" onclick="toggleCheck(this)">Heated Water</label>
+                <label class="check-btn" onclick="toggleCheck(this)">Other</label>
+              </div>
+            </div>
+            <div class="field">
+              <label>Direct / Indirect Heat</label>
+              <select id="haz-procheat-direct">
+                <option value="">— Select —</option>
+                <option>Direct — combustible product makes direct contact with heat supply</option>
+                <option>Indirect — radiation from heated tubes, or air passed through heat exchangers</option>
+                <option>Both / Mixed</option>
+                <option>Unknown</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Construction of Heat Device</label>
+              <select id="haz-procheat-construction">
+                <option value="">— Select —</option>
+                <option>Refractory-lined steel</option>
+                <option>Insulated jacketed steel</option>
+                <option>Cast iron</option>
+                <option>Ceramic / refractory brick</option>
+                <option>Sheet steel enclosure — uninsulated</option>
+                <option>Other — see notes</option>
+                <option>Unknown</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Temperature(s) Used</label>
+              <input type="text" id="haz-procheat-temp" placeholder="e.g. 450&#xB0;F / 232&#xB0;C, or range">
+            </div>
+            <div class="field">
+              <label>Fuel Used</label>
+              <select id="haz-procheat-fuel">
+                <option value="">— Select —</option>
+                <option>Natural Gas</option>
+                <option>Propane</option>
+                <option>Electric</option>
+                <option>Fuel Oil</option>
+                <option>Diesel</option>
+                <option>Biomass / Wood</option>
+                <option>Steam</option>
+                <option>Dual Fuel — see notes</option>
+                <option>Other</option>
+                <option>Unknown</option>
+              </select>
+            </div>
+            <div class="field form-full" style="margin-bottom:4px">
+              <label>Controls / Shut-off Devices in Place (select all that apply)</label>
+              <div class="check-group" id="haz-procheat-controls">
+                <label class="check-btn" onclick="toggleCheck(this)">High-Limit Temperature Cutoff</label>
+                <label class="check-btn" onclick="toggleCheck(this)">Flame Failure / Safety Shutoff</label>
+                <label class="check-btn" onclick="toggleCheck(this)">Low-Water Cutoff (Boilers)</label>
+                <label class="check-btn" onclick="toggleCheck(this)">Pressure Relief Valve</label>
+                <label class="check-btn" onclick="toggleCheck(this)">Emergency Stop Button</label>
+                <label class="check-btn" onclick="toggleCheck(this)">Automatic Fuel Shutoff</label>
+                <label class="check-btn" onclick="toggleCheck(this)">Ventilation Interlock</label>
+                <label class="check-btn" onclick="toggleCheck(this)">None Observed</label>
+              </div>
+            </div>
+            <div class="field">
+              <label>Clearance to Combustibles</label>
+              <select id="haz-procheat-clearance">
+                <option value="">— Select —</option>
+                <option>Adequate — manufacturer/code clearance maintained</option>
+                <option>Marginal — combustibles nearby but not contacting</option>
+                <option>Inadequate — combustibles in close proximity</option>
+                <option>Unknown</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Ventilation / Exhaust System Present?</label>
+              <select id="haz-procheat-ventilation">
+                <option value="">— Select —</option>
+                <option>Yes — Dedicated exhaust / ventilation</option>
+                <option>Partial</option>
+                <option>No</option>
+                <option>N/A</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Maintenance / Inspection Frequency</label>
+              <select id="haz-procheat-maintenance">
+                <option value="">— Select —</option>
+                <option>Annual</option>
+                <option>Per Manufacturer Schedule</option>
+                <option>Ad Hoc / As Needed</option>
+                <option>Unknown / Not Documented</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Applicable NFPA Standard</label>
+              <select id="haz-procheat-nfpa">
+                <option value="">— Select —</option>
+                <option>NFPA 86 — Ovens and Furnaces</option>
+                <option>NFPA 85 — Boiler and Combustion Systems</option>
+                <option>NFPA 87 — Fluid Heaters</option>
+                <option>Other / Not Applicable</option>
+                <option>Unknown</option>
+              </select>
+            </div>
+            <div class="field form-full">
+              <label>Process Heat Hazard Notes</label>
+              <textarea spellcheck="true" id="haz-procheat-notes" placeholder="Equipment brand/model, process description, distance to nearest combustibles, insulation condition, history of incidents..."></textarea>
             </div>
           </div>
         </div>
@@ -11345,14 +11464,23 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
         fields: [['Material Type', 'haz-cryo-type'], ['Vessel Type', 'haz-cryo-vessel'], ['O2 Deficiency Monitor', 'haz-cryo-monitor'], ['Ventilation', 'haz-cryo-ventilation']], notes: 'haz-cryo-notes' },
       { id: 'haz-detail-printing', name: 'Printing / Ink',
         fields: [['Operation Type', 'haz-print-type'], ['Ink/Solvent Type', 'haz-print-solvent'], ['Storage Volume', 'haz-print-volume'], ['Ventilation', 'haz-print-ventilation']], notes: 'haz-print-notes' },
+      { id: 'haz-detail-procheat', name: 'Process Heat',
+        fields: [['Type of Process', 'haz-procheat-type', 'checkgroup'], ['Direct/Indirect Heat', 'haz-procheat-direct'], ['Construction of Heat Device', 'haz-procheat-construction'], ['Temperature(s) Used', 'haz-procheat-temp'], ['Fuel Used', 'haz-procheat-fuel'], ['Controls/Shut-off Devices', 'haz-procheat-controls', 'checkgroup'], ['Clearance to Combustibles', 'haz-procheat-clearance'], ['Ventilation/Exhaust', 'haz-procheat-ventilation'], ['Maintenance/Inspection Frequency', 'haz-procheat-maintenance'], ['Applicable NFPA Standard', 'haz-procheat-nfpa']], notes: 'haz-procheat-notes' },
     ];
     hazDetails.forEach(function(h) {
       var panel = document.getElementById(h.id);
       if (!panel || panel.style.display === 'none') return;
       var details = [];
       h.fields.forEach(function(f) {
-        var el = document.getElementById(f[1]);
-        var v = el ? el.value : '';
+        var v;
+        if (f[2] === 'checkgroup') {
+          var grp = document.getElementById(f[1]);
+          var selected = grp ? Array.prototype.map.call(grp.querySelectorAll('.check-btn.selected'), function(b){ return b.textContent.trim(); }) : [];
+          v = selected.join(', ');
+        } else {
+          var el = document.getElementById(f[1]);
+          v = el ? el.value : '';
+        }
         if (v && v !== '—') details.push(f[0] + ': ' + v);
       });
       var notesEl = document.getElementById(h.notes);
@@ -13318,7 +13446,7 @@ function generateFormalReport() {
     </div>
     ${fieldFull('Description of Operations', val('description-operations'))}
     <hr class="sec-divider">
-    <div class="sub-heading">Hazardous Operations & Materials</div>
+    <div class="sub-heading">Special Hazards</div>
     <div class="field-grid">
       ${fieldFull('Hazardous Processes Present', pillVal('hazardous_processes_present__select_all_that_apply_'))}
       ${field2('NFPA Hazard Category', val('nfpa-hazard-category'))}
@@ -13327,6 +13455,7 @@ function generateFormalReport() {
     ${(()=>{
       const v = id => { const el = document.getElementById(id); return el ? (el.value || '—') : '—'; };
       const ta = id => { const el = document.getElementById(id); return el ? (el.value || '') : ''; };
+      const cg = id => { const el = document.getElementById(id); if (!el) return '—'; const sel = Array.prototype.map.call(el.querySelectorAll('.check-btn.selected'), b => b.textContent.trim()); return sel.length ? sel.join(', ') : '—'; };
       const hazPanels = [
         { id: 'haz-detail-cooking',  label: '🔥 Cooking / Open Flame', fields: [
           ['Type of Cooking Equipment', v('haz-cooking-equipment')],
@@ -13382,6 +13511,18 @@ function generateFormalReport() {
           ['Solvent / Ink Storage Volume', v('haz-print-volume')],
           ['Ventilation / Exhaust Adequate', v('haz-print-ventilation')],
         ], notes: ta('haz-print-notes') },
+        { id: 'haz-detail-procheat', label: '♨️ Process Heat', fields: [
+          ['Type of Process', cg('haz-procheat-type')],
+          ['Direct / Indirect Heat', v('haz-procheat-direct')],
+          ['Construction of Heat Device', v('haz-procheat-construction')],
+          ['Temperature(s) Used', v('haz-procheat-temp')],
+          ['Fuel Used', v('haz-procheat-fuel')],
+          ['Controls / Shut-off Devices', cg('haz-procheat-controls')],
+          ['Clearance to Combustibles', v('haz-procheat-clearance')],
+          ['Ventilation / Exhaust System', v('haz-procheat-ventilation')],
+          ['Maintenance / Inspection Frequency', v('haz-procheat-maintenance')],
+          ['Applicable NFPA Standard', v('haz-procheat-nfpa')],
+        ], notes: ta('haz-procheat-notes') },
       ];
       return hazPanels.map(p => {
         const panel = document.getElementById(p.id);
