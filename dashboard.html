@@ -887,7 +887,7 @@
       var r = _inspRowData[id];
       if (!r || !r.report_pdf_path) { showToast('⚠ No report PDF stored for this inspection yet.'); return; }
       try {
-        var res = await _supabase.storage.from('inspection-reports').createSignedUrl(r.report_pdf_path, 300);
+        var res = await _supabase.storage.from('reports').createSignedUrl(r.report_pdf_path, 300);
         if (res.error) throw res.error;
         window.open(res.data.signedUrl, '_blank');
       } catch(e) {
