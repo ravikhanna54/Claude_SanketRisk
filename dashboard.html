@@ -316,11 +316,14 @@
     const RESEND_FROM      = 'SanketRisk ONE <onboarding@resend.dev>';  // change to e.g. reports@sanketrisk.com after domain verification
     const EMAIL_SUBJECT_TPL = 'SanketRisk SCAN ONE — Property Risk Assessment: {insured}';
     const EMAIL_BODY_TPL    = 'Dear {name},\n\nPlease find attached the SanketRisk SCAN ONE Property Risk Assessment Report for {insured}, located at {address}.\n\nThis report has been prepared based on the photographs and property information submitted for AI-assisted analysis. Please review the findings and recommendations at your earliest convenience.\n\nShould you have any questions regarding the assessment, please do not hesitate to contact us.\n\nKind regards,\nSanket Risk Consultants\n\n---\nThis report is AI-generated and is intended as a preliminary assessment only. It does not replace a full physical inspection by a qualified professional.';
+    const EMAIL_SUBJECT_TPL_INSP = 'SanketRisk — Property Inspection Report: {insured}';
+    const EMAIL_BODY_TPL_INSP    = 'Dear {name},\n\nPlease find attached the completed property inspection report for {insured}, located at {address}.\n\nThis report has been prepared following an on-site inspection. Please review the findings and recommendations at your earliest convenience.\n\nShould you have any questions regarding the report, please do not hesitate to contact us.\n\nKind regards,\nSanket Risk Consultants';
 
     let currentUser     = null;
     let currentUserRole = 'inspector';
     let currentUserName = '';
     var _scanRowData = {};  // keyed by row id for inline onclick access
+    var _inspRowData = {};  // keyed by row id — COPE inspections, for Email Report
     let allInspections  = [];
 
     var allReviewers = [];
@@ -430,7 +433,7 @@
       const isAdmin = currentUserRole === 'admin';
       let query = _supabase
         .from('inspections')
-        .select('id,inspection_id,insured_name,city,province_state,occupancy_class,inspector_name,user_id,report_status,report_published,inspection_date,updated_at,qa_reviewer')
+        .select('id,inspection_id,insured_name,city,province_state,occupancy_class,inspector_name,user_id,report_status,report_published,inspection_date,updated_at,qa_reviewer,form_data,report_pdf_path,report_format,report_generated_at')
         .order('updated_at', { ascending: false })
         .limit(300);
       if (isAdmin) {
@@ -533,6 +536,15 @@
               reviewerCell = '<td><span style="font-size:11px;color:var(--slate);">' + (r.qa_reviewer || '—') + '</span></td>';
             }
           }
+          _inspRowData[r.id] = r;  // store for inline onclick access
+          var canEmail = r.report_status && r.report_status !== 'draft' && r.report_status !== 'returned';
+          var hasPdf = !!r.report_pdf_path;
+          var viewBtn = hasPdf
+            ? '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;margin-left:4px;" onclick="event.stopPropagation();viewInspectionReport(\'' + r.id + '\')" title="View stored report PDF">📋 View Report</button>'
+            : '';
+          var emailBtn = canEmail
+            ? '<button class="btn-open" style="background:#7c3aed;color:#fff;border-color:#7c3aed;margin-left:4px;" onclick="event.stopPropagation();openEmailModal(_inspRowData[\'' + r.id + '\'], \'inspection\')" title="Email report to requestor">📧 Email Report</button>'
+            : '';
           return '<tr onclick="openInspection(\'' + r.id + '\')">' +
             '<td class="td-id">' + (r.inspection_id || r.id?.substring(0,8) || '—') + '</td>' +
             '<td><div class="td-name">' + (r.insured_name || '—') + '</div><div class="td-sub">' + ([r.city, r.province_state].filter(Boolean).join(', ') || r.occupancy_class || '') + '</div></td>' +
@@ -543,6 +555,8 @@
             '<td style="font-size:11px;color:var(--slate-light);font-family:monospace;">' + formatDate(r.updated_at) + '</td>' +
             '<td style="white-space:nowrap;"><button class="btn-open" onclick="event.stopPropagation();openInspection(\'' + r.id + '\')">Open →</button>' +
             '<button class="btn-open" onclick="event.stopPropagation();copyInspection(\'' + r.id + '\')" style="margin-left:4px;background:#c9a84c;color:#0d1b2a;border-color:#c9a84c;" title="Copy to new file">📋 Copy</button>' +
+            viewBtn +
+            emailBtn +
             deleteBtn + '</td>' +
             '</tr>';
         }).join('') + '</tbody></table>';
@@ -867,28 +881,62 @@
 
     // ── EMAIL MODAL ──
     var _emailRecord = null;
+    var _emailKind    = 'scan';  // 'scan' or 'inspection' — determines template + PDF messaging
 
-    function openEmailModal(r) {
+    async function viewInspectionReport(id) {
+      var r = _inspRowData[id];
+      if (!r || !r.report_pdf_path) { showToast('⚠ No report PDF stored for this inspection yet.'); return; }
+      try {
+        var res = await _supabase.storage.from('inspection-reports').createSignedUrl(r.report_pdf_path, 300);
+        if (res.error) throw res.error;
+        window.open(res.data.signedUrl, '_blank');
+      } catch(e) {
+        showToast('⚠ Could not open report: ' + e.message);
+      }
+    }
+
+    function extractRecipientEmail(fd) {
+      if (!fd) return '';
+      // Flat shape (Scan One's own form_data)
+      if (fd.recipientEmail)  return fd.recipientEmail;
+      if (fd.clientEmail)     return fd.clientEmail;
+      if (fd.email)           return fd.email;
+      if (fd.submitterEmail)  return fd.submitterEmail;
+      // Nested shape (COPE Inspections — collectFormData() namespaces raw DOM
+      // fields under .fields, keyed by element id)
+      if (fd.fields) {
+        if (fd.fields['requestor-email']) return fd.fields['requestor-email'];
+        if (fd.fields['email'])           return fd.fields['email'];
+      }
+      return '';
+    }
+
+    function openEmailModal(r, kind) {
       _emailRecord = r;
+      _emailKind   = kind || 'scan';
+      var isInsp   = _emailKind === 'inspection';
+      var province = r.province || r.province_state || '';
 
-      // Parse form_data to get client email
+      // Parse form_data to get recipient email
       var fd = null;
       try { fd = r.form_data ? (typeof r.form_data === 'string' ? JSON.parse(r.form_data) : r.form_data) : null; } catch(e) {}
-      var clientEmail = (fd && (fd.recipientEmail || fd.clientEmail || fd.email || fd.submitterEmail)) || '';
+      var clientEmail = extractRecipientEmail(fd);
 
       // Pre-fill fields
+      var subjectTpl = isInsp ? EMAIL_SUBJECT_TPL_INSP : EMAIL_SUBJECT_TPL;
+      var bodyTpl     = isInsp ? EMAIL_BODY_TPL_INSP    : EMAIL_BODY_TPL;
       document.getElementById('email-to').value      = clientEmail;
-      document.getElementById('email-subject').value = EMAIL_SUBJECT_TPL.replace('{insured}', r.insured_name || 'Property');
-      document.getElementById('email-body').value    = EMAIL_BODY_TPL
-        .replace('{name}',    r.insured_name || 'Sir/Madam')
+      document.getElementById('email-subject').value = subjectTpl.replace('{insured}', r.insured_name || 'Property');
+      document.getElementById('email-body').value    = bodyTpl
+        .replace('{name}',    (fd && fd.fields && fd.fields['requestor-name']) || r.insured_name || 'Sir/Madam')
         .replace('{insured}', r.insured_name || 'the subject property')
-        .replace('{address}', [r.city, r.province].filter(Boolean).join(', ') || 'the property');
+        .replace('{address}', [r.city, province].filter(Boolean).join(', ') || 'the property');
 
       // Record info strip
       var fileNo = r.inspection_id || r.file_number || '—';
       document.getElementById('email-modal-record').innerHTML =
         '<strong>' + (r.insured_name || '—') + '</strong> &nbsp;·&nbsp; ' + fileNo +
-        ' &nbsp;·&nbsp; ' + [r.city, r.province].filter(Boolean).join(', ');
+        ' &nbsp;·&nbsp; ' + [r.city, province].filter(Boolean).join(', ');
 
       // Reset status
       var st = document.getElementById('email-status');
@@ -904,6 +952,11 @@
           pdfNote.style.borderColor = '#9ae6b4';
           pdfNote.style.color = '#276749';
           pdfNote.innerHTML = '📎 <strong>Attachment:</strong> PDF report ready — <code>' + r.report_pdf_path + '</code>';
+        } else if (isInsp) {
+          pdfNote.style.background = '#fff5f5';
+          pdfNote.style.borderColor = '#fc8181';
+          pdfNote.style.color = '#c53030';
+          pdfNote.innerHTML = '⚠ <strong>No PDF attachment yet.</strong> COPE inspection reports aren\'t auto-stored as PDF yet — this will send as a message only. Attach a PDF manually by generating one via Print / Save PDF in the inspection, or check back once PDF storage is added for inspections.';
         } else {
           pdfNote.style.background = '#fff5f5';
           pdfNote.style.borderColor = '#fc8181';
@@ -963,7 +1016,8 @@
         if (!res.ok) throw new Error(data.error || 'Email send failed');
 
         btn.textContent = '✓ Sent';
-        var hasPdf = data.has_pdf ? ' with PDF attachment' : ' (PDF not yet available — save report first)';
+        var hasPdf = data.has_pdf ? ' with PDF attachment' :
+          (_emailKind === 'inspection' ? ' (message only — no PDF attachment)' : ' (PDF not yet available — save report first)');
         showEmailStatus('success', '✓ Report emailed successfully to ' + to + hasPdf);
 
         // Close after 3 seconds
