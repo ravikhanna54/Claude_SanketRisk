@@ -1647,12 +1647,561 @@
       <div style="padding:32px 24px;max-width:1100px;margin:0 auto;">
         <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--navy);margin-bottom:20px;">📚 Knowledge Base</h2>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;">
-          <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">🏗 ISO Construction Classification Guide</div><div class="index-card-sub">Classes 1–6 with Canadian examples</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
+          <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-construction-classes')"><div class="index-card-title">🏗 ISO Construction Classification Guide</div><div class="index-card-sub">Classes 1–6 with Canadian examples</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
           <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">🔥 FUS Grading Methodology</div><div class="index-card-sub">Fire Underwriters Survey system</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
           <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">🌊 NBC 2025 Climatic Design Data</div><div class="index-card-sub">Snow loads, wind, seismic hazard</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
-          <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">💧 Sprinkler Systems &amp; NFPA 13</div><div class="index-card-sub">Wet, dry, pre-action, deluge types</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
+          <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-sprinkler-systems')"><div class="index-card-title">💧 Sprinkler Systems &amp; NFPA 13</div><div class="index-card-sub">Wet, dry, pre-action, deluge types</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
           <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">📋 IBC Occupancy Code Reference</div><div class="index-card-sub">Full reference with SIC/NAICS</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
           <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">⚠️ Underwriting Red Flags Guide</div><div class="index-card-sub">Conditions triggering referral/declination</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
+        </div>
+
+        <!-- ═══════════ ISO CONSTRUCTION CLASSIFICATION GUIDE ═══════════ -->
+        <div class="esi-section" id="kb-construction-classes" style="margin-top:36px;">
+          <div class="esi-section-title">ISO Construction Classification Guide <span class="esi-section-tag">CONSTRUCTION</span></div>
+          <p class="esi-sub">The six-class ISO/insurance construction scheme is the foundation of commercial property rating — it determines base rates, replacement cost expectations, and fire spread potential. Classification depends on the <strong>structural frame and load-bearing elements</strong>, not the exterior finish or cladding — a common source of misclassification. This guide expands on the summary in the Form Filling Guide (Construction section) with fuller definitions, Canadian examples, and field identification tips for both finished buildings and buildings under construction.</p>
+
+          <div class="callout callout-alert"><strong>The #1 Misclassification Trap:</strong> Exterior cladding is not the structural frame. A building with brick veneer, EIFS (stucco-look synthetic panels), or metal siding can be hiding a wood-frame, steel-frame, or masonry structure behind it. Always identify what actually bears the load and supports the roof/floor — not what you see on the outside walls. When in doubt, check exposed structural elements in a mechanical room, unfinished basement, attic access, or loading dock.</div>
+
+          <!-- Quick reference table -->
+          <table class="nfpa-table">
+            <thead><tr><th>Class</th><th>Structural Frame</th><th>Exterior Walls</th><th>Floor / Roof</th><th>Fire Vulnerability</th></tr></thead>
+            <tbody>
+              <tr><td><strong style="color:var(--red);">1 — Frame</strong></td><td>Wood or other combustible</td><td>Combustible</td><td>Combustible</td><td>Highest</td></tr>
+              <tr><td><strong style="color:var(--orange);">2 — Joisted Masonry</strong></td><td>Masonry bearing walls</td><td>Masonry (load-bearing)</td><td>Wood/combustible</td><td>High</td></tr>
+              <tr><td><strong style="color:var(--amber);">3 — Non-Combustible</strong></td><td>Unprotected steel</td><td>Metal / non-combustible</td><td>Metal deck</td><td>Moderate</td></tr>
+              <tr><td><strong style="color:var(--amber);">4 — Masonry Non-Combustible</strong></td><td>Masonry bearing walls</td><td>Masonry (load-bearing)</td><td>Metal / non-combustible</td><td>Moderate-Low</td></tr>
+              <tr><td><strong style="color:var(--green);">5 — Modified Fire Resistive</strong></td><td>Concrete / rated assemblies</td><td>Concrete (e.g. tilt-up)</td><td>1–2 hr rated (partial)</td><td>Low</td></tr>
+              <tr><td><strong style="color:var(--green);">6 — Fire Resistive</strong></td><td>Fully rated concrete/steel</td><td>2+ hr rated</td><td>2+ hr rated (all elements)</td><td>Lowest</td></tr>
+            </tbody>
+          </table>
+
+          <!-- CLASS 1 — FRAME -->
+          <div class="hazard-card" id="kb-class-1" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #742a2a, #c53030);">
+              <div class="hazard-icon">🪵</div>
+              <div>
+                <div class="hazard-title">Class 1 — Frame</div>
+                <div class="hazard-sub">Wood or other combustible structural frame, walls, floor, and roof</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-bottom:16px;">
+                <svg viewBox="0 0 180 130" style="width:180px;height:130px;flex-shrink:0;background:#fafafa;border:1px solid #eee;border-radius:6px;">
+                  <polygon points="20,50 90,15 160,50" fill="none" stroke="#8b5e34" stroke-width="3"/>
+                  <line x1="30" y1="50" x2="30" y2="115" stroke="#8b5e34" stroke-width="4"/>
+                  <line x1="55" y1="50" x2="55" y2="115" stroke="#8b5e34" stroke-width="4"/>
+                  <line x1="80" y1="50" x2="80" y2="115" stroke="#8b5e34" stroke-width="4"/>
+                  <line x1="105" y1="50" x2="105" y2="115" stroke="#8b5e34" stroke-width="4"/>
+                  <line x1="130" y1="50" x2="130" y2="115" stroke="#8b5e34" stroke-width="4"/>
+                  <line x1="150" y1="50" x2="150" y2="115" stroke="#8b5e34" stroke-width="4"/>
+                  <line x1="20" y1="115" x2="160" y2="115" stroke="#8b5e34" stroke-width="4"/>
+                  <text x="90" y="128" font-size="9" fill="#666" text-anchor="middle" font-family="IBM Plex Mono, monospace">EXPOSED STUD WALL + TRUSS</text>
+                </svg>
+                <div style="flex:1;min-width:220px;">
+                  <p><strong>Definition:</strong> Exterior walls, floor, and roof structural members are wood or other combustible material — regardless of exterior cladding. Brick veneer or vinyl siding over a wood-stud frame is <em>still Class 1</em>.</p>
+                  <p style="margin-top:8px;"><strong>Canadian Examples:</strong> Single-family homes, wood-frame low-rise apartments/condos (up to 6 storeys under current wood-frame building code provisions in most provinces), older rural commercial buildings, pole-barn agricultural structures, small strip retail built before 1980.</p>
+                </div>
+              </div>
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Field ID — Finished Building</div>
+                  <ul>
+                    <li>Check an attic access, unfinished basement, or utility room for exposed dimensional lumber (2×4, 2×6, 2×8) or wood roof trusses</li>
+                    <li>Brick veneer trap: tap the wall — veneer sounds hollow with a visible weep-hole/air-gap line near the base; true masonry does not</li>
+                    <li>Interior partition walls with visible wood studs (renovation openings, unfinished storage areas) confirm wood frame</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Under Construction — What to Look For</div>
+                  <ul>
+                    <li>Exposed wood studs and OSB/plywood sheathing before cladding is installed</li>
+                    <li>Wood roof trusses being craned/placed, visible before roof covering</li>
+                    <li>House-wrap or building paper over visible stud bays</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CLASS 2 — JOISTED MASONRY -->
+          <div class="hazard-card" id="kb-class-2" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #7b341e, #c05621);">
+              <div class="hazard-icon">🧱</div>
+              <div>
+                <div class="hazard-title">Class 2 — Joisted Masonry</div>
+                <div class="hazard-sub">Masonry load-bearing walls, wood or combustible floor/roof</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-bottom:16px;">
+                <svg viewBox="0 0 180 130" style="width:180px;height:130px;flex-shrink:0;background:#fafafa;border:1px solid #eee;border-radius:6px;">
+                  <rect x="20" y="50" width="140" height="65" fill="none" stroke="#a0522d" stroke-width="2"/>
+                  <line x1="20" y1="63" x2="160" y2="63" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="20" y1="76" x2="160" y2="76" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="20" y1="89" x2="160" y2="89" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="20" y1="102" x2="160" y2="102" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="40" y1="50" x2="40" y2="63" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="70" y1="63" x2="70" y2="76" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="100" y1="76" x2="100" y2="89" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="60" y1="50" x2="60" y2="63" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="130" y1="63" x2="130" y2="76" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="30" y1="15" x2="30" y2="50" stroke="#8b5e34" stroke-width="3"/>
+                  <line x1="55" y1="15" x2="55" y2="50" stroke="#8b5e34" stroke-width="3"/>
+                  <line x1="80" y1="15" x2="80" y2="50" stroke="#8b5e34" stroke-width="3"/>
+                  <line x1="105" y1="15" x2="105" y2="50" stroke="#8b5e34" stroke-width="3"/>
+                  <line x1="130" y1="15" x2="130" y2="50" stroke="#8b5e34" stroke-width="3"/>
+                  <line x1="150" y1="15" x2="150" y2="50" stroke="#8b5e34" stroke-width="3"/>
+                  <text x="90" y="127" font-size="9" fill="#666" text-anchor="middle" font-family="IBM Plex Mono, monospace">MASONRY WALL + WOOD ROOF JOISTS</text>
+                </svg>
+                <div style="flex:1;min-width:220px;">
+                  <p><strong>Definition:</strong> Exterior bearing walls of masonry (brick, concrete block, stone) that carry the structural load; floor and roof structure is wood or other combustible material.</p>
+                  <p style="margin-top:8px;"><strong>Canadian Examples:</strong> Older downtown "Main Street" commercial storefronts, pre-1960s walk-up apartment buildings, older schoolhouses and churches, warehouses with masonry bearing walls and wood-truss roofs.</p>
+                </div>
+              </div>
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Field ID — Finished Building</div>
+                  <ul>
+                    <li>Confirm the masonry is load-bearing, not a veneer — check wall thickness at a window or door opening (solid masonry typically 8"+ vs. 3–4" thin veneer)</li>
+                    <li>Check the roofline/parapet — true masonry continues as the structural wall, not stopping short with a different material behind it</li>
+                    <li>Attic or roof-space access shows wood joists, trusses, or purlins resting directly on the masonry walls</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Under Construction — What to Look For</div>
+                  <ul>
+                    <li>Masonry block/brick walls being laid course by course, often with visible mortar joints and scaffolding</li>
+                    <li>Wood roof trusses being placed on top of completed masonry walls</li>
+                    <li>Wood floor joists set into masonry wall pockets</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CLASS 3 — NON-COMBUSTIBLE -->
+          <div class="hazard-card" id="kb-class-3" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #7c6415, #b7791f);">
+              <div class="hazard-icon">🏭</div>
+              <div>
+                <div class="hazard-title">Class 3 — Non-Combustible</div>
+                <div class="hazard-sub">Unprotected steel frame with metal deck and non-combustible cladding</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-bottom:16px;">
+                <svg viewBox="0 0 180 130" style="width:180px;height:130px;flex-shrink:0;background:#fafafa;border:1px solid #eee;border-radius:6px;">
+                  <polyline points="20,50 30,42 40,50 50,42 60,50 70,42 80,50 90,42 100,50 110,42 120,50 130,42 140,50 150,42 160,50" fill="none" stroke="#71797E" stroke-width="3"/>
+                  <rect x="27" y="50" width="10" height="65" fill="#4a5560"/>
+                  <rect x="87" y="50" width="10" height="65" fill="#4a5560"/>
+                  <rect x="143" y="50" width="10" height="65" fill="#4a5560"/>
+                  <line x1="20" y1="115" x2="160" y2="115" stroke="#4a5560" stroke-width="3"/>
+                  <text x="90" y="127" font-size="9" fill="#666" text-anchor="middle" font-family="IBM Plex Mono, monospace">STEEL COLUMNS + METAL DECK ROOF</text>
+                </svg>
+                <div style="flex:1;min-width:220px;">
+                  <p><strong>Definition:</strong> Exterior walls, floor, and roof of metal or other non-combustible material supported by an <em>unprotected</em> structural steel frame — no fire-resistance rating on the steel itself.</p>
+                  <p style="margin-top:8px;"><strong>Canadian Examples:</strong> Pre-engineered metal buildings (PEMBs), distribution centres and warehouses, light industrial/manufacturing buildings, big-box retail, agricultural equipment buildings, many strip malls with steel frame and metal panel/EIFS cladding.</p>
+                </div>
+              </div>
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Field ID — Finished Building</div>
+                  <ul>
+                    <li>Confirm the primary structural frame is steel — exposed I-beams, tube steel columns, or rigid frames are typically visible in warehouse interiors, loading docks, or utility rooms</li>
+                    <li>Corrugated metal deck roof (visible from below in an open warehouse ceiling) is a strong indicator</li>
+                    <li>No spray-applied fireproofing visible on the steel — if a grey/white sprayed or troweled coating fully encases beams and columns, reclassify toward Class 5/6</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Under Construction — What to Look For</div>
+                  <ul>
+                    <li>The clearest class to identify during construction — exposed red-primed or galvanized steel columns and rigid frames fully visible before wall panels go up</li>
+                    <li>Corrugated metal roof deck being installed before insulation/membrane</li>
+                    <li>Bolted or welded steel connections visible at eave and ridge lines</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CLASS 4 — MASONRY NON-COMBUSTIBLE -->
+          <div class="hazard-card" id="kb-class-4" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #4a5568, #718096);">
+              <div class="hazard-icon">🏢</div>
+              <div>
+                <div class="hazard-title">Class 4 — Masonry Non-Combustible</div>
+                <div class="hazard-sub">Masonry load-bearing walls with non-combustible floor/roof</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-bottom:16px;">
+                <svg viewBox="0 0 180 130" style="width:180px;height:130px;flex-shrink:0;background:#fafafa;border:1px solid #eee;border-radius:6px;">
+                  <rect x="20" y="50" width="140" height="65" fill="none" stroke="#a0522d" stroke-width="2"/>
+                  <line x1="20" y1="63" x2="160" y2="63" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="20" y1="76" x2="160" y2="76" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="20" y1="89" x2="160" y2="89" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="20" y1="102" x2="160" y2="102" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="60" y1="50" x2="60" y2="63" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="100" y1="63" x2="100" y2="76" stroke="#a0522d" stroke-width="1.5"/>
+                  <line x1="40" y1="76" x2="40" y2="89" stroke="#a0522d" stroke-width="1.5"/>
+                  <polyline points="20,50 30,44 40,50 50,44 60,50 70,44 80,50 90,44 100,50 110,44 120,50 130,44 140,50 150,44 160,50" fill="none" stroke="#71797E" stroke-width="2.5"/>
+                  <text x="90" y="127" font-size="9" fill="#666" text-anchor="middle" font-family="IBM Plex Mono, monospace">MASONRY WALL + STEEL DECK ROOF</text>
+                </svg>
+                <div style="flex:1;min-width:220px;">
+                  <p><strong>Definition:</strong> Exterior bearing walls of masonry as in Class 2, but the floor and roof structure is non-combustible (metal deck on steel bar joists, concrete) rather than wood.</p>
+                  <p style="margin-top:8px;"><strong>Canadian Examples:</strong> Masonry-walled warehouses/industrial buildings with metal roof decking, big-box retail with CMU perimeter walls and steel bar-joist roofs, mid-century industrial buildings retrofitted from wood to steel roof framing.</p>
+                </div>
+              </div>
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Field ID — Finished Building</div>
+                  <ul>
+                    <li>Confirm load-bearing masonry walls exactly as in Class 2 (thickness, continuity to parapet)</li>
+                    <li>Ceiling/roof space shows open-web steel bar joists and metal deck rather than wood trusses — this is the key distinction from Class 2</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Under Construction — What to Look For</div>
+                  <ul>
+                    <li>Masonry walls being built up alongside steel bar joists and metal decking being placed for the roof — a visual hybrid of Class 2 and Class 3 techniques</li>
+                    <li>Steel joists visibly resting on completed masonry wall bond beams</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CLASS 5 — MODIFIED FIRE RESISTIVE -->
+          <div class="hazard-card" id="kb-class-5" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #22543d, #276749);">
+              <div class="hazard-icon">🏗️</div>
+              <div>
+                <div class="hazard-title">Class 5 — Modified Fire Resistive</div>
+                <div class="hazard-sub">Rated concrete/masonry assemblies, 1–2 hr fire resistance (not full Class 6)</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-bottom:16px;">
+                <svg viewBox="0 0 180 130" style="width:180px;height:130px;flex-shrink:0;background:#fafafa;border:1px solid #eee;border-radius:6px;">
+                  <rect x="20" y="50" width="42" height="65" fill="#c7c7c7" stroke="#888" stroke-width="1.5"/>
+                  <rect x="69" y="50" width="42" height="65" fill="#c7c7c7" stroke="#888" stroke-width="1.5"/>
+                  <rect x="118" y="50" width="42" height="65" fill="#c7c7c7" stroke="#888" stroke-width="1.5"/>
+                  <polyline points="20,50 30,44 40,50 50,44 60,50 70,44 80,50 90,44 100,50 110,44 120,50 130,44 140,50 150,44 160,50" fill="none" stroke="#71797E" stroke-width="2"/>
+                  <text x="90" y="127" font-size="9" fill="#666" text-anchor="middle" font-family="IBM Plex Mono, monospace">TILT-UP CONCRETE PANELS</text>
+                </svg>
+                <div style="flex:1;min-width:220px;">
+                  <p><strong>Definition:</strong> Floor and roof assemblies of masonry or reinforced concrete providing a fire-resistance rating of 1–2 hours, but not meeting the full 2-hour rating on all structural elements required for Class 6.</p>
+                  <p style="margin-top:8px;"><strong>Canadian Examples:</strong> Concrete tilt-up panel buildings (very common in Western Canada industrial parks — Surrey, Langley, Calgary, Edmonton), precast concrete panel construction with steel roof framing, some mid-rise concrete/steel hybrid buildings.</p>
+                </div>
+              </div>
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Field ID — Finished Building</div>
+                  <ul>
+                    <li>Tilt-up concrete: large, flat wall panels with a distinctive cast texture and visible vertical joint/reveal lines every 20–30 ft where individual panels meet</li>
+                    <li>Check whether the roof structure is fire-rated (precast plank) or an unrated lighter steel joist/deck system on top of the concrete walls — the classic Class 5 combination is concrete walls (fire resistant) with an unrated steel roof</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Under Construction — What to Look For</div>
+                  <ul>
+                    <li>Highly distinctive: large flat concrete panels cast horizontally on the ground/floor slab, then tilt-lifted into vertical position by crane — a very recognizable construction technique if photographed during the tilt-up phase</li>
+                    <li>Exposed rebar and panel forms before pour</li>
+                    <li>Steel roof joists being placed on top of completed tilt-up walls</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CLASS 6 — FIRE RESISTIVE -->
+          <div class="hazard-card" id="kb-class-6" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #1a365d, #2b6cb0);">
+              <div class="hazard-icon">🏙️</div>
+              <div>
+                <div class="hazard-title">Class 6 — Fire Resistive</div>
+                <div class="hazard-sub">All structural elements minimum 2-hour fire-resistance rating</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-bottom:16px;">
+                <svg viewBox="0 0 180 130" style="width:180px;height:130px;flex-shrink:0;background:#fafafa;border:1px solid #eee;border-radius:6px;">
+                  <rect x="20" y="15" width="140" height="100" fill="none" stroke="#2b6cb0" stroke-width="2"/>
+                  <line x1="20" y1="48" x2="160" y2="48" stroke="#2b6cb0" stroke-width="2"/>
+                  <line x1="20" y1="81" x2="160" y2="81" stroke="#2b6cb0" stroke-width="2"/>
+                  <line x1="55" y1="15" x2="55" y2="115" stroke="#2b6cb0" stroke-width="2"/>
+                  <line x1="90" y1="15" x2="90" y2="115" stroke="#2b6cb0" stroke-width="2"/>
+                  <line x1="125" y1="15" x2="125" y2="115" stroke="#2b6cb0" stroke-width="2"/>
+                  <text x="90" y="127" font-size="9" fill="#666" text-anchor="middle" font-family="IBM Plex Mono, monospace">REINFORCED CONCRETE FRAME</text>
+                </svg>
+                <div style="flex:1;min-width:220px;">
+                  <p><strong>Definition:</strong> All structural elements — walls, floors, roof, and structural frame — carry a minimum 2-hour fire-resistance rating, typically via reinforced concrete construction or fully fireproofed structural steel.</p>
+                  <p style="margin-top:8px;"><strong>Canadian Examples:</strong> High-rise office towers, high-rise residential condominiums, hospitals, parkades, major institutional buildings.</p>
+                </div>
+              </div>
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Field ID — Finished Building</div>
+                  <ul>
+                    <li>Poured-in-place or precast concrete structural frame (columns, beams, floor slabs) is the most common method</li>
+                    <li>If steel-framed, look for spray-applied or board fireproofing fully encasing all beams and columns — a thick grey/white coating, sometimes concealed behind a drywall enclosure</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Under Construction — What to Look For</div>
+                  <ul>
+                    <li>Rebar cages and concrete formwork being assembled floor by floor (climbing/jump forms), concrete pump trucks on site</li>
+                    <li>For steel high-rises: fireproofing being spray-applied to the exposed structural steel frame before other finishes are installed</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout callout-info" style="margin-top:20px;"><strong>Mixed / Combination Construction:</strong> Many buildings combine construction types — e.g. a masonry front facade on an otherwise steel-frame building, or a concrete podium under wood-frame upper storeys. Use the percentage breakdown fields in the inspection form for buildings with more than one construction type, and assign the ISO class reflecting the <em>predominant</em> construction of the insured building. When a single occupancy unit within a larger building has different construction than its neighbours (e.g. a masonry firewall separation), note this explicitly — it materially affects fire spread potential.</div>
+          <div class="callout callout-warn" style="margin-top:12px;"><strong>Building Photos Are the Best Reference:</strong> Over time, this section can be supplemented with your own inspection photographs of confirmed construction types — a real Class 3 pre-engineered steel building under construction, a real Class 5 tilt-up pour, and so on, are more valuable field references than generic stock imagery. Consider flagging especially clear examples encountered in the field for addition here.</div>
+        </div>
+
+        <!-- ═══════════ SPRINKLER SYSTEMS & NFPA 13 ═══════════ -->
+        <div class="esi-section" id="kb-sprinkler-systems" style="margin-top:36px;">
+          <div class="esi-section-title">Sprinkler Systems &amp; NFPA 13 <span class="esi-section-tag">NFPA 13</span></div>
+          <p class="esi-sub">Beyond the design density/area criteria already covered under NFPA Hazard Classification, the <em>type</em> of sprinkler system installed materially affects both fire performance and underwriting judgment. This guide covers the four core system types, special application systems for storage, plastics manufacturing as an occupancy hazard class, and high-piled storage definitions for plastic commodities — none of which were covered in the earlier NFPA Hazard Classification table.</p>
+
+          <!-- Quick reference table -->
+          <table class="nfpa-table">
+            <thead><tr><th>System Type</th><th>Pipe Contents</th><th>Response Speed</th><th>Typical Use</th></tr></thead>
+            <tbody>
+              <tr><td><strong style="color:var(--green);">Wet Pipe</strong></td><td>Water, at all times</td><td>Fastest — immediate discharge</td><td>Heated spaces above freezing, most common system type</td></tr>
+              <tr><td><strong style="color:var(--amber);">Dry Pipe</strong></td><td>Pressurized air/nitrogen; water held back by a dry pipe valve</td><td>Delayed 30–90+ sec while air vents and water travels</td><td>Unheated spaces subject to freezing — parking garages, loading docks, attics, cold storage</td></tr>
+              <tr><td><strong style="color:var(--amber);">Pre-Action</strong></td><td>Air (normally atmospheric or supervisory pressure); requires separate detection to release water into the pipe before a sprinkler can discharge</td><td>Slower — two events must occur (detection, then heat at head)</td><td>Water-sensitive contents — data centres, archives, museums, freezers</td></tr>
+              <tr><td><strong style="color:var(--orange);">Deluge</strong></td><td>Open (non-fusible) sprinklers, empty pipe; water released to ALL heads simultaneously by a separate detection system</td><td>Fast, total-area discharge — no waiting for individual heads to fuse</td><td>Rapid fire spread hazards — aircraft hangars, flammable liquid areas, transformer protection</td></tr>
+            </tbody>
+          </table>
+
+          <!-- WET PIPE -->
+          <div class="hazard-card" id="kb-sprinkler-wet" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #22543d, #276749);">
+              <div class="hazard-icon">💧</div>
+              <div>
+                <div class="hazard-title">Wet Pipe System</div>
+                <div class="hazard-sub">Water-filled piping at all times — the simplest, fastest, and most common system type</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">How It Works</div>
+                  <p>Piping is charged with water under pressure at all times. When a sprinkler head's heat-sensitive element fuses, water discharges immediately from that head only. No detection system or valve sequence is required — this is the fastest-responding and most reliable system type, and the default choice wherever freezing is not a concern.</p>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Field Identification</div>
+                  <ul>
+                    <li>Alarm check valve (not a dry pipe valve) at the riser — a simpler valve body without an air pressure gauge on the system side</li>
+                    <li>No air compressor or nitrogen generator connected to the riser</li>
+                    <li>Standard closed-head sprinklers (fusible link or glass bulb) at the ceiling</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Underwriting Considerations</div>
+                  <ul>
+                    <li>Preferred system type where the space is reliably heated above freezing — fastest response, simplest maintenance</li>
+                    <li>Not appropriate for unheated spaces — a frozen wet pipe system can fracture and cause severe water damage, or fail to operate</li>
+                    <li>Check heating reliability in marginal spaces (unheated additions, mezzanines, loading docks) — a wet system in a space that periodically drops below freezing is a real exposure</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DRY PIPE -->
+          <div class="hazard-card" id="kb-sprinkler-dry" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #7c6415, #b7791f);">
+              <div class="hazard-icon">🌬️</div>
+              <div>
+                <div class="hazard-title">Dry Pipe System</div>
+                <div class="hazard-sub">Pressurized air holds water back — for unheated spaces subject to freezing</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">How It Works</div>
+                  <p>Piping is charged with pressurized air (or nitrogen) instead of water. When a sprinkler head fuses, air escapes, tripping the dry pipe valve at the riser and allowing water to flow into the piping and out the open head. This introduces a real delay — typically 30 to 90+ seconds depending on system size — between head activation and actual water discharge, since air must vent and water must travel the full length of the piping first.</p>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Field Identification</div>
+                  <ul>
+                    <li>Dry pipe valve assembly at the riser with an air pressure gauge on the system side, separate from the water supply gauge</li>
+                    <li>Air compressor or nitrogen generator connected to maintain system air pressure</li>
+                    <li>Common in unheated garages, loading docks, attics, unheated warehouses, and refrigerated/cold storage areas</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Underwriting Considerations</div>
+                  <ul>
+                    <li>The discharge delay is a genuine fire-growth consideration in fast-developing fires — this is a real trade-off accepted in exchange for freeze protection, not a deficiency by itself</li>
+                    <li>Larger dry systems (long trip time) may require calculation per NFPA 13 to confirm trip time is within limits — ask about system size if unusually large</li>
+                    <li>Low-point drains must be properly maintained — accumulated water in dry piping is a common cause of pipe corrosion, and can also cause false trips or reduced air holding capacity</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="callout callout-warn" style="margin-top:4px;"><strong>Canadian Climate Relevance:</strong> Dry pipe systems are especially common across Canada in any unheated or marginally-heated space — attics, unheated loading areas, parking structures, seasonal buildings. Confirm the air compressor is functional and the system is holding pressure; a dry system that has lost air pressure will trip immediately on any head fusing, behaving like an unintended wet system with no freeze protection.</div>
+            </div>
+          </div>
+
+          <!-- PRE-ACTION -->
+          <div class="hazard-card" id="kb-sprinkler-preaction" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #4a5568, #718096);">
+              <div class="hazard-icon">🛡️</div>
+              <div>
+                <div class="hazard-title">Pre-Action System</div>
+                <div class="hazard-sub">Requires separate detection before water enters the piping — for water-sensitive contents</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">How It Works</div>
+                  <p>Piping normally holds air (at atmospheric or supervisory pressure) and a separate fire detection system (smoke or heat detectors) must activate before the pre-action valve releases water into the piping. Only after that does the system behave like a wet system — an individual head must still fuse from heat to actually discharge. This double-event requirement (detection, then heat) protects against accidental water discharge from a damaged pipe or head, since air alone escaping doesn't release water — a real fire condition must be detected first.</p>
+                  <p style="margin-top:8px;"><strong>Single vs. double interlock:</strong> Single-interlock systems fill with water on detection alone, then behave like a wet system. Double-interlock systems require BOTH detection AND head fusion before water is released — the highest protection against accidental discharge, common in data centres and archives.</p>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Field Identification</div>
+                  <ul>
+                    <li>Pre-action valve assembly at the riser, similar in appearance to a dry pipe valve but paired with a fire alarm/detection control panel</li>
+                    <li>Smoke or heat detectors visible in the protected space, in addition to the sprinkler heads themselves</li>
+                    <li>Common in server rooms, data centres, museums, archives, and other high-value, water-sensitive occupancies</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Underwriting Considerations</div>
+                  <ul>
+                    <li>Confirm the detection system is tested and monitored — a pre-action system depends entirely on its detection component working correctly, more so than wet or dry systems</li>
+                    <li>Double-interlock systems carry the longest potential delay to water discharge of the four types — appropriate where accidental discharge risk (to contents) outweighs the slower response, not appropriate for general life-safety-driven occupancies</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DELUGE -->
+          <div class="hazard-card" id="kb-sprinkler-deluge" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #7b341e, #c05621);">
+              <div class="hazard-icon">🌊</div>
+              <div>
+                <div class="hazard-title">Deluge System</div>
+                <div class="hazard-sub">Open sprinklers, total-area discharge — for extreme, rapid fire spread hazards</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">How It Works</div>
+                  <p>Unlike the other three types, deluge systems use <em>open</em> sprinkler heads (no individual heat-fusible element) connected to empty piping. A separate fire detection system triggers the deluge valve, releasing water to <strong>all</strong> heads in the system simultaneously — the entire protected area is deluged at once, rather than only the heads nearest the fire. This is used where fire can spread faster than individual head fusion could respond in time.</p>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Field Identification</div>
+                  <ul>
+                    <li>Sprinkler heads have no visible fusible link or glass bulb — they are simply open orifices</li>
+                    <li>Deluge valve at the riser paired with a dedicated detection system (heat, flame, or linear detection)</li>
+                    <li>Common in aircraft hangars, flammable liquid loading/processing areas, transformer/switchgear protection, and conveyor galleries in high-hazard processes</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Underwriting Considerations</div>
+                  <ul>
+                    <li>Reserved for genuinely extreme hazards — presence of a deluge system is itself a signal of elevated underlying hazard, not a mitigant to be taken at face value</li>
+                    <li>Requires the largest water supply of the four types, since all heads flow simultaneously — confirm water supply adequacy was engineered for full simultaneous demand</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout callout-info" style="margin-top:20px;"><strong>Special Application Systems for Storage:</strong> High-piled and rack storage occupancies often use specially engineered system types beyond the four core types above — ESFR (Early Suppression Fast Response) and CMSA (Control Mode Specific Application) sprinklers, designed to suppress rather than merely control a fire in tall storage arrays. These require specialist design per NFPA 13 Chapters 20–24 — see the High-Piled Storage &amp; Plastics note below, and the Storage/Plastics row in the <a href="javascript:void(0)" onclick="goToSection('technical','tech-nfpa')" style="color:#2b6cb0;">NFPA Hazard Classification table</a>.</div>
+
+          <!-- PLASTICS MANUFACTURING OCCUPANCY -->
+          <div class="hazard-card" id="kb-plastics-manufacturing" style="margin-top:24px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #742a2a, #c53030);">
+              <div class="hazard-icon">🏭</div>
+              <div>
+                <div class="hazard-title">Plastics Manufacturing &amp; Processing — Occupancy Classification</div>
+                <div class="hazard-sub">Not covered in the general NFPA Hazard Classification table — addressed separately here</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Classification</div>
+                  <p>Plastics manufacturing is explicitly listed by NFPA 13 as an example <strong>Extra Hazard Group 2</strong> occupancy — the classification applies to the manufacturing/processing operation itself (injection molding, extrusion, blow molding, thermoforming, foam manufacturing), separate from any question of how finished plastic goods are later stored (see High-Piled Storage below).</p>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Why Extra Hazard 2</div>
+                  <ul>
+                    <li>Injection molding and extrusion equipment uses hydraulic oil under significant pressure — a hydraulic line failure near a hot mold/barrel is a recognized ignition scenario</li>
+                    <li>Molten plastic and heated barrels/dies operate at high temperatures (commonly 350–600°F depending on resin) — an uncontrolled melt or barrel failure presents a direct ignition source</li>
+                    <li>Many processes involve flammable/combustible solvents or coatings (mold release agents, secondary finishing, adhesive bonding, solvent cleaning) consistent with the "moderate to substantial flammable/combustible liquids" definition of EH2</li>
+                    <li>Foam/expanded plastic manufacturing carries an especially high heat release rate once ignited</li>
+                    <li>Burning plastics generally have a very high heat release rate and produce dense, toxic smoke — a fire in a plastics plant develops and spreads faster than the equivalent fire load in most other occupancies</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Key Inspection Points</div>
+                  <ul>
+                    <li>Type of process — injection molding, extrusion, blow molding, thermoforming, rotational molding, foam manufacturing</li>
+                    <li>Hydraulic fluid type, quantity, and condition of hydraulic lines near hot equipment</li>
+                    <li>Resin/pellet storage — quantity, silo vs. bag storage, proximity to processing equipment and ignition sources</li>
+                    <li>Presence of flammable solvents, mold release agents, or adhesives, and their storage/handling</li>
+                    <li>Dust collection if any grinding/regrind operation is present (recycled regrind dust can itself be a combustible dust hazard)</li>
+                    <li>Housekeeping around processing equipment — accumulated regrind, trim scrap, or finished parts near heat sources</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="callout callout-alert" style="margin-top:4px;"><strong>Distinct from Storage Classification:</strong> Do not conflate the occupancy classification (the manufacturing process itself, typically EH2) with the commodity/storage classification of the plastic products once made. A plastics manufacturing floor is EH2 by process; a separate finished-goods warehouse storing the same company's plastic products is classified by the High-Piled Storage / Group A-B-C commodity rules below — these are two different questions, both potentially applicable in a single facility with a manufacturing area and an attached warehouse.</div>
+            </div>
+          </div>
+
+          <!-- HIGH-PILED STORAGE & PLASTICS DEFINITIONS -->
+          <div class="hazard-card" id="kb-high-piled-plastics" style="margin-top:24px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #1a365d, #2b6cb0);">
+              <div class="hazard-icon">📦</div>
+              <div>
+                <div class="hazard-title">High-Piled Storage &amp; Plastics Definitions</div>
+                <div class="hazard-sub">When storage height triggers additional fire protection requirements, and what Group A/B/C plastics means</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">High-Piled Storage — Height Thresholds</div>
+                  <ul>
+                    <li><strong>General combustible storage:</strong> top of storage greater than 12 ft in height (in closely packed piles, or on pallets/racks/shelves) triggers high-piled storage requirements under the fire code</li>
+                    <li><strong>Designated high-hazard commodities</strong> (rubber tires, Group A plastics, flammable liquids, idle pallets): threshold drops to greater than 6 ft in height under the fire code</li>
+                    <li><strong>NFPA 13 specifically</strong> applies its high-piled storage protection criteria to Group A plastics once stored over <strong>5 ft</strong> in height — a lower, sprinkler-design-specific threshold distinct from the fire code's 6 ft trigger</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Group A / B / C Plastics — What the Groups Mean</div>
+                  <ul>
+                    <li>Plastics are grouped by <strong>heat of combustion</strong> — Group A is the highest hazard, Group B moderate, Group C lowest</li>
+                    <li><strong>Group C plastics</strong> (e.g. PVC, phenolics, melamine, urea formaldehyde) burn similarly to ordinary combustibles and are treated as a <strong>Class III commodity</strong></li>
+                    <li><strong>Group B plastics</strong> (e.g. nylon, cellulosics, fluoroplastics) are treated as a <strong>Class IV commodity</strong></li>
+                    <li><strong>Group A plastics</strong> (e.g. ABS, acrylic, polyethylene, polypropylene, polystyrene, polyurethane, PET) are the highest hazard, and are further subdivided as <strong>expanded (foamed)</strong> or <strong>unexpanded</strong> — expanded/foamed Group A plastics carry the greatest hazard of all due to very high surface area and rapid heat release</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">What This Means in the Field</div>
+                  <ul>
+                    <li>Note the commodity — is it packaged (cartoned) or exposed (uncartoned)? Cartoned goods are somewhat less severe than the same commodity exposed</li>
+                    <li>Note the pallet type — plastic pallets (other than polypropylene/HDPE tested types) can increase the effective commodity classification by up to two classes versus wood pallets</li>
+                    <li>Note storage height and configuration — solid pile, palletized, single-row rack, double-row rack, or multi-row rack all have different protection implications at the same commodity class</li>
+                    <li>Record these details precisely rather than assigning a class yourself — as noted in the NFPA Hazard Classification table, exact design adequacy for Group A/B/C plastics and high-piled storage requires review by a qualified fire protection engineer</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="callout callout-warn" style="margin-top:4px;"><strong>This Is a Refer-to-Specialist Area:</strong> As established in the NFPA Hazard Classification table, exact sprinkler design adequacy for high-piled storage and Group A/B/C plastics depends on storage height, ceiling height, encapsulation, rack configuration, and sprinkler type (CMDA/CMSA/ESFR) per NFPA 13 Chapters 20–24. The definitions above are for recognizing <em>when</em> this applies during an inspection — not for determining design adequacy, which remains a specialist task.</div>
+            </div>
+          </div>
         </div>
       </div>
     </div><!-- end panel-knowledge -->
@@ -2070,7 +2619,20 @@ create policy "Admins only can delete bulletins"
     ],
     knowledge: [
       { title: 'Knowledge Base', links: [
-        { id: null, label: '📚 Coming Soon', action: function() {} },
+        { id: 'kb-construction-classes', label: '🏗 ISO Construction Guide — Overview' },
+        { id: 'kb-class-1', label: '🪵 Class 1 — Frame' },
+        { id: 'kb-class-2', label: '🧱 Class 2 — Joisted Masonry' },
+        { id: 'kb-class-3', label: '🏭 Class 3 — Non-Combustible' },
+        { id: 'kb-class-4', label: '🏢 Class 4 — Masonry Non-Combustible' },
+        { id: 'kb-class-5', label: '🏗️ Class 5 — Modified Fire Resistive' },
+        { id: 'kb-class-6', label: '🏙️ Class 6 — Fire Resistive' },
+        { id: 'kb-sprinkler-systems', label: '💧 Sprinkler Systems — Overview' },
+        { id: 'kb-sprinkler-wet', label: '💧 Wet Pipe' },
+        { id: 'kb-sprinkler-dry', label: '🌬️ Dry Pipe' },
+        { id: 'kb-sprinkler-preaction', label: '🛡️ Pre-Action' },
+        { id: 'kb-sprinkler-deluge', label: '🌊 Deluge' },
+        { id: 'kb-plastics-manufacturing', label: '🏭 Plastics Manufacturing (EH2)' },
+        { id: 'kb-high-piled-plastics', label: '📦 High-Piled Storage & Plastics' },
       ]},
     ],
   };
@@ -2180,6 +2742,20 @@ create policy "Admins only can delete bulletins"
     { tab:'guide', id:'guide-recommendations',  title:'Recommendations Requirements',     keywords:'recommendations requirements priority high medium low' },
     { tab:'guide', id:'guide-photos',           title:'Photo Documentation',              keywords:'photos bulk upload pdf documentation coverage' },
     { tab:'guide', id:'guide-summary',          title:'Underwriter Summary',              keywords:'summary underwriter risk quality recommendation score qa' },
+    { tab:'knowledge', id:'kb-construction-classes', title:'ISO Construction Classification Guide', keywords:'iso construction class frame joisted masonry non combustible fire resistive tilt up steel wood building under construction canadian examples field identification' },
+    { tab:'knowledge', id:'kb-class-1', title:'Construction Class 1 — Frame',                keywords:'class 1 frame wood combustible stud truss veneer' },
+    { tab:'knowledge', id:'kb-class-2', title:'Construction Class 2 — Joisted Masonry',      keywords:'class 2 joisted masonry brick block wood joist bearing wall' },
+    { tab:'knowledge', id:'kb-class-3', title:'Construction Class 3 — Non-Combustible',      keywords:'class 3 non combustible steel frame metal deck pre-engineered pemb' },
+    { tab:'knowledge', id:'kb-class-4', title:'Construction Class 4 — Masonry Non-Combustible', keywords:'class 4 masonry non combustible bar joist metal deck' },
+    { tab:'knowledge', id:'kb-class-5', title:'Construction Class 5 — Modified Fire Resistive', keywords:'class 5 modified fire resistive tilt up concrete panel' },
+    { tab:'knowledge', id:'kb-class-6', title:'Construction Class 6 — Fire Resistive',       keywords:'class 6 fire resistive concrete frame fireproofed steel high rise' },
+    { tab:'knowledge', id:'kb-sprinkler-systems', title:'Sprinkler Systems & NFPA 13 Overview', keywords:'sprinkler system types wet dry pre-action preaction deluge esfr cmsa' },
+    { tab:'knowledge', id:'kb-sprinkler-wet', title:'Wet Pipe Sprinkler System',              keywords:'wet pipe sprinkler alarm check valve' },
+    { tab:'knowledge', id:'kb-sprinkler-dry', title:'Dry Pipe Sprinkler System',              keywords:'dry pipe sprinkler air compressor freeze trip time unheated' },
+    { tab:'knowledge', id:'kb-sprinkler-preaction', title:'Pre-Action Sprinkler System',      keywords:'pre-action preaction single double interlock detection data centre' },
+    { tab:'knowledge', id:'kb-sprinkler-deluge', title:'Deluge Sprinkler System',             keywords:'deluge open sprinkler heads simultaneous discharge hangar' },
+    { tab:'knowledge', id:'kb-plastics-manufacturing', title:'Plastics Manufacturing Occupancy Classification', keywords:'plastics manufacturing extra hazard group 2 injection molding extrusion hydraulic' },
+    { tab:'knowledge', id:'kb-high-piled-plastics', title:'High-Piled Storage & Plastics Definitions', keywords:'high piled storage group a b c plastics expanded unexpanded class iii iv commodity height threshold' },
     { tab:'technical', id:'tech-nfpa',      title:'NFPA Hazard Classification',       keywords:'nfpa hazard light ordinary extra classification sprinkler design density area gpm high piled storage plastics class specialist' },
     { tab:'technical', id:'tech-cooking',   title:'Cooking Open Flame',               keywords:'cooking flame hood suppression nfpa 96 cleaning restaurant' },
     { tab:'technical', id:'tech-welding',   title:'Welding Cutting',                  keywords:'welding cutting hot work permit fire watch' },
@@ -2211,7 +2787,7 @@ create policy "Admins only can delete bulletins"
     if (staticResults.length) {
       html += '<div style="padding:6px 14px;font-size:10px;font-weight:700;color:var(--slate);text-transform:uppercase;background:#f8f8f6;">ESI Sections</div>';
       staticResults.forEach(function(item) {
-        var icon = item.tab === 'guide' ? '📋' : '🔬';
+        var icon = item.tab === 'guide' ? '📋' : (item.tab === 'knowledge' ? '📚' : '🔬');
         html += '<div class="search-result-item" data-tab="' + item.tab + '" data-id="' + item.id + '">' +
           '<div class="search-result-title"><span class="search-result-tag">' + icon + '</span>' + escHtml(item.title) + '</div></div>';
       });
