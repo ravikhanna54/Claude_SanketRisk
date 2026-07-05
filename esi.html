@@ -1030,6 +1030,57 @@
           </tbody>
         </table>
         <div class="callout callout-info"><strong>Mixed Hazard Buildings:</strong> When multiple occupancies or processes are present, the sprinkler system must be designed for the highest hazard class present in each area. Document the hazard class by area in the Sprinkler Supplement if applicable.</div>
+
+        <h3 style="margin:24px 0 8px;font-size:15px;color:var(--navy);">Sprinkler Protection Design Requirements <span class="esi-section-tag">NFPA 13</span></h3>
+        <p class="esi-sub">Minimum sprinkler design density and design area by occupancy hazard classification, per current NFPA 13 criteria (2022/2025 editions — single fixed design point per class). Use this to sanity-check a hydraulic data plate's stated design density against the occupancy observed — a plate showing a materially lower density than the applicable class below warrants a recommendation for review by a qualified sprinkler contractor.</p>
+
+        <table class="nfpa-table">
+          <thead><tr><th>Classification</th><th>Min. Design Density</th><th>Design Area</th><th>High-Temp Sprinkler Adjustment</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong style="color:var(--green);">Light Hazard (LH)</strong></td>
+              <td>0.10 gpm/ft²</td>
+              <td>1,500 ft²</td>
+              <td>—</td>
+              <td>Standard design point for offices, schools, residential, similar low-fuel-load occupancies.</td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--amber);">Ordinary Hazard Group 1 (OH1)</strong></td>
+              <td>0.15 gpm/ft²</td>
+              <td>1,500 ft²</td>
+              <td>—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--amber);">Ordinary Hazard Group 2 (OH2)</strong></td>
+              <td>0.20 gpm/ft²</td>
+              <td>1,500 ft²</td>
+              <td>—</td>
+              <td>Ceilings &gt;30 ft: density steps up to 0.37 gpm/ft² (≤40 ft) or 0.45 gpm/ft² (&gt;40 ft) — refer to specialist.</td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--orange);">Extra Hazard Group 1 (EH1)</strong></td>
+              <td>0.30 gpm/ft²</td>
+              <td>2,500 ft²</td>
+              <td>25% area reduction permitted (min. 2,000 ft²)</td>
+              <td>Ceilings &gt;30 ft: density steps up to 0.45 gpm/ft² — refer to specialist.</td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--red);">Extra Hazard Group 2 (EH2)</strong></td>
+              <td>0.40 gpm/ft²</td>
+              <td>2,500 ft²</td>
+              <td>25% area reduction permitted (min. 2,000 ft²)</td>
+              <td>Ceilings &gt;30 ft: density steps up to 0.45 gpm/ft² — refer to specialist.</td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--red);">High-Piled / Rack Storage &amp; Plastics — Class I–IV, Group A/B/C</strong></td>
+              <td colspan="3" style="text-align:center;"><span class="risk-signal risk-refer">! Refer to Specialist</span></td>
+              <td>Design criteria depend on storage height, ceiling height, encapsulation, rack/shelving/solid-pile configuration, and sprinkler type (CMDA/CMSA/ESFR) — governed by NFPA 13 Chapters 20–24. Not reducible to a single density/area value. Note commodity class, storage height, and configuration in the inspection, and refer to a qualified fire protection engineer for design adequacy review.</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout callout-warn"><strong>Historical / Curve-Based Systems:</strong> Editions of NFPA 13 prior to 2022 used density/area curves, allowing a designer to trade off density against a larger design area at various points along a curve. Older sprinkler systems in the field may show a hydraulic data plate density lower than the single-point values above while still having been compliant under the edition in force when installed. A lower plate density on an older system is not automatically a deficiency — if in doubt, note the plate's stated design criteria and refer to a qualified sprinkler contractor to confirm adequacy for the current occupancy, rather than assuming non-compliance.</div>
+        <div class="callout callout-alert"><strong>Scope Limit:</strong> This table covers standard spray-sprinkler protection for general occupancy hazard classes only. High-piled storage, plastics, rack storage, ESFR/CMSA systems, and any occupancy with ceilings exceeding 30 ft require specialist review and are outside the scope of this general reference.</div>
       </div>
 
       <!-- Cooking / Open Flame -->
@@ -2129,7 +2180,7 @@ create policy "Admins only can delete bulletins"
     { tab:'guide', id:'guide-recommendations',  title:'Recommendations Requirements',     keywords:'recommendations requirements priority high medium low' },
     { tab:'guide', id:'guide-photos',           title:'Photo Documentation',              keywords:'photos bulk upload pdf documentation coverage' },
     { tab:'guide', id:'guide-summary',          title:'Underwriter Summary',              keywords:'summary underwriter risk quality recommendation score qa' },
-    { tab:'technical', id:'tech-nfpa',      title:'NFPA Hazard Classification',       keywords:'nfpa hazard light ordinary extra classification' },
+    { tab:'technical', id:'tech-nfpa',      title:'NFPA Hazard Classification',       keywords:'nfpa hazard light ordinary extra classification sprinkler design density area gpm high piled storage plastics class specialist' },
     { tab:'technical', id:'tech-cooking',   title:'Cooking Open Flame',               keywords:'cooking flame hood suppression nfpa 96 cleaning restaurant' },
     { tab:'technical', id:'tech-welding',   title:'Welding Cutting',                  keywords:'welding cutting hot work permit fire watch' },
     { tab:'technical', id:'tech-spray',     title:'Spray Painting Coating',           keywords:'spray paint booth ventilation flammable coating' },
