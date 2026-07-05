@@ -327,6 +327,7 @@
     let allInspections  = [];
 
     var allReviewers = [];
+    var allInspectors = [];
 
     function loadReviewers() {
       return _supabase.from('profiles')
@@ -336,6 +337,20 @@
         .then(function(res) {
           if (!res.error && res.data) {
             allReviewers = res.data.map(function(r) {
+              return { name: r.full_name || r.email, email: r.email };
+            });
+          }
+        }).catch(function(){});
+    }
+
+    function loadInspectors() {
+      return _supabase.from('profiles')
+        .select('full_name, email, role')
+        .in('role', ['admin', 'inspector'])
+        .order('full_name')
+        .then(function(res) {
+          if (!res.error && res.data) {
+            allInspectors = res.data.map(function(r) {
               return { name: r.full_name || r.email, email: r.email };
             });
           }
@@ -390,6 +405,18 @@
     }
 
 
+    function assignInspectorToInspection(inspectionId, inspectorName) {
+      if (!inspectorName) return;
+      _supabase.from('inspections')
+        .update({ inspector_name: inspectorName })
+        .eq('id', inspectionId)
+        .then(function(res) {
+          if (res.error) { showToast('⚠ Failed: ' + res.error.message); return; }
+          showToast('✓ Assigned to ' + inspectorName);
+          loadInspections();
+        }).catch(function(e) { showToast('⚠ ' + e.message); });
+    }
+
     function assignReviewer(inspectionId, reviewerName) {
       if (!reviewerName) return;
       _supabase.from('inspections')
@@ -426,7 +453,7 @@
         document.getElementById('btn-backup').style.display = 'inline-block';
         document.getElementById('btn-scan-one').style.display = 'inline-block';
       }
-      loadReviewers().then(function(){ loadInspections(); });
+      Promise.all([loadReviewers(), loadInspectors()]).then(function(){ loadInspections(); });
     }
 
     async function loadInspections() {
@@ -520,7 +547,14 @@
         rows.map(r => {
           const statusClass = 'status-' + (r.report_status || 'draft');
           const statusLabel = { draft:'Draft', submitted:'Submitted', inreview:'In Review', approved:'Approved', returned:'Returned' }[r.report_status] || (r.report_status || 'Draft');
-          const adminCell = isAdmin ? '<td><span style="font-size:12px;">' + (r.inspector_name || '—') + '</span></td>' : '';
+          var adminCell = '';
+          if (isAdmin) {
+            var inspectorOpts = '<option value="">— Assign —</option>' +
+              allInspectors.map(function(iv) {
+                return '<option value="' + iv.name + '"' + (r.inspector_name === iv.name ? ' selected' : '') + '>' + iv.name + '</option>';
+              }).join('');
+            adminCell = '<td onclick="event.stopPropagation()"><select onchange="assignInspectorToInspection(\'' + r.id + '\', this.value)" style="font-size:11px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);max-width:130px;">' + inspectorOpts + '</select></td>';
+          }
           const deleteBtn = isAdmin ? '<button class="btn-open" style="color:#c53030;border-color:#c53030;margin-left:4px;" onclick="event.stopPropagation();deleteInspection(\'' + r.id + '\',\'' + (r.insured_name||'this inspection').replace(/'/g,'') + '\')">🗑</button>' : '';
           // Reviewer column - only show for submitted/inreview/approved/returned
           var reviewerCell = '';
