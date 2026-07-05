@@ -1648,7 +1648,7 @@
         <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--navy);margin-bottom:20px;">📚 Knowledge Base</h2>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;">
           <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-construction-classes')"><div class="index-card-title">🏗 ISO Construction Classification Guide</div><div class="index-card-sub">Classes 1–6 with Canadian examples</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
-          <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">🔥 FUS Grading Methodology</div><div class="index-card-sub">Fire Underwriters Survey system</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
+          <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-fus-grading')"><div class="index-card-title">🔥 FUS Grading Methodology</div><div class="index-card-sub">Fire Underwriters Survey system</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
           <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">🌊 NBC 2025 Climatic Design Data</div><div class="index-card-sub">Snow loads, wind, seismic hazard</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
           <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-sprinkler-systems')"><div class="index-card-title">💧 Sprinkler Systems &amp; NFPA 13</div><div class="index-card-sub">Wet, dry, pre-action, deluge types</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
           <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">📋 IBC Occupancy Code Reference</div><div class="index-card-sub">Full reference with SIC/NAICS</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
@@ -2203,6 +2203,117 @@
             </div>
           </div>
         </div>
+
+        <!-- ═══════════ FUS GRADING METHODOLOGY ═══════════ -->
+        <div class="esi-section" id="kb-fus-grading" style="margin-top:36px;">
+          <div class="esi-section-title">FUS Grading Methodology <span class="esi-section-tag">FUS</span></div>
+          <p class="esi-sub">Fire Underwriters Survey (FUS) — a Verisk Canada service, formerly Opta Information Intelligence — is the sole national organization providing standardized public fire protection grading for Canadian insurance purposes, used by over 90% of Canadian property and casualty insurers. Unlike a building-specific rating, FUS grades measure the <strong>community's</strong> fire protection infrastructure — fire department capability, water supply, and communications/dispatch — that a given property can rely on when a fire occurs. This directly complements the private (on-site) protection assessment already covered in the Form Filling Guide's Protection section.</p>
+
+          <!-- Quick reference table -->
+          <table class="nfpa-table">
+            <thead><tr><th>Grade</th><th>Full Name</th><th>Scale</th><th>Applies To</th></tr></thead>
+            <tbody>
+              <tr><td><strong style="color:var(--navy);">PFPC</strong></td><td>Public Fire Protection Classification</td><td>1 (best) – 10 (worst)</td><td>Commercial, industrial, institutional, and multi-family properties</td></tr>
+              <tr><td><strong style="color:var(--navy);">DPG</strong></td><td>Dwelling Protection Grade</td><td>1 (best) – 5 (worst)</td><td>Detached one- and two-family dwellings only</td></tr>
+              <tr><td><strong style="color:var(--navy);">Wildfire Risk Class</strong></td><td>Canadian Wildfire Grading Index</td><td>Risk class by zone</td><td>Wildland-urban interface (WUI) exposure, all property types</td></tr>
+            </tbody>
+          </table>
+
+          <!-- PFPC -->
+          <div class="hazard-card" id="kb-fus-pfpc" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #1a365d, #2b6cb0);">
+              <div class="hazard-icon">🚒</div>
+              <div>
+                <div class="hazard-title">Public Fire Protection Classification (PFPC)</div>
+                <div class="hazard-sub">1–10 scale — the grade that matters for commercial property inspection work</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">What It Measures</div>
+                  <p>PFPC evaluates a community's ability to prevent and control major fires in commercial, industrial, institutional, and multi-family buildings — measured against a recognized standard, not against the community's actual fire loss history. A well-graded community may still experience fires; the grade reflects <em>capability to respond</em>, not a prediction of loss frequency.</p>
+                  <p style="margin-top:8px;">Three major areas are assessed: <strong>Fire Department</strong> (apparatus, staffing, training, station distribution, response times), <strong>Water Supply</strong> (distribution system capacity and reliability to deliver adequate fire flow), and <strong>Communications</strong> (dispatch and alarm handling).</p>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Insurer Tiering</div>
+                  <ul>
+                    <li><strong>Protected:</strong> approximately Class 1–5</li>
+                    <li><strong>Semi-Protected:</strong> approximately Class 5–8</li>
+                    <li><strong>Unprotected:</strong> approximately Class 9–10</li>
+                  </ul>
+                  <p style="margin-top:8px;">Individual insurers may apply the tier boundaries slightly differently for their own underwriting appetite — treat these as general reference bands, not a fixed rule.</p>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Response Distance Benchmarks</div>
+                  <ul>
+                    <li>Maximum recognized response distance: <strong>8 km</strong> by continuously maintained public road</li>
+                    <li><strong>5 km</strong> or less is preferred, due to reduced response time</li>
+                    <li>Private roads may be recognized where maintenance reliability is demonstrated</li>
+                    <li>Rural areas without hydrant service may instead demonstrate tanker shuttle capability (minimum 900 L/min sustained for 2 hours) in the presence of an FUS representative</li>
+                  </ul>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Field Application</div>
+                  <ul>
+                    <li>Note the distance from the subject property to the nearest fire station/hall — this is a direct input to how FUS assesses that area, and is already something the Protection section of the inspection form asks you to record</li>
+                    <li>A property just outside a municipality's protected boundary, or served by a volunteer/auxiliary department, may carry a materially different PFPC than a similar property downtown — don't assume municipal-wide uniformity</li>
+                    <li>The current PFPC for a specific address can be looked up via the FUS Grading Index (fireunderwriters.ca) — when in doubt about a borderline or rural location, verify rather than assume</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DPG -->
+          <div class="hazard-card" id="kb-fus-dpg" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #4a5568, #718096);">
+              <div class="hazard-icon">🏠</div>
+              <div>
+                <div class="hazard-title">Dwelling Protection Grade (DPG)</div>
+                <div class="hazard-sub">1–5 scale — personal lines only, detached homes and duplexes</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Scope</div>
+                  <p>DPG applies only to detached one- and two-family dwellings (not larger multi-family buildings, which fall under PFPC). It measures the same underlying fire department capability as PFPC but benchmarked against the lower demand of a residential structure fire rather than a major commercial fire. DPG is derived from the same underlying PFPC survey data for the community.</p>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Relevance to Commercial Inspection Work</div>
+                  <p>DPG itself is not directly used for the commercial/COPE inspections this platform is built around — it's a personal lines grade. It's included here for completeness and because Sanket Risk Consultants' broader client base may occasionally ask about it in the context of a mixed-use or small multi-family property near the dwelling/commercial size threshold.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WILDFIRE RISK CLASS -->
+          <div class="hazard-card" id="kb-fus-wildfire" style="margin-top:20px;">
+            <div class="hazard-header" style="background: linear-gradient(135deg, #7b341e, #c05621);">
+              <div class="hazard-icon">🔥</div>
+              <div>
+                <div class="hazard-title">Canadian Wildfire Grading Index</div>
+                <div class="hazard-sub">A newer, separate FUS product addressing wildland-urban interface (WUI) exposure</div>
+              </div>
+            </div>
+            <div class="hazard-body">
+              <div class="hazard-grid">
+                <div class="hazard-block">
+                  <div class="hazard-block-title">What It Measures</div>
+                  <p>Distinct from PFPC/DPG, this index assesses wildfire risk by zone based on: Hazard Severity (frequency/size of significant fires, climate factors), Exposure Severity (proportion of surrounding area with vegetation/fuel capable of producing radiant heat, short-range embers, and long-range embers), and a resulting Wildfire Risk Class combining both.</p>
+                </div>
+                <div class="hazard-block">
+                  <div class="hazard-block-title">Field Application</div>
+                  <p>Increasingly relevant for Canadian properties near forested or grassland urban-interface areas, particularly in BC, Alberta, and other wildfire-exposed regions. Where a property borders significant wildland vegetation, note this in the Exposure section of the inspection alongside standard exposure observations — this is a genuinely distinct risk pathway from the structural fire protection PFPC addresses.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout callout-info" style="margin-top:20px;"><strong>Grading Is Not Static:</strong> Communities are reassessed roughly every five years via an FUS Community Outreach Questionnaire, and can request a new survey sooner if fire protection capability has materially improved (e.g. new water infrastructure, new fire hall). If FUS calculates a downgrade, the community is notified privately first and given up to 12 months to implement an improvement plan before the change is published — the previous grade remains in effect, marked "provisional," during that window. Grading reflects fire protection <em>capability</em>, not the community's actual fire loss history.</div>
+          <div class="callout callout-warn" style="margin-top:12px;"><strong>Practical Note:</strong> When inspecting a property in an unfamiliar or rural community, don't assume the PFPC based on the municipality's general reputation — verify the specific grade via the FUS Grading Index, particularly for properties near a protection boundary, served by a volunteer department, or in an area with recent fire service changes.</div>
+        </div>
       </div>
     </div><!-- end panel-knowledge -->
 
@@ -2633,6 +2744,10 @@ create policy "Admins only can delete bulletins"
         { id: 'kb-sprinkler-deluge', label: '🌊 Deluge' },
         { id: 'kb-plastics-manufacturing', label: '🏭 Plastics Manufacturing (EH2)' },
         { id: 'kb-high-piled-plastics', label: '📦 High-Piled Storage & Plastics' },
+        { id: 'kb-fus-grading', label: '🚒 FUS Grading — Overview' },
+        { id: 'kb-fus-pfpc', label: '🚒 PFPC (1–10)' },
+        { id: 'kb-fus-dpg', label: '🏠 DPG (1–5)' },
+        { id: 'kb-fus-wildfire', label: '🔥 Wildfire Risk Class' },
       ]},
     ],
   };
@@ -2756,6 +2871,10 @@ create policy "Admins only can delete bulletins"
     { tab:'knowledge', id:'kb-sprinkler-deluge', title:'Deluge Sprinkler System',             keywords:'deluge open sprinkler heads simultaneous discharge hangar' },
     { tab:'knowledge', id:'kb-plastics-manufacturing', title:'Plastics Manufacturing Occupancy Classification', keywords:'plastics manufacturing extra hazard group 2 injection molding extrusion hydraulic' },
     { tab:'knowledge', id:'kb-high-piled-plastics', title:'High-Piled Storage & Plastics Definitions', keywords:'high piled storage group a b c plastics expanded unexpanded class iii iv commodity height threshold' },
+    { tab:'knowledge', id:'kb-fus-grading', title:'FUS Grading Methodology Overview',       keywords:'fus fire underwriters survey grading methodology verisk canada' },
+    { tab:'knowledge', id:'kb-fus-pfpc', title:'Public Fire Protection Classification PFPC', keywords:'pfpc public fire protection classification protected semi-protected unprotected response distance' },
+    { tab:'knowledge', id:'kb-fus-dpg', title:'Dwelling Protection Grade DPG',               keywords:'dpg dwelling protection grade detached duplex personal lines' },
+    { tab:'knowledge', id:'kb-fus-wildfire', title:'Canadian Wildfire Grading Index',        keywords:'wildfire risk class wui wildland urban interface fus' },
     { tab:'technical', id:'tech-nfpa',      title:'NFPA Hazard Classification',       keywords:'nfpa hazard light ordinary extra classification sprinkler design density area gpm high piled storage plastics class specialist' },
     { tab:'technical', id:'tech-cooking',   title:'Cooking Open Flame',               keywords:'cooking flame hood suppression nfpa 96 cleaning restaurant' },
     { tab:'technical', id:'tech-welding',   title:'Welding Cutting',                  keywords:'welding cutting hot work permit fire watch' },
