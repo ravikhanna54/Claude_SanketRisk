@@ -2513,6 +2513,7 @@
   let activeFilter    = 'all';
 
   // ── AUTH ──
+  loadKbDocuments(); // load document library metadata immediately so global search works from any tab, even before visiting Knowledge Base
   (async () => {
     const { data: { session } } = await _supabase.auth.getSession();
     if (!session) return; // ESI accessible without login — bulletins show as read-only
@@ -3253,7 +3254,13 @@ create policy "Admins only can delete bulletins"
     var bulletinResults = (allBulletins || []).filter(function(b) {
       return ((b.title || '').toLowerCase().indexOf(q) >= 0) || ((b.content || '').toLowerCase().indexOf(q) >= 0);
     }).slice(0, 5);
-    if (!staticResults.length && !bulletinResults.length) {
+    var docResults = (allKbDocuments || []).filter(function(d) {
+      return ((d.title || '').toLowerCase().indexOf(q) >= 0) ||
+        ((d.description || '').toLowerCase().indexOf(q) >= 0) ||
+        ((d.tags || '').toLowerCase().indexOf(q) >= 0) ||
+        ((d.text_content || '').toLowerCase().indexOf(q) >= 0);
+    }).slice(0, 5);
+    if (!staticResults.length && !bulletinResults.length && !docResults.length) {
       resultsDiv.innerHTML = '<div style="padding:16px;text-align:center;color:var(--slate);font-size:13px;">No results for &ldquo;' + escHtml(query) + '&rdquo;</div>';
       return;
     }
@@ -3264,6 +3271,14 @@ create policy "Admins only can delete bulletins"
         var icon = item.tab === 'guide' ? '📋' : (item.tab === 'knowledge' ? '📚' : '🔬');
         html += '<div class="search-result-item" data-tab="' + item.tab + '" data-id="' + item.id + '">' +
           '<div class="search-result-title"><span class="search-result-tag">' + icon + '</span>' + escHtml(item.title) + '</div></div>';
+      });
+    }
+    if (docResults.length) {
+      html += '<div style="padding:6px 14px;font-size:10px;font-weight:700;color:var(--slate);text-transform:uppercase;background:#f8f8f6;border-top:1px solid #eee;">📁 Documents</div>';
+      docResults.forEach(function(d) {
+        html += '<div class="search-result-item" data-docid="' + d.id + '">' +
+          '<div class="search-result-title"><span class="search-result-tag">📁</span>' + escHtml(d.title || 'Untitled') + '</div>' +
+          '<div class="search-result-sub">' + escHtml(d.category || '') + '</div></div>';
       });
     }
     if (bulletinResults.length) {
@@ -3278,6 +3293,22 @@ create policy "Admins only can delete bulletins"
     resultsDiv.innerHTML = html;
   }
 
+  function goToKbDocument(docId) {
+    var tabEl = document.querySelector('.main-tab[onclick*="knowledge"]');
+    if (tabEl) switchMainTab('knowledge', tabEl);
+    setTimeout(function() {
+      var d = (allKbDocuments || []).find(function(x) { return x.id === docId; });
+      var searchBox = document.getElementById('kb-doc-search');
+      if (d && searchBox) {
+        searchBox.value = d.title || '';
+        document.getElementById('kb-doc-cat-filter').value = '';
+        filterKbDocuments();
+      }
+      var lib = document.getElementById('kb-doc-library');
+      if (lib) lib.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
+  }
+
   function closeSearch() {
     var r = document.getElementById('esi-search-results');
     var i = document.getElementById('esi-search-input');
@@ -3289,8 +3320,10 @@ create policy "Admins only can delete bulletins"
   document.addEventListener('click', function(e) {
     var target = e.target.closest('[data-bid]');
     if (target) { closeSearch(); goToBulletin(target.getAttribute('data-bid')); return; }
+    var dtgt = e.target.closest('[data-docid]');
+    if (dtgt) { closeSearch(); goToKbDocument(dtgt.getAttribute('data-docid')); return; }
     var stgt = e.target.closest('[data-tab]');
-    if (stgt) { closeSearch(); goToSection(stgt.getAttribute('data-tab'), stgt.getAttribute('data-sid')); return; }
+    if (stgt) { closeSearch(); goToSection(stgt.getAttribute('data-tab'), stgt.getAttribute('data-id')); return; }
   });
 
   // Close search on outside click
