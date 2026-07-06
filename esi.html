@@ -6,6 +6,7 @@
   <title>ESI — Engineering Service Instructions | SanketRisk Inspector</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1646,6 +1647,70 @@
     <div class="tab-panel" id="panel-knowledge">
       <div style="padding:32px 24px;max-width:1100px;margin:0 auto;">
         <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--navy);margin-bottom:20px;">📚 Knowledge Base</h2>
+
+        <!-- ═══════════ DOCUMENT LIBRARY ═══════════ -->
+        <div id="kb-doc-library" style="margin-bottom:36px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+            <h3 style="font-size:16px;color:var(--navy);margin:0;">📁 Document Library</h3>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="text" id="kb-doc-search" placeholder="Search documents…" oninput="filterKbDocuments()" style="padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:200px;">
+              <select id="kb-doc-cat-filter" onchange="filterKbDocuments()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+                <option value="">All Categories</option>
+                <option>Technical Reference</option>
+                <option>Regulatory &amp; Code</option>
+                <option>Manufacturer Literature</option>
+                <option>Historical Inspection Reports</option>
+                <option>Training Material</option>
+                <option>Other</option>
+              </select>
+              <button class="btn-post" id="kb-doc-upload-toggle" style="display:none;padding:8px 16px;font-size:12px;" onclick="toggleKbUploadForm()">＋ Upload Document</button>
+            </div>
+          </div>
+
+          <!-- Upload form (admin/reviewer only) -->
+          <div id="kb-upload-form" style="display:none;background:#faf9f6;border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+              <div class="field">
+                <label style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Title *</label>
+                <input type="text" id="kb-doc-title" placeholder="e.g. Sprinkler Riser Component Reference — 1998" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+              </div>
+              <div class="field">
+                <label style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Category</label>
+                <select id="kb-doc-category" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                  <option>Technical Reference</option>
+                  <option>Regulatory &amp; Code</option>
+                  <option>Manufacturer Literature</option>
+                  <option>Historical Inspection Reports</option>
+                  <option>Training Material</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:14px;">
+              <label style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Description</label>
+              <textarea id="kb-doc-description" placeholder="Brief description of what this document covers and why it's useful..." style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-height:60px;font-family:inherit;"></textarea>
+            </div>
+            <div class="field" style="margin-bottom:14px;">
+              <label style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Tags (comma-separated)</label>
+              <input type="text" id="kb-doc-tags" placeholder="e.g. sprinkler, riser, valve, 1998" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+            </div>
+            <div class="field" style="margin-bottom:14px;">
+              <label style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">PDF File *</label>
+              <input type="file" id="kb-doc-file" accept="application/pdf">
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <button class="btn-post" id="kb-doc-submit-btn" onclick="uploadKbDocument()">Upload</button>
+              <button class="btn-post" style="background:#e2e8f0;color:var(--navy);" onclick="toggleKbUploadForm()">Cancel</button>
+              <span id="kb-upload-msg" style="font-size:12px;color:var(--slate);"></span>
+            </div>
+          </div>
+
+          <div id="kb-doc-list" style="display:flex;flex-direction:column;gap:10px;">
+            <div style="text-align:center;padding:24px;color:var(--slate-light);font-size:13px;">Loading document library…</div>
+          </div>
+        </div>
+
+        <h3 style="font-size:16px;color:var(--navy);margin:0 0 14px;">📖 Reference Articles</h3>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;">
           <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-construction-classes')"><div class="index-card-title">🏗 ISO Construction Classification Guide</div><div class="index-card-sub">Classes 1–6 with Canadian examples</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
           <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-fus-grading')"><div class="index-card-title">🔥 FUS Grading Methodology</div><div class="index-card-sub">Fire Underwriters Survey system</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
@@ -2458,8 +2523,215 @@
     if (currentUserRole === 'admin' || currentUserRole === 'reviewer') {
       document.getElementById('compose-wrap').style.display = 'block';
       document.getElementById('b-date').valueAsDate = new Date();
+      const kbBtn = document.getElementById('kb-doc-upload-toggle');
+      if (kbBtn) kbBtn.style.display = 'inline-block';
     }
   })();
+
+  // ── DOCUMENT LIBRARY ──
+  let allKbDocuments = [];
+  const KB_CAT_ICON = {
+    'Technical Reference': '🔧', 'Regulatory & Code': '📜', 'Manufacturer Literature': '🏭',
+    'Historical Inspection Reports': '📋', 'Training Material': '🎓', 'Other': '📄'
+  };
+  const KB_STATUS_LABEL = {
+    'pending': '⏳ Processing…', 'text_extracted': '✓ Searchable (text layer)',
+    'needs_ocr': '⚠ Scanned — OCR needed', 'ocr_complete': '✓ Searchable (OCR)', 'ocr_failed': '✗ OCR failed'
+  };
+
+  function toggleKbUploadForm() {
+    const f = document.getElementById('kb-upload-form');
+    f.style.display = (f.style.display === 'none') ? 'block' : 'none';
+  }
+
+  async function loadKbDocuments() {
+    const listEl = document.getElementById('kb-doc-list');
+    try {
+      const { data, error } = await _supabase
+        .from('kb_documents')
+        .select('*')
+        .order('uploaded_at', { ascending: false });
+      if (error) {
+        if (error.message && error.message.includes('does not exist')) {
+          listEl.innerHTML = '<div class="callout callout-warn">The Document Library table hasn\'t been created yet in Supabase. Run the setup SQL provided in the platform documentation, then refresh this page.</div>';
+          return;
+        }
+        throw error;
+      }
+      allKbDocuments = data || [];
+      filterKbDocuments();
+    } catch(e) {
+      listEl.innerHTML = '<div class="callout callout-warn">Could not load documents: ' + e.message + '</div>';
+    }
+  }
+
+  function filterKbDocuments() {
+    const q = (document.getElementById('kb-doc-search').value || '').toLowerCase().trim();
+    const cat = document.getElementById('kb-doc-cat-filter').value;
+    let filtered = allKbDocuments;
+    if (cat) filtered = filtered.filter(d => d.category === cat);
+    if (q) {
+      filtered = filtered.filter(d =>
+        (d.title || '').toLowerCase().includes(q) ||
+        (d.description || '').toLowerCase().includes(q) ||
+        (d.tags || '').toLowerCase().includes(q) ||
+        (d.text_content || '').toLowerCase().includes(q)
+      );
+    }
+    renderKbDocuments(filtered);
+  }
+
+  function renderKbDocuments(docs) {
+    const listEl = document.getElementById('kb-doc-list');
+    if (!docs.length) {
+      listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--slate-light);font-size:13px;">No documents yet. ' +
+        ((currentUserRole === 'admin' || currentUserRole === 'reviewer') ? 'Click "＋ Upload Document" above to add the first one.' : 'Check back once your administrator has added reference material.') + '</div>';
+      return;
+    }
+    const canDelete = currentUserRole === 'admin';
+    listEl.innerHTML = docs.map(d => {
+      const icon = KB_CAT_ICON[d.category] || '📄';
+      const statusLabel = KB_STATUS_LABEL[d.extraction_status] || '';
+      const statusColor = d.extraction_status === 'ocr_failed' ? '#c53030' : (d.extraction_status === 'needs_ocr' ? '#b7791f' : '#276749');
+      const tagsHtml = (d.tags || '').split(',').map(t => t.trim()).filter(Boolean)
+        .map(t => '<span style="background:#f0ece2;color:var(--slate);font-size:10px;padding:2px 8px;border-radius:10px;margin-right:4px;">' + t + '</span>').join('');
+      const ocrBtn = (d.extraction_status === 'needs_ocr' && (currentUserRole === 'admin' || currentUserRole === 'reviewer'))
+        ? '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#7c3aed;" onclick="runOcrForDocument(\'' + d.id + '\',\'' + d.file_path + '\')" id="ocr-btn-' + d.id + '">🔍 Run OCR</button>'
+        : '';
+      const deleteBtn = canDelete
+        ? '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#e2e8f0;color:#c53030;" onclick="deleteKbDocument(\'' + d.id + '\',\'' + d.file_path + '\')">🗑 Delete</button>'
+        : '';
+      return '<div class="bulletin-card">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">' +
+        '<div style="flex:1;min-width:220px;">' +
+        '<div style="font-size:14px;font-weight:700;color:var(--navy);">' + icon + ' ' + (d.title || 'Untitled') + '</div>' +
+        '<div style="font-size:11px;color:var(--slate-light);margin-top:2px;">' + (d.category || 'Other') + ' · Uploaded by ' + (d.uploaded_by || 'Unknown') + ' · ' + (d.uploaded_at ? d.uploaded_at.substring(0,10) : '') + '</div>' +
+        (d.description ? '<div style="font-size:12px;color:var(--slate);margin-top:8px;">' + d.description + '</div>' : '') +
+        (tagsHtml ? '<div style="margin-top:8px;">' + tagsHtml + '</div>' : '') +
+        '<div style="font-size:11px;margin-top:8px;color:' + statusColor + ';font-weight:600;">' + statusLabel + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+        '<button class="btn-post" style="padding:5px 12px;font-size:11px;" onclick="viewKbDocument(\'' + d.file_path + '\')">📄 View</button>' +
+        ocrBtn + deleteBtn +
+        '</div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  async function uploadKbDocument() {
+    const title = document.getElementById('kb-doc-title').value.trim();
+    const category = document.getElementById('kb-doc-category').value;
+    const description = document.getElementById('kb-doc-description').value.trim();
+    const tags = document.getElementById('kb-doc-tags').value.trim();
+    const fileInput = document.getElementById('kb-doc-file');
+    const file = fileInput.files[0];
+    const msg = document.getElementById('kb-upload-msg');
+    const btn = document.getElementById('kb-doc-submit-btn');
+
+    if (!title || !file) { msg.textContent = '⚠ Title and PDF file are required.'; return; }
+    if (file.type !== 'application/pdf') { msg.textContent = '⚠ Only PDF files are accepted.'; return; }
+
+    btn.disabled = true;
+    msg.textContent = 'Uploading…';
+
+    try {
+      const { data: profiles } = await _supabase.from('profiles').select('full_name').eq('id', currentUser.id);
+      const uploadedBy = profiles?.[0]?.full_name || currentUser.email;
+
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = crypto.randomUUID() + '-' + safeName;
+
+      const { error: upErr } = await _supabase.storage.from('kb-documents').upload(filePath, file, { contentType: 'application/pdf' });
+      if (upErr) throw upErr;
+
+      const { data: inserted, error: insErr } = await _supabase.from('kb_documents').insert({
+        title, category, description: description || null, tags: tags || null,
+        file_path: filePath, file_name: file.name, file_size: file.size,
+        extraction_status: 'pending', uploaded_by: uploadedBy,
+      }).select().single();
+      if (insErr) throw insErr;
+
+      msg.textContent = '✓ Uploaded — extracting text…';
+      await extractPdfTextClientSide(file, inserted.id);
+
+      // Clear form
+      ['kb-doc-title','kb-doc-description','kb-doc-tags'].forEach(id => document.getElementById(id).value = '');
+      fileInput.value = '';
+      document.getElementById('kb-doc-category').value = 'Technical Reference';
+      msg.textContent = '';
+      toggleKbUploadForm();
+      await loadKbDocuments();
+    } catch(e) {
+      msg.textContent = '✗ Error: ' + e.message;
+    }
+    btn.disabled = false;
+  }
+
+  // Attempts free client-side text-layer extraction via pdf.js. "Real" PDFs
+  // (not scanned images) already have an invisible text layer — this reads it
+  // directly, no OCR needed. If little/no text is found, flags for manual OCR.
+  async function extractPdfTextClientSide(file, docId) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      const maxPages = Math.min(pdf.numPages, 200);
+      for (let i = 1; i <= maxPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        fullText += content.items.map(it => it.str).join(' ') + '\n';
+      }
+      const trimmed = fullText.trim();
+      const status = trimmed.length > 50 ? 'text_extracted' : 'needs_ocr';
+      await _supabase.from('kb_documents').update({
+        text_content: trimmed.length > 50 ? trimmed.substring(0, 500000) : null,
+        extraction_status: status
+      }).eq('id', docId);
+    } catch(e) {
+      console.warn('Client-side text extraction failed:', e.message);
+      await _supabase.from('kb_documents').update({ extraction_status: 'needs_ocr' }).eq('id', docId);
+    }
+  }
+
+  async function runOcrForDocument(id, filePath) {
+    const btn = document.getElementById('ocr-btn-' + id);
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Running OCR…'; }
+    try {
+      const res = await fetch('/.netlify/functions/kb-ocr', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ document_id: id, file_path: filePath, bucket: 'kb-documents' })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'OCR request failed');
+      await loadKbDocuments();
+    } catch(e) {
+      alert('OCR failed: ' + e.message);
+      if (btn) { btn.disabled = false; btn.textContent = '🔍 Run OCR'; }
+    }
+  }
+
+  async function viewKbDocument(filePath) {
+    try {
+      const { data, error } = await _supabase.storage.from('kb-documents').createSignedUrl(filePath, 300);
+      if (error) throw error;
+      window.open(data.signedUrl, '_blank');
+    } catch(e) {
+      alert('Could not open document: ' + e.message);
+    }
+  }
+
+  async function deleteKbDocument(id, filePath) {
+    if (!confirm('Delete this document? This cannot be undone.')) return;
+    try {
+      await _supabase.storage.from('kb-documents').remove([filePath]);
+      const { error } = await _supabase.from('kb_documents').delete().eq('id', id);
+      if (error) throw error;
+      allKbDocuments = allKbDocuments.filter(d => d.id !== id);
+      filterKbDocuments();
+    } catch(e) {
+      alert('Delete failed: ' + e.message);
+    }
+  }
 
   // ── CATEGORY HELPERS ──
   const CAT_CLASS = {
@@ -2879,6 +3151,7 @@ create policy "Admins only can delete bulletins"
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (tab === 'bulletins') loadBulletins();
     if (tab === 'index') { loadBulletins(); setTimeout(renderIndexBulletins, 800); }
+    if (tab === 'knowledge') loadKbDocuments();
   }
 
   // ── SUBJECT INDEX & SEARCH FUNCTIONS ──
