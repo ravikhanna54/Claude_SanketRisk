@@ -2728,6 +2728,16 @@
       return;
     }
 
+    // Optimistically reflect "processing" locally right away — don't reload
+    // from the database yet. Lambda needs a moment to even receive this
+    // request and write its first status update, so an immediate reload here
+    // would show stale data and visually undo the button state we just set,
+    // making it look like nothing happened even though the job is running.
+    const idx = allKbDocuments.findIndex(d => d.id === id);
+    if (idx >= 0) allKbDocuments[idx].extraction_status = 'ocr_processing';
+    const statusEl = document.getElementById('kb-status-' + id);
+    if (statusEl) { statusEl.textContent = '🔍 OCR starting…'; statusEl.style.color = '#b7791f'; }
+
     // Fire the request but don't treat a dropped connection as fatal — Lambda
     // keeps running server-side regardless of whether this fetch completes,
     // and the poll below is the real source of truth for the outcome.
@@ -2737,16 +2747,16 @@
       body: JSON.stringify({ document_id: id, file_path: filePath, bucket: 'kb-documents' })
     }).catch(function(e) { console.warn('OCR Lambda request dropped (job continues server-side):', e.message); });
 
-    await loadKbDocuments(); // refresh to show current state
-    if (!kbOcrPollTimers[id]) pollOcrStatus(id); // start polling immediately — don't wait for the row to show ocr_processing first
+    if (!kbOcrPollTimers[id]) pollOcrStatus(id);
   }
 
-  // Polls kb_documents every 6 seconds until OCR finishes, fails, or 14 minutes
+  // Polls kb_documents every 4 seconds until OCR finishes, fails, or 14 minutes
   // elapse — mirrors Scan One's scan_jobs polling pattern exactly.
   function pollOcrStatus(docId) {
     var startTime = Date.now();
     var maxMs = 14 * 60 * 1000;
-    kbOcrPollTimers[docId] = setInterval(async function() {
+
+    async function checkOnce() {
       if (Date.now() - startTime > maxMs) {
         clearInterval(kbOcrPollTimers[docId]);
         delete kbOcrPollTimers[docId];
@@ -2761,8 +2771,7 @@
         const idx = allKbDocuments.findIndex(d => d.id === docId);
         if (idx >= 0) allKbDocuments[idx] = data;
         if (data.extraction_status === 'ocr_complete' || data.extraction_status === 'ocr_failed') {
-          clearInterval(kbOcrPollTimers[docId]);
-          delete kbOcrPollTimers[docId];
+          if (kbOcrPollTimers[docId]) { clearInterval(kbOcrPollTimers[docId]); delete kbOcrPollTimers[docId]; }
           filterKbDocuments();
         } else {
           // Update just the status line + progress in place, without a full re-render
@@ -2774,7 +2783,10 @@
           }
         }
       } catch(e) { console.warn('OCR poll error:', e.message); }
-    }, 6000);
+    }
+
+    setTimeout(checkOnce, 2500); // quick first check, well before the regular interval, so feedback appears fast
+    kbOcrPollTimers[docId] = setInterval(checkOnce, 6000);
   }
 
   async function viewKbDocument(filePath) {
