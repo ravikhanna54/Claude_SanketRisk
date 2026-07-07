@@ -2540,8 +2540,12 @@
   };
   const KB_STATUS_LABEL = {
     'pending': '⏳ Processing…', 'text_extracted': '✓ Searchable (text layer)',
-    'needs_ocr': '⚠ Scanned — OCR needed', 'ocr_complete': '✓ Searchable (OCR)', 'ocr_failed': '✗ OCR failed'
+    'needs_ocr': '⚠ Scanned — OCR needed', 'ocr_processing': '🔍 OCR running…',
+    'ocr_complete': '✓ Searchable (OCR)', 'ocr_failed': '✗ OCR failed — document is still viewable, retry available'
   };
+  // TODO: paste your kb-ocr-lambda Function URL here once deployed (same pattern as EDGE_URL in scan.html)
+  const KB_OCR_LAMBDA_URL = 'PASTE_YOUR_LAMBDA_FUNCTION_URL_HERE';
+  let kbOcrPollTimers = {}; // documentId -> interval handle, so a page navigation doesn't leave stray polls running
 
   function toggleKbUploadForm() {
     const f = document.getElementById('kb-upload-form');
@@ -2595,13 +2599,30 @@
     const canDelete = currentUserRole === 'admin';
     listEl.innerHTML = docs.map(d => {
       const icon = KB_CAT_ICON[d.category] || '📄';
-      const statusLabel = KB_STATUS_LABEL[d.extraction_status] || '';
-      const statusColor = d.extraction_status === 'ocr_failed' ? '#c53030' : (d.extraction_status === 'needs_ocr' ? '#b7791f' : '#276749');
+      let statusLabel = KB_STATUS_LABEL[d.extraction_status] || '';
+      if (d.extraction_status === 'ocr_processing' && d.ocr_pages_done) {
+        statusLabel += ' (' + d.ocr_pages_done + ' pages so far)';
+      }
+      if (d.extraction_status === 'ocr_failed' && d.ocr_error) {
+        statusLabel += ': ' + d.ocr_error;
+      }
+      const statusColor = (d.extraction_status === 'ocr_failed') ? '#c53030' :
+        (d.extraction_status === 'needs_ocr' || d.extraction_status === 'ocr_processing') ? '#b7791f' : '#276749';
       const tagsHtml = (d.tags || '').split(',').map(t => t.trim()).filter(Boolean)
         .map(t => '<span style="background:#f0ece2;color:var(--slate);font-size:10px;padding:2px 8px;border-radius:10px;margin-right:4px;">' + t + '</span>').join('');
-      const ocrBtn = (d.extraction_status === 'needs_ocr' && (currentUserRole === 'admin' || currentUserRole === 'reviewer'))
-        ? '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#7c3aed;" onclick="runOcrForDocument(\'' + d.id + '\',\'' + d.file_path + '\')" id="ocr-btn-' + d.id + '">🔍 Run OCR</button>'
-        : '';
+      const canRunOcr = currentUserRole === 'admin' || currentUserRole === 'reviewer';
+      let ocrBtn = '';
+      if (d.extraction_status === 'needs_ocr' && canRunOcr) {
+        ocrBtn = '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#7c3aed;" onclick="runOcrForDocument(\'' + d.id + '\',\'' + d.file_path + '\')" id="ocr-btn-' + d.id + '">🔍 Run OCR</button>';
+      } else if (d.extraction_status === 'ocr_failed' && canRunOcr) {
+        ocrBtn = '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#7c3aed;" onclick="runOcrForDocument(\'' + d.id + '\',\'' + d.file_path + '\')" id="ocr-btn-' + d.id + '">🔄 Retry OCR</button>';
+      } else if (d.extraction_status === 'ocr_processing') {
+        ocrBtn = '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#a0aec0;" disabled id="ocr-btn-' + d.id + '">⏳ Running…</button>';
+        // Resume polling automatically — covers the case where the page was
+        // reloaded (or another user opened it) while a job was still running
+        // on the Lambda side.
+        if (!kbOcrPollTimers[d.id]) pollOcrStatus(d.id);
+      }
       const deleteBtn = canDelete
         ? '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#e2e8f0;color:#c53030;" onclick="deleteKbDocument(\'' + d.id + '\',\'' + d.file_path + '\')">🗑 Delete</button>'
         : '';
@@ -2612,7 +2633,7 @@
         '<div style="font-size:11px;color:var(--slate-light);margin-top:2px;">' + (d.category || 'Other') + ' · Uploaded by ' + (d.uploaded_by || 'Unknown') + ' · ' + (d.uploaded_at ? d.uploaded_at.substring(0,10) : '') + '</div>' +
         (d.description ? '<div style="font-size:12px;color:var(--slate);margin-top:8px;">' + d.description + '</div>' : '') +
         (tagsHtml ? '<div style="margin-top:8px;">' + tagsHtml + '</div>' : '') +
-        '<div style="font-size:11px;margin-top:8px;color:' + statusColor + ';font-weight:600;">' + statusLabel + '</div>' +
+        '<div style="font-size:11px;margin-top:8px;color:' + statusColor + ';font-weight:600;" id="kb-status-' + d.id + '">' + statusLabel + '</div>' +
         '</div>' +
         '<div style="display:flex;gap:6px;flex-shrink:0;">' +
         '<button class="btn-post" style="padding:5px 12px;font-size:11px;" onclick="viewKbDocument(\'' + d.file_path + '\')">📄 View</button>' +
@@ -2699,19 +2720,61 @@
 
   async function runOcrForDocument(id, filePath) {
     const btn = document.getElementById('ocr-btn-' + id);
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Running OCR…'; }
-    try {
-      const res = await fetch('/.netlify/functions/kb-ocr', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ document_id: id, file_path: filePath, bucket: 'kb-documents' })
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'OCR request failed');
-      await loadKbDocuments();
-    } catch(e) {
-      alert('OCR failed: ' + e.message);
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Starting…'; }
+
+    if (KB_OCR_LAMBDA_URL.indexOf('PASTE_YOUR') === 0) {
+      alert('The OCR Lambda URL hasn\'t been configured yet in esi.html (KB_OCR_LAMBDA_URL). Deploy kb-ocr-lambda.mjs to AWS Lambda first, then paste its Function URL in.');
       if (btn) { btn.disabled = false; btn.textContent = '🔍 Run OCR'; }
+      return;
     }
+
+    // Fire the request but don't treat a dropped connection as fatal — Lambda
+    // keeps running server-side regardless of whether this fetch completes,
+    // and the poll below is the real source of truth for the outcome.
+    fetch(KB_OCR_LAMBDA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' }, // avoids a CORS preflight, matching Scan One's Lambda calls
+      body: JSON.stringify({ document_id: id, file_path: filePath, bucket: 'kb-documents' })
+    }).catch(function(e) { console.warn('OCR Lambda request dropped (job continues server-side):', e.message); });
+
+    await loadKbDocuments(); // refresh to show current state
+    if (!kbOcrPollTimers[id]) pollOcrStatus(id); // start polling immediately — don't wait for the row to show ocr_processing first
+  }
+
+  // Polls kb_documents every 6 seconds until OCR finishes, fails, or 14 minutes
+  // elapse — mirrors Scan One's scan_jobs polling pattern exactly.
+  function pollOcrStatus(docId) {
+    var startTime = Date.now();
+    var maxMs = 14 * 60 * 1000;
+    kbOcrPollTimers[docId] = setInterval(async function() {
+      if (Date.now() - startTime > maxMs) {
+        clearInterval(kbOcrPollTimers[docId]);
+        delete kbOcrPollTimers[docId];
+        var statusEl = document.getElementById('kb-status-' + docId);
+        if (statusEl) statusEl.textContent = '⚠ OCR is taking longer than expected — check back later or retry.';
+        return;
+      }
+      try {
+        const { data, error } = await _supabase.from('kb_documents').select('*').eq('id', docId).single();
+        if (error || !data) return;
+        // Update the in-memory record so re-renders reflect the latest state
+        const idx = allKbDocuments.findIndex(d => d.id === docId);
+        if (idx >= 0) allKbDocuments[idx] = data;
+        if (data.extraction_status === 'ocr_complete' || data.extraction_status === 'ocr_failed') {
+          clearInterval(kbOcrPollTimers[docId]);
+          delete kbOcrPollTimers[docId];
+          filterKbDocuments();
+        } else {
+          // Update just the status line + progress in place, without a full re-render
+          var statusEl = document.getElementById('kb-status-' + docId);
+          if (statusEl) {
+            var label = KB_STATUS_LABEL[data.extraction_status] || '';
+            if (data.ocr_pages_done) label += ' (' + data.ocr_pages_done + ' pages so far)';
+            statusEl.textContent = label;
+          }
+        }
+      } catch(e) { console.warn('OCR poll error:', e.message); }
+    }, 6000);
   }
 
   async function viewKbDocument(filePath) {
