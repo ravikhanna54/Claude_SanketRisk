@@ -2858,6 +2858,7 @@
   async function deleteKbDocument(id, filePath) {
     if (!confirm('Delete this document? This cannot be undone.')) return;
     try {
+      if (kbOcrPollTimers[id]) { clearInterval(kbOcrPollTimers[id]); delete kbOcrPollTimers[id]; _dbg('[Delete] Cleared active OCR poll timer for', id); }
       await _supabase.storage.from('kb-documents').remove([filePath]);
       const { error } = await _supabase.from('kb_documents').delete().eq('id', id);
       if (error) throw error;
