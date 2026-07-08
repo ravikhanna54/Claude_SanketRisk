@@ -659,6 +659,45 @@
 </head>
 <body>
 
+<!-- ON-SCREEN DEBUG LOG — for use on devices without DevTools console access -->
+<button id="dbg-toggle-btn" onclick="_toggleDebugPanel()" style="position:fixed;bottom:16px;right:16px;z-index:9999;background:#1a2e42;color:#fff;border:none;border-radius:24px;padding:10px 16px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3);">&#x1F41E; Debug Log</button>
+<div id="dbg-panel" style="display:none;position:fixed;bottom:64px;right:16px;left:16px;max-width:600px;margin:0 auto;max-height:60vh;background:#0f172a;color:#e2e8f0;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:9999;overflow:hidden;">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#1e293b;border-bottom:1px solid #334155;">
+    <strong style="font-size:12px;">Debug Log</strong>
+    <div>
+      <button onclick="_clearDebugPanel()" style="background:#334155;color:#e2e8f0;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;margin-right:6px;">Clear</button>
+      <button onclick="_toggleDebugPanel()" style="background:#334155;color:#e2e8f0;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Close</button>
+    </div>
+  </div>
+  <div id="dbg-content" style="padding:10px 14px;font-family:monospace;font-size:11px;line-height:1.6;overflow-y:auto;max-height:calc(60vh - 44px);white-space:pre-wrap;word-break:break-word;"></div>
+</div>
+<script>
+  function _toggleDebugPanel() {
+    var p = document.getElementById('dbg-panel');
+    if (p) p.style.display = (p.style.display === 'none' ? 'block' : 'none');
+  }
+  function _clearDebugPanel() {
+    var c = document.getElementById('dbg-content');
+    if (c) c.innerHTML = '';
+  }
+  function _dbg() {
+    var parts = Array.prototype.slice.call(arguments).map(function(a) {
+      if (typeof a === 'object') { try { return JSON.stringify(a); } catch(e) { return String(a); } }
+      return String(a);
+    });
+    var line = parts.join(' ');
+    console.log(line);
+    var c = document.getElementById('dbg-content');
+    if (c) {
+      var entry = document.createElement('div');
+      entry.style.cssText = 'padding:3px 0;border-bottom:1px solid #1e293b;';
+      entry.textContent = new Date().toLocaleTimeString() + '  ' + line;
+      c.appendChild(entry);
+      c.scrollTop = c.scrollHeight;
+    }
+  }
+</script>
+
 <!-- HEADER -->
 <div class="esi-header">
   <div class="esi-logo">
@@ -2656,6 +2695,7 @@
     if (!title || !file) { msg.textContent = '⚠ Title and PDF file are required.'; return; }
     if (file.type !== 'application/pdf') { msg.textContent = '⚠ Only PDF files are accepted.'; return; }
 
+    _dbg('[Upload] Starting:', title, '(' + Math.round(file.size / 1024) + ' KB)');
     btn.disabled = true;
     msg.textContent = 'Uploading…';
 
@@ -2666,15 +2706,18 @@
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       const filePath = crypto.randomUUID() + '-' + safeName;
 
+      _dbg('[Upload] Uploading to Storage bucket kb-documents at path:', filePath);
       const { error: upErr } = await _supabase.storage.from('kb-documents').upload(filePath, file, { contentType: 'application/pdf' });
-      if (upErr) throw upErr;
+      if (upErr) { _dbg('[Upload] Storage upload FAILED:', upErr.message); throw upErr; }
+      _dbg('[Upload] Storage upload OK');
 
       const { data: inserted, error: insErr } = await _supabase.from('kb_documents').insert({
         title, category, description: description || null, tags: tags || null,
         file_path: filePath, file_name: file.name, file_size: file.size,
         extraction_status: 'pending', uploaded_by: uploadedBy,
       }).select().single();
-      if (insErr) throw insErr;
+      if (insErr) { _dbg('[Upload] kb_documents row insert FAILED:', insErr.message); throw insErr; }
+      _dbg('[Upload] kb_documents row created, id:', inserted.id);
 
       msg.textContent = '✓ Uploaded — extracting text…';
       await extractPdfTextClientSide(file, inserted.id);
@@ -2686,8 +2729,10 @@
       msg.textContent = '';
       toggleKbUploadForm();
       await loadKbDocuments();
+      _dbg('[Upload] Complete.');
     } catch(e) {
       msg.textContent = '✗ Error: ' + e.message;
+      _dbg('[Upload] FAILED overall:', e.message);
     }
     btn.disabled = false;
   }
@@ -2708,12 +2753,13 @@
       }
       const trimmed = fullText.trim();
       const status = trimmed.length > 50 ? 'text_extracted' : 'needs_ocr';
+      _dbg('[Extract] pdf.js found', trimmed.length, 'chars across', pdf.numPages, 'pages — status:', status);
       await _supabase.from('kb_documents').update({
         text_content: trimmed.length > 50 ? trimmed.substring(0, 500000) : null,
         extraction_status: status
       }).eq('id', docId);
     } catch(e) {
-      console.warn('Client-side text extraction failed:', e.message);
+      _dbg('[Extract] Client-side text extraction failed:', e.message, '— flagging needs_ocr');
       await _supabase.from('kb_documents').update({ extraction_status: 'needs_ocr' }).eq('id', docId);
     }
   }
@@ -2721,8 +2767,10 @@
   async function runOcrForDocument(id, filePath) {
     const btn = document.getElementById('ocr-btn-' + id);
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Starting…'; }
+    _dbg('[OCR] Triggered for document:', id, 'path:', filePath);
 
     if (KB_OCR_LAMBDA_URL.indexOf('PASTE_YOUR') === 0) {
+      _dbg('[OCR] KB_OCR_LAMBDA_URL not configured — aborting.');
       alert('The OCR Lambda URL hasn\'t been configured yet in esi.html (KB_OCR_LAMBDA_URL). Deploy kb-ocr-lambda.mjs to AWS Lambda first, then paste its Function URL in.');
       if (btn) { btn.disabled = false; btn.textContent = '🔍 Run OCR'; }
       return;
@@ -2741,11 +2789,17 @@
     // Fire the request but don't treat a dropped connection as fatal — Lambda
     // keeps running server-side regardless of whether this fetch completes,
     // and the poll below is the real source of truth for the outcome.
+    _dbg('[OCR] Calling Lambda:', KB_OCR_LAMBDA_URL);
     fetch(KB_OCR_LAMBDA_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' }, // avoids a CORS preflight, matching Scan One's Lambda calls
       body: JSON.stringify({ document_id: id, file_path: filePath, bucket: 'kb-documents' })
-    }).catch(function(e) { console.warn('OCR Lambda request dropped (job continues server-side):', e.message); });
+    }).then(function(res) {
+      _dbg('[OCR] Lambda HTTP response status:', res.status);
+      return res.text();
+    }).then(function(txt) {
+      _dbg('[OCR] Lambda response body:', txt.substring(0, 300));
+    }).catch(function(e) { _dbg('[OCR] Request dropped client-side (job may still be running server-side):', e.message); });
 
     if (!kbOcrPollTimers[id]) pollOcrStatus(id);
   }
@@ -2760,13 +2814,15 @@
       if (Date.now() - startTime > maxMs) {
         clearInterval(kbOcrPollTimers[docId]);
         delete kbOcrPollTimers[docId];
+        _dbg('[OCR Poll]', docId, '— gave up after 14 minutes with no completion');
         var statusEl = document.getElementById('kb-status-' + docId);
         if (statusEl) statusEl.textContent = '⚠ OCR is taking longer than expected — check back later or retry.';
         return;
       }
       try {
         const { data, error } = await _supabase.from('kb_documents').select('*').eq('id', docId).single();
-        if (error || !data) return;
+        if (error || !data) { _dbg('[OCR Poll]', docId, '— query error or no row:', error && error.message); return; }
+        _dbg('[OCR Poll]', docId, '— status:', data.extraction_status, 'pages_done:', data.ocr_pages_done || 0, data.ocr_error ? ('error: ' + data.ocr_error) : '');
         // Update the in-memory record so re-renders reflect the latest state
         const idx = allKbDocuments.findIndex(d => d.id === docId);
         if (idx >= 0) allKbDocuments[idx] = data;
@@ -2782,7 +2838,7 @@
             statusEl.textContent = label;
           }
         }
-      } catch(e) { console.warn('OCR poll error:', e.message); }
+      } catch(e) { _dbg('[OCR Poll]', docId, '— exception:', e.message); }
     }
 
     setTimeout(checkOnce, 2500); // quick first check, well before the regular interval, so feedback appears fast
