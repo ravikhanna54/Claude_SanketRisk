@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 358 — 2026-07-03 — AI prompt: sprinkler system must never be assumed designed/adequate per NFPA 13; wet/dry type only stated if confirmed by piping/valve evidence; hydraulic data plate design density only reported if plate is visible AND legible; otherwise recommend review by a competent sprinkler contractor per occupancy hazard -->
+<!-- SanketRisk SCAN ONE — Deploy 359 — 2026-07-10 — Wire in BC building footprint dataset (Microsoft CanadianBuildingFootprints, 1.36M buildings, loaded into Supabase PostGIS) as the priority footprint source for BC addresses — takes precedence over Google's Preview outline feature and OSM/Overpass, since it's now the most complete/reliable data we have for this province -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1995,6 +1995,45 @@
           _dbg('[Footprint] registry-intel fetch not ok — HTTP', gResp.status, '— falling back to Nominatim/OSM entirely.');
         }
       } catch(gErr) { _dbg('[Footprint] Google building outline error (fetch threw):', gErr.message); }
+
+      // ── Step 1.5 — BC-specific building footprint lookup (Microsoft dataset,
+      // 1.36M buildings, loaded into our own Supabase PostGIS table). This takes
+      // priority over Google's outline and OSM for BC addresses specifically,
+      // since it's now the most complete and reliable source we have for this
+      // province — Google's outline feature is still Preview/limited-coverage,
+      // and OSM has been the source of prior inaccuracies (e.g. Hope, BC). ──
+      var isBC = /\bB\.?C\.?\b|\bBRITISH COLUMBIA\b/i.test(province || '');
+      if (lat !== null && isBC) {
+        try {
+          _dbg('[Footprint] Province is BC — checking Microsoft building footprint dataset at', lat, lon);
+          var bcResp = await fetch('/.netlify/functions/building-footprint-lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat: lat, lon: lon })
+          });
+          if (bcResp.ok) {
+            var bcJson = await bcResp.json();
+            _dbg('[Footprint] BC footprint lookup response:', bcJson);
+            if (bcJson.status === 'ok') {
+              var bcAreaSqFt = bcJson.footprint_area_sq_ft;
+              footprintSource = 'Microsoft Building Footprints (BC)' + (bcJson.match_type === 'nearest' ? ' — nearest match, ' + Math.round(bcJson.distance_m) + 'm away' : '');
+              _dbg('[Footprint] Using BC dataset footprint:', Math.round(bcAreaSqFt), 'sq ft —', bcJson.match_type);
+              footprintHtml =
+                '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
+                _riRow('Mapped Footprint Area', '<strong>' + Math.round(bcAreaSqFt).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(bcJson.footprint_area_sq_m).toLocaleString('en-CA') + ' m\u00B2)') +
+                (declaredArea ? _riRow('Declared Building Area', declaredArea + (isNaN(parseFloat(declaredArea)) ? '' : ' sq ft')) : '') +
+                _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
+                _riRow('Data Source', footprintSource) +
+                '</table>' +
+                _compareFootprintArea(declaredArea, bcAreaSqFt);
+            } else {
+              _dbg('[Footprint] No BC dataset match — falling through to Google outline / OSM.');
+            }
+          } else {
+            _dbg('[Footprint] BC footprint lookup HTTP not ok:', bcResp.status);
+          }
+        } catch(bcErr) { _dbg('[Footprint] BC footprint lookup error:', bcErr.message); }
+      }
 
       // ── Step 2 — fallback to OSM/Nominatim + Overpass if Google had no outline ──
       if (!footprintSource) {
