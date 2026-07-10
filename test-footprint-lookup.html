@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Building Footprint Lookup — Test</title>
+<style>
+  body { font-family: -apple-system, 'Segoe UI', sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; background: #f5f5f3; color: #1a2e42; }
+  h1 { font-size: 20px; }
+  .field { margin-bottom: 14px; }
+  label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #4a6580; margin-bottom: 4px; }
+  input { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+  button { background: #1a2e42; color: #fff; border: none; border-radius: 6px; padding: 12px 20px; font-size: 14px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 6px; }
+  button:disabled { opacity: .5; }
+  #result { margin-top: 24px; padding: 16px; border-radius: 8px; background: #fff; border: 1px solid #ddd; white-space: pre-wrap; font-family: monospace; font-size: 12px; display: none; }
+  #summary { margin-top: 16px; padding: 14px; border-radius: 8px; font-size: 14px; display: none; }
+  .ok { background: #f0fff4; border: 1px solid #9ae6b4; color: #276749; }
+  .warn { background: #fff5f5; border: 1px solid #fc8181; color: #c53030; }
+  .presets { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .preset-btn { flex: none; width: auto; background: #e2e8f0; color: #1a2e42; font-size: 12px; padding: 6px 12px; }
+</style>
+</head>
+<body>
+  <h1>🏢 Building Footprint Lookup — Test Page</h1>
+  <p style="font-size:13px;color:#4a6580;">Tests the <code>building-footprint-lookup</code> Netlify function directly against the BC building footprints database (1.36M buildings, loaded from Microsoft's dataset). Enter a lat/lon and see the raw response.</p>
+
+  <div class="presets">
+    <button class="preset-btn" onclick="setCoords(49.37931,-121.43861)">Hope, BC (known test case)</button>
+    <button class="preset-btn" onclick="setCoords(49.2827,-123.1207)">Vancouver, BC</button>
+    <button class="preset-btn" onclick="setCoords(48.4284,-123.3656)">Victoria, BC</button>
+  </div>
+
+  <div class="field">
+    <label>Latitude</label>
+    <input type="text" id="lat" placeholder="e.g. 49.37931" value="49.37931">
+  </div>
+  <div class="field">
+    <label>Longitude</label>
+    <input type="text" id="lon" placeholder="e.g. -121.43861" value="-121.43861">
+  </div>
+  <button id="testBtn" onclick="runTest()">Run Lookup</button>
+
+  <div id="summary"></div>
+  <div id="result"></div>
+
+<script>
+function setCoords(lat, lon) {
+  document.getElementById('lat').value = lat;
+  document.getElementById('lon').value = lon;
+}
+
+async function runTest() {
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lon = parseFloat(document.getElementById('lon').value);
+  const btn = document.getElementById('testBtn');
+  const resultEl = document.getElementById('result');
+  const summaryEl = document.getElementById('summary');
+
+  if (isNaN(lat) || isNaN(lon)) {
+    alert('Please enter valid numbers for both latitude and longitude.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Running…';
+  resultEl.style.display = 'none';
+  summaryEl.style.display = 'none';
+
+  try {
+    const startTime = Date.now();
+    const res = await fetch('/.netlify/functions/building-footprint-lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat, lon })
+    });
+    const elapsed = Date.now() - startTime;
+    const data = await res.json();
+
+    resultEl.style.display = 'block';
+    resultEl.textContent = 'HTTP ' + res.status + ' (' + elapsed + 'ms)\n\n' + JSON.stringify(data, null, 2);
+
+    summaryEl.style.display = 'block';
+    if (data.status === 'ok') {
+      summaryEl.className = 'ok';
+      summaryEl.innerHTML = '<strong>✓ Match found</strong> (' + data.match_type + ')<br>' +
+        'Footprint area: <strong>' + Math.round(data.footprint_area_sq_ft).toLocaleString() + ' sq ft</strong> (' + Math.round(data.footprint_area_sq_m).toLocaleString() + ' m²)' +
+        (data.distance_m ? '<br>Distance from point: ' + Math.round(data.distance_m) + ' m' : '');
+    } else if (data.status === 'not_found') {
+      summaryEl.className = 'warn';
+      summaryEl.innerHTML = '<strong>No building found</strong> within 50m of this point.';
+    } else {
+      summaryEl.className = 'warn';
+      summaryEl.innerHTML = '<strong>Error:</strong> ' + (data.error || 'Unknown error');
+    }
+  } catch (e) {
+    resultEl.style.display = 'block';
+    resultEl.textContent = 'Request failed: ' + e.message;
+    summaryEl.style.display = 'block';
+    summaryEl.className = 'warn';
+    summaryEl.innerHTML = '<strong>✗ Request failed</strong> — ' + e.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Run Lookup';
+}
+</script>
+</body>
+</html>
