@@ -816,9 +816,29 @@
           <p><strong>Mixed:</strong> Some floors/units owner-occupied, others leased. Document the breakdown and identify tenant occupancies separately.</p>
         </div>
         <div class="esi-card">
-          <div class="esi-card-title">Hazardous Operations & Materials</div>
-          <p>Select all applicable hazardous processes. Each selection opens a detailed supplementary panel — complete all fields within each active panel. The NFPA Hazard Category should reflect the overall hazard classification of the occupancy, taking into account all processes present.</p>
+          <div class="esi-card-title">Special Hazards</div>
+          <p>Formerly labelled "Hazardous Operations & Materials" — renamed to <strong>Special Hazards</strong> to reflect the broader range of process hazards now covered, including Process Heat (see below). Select all applicable hazardous processes. Each selection opens a detailed supplementary panel — complete all fields within each active panel. The NFPA Hazard Category should reflect the overall hazard classification of the occupancy, taking into account all processes present.</p>
           <p>When multiple hazards coexist (e.g., welding AND flammable liquid storage), the combined risk is greater than any single hazard alone. Elevate the NFPA category accordingly and document the interaction in the Hazard Notes field.</p>
+        </div>
+        <div class="esi-card">
+          <div class="esi-card-title">Process Heat</div>
+          <p>Covers boilers, ovens, heated elements, and heated oil/water processes — any equipment where heat is deliberately applied as part of an industrial or commercial process, distinct from incidental heat sources like HVAC or water heaters covered elsewhere in the form.</p>
+          <table class="field-table">
+            <thead><tr><th>Field</th><th>Guidance</th></tr></thead>
+            <tbody>
+              <tr><td class="field-name">Type of Process</td><td>Select all that apply — a single occupancy may have more than one (e.g. a boiler for building heat AND a separate heated-oil fryer process). Each type carries different failure modes worth noting in the field notes if unusual.</td></tr>
+              <tr><td class="field-name">Direct / Indirect Heat</td><td><strong>Direct</strong> — the combustible product makes direct contact with the heat supply (e.g. an open flame or heating element touching the product). This carries a higher ignition risk. <strong>Indirect</strong> — heat is transferred via radiation from heated tubes, or by passing air through a heat exchanger, without direct flame/element contact. Select Both/Mixed if the process uses both methods at different stages.</td></tr>
+              <tr><td class="field-name">Construction of Heat Device</td><td>Note the enclosure material — refractory-lined steel and insulated jacketed steel are the most common and generally well-contained. An uninsulated sheet steel enclosure is a comparatively higher-risk construction, since the exterior surface itself can reach elevated temperatures.</td></tr>
+              <tr><td class="field-name">Temperature(s) Used</td><td>Record the actual operating temperature or range, not a nameplate maximum, if the two differ. This is directly relevant to assessing clearance-to-combustibles adequacy.</td></tr>
+              <tr><td class="field-name">Fuel Used</td><td>Note the fuel type and, where relevant to the risk (e.g. dual-fuel systems, or an unusual fuel for the process type), add detail in the notes field.</td></tr>
+              <tr><td class="field-name">Controls / Shut-off Devices</td><td>Select all safety controls actually observed or confirmed present — high-limit temperature cutoff, flame failure/safety shutoff, low-water cutoff (boilers), pressure relief valve, emergency stop, automatic fuel shutoff, ventilation interlock. Select "None Observed" rather than leaving blank if no controls could be confirmed — this is a materially different statement than an incomplete field.</td></tr>
+              <tr><td class="field-name">Clearance to Combustibles</td><td>Assess the physical distance between the heat source and the nearest combustible material or storage. "Inadequate" should trigger a specific recommendation in the report, not just a lower grade.</td></tr>
+              <tr><td class="field-name">Ventilation / Exhaust System</td><td>Relevant both for removing heat/fumes and for combustion air supply on fuel-fired equipment. Note if ventilation appeared inadequate for the apparent heat/fume load.</td></tr>
+              <tr><td class="field-name">Maintenance / Inspection Frequency</td><td>Ask the insured directly rather than assuming — "Unknown / Not Documented" is a valid and often accurate answer, and is itself a useful underwriting signal distinct from a confirmed annual program.</td></tr>
+              <tr><td class="field-name">Applicable NFPA Standard</td><td>NFPA 86 (Ovens and Furnaces), NFPA 85 (Boiler and Combustion Systems), or NFPA 87 (Fluid Heaters) — select based on the process type. This is a reference note for the report, not something the inspector is expected to audit compliance against; if in doubt, select the closest match and note the specific equipment type.</td></tr>
+            </tbody>
+          </table>
+          <div class="callout callout-tip"><strong>Photo Priority:</strong> For any Process Heat hazard, prioritize a clear photo of the equipment data plate (showing manufacturer, model, temperature rating, fuel type) alongside a wider context shot showing clearance to surrounding combustibles — these two photos together cover most of what the fields above ask for.</div>
         </div>
         <div class="callout callout-warn"><strong>Supplement Triggers:</strong> Certain occupancies require completion of a Supplement module. Activate the appropriate supplement via the Supplement Manager: Restaurant (cooking operations), Woodworking (millwork/cabinet shops), Warehouse (storage operations), Auto Service (garages/body shops), Sprinkler (sprinklered buildings), Apartments (multi-residential).</div>
       </div>
@@ -1758,8 +1778,8 @@
           <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-fus-grading')"><div class="index-card-title">🔥 FUS Grading Methodology</div><div class="index-card-sub">Fire Underwriters Survey system</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
           <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-nbc-climatic')"><div class="index-card-title">🌊 NBC 2025 Climatic Design Data</div><div class="index-card-sub">Snow loads, wind, seismic hazard</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
           <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-sprinkler-systems')"><div class="index-card-title">💧 Sprinkler Systems &amp; NFPA 13</div><div class="index-card-sub">Wet, dry, pre-action, deluge types</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
-          <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">📋 IBC Occupancy Code Reference</div><div class="index-card-sub">Full reference with SIC/NAICS</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
-          <div class="index-card" style="border-left:4px solid var(--gold);"><div class="index-card-title">⚠️ Underwriting Red Flags Guide</div><div class="index-card-sub">Conditions triggering referral/declination</div><div style="font-size:11px;color:var(--slate-light);margin-top:8px;">Coming soon</div></div>
+          <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-ibc-occupancy')"><div class="index-card-title">📋 IBC Occupancy Code Reference</div><div class="index-card-sub">Full reference with SIC/NAICS</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
+          <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-red-flags')"><div class="index-card-title">⚠️ Underwriting Red Flags Guide</div><div class="index-card-sub">Conditions triggering referral/declination</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
         </div>
 
         <!-- ═══════════ ISO CONSTRUCTION CLASSIFICATION GUIDE ═══════════ -->
@@ -2496,6 +2516,80 @@
 
           <div class="callout callout-info" style="margin-top:20px;"><strong>How the Platform Uses This Data:</strong> The <code>climatic_design_data</code> table is queried by location (city + province) to retrieve the Smax, snow, and wind values for that specific location, feeding the Sanket Nat-Cat Grading module's demerit-weighted scoring for Earthquake, Wind/Storm, and Flood/Water hazard tiers — producing a Grade 1–5 rating consistent with the Property and Sprinkler grading methodology used elsewhere on the platform. If a lookup fails to find a location, this reflects a data or matching issue (see the platform's Debug Log panel) rather than an actual absence of climatic data for that area — every populated Canadian location has an applicable NBC value, even if the exact municipality name isn't in the 680-location table and a nearby larger centre must be used as a proxy.</div>
           <div class="callout callout-warn" style="margin-top:12px;"><strong>This Is Reference Data, Not a Substitute for Engineering Analysis:</strong> These values inform underwriting risk grading and flag where closer attention to construction vulnerability is warranted — they are not a structural adequacy determination. Where a specific building's ability to meet current code demand is in genuine question (e.g. a pre-1970s unreinforced masonry building in a high Smax zone), the appropriate recommendation is a structural/seismic assessment by a qualified engineer, not a conclusion drawn from the climatic data alone.</div>
+        </div>
+
+        <!-- ═══════════ IBC OCCUPANCY CODE REFERENCE ═══════════ -->
+        <div class="esi-section" id="kb-ibc-occupancy" style="margin-top:36px;">
+          <div class="esi-section-title">IBC Occupancy Code Reference <span class="esi-section-tag">IBC / SIC / NAICS</span></div>
+          <p class="esi-sub">The COPE form's "IBC / SIC / NAICS Code" dropdown carries 181 pre-built occupancy codes, organized into ten category ranges. This guide explains the coding structure, why three different code systems are shown together for every entry, and how to choose correctly when an occupancy doesn't fit neatly into one option.</p>
+
+          <div class="callout callout-info"><strong>Three Codes, One Selection:</strong> Each dropdown entry carries an <strong>IBC-style code</strong> (this platform's own internal classification, loosely modeled on industry occupancy coding conventions), a <strong>SIC code</strong> (Standard Industrial Classification — an older US system still widely referenced in insurance rating manuals), and a <strong>NAICS code</strong> (North American Industry Classification System — the modern standard used by Statistics Canada and the US Census Bureau). Selecting one dropdown entry records all three simultaneously, so the report carries whichever code system a given recipient (insurer, reinsurer, regulator) expects to see.</div>
+
+          <table class="nfpa-table">
+            <thead><tr><th>Range</th><th>Category</th><th>Approx. Codes</th><th>Examples</th></tr></thead>
+            <tbody>
+              <tr><td><strong>0000s</strong></td><td>Contractors, Trades &amp; Agriculture</td><td>21</td><td>General/Electrical Contractors, Feed Mills, Farm Supplies</td></tr>
+              <tr><td><strong>1000s</strong></td><td>Residential &amp; Multi-Family</td><td>6</td><td>Apartments (Low/High Rise), Condominiums, Mobile Home Parks</td></tr>
+              <tr><td><strong>2000s</strong></td><td>Lodging &amp; Transient Accommodation</td><td>4</td><td>Hotels, Motels, Casino Hotels, Campgrounds</td></tr>
+              <tr><td><strong>3000s</strong></td><td>Office &amp; Professional Services</td><td>39</td><td>General Offices, Engineering, Legal, Medical/Dental, Financial Services, Associations</td></tr>
+              <tr><td><strong>4000s</strong></td><td>Retail — General Merchandise</td><td>25</td><td>Grocery, Drug Stores, Department Stores, Bakeries</td></tr>
+              <tr><td><strong>5000s</strong></td><td>Restaurants, Personal Services &amp; Repair</td><td>16</td><td>Restaurants, Bars, Appliance/Electronics Repair</td></tr>
+              <tr><td><strong>6000s</strong></td><td>Recreation, Entertainment &amp; Real Estate</td><td>17</td><td>Theatres, Gyms/Fitness Centres, Real Estate/Strata Management</td></tr>
+              <tr><td><strong>7000s</strong></td><td>Manufacturing</td><td>23</td><td>Food/Beverage Mfg, Printing, Plastics/Foam Products, Industrial Chemicals</td></tr>
+              <tr><td><strong>8000s</strong></td><td>Warehousing &amp; Wholesale</td><td>9</td><td>General/Cold Storage Warehousing, Wholesale Distribution</td></tr>
+              <tr><td><strong>9000s</strong></td><td>Automotive &amp; Miscellaneous</td><td>21</td><td>Auto Dealers, Body Shops, Salvage Yards, Vacant Buildings</td></tr>
+            </tbody>
+          </table>
+
+          <div class="esi-card">
+            <div class="esi-card-title">Choosing the Right Code</div>
+            <p>Use the dropdown's search/type-ahead to find candidates by keyword rather than scrolling the full list — searching "restaurant," "warehouse," or "manufacturing" will surface the relevant range quickly.</p>
+            <p><strong>When no code matches exactly:</strong> select the closest available code rather than leaving the field blank, and use the Description of Operations narrative (Occupancy section) to note the specific discrepancy — e.g. selecting "7340 — Plastics / Foam Products Mfg" for a facility that also does light metal fabrication, with a note explaining the secondary operation. The narrative field is where nuance belongs; the code field is a categorical anchor for rating and data purposes, not a full description in itself.</p>
+            <p><strong>Mixed or multi-tenant occupancies:</strong> select the code for the <em>predominant</em> or primary insured operation. If a building genuinely spans very different occupancy types (e.g. ground-floor retail with upper-floor apartments), document each significant occupancy separately in the narrative even though only one code can be selected in the dropdown.</p>
+          </div>
+
+          <div class="callout callout-tip"><strong>Why This Matters Beyond Data Entry:</strong> The selected occupancy code is a direct input to hazard classification elsewhere in the platform — it informs which NFPA Hazard Category is expected as a baseline (see the NFPA Hazard Classification guide), and which Special Hazards or Supplement modules are likely relevant. A code chosen carelessly can produce a mismatch between the stated occupancy and the hazards actually documented in the report — if in doubt between two candidates, pick the one that best matches the primary hazard profile of the operation, not just its general business description.</div>
+        </div>
+
+        <!-- ═══════════ UNDERWRITING RED FLAGS GUIDE ═══════════ -->
+        <div class="esi-section" id="kb-red-flags" style="margin-top:36px;">
+          <div class="esi-section-title">Underwriting Red Flags Guide <span class="esi-section-tag">REFERRAL / DECLINATION</span></div>
+          <p class="esi-sub">This guide organizes conditions across all four COPE elements and Nat-Cat that typically warrant escalation — referral to an underwriter, a specific remediation recommendation, or in the most severe cases, consideration of declination. It draws together the individual guidance already covered in the Construction, Protection, Occupancy, and Nat-Cat sections of this Form Filling Guide and the Knowledge Base articles, rather than introducing new criteria. <strong>This is a triage tool, not an automated decision-maker</strong> — final underwriting judgment always rests with the underwriter; the inspector's role is to document conditions clearly and flag them prominently, not to approve or decline coverage.</p>
+
+          <table class="nfpa-table">
+            <thead><tr><th>Category</th><th>Condition</th><th>Typical Escalation</th></tr></thead>
+            <tbody>
+              <tr><td rowspan="4"><strong>Construction</strong></td><td>Unreinforced masonry (URM) bearing walls in a Moderate+ Smax seismic zone, no visible retrofit</td><td>Refer to underwriter; consider requiring a seismic assessment</td></tr>
+              <tr><td>Federal Pacific or Zinsco electrical panels observed</td><td>High-priority recommendation regardless of other findings — recognized fire hazard brands</td></tr>
+              <tr><td>Soft-storey condition (open ground floor parking/retail below occupied storeys)</td><td>Refer to underwriter, particularly in higher seismic zones</td></tr>
+              <tr><td>Roof, structural, or envelope deficiencies suggesting deferred maintenance well beyond normal wear</td><td>Refer to underwriter with photos; consider requiring remediation as a condition of coverage</td></tr>
+              <tr><td rowspan="4"><strong>Protection</strong></td><td>No automatic sprinklers in an Extra Hazard or high-value occupancy</td><td>Refer to underwriter — may affect terms, pricing, or insurability</td></tr>
+              <tr><td>Painted sprinkler heads, or heads with obstructed clearance</td><td>Immediate recommendation — heads may not function correctly regardless of system design</td></tr>
+              <tr><td>Sprinkler system type/design adequacy not confirmable from photos (per the Sprinkler Systems guide)</td><td>Recommend review by a qualified sprinkler contractor before relying on the system in underwriting</td></tr>
+              <tr><td>FUS Public Fire Protection Classification 9–10 (Unprotected), or &gt;8 km from responding fire hall</td><td>Refer to underwriter — significant surcharge or restriction likely</td></tr>
+              <tr><td rowspan="3"><strong>Occupancy / Special Hazards</strong></td><td>Undisclosed hazardous process discovered on-site (not matching the stated occupancy code or application)</td><td>Refer to underwriter immediately — may constitute material misrepresentation</td></tr>
+              <tr><td>High-piled storage or Group A/B/C plastics present without specialist sprinkler design confirmation</td><td>Recommend fire protection engineer review per the High-Piled Storage &amp; Plastics guide</td></tr>
+              <tr><td>Process Heat equipment with "None Observed" controls and inadequate clearance to combustibles</td><td>High-priority recommendation; consider referral if clearance is severely inadequate</td></tr>
+              <tr><td rowspan="3"><strong>Exposure</strong></td><td>Adjacent occupancy within minimum separation distance carrying its own significant hazard (e.g. woodworking, auto body immediately adjacent)</td><td>Refer to underwriter — exposure risk independent of the insured building's own condition</td></tr>
+              <tr><td>Property in a mapped floodplain with no elevation or mitigation evident</td><td>Refer to underwriter; review flood sublimits/deductibles</td></tr>
+              <tr><td>Significant wildland-urban interface (WUI) exposure per the Canadian Wildfire Grading Index</td><td>Refer to underwriter, particularly in BC/Alberta and similar zones</td></tr>
+              <tr><td rowspan="2"><strong>Nat-Cat</strong></td><td>Nat-Cat Grade 4 or 5 (Elevated or Severe exposure)</td><td>Refer to underwriter per the Nat-Cat Grade Calculator guidance; consider peril-specific deductibles/sublimits</td></tr>
+              <tr><td>High Smax zone with visibly unreinforced/unbraced structural elements</td><td>Recommend structural/seismic engineering assessment</td></tr>
+            </tbody>
+          </table>
+
+          <div class="esi-card">
+            <div class="esi-card-title">General / Documentation Red Flags</div>
+            <p>Beyond specific physical conditions, certain patterns in how an inspection unfolds are themselves worth flagging:</p>
+            <ul style="margin:8px 0 0 20px;padding:0;">
+              <li><strong>Access refused or restricted</strong> to key areas (electrical room, roof, mechanical spaces) — note explicitly what could not be inspected and why, rather than omitting it silently. An incomplete inspection is a materially different statement than a clean one.</li>
+              <li><strong>Loss history refused or evasive</strong> when requested directly — document the request and the response (or non-response) factually.</li>
+              <li><strong>Material inconsistency</strong> between the insured's verbal statements and what's directly observed (e.g. insured states "no hazardous materials" while flammable liquid storage is visibly present) — document both the statement and the observation without editorializing on intent.</li>
+              <li><strong>Housekeeping and general maintenance</strong> significantly below what would be expected for the occupancy and value at risk — often correlates with elevated loss frequency even absent any single disqualifying condition.</li>
+            </ul>
+          </div>
+
+          <div class="callout callout-warn"><strong>Escalation Is About Visibility, Not Authority:</strong> Inspectors and field staff do not have authority to decline coverage or dictate terms — that judgment belongs to the underwriter. The inspector's responsibility is to ensure conditions like those above are impossible to miss in the report: clear photos, explicit narrative description, and use of the report's recommendation/referral fields as intended. A well-documented red flag that reaches the underwriter's attention is far more valuable than an inspector's own informal opinion on insurability.</div>
         </div>
       </div>
     </div><!-- end panel-knowledge -->
@@ -3235,6 +3329,8 @@ create policy "Admins only can delete bulletins"
         { id: 'kb-nbc-climatic', label: '🌊 NBC 2025 Climatic Data — Overview' },
         { id: 'kb-nbc-seismic', label: '🌋 Seismic Hazard — Smax' },
         { id: 'kb-nbc-snow-wind', label: '❄️ Snow & Wind Design Loads' },
+        { id: 'kb-ibc-occupancy', label: '📋 IBC Occupancy Code Reference' },
+        { id: 'kb-red-flags', label: '⚠️ Underwriting Red Flags Guide' },
       ]},
     ],
   };
@@ -3336,7 +3432,7 @@ create policy "Admins only can delete bulletins"
     { tab:'guide', id:'guide-intro',           title:'Introduction & Inspection Setup',  keywords:'inspection id purpose date inspector assignment' },
     { tab:'guide', id:'guide-insured',          title:'Insured & Property Information',   keywords:'insured legal entity address contact mailing' },
     { tab:'guide', id:'guide-construction',     title:'Construction COPE C',              keywords:'construction iso class year built roof building electrical heating' },
-    { tab:'guide', id:'guide-occupancy',        title:'Occupancy COPE O',                 keywords:'occupancy operations hazardous ibc sic naics tenant owner' },
+    { tab:'guide', id:'guide-occupancy',        title:'Occupancy COPE O',                 keywords:'occupancy operations hazardous special hazards process heat boiler oven ibc sic naics tenant owner' },
     { tab:'guide', id:'guide-protection',       title:'Protection COPE P',                keywords:'sprinkler fire alarm fus hydrant security monitoring' },
     { tab:'guide', id:'guide-exposure',         title:'Exposure COPE E',                  keywords:'exposure neighbouring flood earthquake wind wildfire' },
     { tab:'guide', id:'guide-natcat',           title:'Natural Catastrophe Nat-Cat',      keywords:'natcat nbc 2025 seismic climatic wind snow flood grade' },
@@ -3366,6 +3462,8 @@ create policy "Admins only can delete bulletins"
     { tab:'knowledge', id:'kb-nbc-climatic', title:'NBC 2025 Climatic Design Data Overview', keywords:'nbc 2025 climatic design data appendix c smax snow wind seismic natcat' },
     { tab:'knowledge', id:'kb-nbc-seismic', title:'Seismic Hazard — Smax',                   keywords:'smax sa(0.2) seismic hazard unreinforced masonry soft storey' },
     { tab:'knowledge', id:'kb-nbc-snow-wind', title:'Snow & Wind Design Loads',              keywords:'snow load ss sr wind design pressure ground snow rain load uniform risk' },
+    { tab:'knowledge', id:'kb-ibc-occupancy', title:'IBC Occupancy Code Reference',          keywords:'ibc sic naics occupancy code dropdown category range residential office retail manufacturing warehouse' },
+    { tab:'knowledge', id:'kb-red-flags', title:'Underwriting Red Flags Guide',              keywords:'red flag referral declination escalation underwriter recommendation construction protection occupancy exposure natcat' },
     { tab:'technical', id:'tech-nfpa',      title:'NFPA Hazard Classification',       keywords:'nfpa hazard light ordinary extra classification sprinkler design density area gpm high piled storage plastics class specialist' },
     { tab:'technical', id:'tech-cooking',   title:'Cooking Open Flame',               keywords:'cooking flame hood suppression nfpa 96 cleaning restaurant' },
     { tab:'technical', id:'tech-welding',   title:'Welding Cutting',                  keywords:'welding cutting hot work permit fire watch' },
