@@ -1780,6 +1780,7 @@
           <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-sprinkler-systems')"><div class="index-card-title">💧 Sprinkler Systems &amp; NFPA 13</div><div class="index-card-sub">Wet, dry, pre-action, deluge types</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
           <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-ibc-occupancy')"><div class="index-card-title">📋 IBC Occupancy Code Reference</div><div class="index-card-sub">Full reference with SIC/NAICS</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
           <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-red-flags')"><div class="index-card-title">⚠️ Underwriting Red Flags Guide</div><div class="index-card-sub">Conditions triggering referral/declination</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
+          <div class="index-card" style="border-left:4px solid var(--gold);cursor:pointer;" onclick="goToSection('knowledge','kb-construction-cost')"><div class="index-card-title">&#x1F4B0; Construction Cost Reference</div><div class="index-card-sub">Altus Group 2026 Cost Guide, BC</div><div style="font-size:11px;color:var(--green);margin-top:8px;font-weight:600;">→ View Guide</div></div>
         </div>
 
         <!-- ═══════════ ISO CONSTRUCTION CLASSIFICATION GUIDE ═══════════ -->
@@ -2591,6 +2592,21 @@
 
           <div class="callout callout-warn"><strong>Escalation Is About Visibility, Not Authority:</strong> Inspectors and field staff do not have authority to decline coverage or dictate terms — that judgment belongs to the underwriter. The inspector's responsibility is to ensure conditions like those above are impossible to miss in the report: clear photos, explicit narrative description, and use of the report's recommendation/referral fields as intended. A well-documented red flag that reaches the underwriter's attention is far more valuable than an inspector's own informal opinion on insurability.</div>
         </div>
+
+        <!-- ═══════════ CONSTRUCTION COST REFERENCE ═══════════ -->
+        <div class="esi-section" id="kb-construction-cost" style="margin-top:36px;">
+          <div class="esi-section-title">Construction Cost Reference <span class="esi-section-tag">ALTUS 2026</span></div>
+          <p class="esi-sub">Hard construction cost benchmarks ($/sq ft) by building type, sourced from Altus Group's 2026 Canadian Cost Guide, Vancouver/Lower Mainland region. This table is the same live data feeding the "Construction Cost Estimate" calculator in both Scan One and the COPE inspection form — one source of truth, so this reference and the active calculators never drift out of sync.</p>
+
+          <div class="callout callout-alert"><strong>Vancouver/Lower Mainland Only:</strong> Altus Group does not publish a separate Rural/Interior BC figure. For properties outside the Lower Mainland, these ranges should be treated as a rough upper-bound reference only — actual rural costs typically run lower due to labour and land cost differences, but no specific discount factor is sourced or applied. For an accurate rural/regional estimate, or for any occupancy not covered below, request a detailed CoreLogic or RSMeans valuation.</div>
+          <div class="callout callout-warn"><strong>Hard Construction Costs Only:</strong> These figures cover construction costs alone — they exclude land, legal fees, permits, architectural/engineering fees, contingencies, marketing, developer profit, and all other "soft costs" that make up a full development budget. They also exclude site development, parking (priced separately below), and any premium for non-typical design, finishes, or site conditions. Per Altus Group's own guidance: <em>"A qualified cost professional should prepare a replacement cost estimate tailored to your unique asset... Relying on generic estimates that do not address your specific needs can leave you vulnerable."</em> This table is a starting-point reference, not a substitute for that professional judgment.</div>
+
+          <div id="kb-cost-table-container">
+            <div style="text-align:center;padding:20px;color:var(--slate-light);font-size:13px;">Loading current cost benchmark data…</div>
+          </div>
+
+          <div class="callout callout-tip" style="margin-top:16px;"><strong>How the Calculator Works:</strong> In Scan One and the COPE form, selecting a building type from this list and entering the declared building area computes an estimated range (area &times; low rate to area &times; high rate). The calculator also checks the property's city against a Lower Mainland list — if the property falls outside that list, a caveat is shown automatically rather than silently presenting a Vancouver-priced estimate as if it applied uniformly province-wide.</div>
+        </div>
       </div>
     </div><!-- end panel-knowledge -->
 
@@ -2650,6 +2666,40 @@
 
   // ── AUTH ──
   loadKbDocuments(); // load document library metadata immediately so global search works from any tab, even before visiting Knowledge Base
+
+  var _kbCostTableLoaded = false;
+  async function loadConstructionCostTable() {
+    if (_kbCostTableLoaded) return; // static reference data, no need to re-fetch every tab visit
+    const container = document.getElementById('kb-cost-table-container');
+    if (!container) return;
+    try {
+      const { data, error } = await _supabase
+        .from('construction_cost_data')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('building_type', { ascending: true })
+        .order('sub_type', { ascending: true });
+      if (error) throw error;
+      if (!data || !data.length) {
+        container.innerHTML = '<div class="callout callout-warn">Construction cost data hasn\'t been loaded into Supabase yet — run 01_setup_cost_data.sql in the SQL Editor.</div>';
+        return;
+      }
+      let html = '<table class="nfpa-table"><thead><tr><th>Category</th><th>Building Type</th><th>Low ($/sq ft)</th><th>High ($/sq ft)</th><th>Notes</th></tr></thead><tbody>';
+      data.forEach(row => {
+        html += '<tr><td>' + row.category + '</td>' +
+          '<td>' + row.building_type + (row.sub_type ? ' — ' + row.sub_type : '') + '</td>' +
+          '<td>$' + row.cost_low + '</td>' +
+          '<td>$' + row.cost_high + '</td>' +
+          '<td style="font-size:11px;color:var(--slate-light);">' + (row.notes || '') + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      html += '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Source: ' + data[0].source + ' (' + data[0].year + '), ' + data[0].region + '. ' + data.length + ' building types currently loaded.</div>';
+      container.innerHTML = html;
+      _kbCostTableLoaded = true;
+    } catch(e) {
+      container.innerHTML = '<div class="callout callout-warn">Could not load cost data: ' + e.message + '</div>';
+    }
+  }
   (async () => {
     const { data: { session } } = await _supabase.auth.getSession();
     if (!session) return; // ESI accessible without login — bulletins show as read-only
@@ -3331,6 +3381,7 @@ create policy "Admins only can delete bulletins"
         { id: 'kb-nbc-snow-wind', label: '❄️ Snow & Wind Design Loads' },
         { id: 'kb-ibc-occupancy', label: '📋 IBC Occupancy Code Reference' },
         { id: 'kb-red-flags', label: '⚠️ Underwriting Red Flags Guide' },
+        { id: 'kb-construction-cost', label: '&#x1F4B0; Construction Cost Reference' },
       ]},
     ],
   };
@@ -3383,7 +3434,7 @@ create policy "Admins only can delete bulletins"
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (tab === 'bulletins') loadBulletins();
     if (tab === 'index') { loadBulletins(); setTimeout(renderIndexBulletins, 800); }
-    if (tab === 'knowledge') loadKbDocuments();
+    if (tab === 'knowledge') { loadKbDocuments(); loadConstructionCostTable(); }
   }
 
   // ── SUBJECT INDEX & SEARCH FUNCTIONS ──
@@ -3464,6 +3515,7 @@ create policy "Admins only can delete bulletins"
     { tab:'knowledge', id:'kb-nbc-snow-wind', title:'Snow & Wind Design Loads',              keywords:'snow load ss sr wind design pressure ground snow rain load uniform risk' },
     { tab:'knowledge', id:'kb-ibc-occupancy', title:'IBC Occupancy Code Reference',          keywords:'ibc sic naics occupancy code dropdown category range residential office retail manufacturing warehouse' },
     { tab:'knowledge', id:'kb-red-flags', title:'Underwriting Red Flags Guide',              keywords:'red flag referral declination escalation underwriter recommendation construction protection occupancy exposure natcat' },
+    { tab:'knowledge', id:'kb-construction-cost', title:'Construction Cost Reference',        keywords:'construction cost altus group replacement cost per square foot vancouver lower mainland corelogic rsmeans' },
     { tab:'technical', id:'tech-nfpa',      title:'NFPA Hazard Classification',       keywords:'nfpa hazard light ordinary extra classification sprinkler design density area gpm high piled storage plastics class specialist' },
     { tab:'technical', id:'tech-cooking',   title:'Cooking Open Flame',               keywords:'cooking flame hood suppression nfpa 96 cleaning restaurant' },
     { tab:'technical', id:'tech-welding',   title:'Welding Cutting',                  keywords:'welding cutting hot work permit fire watch' },
