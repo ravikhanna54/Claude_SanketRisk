@@ -1767,7 +1767,7 @@
           </div>
           <div class="field">
             <label>Total Building Area (sq ft)</label>
-            <input type="number" id="total-area" placeholder="All levels combined" min="0">
+            <input type="number" id="total-area" placeholder="All levels combined" min="0" oninput="updateCopeConstructionCostEstimate()">
           </div>
           <div class="field">
             <label>Grade Floor Area (sq ft)</label>
@@ -1830,6 +1830,17 @@
             </div>
           </div>
         </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Construction Cost Estimate</div>
+        <div style="font-size:11px;color:var(--slate);margin-bottom:12px;">Optional — select a matching building type to estimate replacement cost from the declared area above.</div>
+        <div class="field">
+          <label>Building Type (Altus Group 2026 Cost Guide)</label>
+          <select id="cope-cost-type" onchange="updateCopeConstructionCostEstimate()">
+            <option value="">&#x2014; Select if a close match exists &#x2014;</option>
+          </select>
+        </div>
+        <div id="cope-construction-cost-result" style="margin-top:10px;"></div>
       </div>
       <div class="card">
         <div class="card-title">Construction Class</div>
@@ -9502,6 +9513,10 @@
           }
         } catch(e) { /* skip unrestorable fields */ }
       });
+      // Construction cost dropdown populates asynchronously (fetched from
+      // Supabase) — the generic restore above can silently fail if it runs
+      // before those <option>s exist, so handle it explicitly here.
+      if (fields['cope-cost-type']) restoreCopeCostRowSelection(fields['cope-cost-type']);
       // ── Restore pill selections (radio-btn / check-btn) ──
       const pills = fd.pills || fd.pill_selections || {};
       Object.entries(pills).forEach(([key, vals]) => {
@@ -11416,6 +11431,96 @@
     var row = btn.closest('.finish-row');
     if (row) row.remove();
   }
+  // ── CONSTRUCTION COST ESTIMATE (Altus Group 2026 Cost Guide) ──
+  var _copeCostData = [];
+  var _copePendingCostRowId = null;
+  var COPE_LOWER_MAINLAND_CITIES = ['vancouver','burnaby','surrey','richmond','coquitlam','delta',
+    'langley','maple ridge','new westminster','north vancouver','west vancouver',
+    'port coquitlam','port moody','white rock','pitt meadows','abbotsford','chilliwack','mission'];
+
+  function _copeCostMsg(msg) {
+    return '<div style="font-size:12px;padding:10px 12px;border-radius:6px;background:#fffbeb;color:#92400e;">&#x26A0; ' + msg + '</div>';
+  }
+
+  async function loadCopeConstructionCostData() {
+    try {
+      var resp = await fetch(SUPABASE_URL + '/rest/v1/construction_cost_data?select=*&order=category,building_type,sub_type', {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+      });
+      if (!resp.ok) { console.warn('[CostEstimate] Failed to load cost data, HTTP', resp.status); return; }
+      _copeCostData = await resp.json();
+      var sel = document.getElementById('cope-cost-type');
+      if (!sel) return;
+      var currentCategory = null;
+      _copeCostData.forEach(function(row) {
+        if (row.category !== currentCategory) {
+          currentCategory = row.category;
+          var grp = document.createElement('optgroup');
+          grp.label = currentCategory;
+          sel.appendChild(grp);
+        }
+        var opt = document.createElement('option');
+        opt.value = row.id;
+        opt.textContent = row.building_type + (row.sub_type ? ' \u2014 ' + row.sub_type : '');
+        sel.lastChild.appendChild(opt);
+      });
+      if (_copePendingCostRowId) {
+        sel.value = _copePendingCostRowId;
+        _copePendingCostRowId = null;
+        updateCopeConstructionCostEstimate();
+      }
+    } catch(e) { console.warn('[CostEstimate] Error loading cost data:', e.message); }
+  }
+
+  function restoreCopeCostRowSelection(rowId) {
+    if (!rowId) return;
+    var sel = document.getElementById('cope-cost-type');
+    if (sel && _copeCostData.length) {
+      sel.value = rowId;
+      updateCopeConstructionCostEstimate();
+    } else {
+      _copePendingCostRowId = rowId;
+    }
+  }
+
+  function updateCopeConstructionCostEstimate() {
+    var sel = document.getElementById('cope-cost-type');
+    var resultEl = document.getElementById('cope-construction-cost-result');
+    if (!sel || !resultEl) return;
+    var rowId = sel.value;
+    if (!rowId) { resultEl.innerHTML = ''; return; }
+
+    var row = _copeCostData.find(function(r) { return String(r.id) === String(rowId); });
+    if (!row) { resultEl.innerHTML = ''; return; }
+
+    var areaInput = document.getElementById('total-area');
+    var area = parseFloat(areaInput ? areaInput.value : '');
+    var cityEl = document.getElementById('city');
+    var city = (cityEl ? cityEl.value : '').trim().toLowerCase();
+    var isLowerMainland = COPE_LOWER_MAINLAND_CITIES.indexOf(city) >= 0;
+
+    var html = '';
+    if (!area || area <= 0) {
+      html = _copeCostMsg('Enter a Total Building Area above to calculate an estimated replacement cost range.');
+    } else {
+      var low = Math.round(area * row.cost_low);
+      var high = Math.round(area * row.cost_high);
+      html = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost</td><td style="padding:4px 0;font-weight:700;">$' + low.toLocaleString('en-CA') + ' &#x2014; $' + high.toLocaleString('en-CA') + '</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied</td><td style="padding:4px 0;">$' + row.cost_low + ' &#x2013; $' + row.cost_high + ' / sq ft \u00D7 ' + area.toLocaleString('en-CA') + ' sq ft</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">' + row.source + ' (' + row.year + '), ' + row.region + '</td></tr>' +
+        '</table>';
+      if (!isLowerMainland && city) {
+        html += _copeCostMsg('This benchmark is priced for the Vancouver/Lower Mainland region. Altus Group does not publish a separate Rural/Interior BC figure — this range likely overstates cost for this location. Treat as a rough upper-bound reference only, and consider requesting a detailed CoreLogic or RSMeans valuation for an accurate rural/regional estimate.');
+      }
+      if (row.notes) {
+        html += '<div style="font-size:11px;color:var(--slate-light);margin-top:4px;">Note: ' + row.notes + '</div>';
+      }
+    }
+    html += '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Hard construction costs only — excludes land, soft costs, FF&E, and site development. For occupancies not listed here, or for a valuation suitable for insurance/replacement cost purposes, request a detailed CoreLogic or RSMeans valuation.</div>';
+    resultEl.innerHTML = html;
+  }
+
   function toggleBasementUse() {
     var area = parseFloat(document.getElementById('basement-area').value) || 0;
     var type = document.getElementById('basement-type') ? document.getElementById('basement-type').value : '';
@@ -11490,6 +11595,7 @@
   // ── AUTO SESSION RESTORE ──
   // If the user is already logged in (came from dashboard), skip login overlay
   (async function restoreSession() {
+    loadCopeConstructionCostData(); // fire independently of auth — populates the cost dropdown
     try {
       const { data: { session } } = await _supabase.auth.getSession();
       if (!session) {
@@ -13462,6 +13568,19 @@ function generateFormalReport() {
       ${field2('Upper Floor Area (sq ft)', val('upper-floor-area'))}
       ${field2('Basement / Below-Grade Area (sq ft)', val('basement-area'))}
       ${field2('Basement Type', val('basement-type'))}
+      ${(() => {
+        const sel = document.getElementById('cope-cost-type');
+        const rowId = sel ? sel.value : '';
+        if (!rowId) return '';
+        const row = (_copeCostData || []).find(r => String(r.id) === String(rowId));
+        if (!row) return '';
+        const area = parseFloat(document.getElementById('total-area') ? document.getElementById('total-area').value : '');
+        if (!area || area <= 0) return field2('Estimated Replacement Cost', 'Building area not declared');
+        const low = Math.round(area * row.cost_low).toLocaleString('en-CA');
+        const high = Math.round(area * row.cost_high).toLocaleString('en-CA');
+        const label = row.building_type + (row.sub_type ? ' — ' + row.sub_type : '');
+        return field2('Estimated Replacement Cost', '$' + low + ' – $' + high + ' (' + label + ', ' + row.source + ' ' + row.year + ')');
+      })()}
     </div>
     <div class="field-block field-full">
       <div class="field-label">Basement Use Breakdown</div>
