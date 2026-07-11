@@ -457,7 +457,7 @@
         <div class="form-grid cols3">
           <div class="field"><label>Year Built</label><input type="number" id="s-year-built" placeholder="e.g. 1985" min="1800" max="2026"></div>
           <div class="field"><label>Number of Storeys</label><input type="number" id="s-storeys" placeholder="e.g. 2" min="1" max="100"></div>
-          <div class="field"><label>Approx. Building Area (sq ft)</label><input type="number" id="s-area" placeholder="e.g. 25000"></div>
+          <div class="field"><label>Approx. Building Area (sq ft)</label><input type="number" id="s-area" placeholder="e.g. 25000" oninput="updateConstructionCostEstimate()"></div>
         </div>
         <div class="form-grid">
           <div class="field"><label>Construction Type (if known)</label>
@@ -489,6 +489,28 @@
             <div class="field-note">This is passed directly to the AI along with your photos &#x2014; be as specific as you like.</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- SECTION 1.5: Construction Cost Estimate -->
+    <div class="card">
+      <div class="card-header scan-accent">
+        <div class="card-header-icon">&#x1F4B0;</div>
+        <div>
+          <div class="card-header-title">Construction Cost Estimate</div>
+          <div class="card-header-sub">Optional — select a matching building type to estimate replacement cost from the declared area</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>Building Type (Altus Group 2026 Cost Guide)</label>
+            <select id="s-cost-type" onchange="updateConstructionCostEstimate()">
+              <option value="">&#x2014; Select if a close match exists &#x2014;</option>
+            </select>
+          </div>
+        </div>
+        <div id="construction-cost-result" style="margin-top:10px;"></div>
       </div>
     </div>
 
@@ -1113,6 +1135,18 @@
         </div>
       </div>
 
+      <!-- Construction Cost Estimate Results -->
+      <div class="result-section" id="res-cost-section" style="display:none;">
+        <div class="result-section-header">
+          <div class="result-section-icon">&#x1F4B0;</div>
+          <div class="result-section-title">Construction Cost Estimate</div>
+          <div style="margin-left:auto;background:linear-gradient(135deg,#276749,#38a169);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;font-family:'IBM Plex Mono',monospace;letter-spacing:.05em;">ALTUS 2026</div>
+        </div>
+        <div class="result-section-body" id="res-cost-body">
+          <!-- Populated dynamically by renderConstructionCostSection() -->
+        </div>
+      </div>
+
       <!-- Photo Evidence Grid -->
       <div class="result-section" id="res-photo-section" style="display:none;">
         <div class="result-section-header"><div class="result-section-icon">&#x1F4F8;</div><div class="result-section-title">Submitted Photographs</div></div>
@@ -1237,6 +1271,7 @@
   const isReportOnly  = urlParams.get('report_only') === '1';  // clean read-only report for customer
 
   (async function() {
+    loadConstructionCostData(); // fire independently of auth/mode — populates the cost dropdown
     if (isPublicMode) {
       activatePublicMode();
       return;
@@ -1326,6 +1361,9 @@
           set('s-ir-testing', fd.infraredTesting);
         }
       }
+
+      // Construction cost estimate selection
+      if (fd.costEstimateRowId) restoreCostRowSelection(fd.costEstimateRowId);
 
       // Hazard checkboxes — re-select any that were checked
       if (fd.hazards && fd.hazards.length) {
@@ -1532,6 +1570,148 @@
   function toggleCheck(el) { el.classList.toggle('selected'); }
 
   // ── UPGRADE TOGGLE ──
+  // ── CONSTRUCTION COST ESTIMATE ──
+  var _constructionCostData = [];
+  var _pendingCostRowId = null; // set by recall/restore before the dropdown has loaded; applied once ready
+  var LOWER_MAINLAND_CITIES = ['vancouver','burnaby','surrey','richmond','coquitlam','delta',
+    'langley','maple ridge','new westminster','north vancouver','west vancouver',
+    'port coquitlam','port moody','white rock','pitt meadows','abbotsford','chilliwack','mission'];
+
+  async function loadConstructionCostData() {
+    try {
+      var resp = await fetch(SUPABASE_URL + '/rest/v1/construction_cost_data?select=*&order=category,building_type,sub_type', {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+      });
+      if (!resp.ok) { _dbg('[CostEstimate] Failed to load cost data, HTTP', resp.status); return; }
+      _constructionCostData = await resp.json();
+      _dbg('[CostEstimate] Loaded', _constructionCostData.length, 'cost benchmark rows');
+      var sel = document.getElementById('s-cost-type');
+      if (!sel) return;
+      var currentCategory = null;
+      _constructionCostData.forEach(function(row) {
+        if (row.category !== currentCategory) {
+          currentCategory = row.category;
+          var grp = document.createElement('optgroup');
+          grp.label = currentCategory;
+          grp.id = 'cost-optgroup-' + currentCategory.replace(/\s+/g,'-');
+          sel.appendChild(grp);
+        }
+        var opt = document.createElement('option');
+        opt.value = row.id;
+        opt.textContent = row.building_type + (row.sub_type ? ' \u2014 ' + row.sub_type : '');
+        sel.lastChild.appendChild(opt);
+      });
+      if (_pendingCostRowId) {
+        sel.value = _pendingCostRowId;
+        _pendingCostRowId = null;
+        updateConstructionCostEstimate();
+      }
+    } catch(e) { _dbg('[CostEstimate] Error loading cost data:', e.message); }
+  }
+
+  // Called by recall/restore paths — applies immediately if the dropdown is
+  // already populated, otherwise queues it for loadConstructionCostData() to
+  // apply once the async fetch completes.
+  function restoreCostRowSelection(rowId) {
+    if (!rowId) return;
+    var sel = document.getElementById('s-cost-type');
+    if (sel && _constructionCostData.length) {
+      sel.value = rowId;
+      updateConstructionCostEstimate();
+    } else {
+      _pendingCostRowId = rowId;
+    }
+  }
+
+  function updateConstructionCostEstimate() {
+    var sel = document.getElementById('s-cost-type');
+    var resultEl = document.getElementById('construction-cost-result');
+    var rowId = sel.value;
+    if (!rowId) { resultEl.innerHTML = ''; return; }
+
+    var row = _constructionCostData.find(function(r) { return String(r.id) === String(rowId); });
+    if (!row) { resultEl.innerHTML = ''; return; }
+
+    var areaInput = document.getElementById('s-area');
+    var area = parseFloat(areaInput ? areaInput.value : '');
+    var city = (document.getElementById('s-city') ? document.getElementById('s-city').value : '').trim().toLowerCase();
+    var isLowerMainland = LOWER_MAINLAND_CITIES.indexOf(city) >= 0;
+
+    var html = '';
+    if (!area || area <= 0) {
+      html = _riMsg('Enter a Building Area above to calculate an estimated replacement cost range.', 'warn');
+    } else {
+      var low = Math.round(area * row.cost_low);
+      var high = Math.round(area * row.cost_high);
+      html = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost</td><td style="padding:4px 0;font-weight:700;">$' + low.toLocaleString('en-CA') + ' &#x2014; $' + high.toLocaleString('en-CA') + '</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied</td><td style="padding:4px 0;">$' + row.cost_low + ' &#x2013; $' + row.cost_high + ' / sq ft \u00D7 ' + area.toLocaleString('en-CA') + ' sq ft</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">' + row.source + ' (' + row.year + '), ' + row.region + '</td></tr>' +
+        '</table>';
+      if (!isLowerMainland && city) {
+        html += _riMsg('This benchmark is priced for the Vancouver/Lower Mainland region. Altus Group does not publish a separate Rural/Interior BC figure — this range likely overstates cost for "' + (document.getElementById('s-city') ? document.getElementById('s-city').value : city) + '". Treat as a rough upper-bound reference only, and consider requesting a detailed CoreLogic or RSMeans valuation for an accurate rural/regional estimate.', 'warn');
+      }
+      if (row.notes) {
+        html += '<div style="font-size:11px;color:var(--slate-light);margin-top:4px;">Note: ' + row.notes + '</div>';
+      }
+    }
+    html += '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Hard construction costs only — excludes land, soft costs, FF&E, and site development. For occupancies not listed here, or for a valuation suitable for insurance/replacement cost purposes, request a detailed CoreLogic or RSMeans valuation.</div>';
+    resultEl.innerHTML = html;
+  }
+
+  // Renders the construction cost estimate into its own results-section card,
+  // sourced entirely from data already collected/calculated client-side (no
+  // AI or network call needed) — matches the same look as Registry Intel/NatCat.
+  function renderConstructionCostSection(data) {
+    var section = document.getElementById('res-cost-section');
+    var body = document.getElementById('res-cost-body');
+    if (!section || !body) return;
+
+    if (!data.costEstimateRowId) {
+      _dbg('[CostEstimate] No building type selected — section left hidden.');
+      return; // no selection made — leave the whole section hidden, nothing to show
+    }
+
+    if (!_constructionCostData.length) {
+      // Cost data hasn't finished loading yet (very unlikely given analysis
+      // takes far longer) — retry shortly rather than silently showing nothing.
+      setTimeout(function() { renderConstructionCostSection(data); }, 1000);
+      return;
+    }
+
+    var row = _constructionCostData.find(function(r) { return String(r.id) === String(data.costEstimateRowId); });
+    if (!row) { _dbg('[CostEstimate] Saved row id not found in current dataset:', data.costEstimateRowId); return; }
+
+    var area = parseFloat(data.area);
+    var city = (data.city || '').trim().toLowerCase();
+    var isLowerMainland = LOWER_MAINLAND_CITIES.indexOf(city) >= 0;
+
+    var html = '<div style="font-size:12px;color:var(--slate);margin-bottom:8px;">' + row.category + ' \u2014 ' + row.building_type + (row.sub_type ? ' \u2014 ' + row.sub_type : '') + '</div>';
+
+    if (!area || area <= 0) {
+      html += _riMsg('No building area was declared — cannot calculate a cost range.', 'warn');
+    } else {
+      var low = Math.round(area * row.cost_low);
+      var high = Math.round(area * row.cost_high);
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost</td><td style="padding:4px 0;font-weight:700;font-size:15px;">$' + low.toLocaleString('en-CA') + ' &#x2014; $' + high.toLocaleString('en-CA') + '</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied</td><td style="padding:4px 0;">$' + row.cost_low + ' &#x2013; $' + row.cost_high + ' / sq ft \u00D7 ' + area.toLocaleString('en-CA') + ' sq ft</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">' + row.source + ' (' + row.year + '), ' + row.region + '</td></tr>' +
+        '</table>';
+      if (!isLowerMainland && city) {
+        html += _riMsg('This benchmark is priced for the Vancouver/Lower Mainland region. Altus Group does not publish a separate Rural/Interior BC figure — this range likely overstates cost for this location. Treat as a rough upper-bound reference only, and consider requesting a detailed CoreLogic or RSMeans valuation for an accurate rural/regional estimate.', 'warn');
+      }
+      if (row.notes) {
+        html += '<div style="font-size:11px;color:var(--slate-light);margin-top:4px;">Note: ' + row.notes + '</div>';
+      }
+    }
+    html += '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Hard construction costs only — excludes land, soft costs, FF&E, and site development. For occupancies not covered by this benchmark, or for a valuation suitable for insurance/replacement cost purposes, request a detailed CoreLogic or RSMeans valuation.</div>';
+
+    body.innerHTML = html;
+    section.style.display = 'block';
+    _dbg('[CostEstimate] Rendered into report:', row.building_type, row.sub_type || '');
+  }
+
   function toggleUpgrade(key) {
     const unk = document.getElementById('upg-' + key + '-unk').checked;
     const inp = document.getElementById('upg-' + key);
@@ -1834,6 +2014,7 @@
       storeys:    document.getElementById('s-storeys').value,
       area:       document.getElementById('s-area').value,
       construction: document.getElementById('s-construction').value,
+      costEstimateRowId: (document.getElementById('s-cost-type') ? document.getElementById('s-cost-type').value : ''),
       infraredTesting: infraredTesting,
       fireProtection: document.getElementById('s-fire-protection').value,
       context:    document.getElementById('s-context').value.trim(),
@@ -3180,6 +3361,7 @@
                 s('s-ir-testing', fd.infraredTesting);
               }
             }
+            if (fd.costEstimateRowId) restoreCostRowSelection(fd.costEstimateRowId);
             if (fd.hazards && fd.hazards.length) {
               document.querySelectorAll('#hazard-checks .check-item').forEach(function(el) {
                 var key = (el.dataset && el.dataset.hazard) ? el.dataset.hazard : el.textContent.trim();
@@ -4055,6 +4237,7 @@
         setTimeout(function() { runRegistryIntel(lastResult.formData); }, 800);
         setTimeout(function() { renderNatCatSection(lastResult.formData); }, 900);
         setTimeout(function() { renderFireHydrantProximity(lastResult.formData); }, 700);
+        setTimeout(function() { renderConstructionCostSection(lastResult.formData); }, 600);
       }
 
     } catch(e) {
@@ -5236,6 +5419,7 @@
       setTimeout(function() { runRegistryIntel(lastResult.formData); }, 500);
       setTimeout(function() { renderNatCatSection(lastResult.formData); }, 500);
       setTimeout(function() { renderFireHydrantProximity(lastResult.formData); }, 500);
+      setTimeout(function() { renderConstructionCostSection(lastResult.formData); }, 500);
     }
   }
 
