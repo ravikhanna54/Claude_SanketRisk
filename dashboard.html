@@ -764,7 +764,7 @@
       const category      = document.getElementById('archive-category').value;
       const notes         = document.getElementById('archive-notes').value.trim();
       const uploadedBy    = currentUserName || (currentUser ? currentUser.email : '') || '';
-      let successCount = 0, failCount = 0;
+      let successCount = 0, failCount = 0, lastErrorMsg = '';
       for (let i = 0; i < archiveUploadQueue.length; i++) {
         const f = archiveUploadQueue[i];
         const statusEl = document.getElementById('archive-queue-status-' + i);
@@ -791,14 +791,16 @@
           successCount++;
         } catch (e) {
           console.error('Archive upload error:', e);
-          if (statusEl) { statusEl.textContent = '✕ Failed'; statusEl.style.color = '#C53030'; }
+          const msg = (e && (e.message || e.error_description || e.error)) || 'Failed';
+          if (statusEl) { statusEl.textContent = '✕ ' + msg; statusEl.style.color = '#C53030'; statusEl.style.minWidth = 'auto'; statusEl.style.maxWidth = '260px'; statusEl.title = msg; }
+          lastErrorMsg = msg;
           failCount++;
         }
       }
       btn.textContent = '⬆ Upload Batch';
-      showToast((successCount ? successCount + ' file(s) archived' : '') + (failCount ? (successCount ? ' — ' : '') + failCount + ' failed' : ''));
+      showToast((successCount ? successCount + ' file(s) archived' : '') + (failCount ? (successCount ? ' — ' : '') + failCount + ' failed: ' + lastErrorMsg : ''));
       archiveUploadQueue = [];
-      setTimeout(() => { renderArchiveQueue(); loadArchiveFiles(); }, 1200);
+      setTimeout(() => { renderArchiveQueue(); loadArchiveFiles(); }, failCount ? 4000 : 1200);
     }
 
     async function loadArchiveFiles() {
