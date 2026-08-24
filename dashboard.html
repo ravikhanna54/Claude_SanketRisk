@@ -168,6 +168,7 @@
       <button class="dash-tab" onclick="switchTab('portal')">⚙️ Portal Settings</button>
       <button class="dash-tab" onclick="switchTab('enquiries')">📬 Contact Enquiries</button>
       <button class="dash-tab" onclick="switchTab('scan')">📸 SCAN ONE Submissions</button>
+      <button class="dash-tab" onclick="switchTab('archive')">🗄️ File Archive</button>
     </div>
 
     <div id="tab-inspections">
@@ -297,6 +298,72 @@
         <div class="table-scroll-wrap">
           <div id="scan-table-wrap">
             <div class="empty-state"><div class="empty-icon">📸</div><div class="empty-text">Click Refresh to load submissions</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILE ARCHIVE TAB -->
+    <div id="tab-archive" style="display:none;">
+      <div class="section-hdr" style="margin-bottom:14px;">
+        <div>
+          <div class="section-hdr-title">🗄️ File Archive</div>
+          <div class="section-hdr-sub">Legacy inspection reports, loss runs, and other PDF/Word documents</div>
+        </div>
+        <button class="btn-new-insp" onclick="loadArchiveFiles()">🔄 Refresh</button>
+      </div>
+      <div class="table-card" style="padding:20px 20px 4px;margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);margin-bottom:12px;font-family:'IBM Plex Mono',monospace;">Batch Upload — PDF and Word Documents</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+          <div style="flex:1;min-width:160px;">
+            <label style="font-size:11px;font-weight:600;color:var(--slate);display:block;margin-bottom:4px;">Insured Name</label>
+            <input type="text" id="archive-insured-name" placeholder="Applies to all files in this batch" style="width:100%;padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--navy);outline:none;box-sizing:border-box;">
+          </div>
+          <div style="flex:1;min-width:140px;">
+            <label style="font-size:11px;font-weight:600;color:var(--slate);display:block;margin-bottom:4px;">Policy / Account Number</label>
+            <input type="text" id="archive-policy-number" placeholder="e.g. POL-2019-4471" style="width:100%;padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--navy);outline:none;box-sizing:border-box;">
+          </div>
+          <div style="flex:1;min-width:160px;">
+            <label style="font-size:11px;font-weight:600;color:var(--slate);display:block;margin-bottom:4px;">Category</label>
+            <select id="archive-category" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:var(--navy);background:#fff;cursor:pointer;outline:none;box-sizing:border-box;">
+              <option value="">— Select —</option>
+              <option>Legacy Inspection Report</option>
+              <option>Loss Run</option>
+              <option>Engineering / Survey Report</option>
+              <option>Correspondence</option>
+              <option>Policy Document</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:160px;">
+            <label style="font-size:11px;font-weight:600;color:var(--slate);display:block;margin-bottom:4px;">Notes</label>
+            <input type="text" id="archive-notes" placeholder="Optional" style="width:100%;padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--navy);outline:none;box-sizing:border-box;">
+          </div>
+        </div>
+        <input type="file" id="archive-file-input" multiple accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none;" onchange="handleArchiveFileSelect(this)">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn-new-insp" onclick="document.getElementById('archive-file-input').click()">📎 Select Files (PDF / DOC / DOCX)</button>
+          <button id="archive-upload-btn" class="btn-new-insp" onclick="uploadArchiveFiles()" disabled style="background:#2f855a;opacity:0.5;">⬆ Upload Batch</button>
+          <span style="font-size:11px;color:var(--slate-light);">Max 50MB per file</span>
+        </div>
+        <div id="archive-queue-list" style="margin-bottom:8px;"></div>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <input class="search-input" id="archive-search" type="text" placeholder="🔍  Search by file name, insured, or policy number…" oninput="filterArchiveFiles()">
+          <select class="filter-select" id="archive-filter-category" onchange="filterArchiveFiles()">
+            <option value="">All Categories</option>
+            <option>Legacy Inspection Report</option>
+            <option>Loss Run</option>
+            <option>Engineering / Survey Report</option>
+            <option>Correspondence</option>
+            <option>Policy Document</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="table-scroll-wrap">
+          <div id="archive-table-wrap">
+            <div class="empty-state"><div class="empty-icon">🗄️</div><div class="empty-text">Click Refresh or upload files to view the archive</div></div>
           </div>
         </div>
       </div>
@@ -625,16 +692,189 @@
     async function signOut() { await _supabase.auth.signOut(); window.location.replace('/login.html'); }
 
     function switchTab(tab) {
-      ['inspections','requests','portal','enquiries','scan'].forEach(t => {
+      ['inspections','requests','portal','enquiries','scan','archive'].forEach(t => {
         document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
       });
       document.querySelectorAll('.dash-tab').forEach((btn, i) => {
-        btn.classList.toggle('active', ['inspections','requests','portal','enquiries','scan'][i] === tab);
+        btn.classList.toggle('active', ['inspections','requests','portal','enquiries','scan','archive'][i] === tab);
       });
       if (tab === 'requests')  loadRequests();
       if (tab === 'portal')    loadAccessCode();
       if (tab === 'enquiries') loadEnquiries();
       if (tab === 'scan')      loadScanSubmissions();
+      if (tab === 'archive')   loadArchiveFiles();
+    }
+
+    // ── FILE ARCHIVE ──
+    let archiveUploadQueue = [];
+    let archiveRowsCache = [];
+    const ARCHIVE_MAX_BYTES = 52428800; // 50MB
+
+    function handleArchiveFileSelect(input) {
+      const files = Array.from(input.files || []);
+      if (!files.length) return;
+      const okExt = /\.(pdf|doc|docx)$/i;
+      const accepted = [], rejected = [];
+      files.forEach(f => {
+        if (!okExt.test(f.name)) { rejected.push(f.name + ' (unsupported type)'); return; }
+        if (f.size > ARCHIVE_MAX_BYTES) { rejected.push(f.name + ' (over 50MB)'); return; }
+        accepted.push(f);
+      });
+      if (rejected.length) showToast('⚠ Skipped: ' + rejected.join(', '));
+      archiveUploadQueue = archiveUploadQueue.concat(accepted);
+      input.value = '';
+      renderArchiveQueue();
+    }
+
+    function renderArchiveQueue() {
+      const wrap = document.getElementById('archive-queue-list');
+      const btn = document.getElementById('archive-upload-btn');
+      if (!archiveUploadQueue.length) {
+        wrap.innerHTML = '';
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        return;
+      }
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      wrap.innerHTML = archiveUploadQueue.map((f, i) => {
+        const icon = /\.pdf$/i.test(f.name) ? '📄' : '📝';
+        const kb = (f.size / 1024).toFixed(0);
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;font-size:12px;">' +
+          '<span>' + icon + '</span><span style="flex:1;word-break:break-all;">' + f.name + '</span>' +
+          '<span style="color:var(--slate);font-size:11px;">' + kb + ' KB</span>' +
+          '<span id="archive-queue-status-' + i + '" style="font-size:11px;color:var(--slate);min-width:70px;text-align:right;">Queued</span>' +
+          '<button onclick="removeArchiveQueueItem(' + i + ')" style="background:none;border:none;color:#C53030;font-size:15px;cursor:pointer;padding:0 4px;" title="Remove">&#x2715;</button>' +
+          '</div>';
+      }).join('');
+    }
+
+    function removeArchiveQueueItem(i) {
+      archiveUploadQueue.splice(i, 1);
+      renderArchiveQueue();
+    }
+
+    async function uploadArchiveFiles() {
+      if (!archiveUploadQueue.length) return;
+      const btn = document.getElementById('archive-upload-btn');
+      btn.disabled = true;
+      btn.textContent = '⬆ Uploading...';
+      const insuredName   = document.getElementById('archive-insured-name').value.trim();
+      const policyNumber  = document.getElementById('archive-policy-number').value.trim();
+      const category      = document.getElementById('archive-category').value;
+      const notes         = document.getElementById('archive-notes').value.trim();
+      const uploadedBy    = currentUserName || (currentUser ? currentUser.email : '') || '';
+      let successCount = 0, failCount = 0;
+      for (let i = 0; i < archiveUploadQueue.length; i++) {
+        const f = archiveUploadQueue[i];
+        const statusEl = document.getElementById('archive-queue-status-' + i);
+        if (statusEl) { statusEl.textContent = 'Uploading...'; statusEl.style.color = '#c47a1a'; }
+        try {
+          const ext = (f.name.split('.').pop() || '').toLowerCase();
+          const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const path = 'archive/' + Date.now() + '-' + i + '-' + safeName;
+          const upRes = await _supabase.storage.from('legacy-archive').upload(path, f, { contentType: f.type, upsert: false });
+          if (upRes.error) throw upRes.error;
+          const insRes = await _supabase.from('archived_files').insert({
+            file_name: f.name,
+            file_type: ext,
+            file_size: f.size,
+            storage_path: path,
+            insured_name: insuredName || null,
+            policy_number: policyNumber || null,
+            category: category || null,
+            notes: notes || null,
+            uploaded_by: uploadedBy || null
+          });
+          if (insRes.error) throw insRes.error;
+          if (statusEl) { statusEl.textContent = '✓ Uploaded'; statusEl.style.color = '#2f855a'; }
+          successCount++;
+        } catch (e) {
+          console.error('Archive upload error:', e);
+          if (statusEl) { statusEl.textContent = '✕ Failed'; statusEl.style.color = '#C53030'; }
+          failCount++;
+        }
+      }
+      btn.textContent = '⬆ Upload Batch';
+      showToast((successCount ? successCount + ' file(s) archived' : '') + (failCount ? (successCount ? ' — ' : '') + failCount + ' failed' : ''));
+      archiveUploadQueue = [];
+      setTimeout(() => { renderArchiveQueue(); loadArchiveFiles(); }, 1200);
+    }
+
+    async function loadArchiveFiles() {
+      const wrap = document.getElementById('archive-table-wrap');
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Loading archive…</div></div>';
+      try {
+        const { data: rows, error } = await _supabase.from('archived_files').select('*').order('uploaded_at', { ascending: false }).limit(500);
+        if (error) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚙️</div><div class="empty-text">archived_files table not yet created</div></div>'; return; }
+        archiveRowsCache = rows || [];
+        renderArchiveTable(archiveRowsCache);
+      } catch (e) {
+        console.error('Archive load error:', e);
+        wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error: ' + e.message + '</div></div>';
+      }
+    }
+
+    function renderArchiveTable(rows) {
+      const wrap = document.getElementById('archive-table-wrap');
+      if (!rows.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🗄️</div><div class="empty-text">No archived files yet</div></div>'; return; }
+      const thS = 'background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:\'IBM Plex Mono\',monospace;white-space:nowrap';
+      wrap.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;min-width:800px;border-collapse:collapse;font-size:13px;"><thead><tr>' +
+        '<th style="' + thS + '">File</th><th style="' + thS + '">Category</th><th style="' + thS + '">Insured</th><th style="' + thS + '">Policy #</th><th style="' + thS + '">Size</th><th style="' + thS + '">Uploaded</th><th style="' + thS + '">Actions</th>' +
+        '</tr></thead><tbody>' +
+        rows.map(r => {
+          const icon = r.file_type === 'pdf' ? '📄' : '📝';
+          const date = r.uploaded_at ? new Date(r.uploaded_at).toLocaleDateString('en-CA') : '—';
+          const kb = r.file_size ? (r.file_size / 1024).toFixed(0) + ' KB' : '—';
+          return '<tr>' +
+            '<td style="font-size:12px;">' + icon + ' ' + (r.file_name || '—') + '</td>' +
+            '<td style="font-size:12px;">' + (r.category || '—') + '</td>' +
+            '<td style="font-size:12px;">' + (r.insured_name || '—') + '</td>' +
+            '<td style="font-size:12px;">' + (r.policy_number || '—') + '</td>' +
+            '<td style="font-size:12px;">' + kb + '</td>' +
+            '<td style="font-size:12px;">' + date + '</td>' +
+            '<td><div style="display:flex;gap:4px;"><button class="btn-open" onclick="downloadArchiveFile(\'' + r.storage_path + '\',\'' + (r.file_name || '').replace(/'/g, '') + '\')">⬇ Download</button>' +
+            '<button class="btn-open" style="color:#C53030;border-color:#C53030;" onclick="deleteArchiveFile(\'' + r.id + '\',\'' + r.storage_path + '\')">✕</button></div></td></tr>';
+        }).join('') +
+        '</tbody></table></div><div style="font-size:11px;color:var(--slate-light);padding:10px 14px;">' + rows.length + ' file' + (rows.length===1?'':'s') + ' archived</div>';
+    }
+
+    function filterArchiveFiles() {
+      const q = (document.getElementById('archive-search').value || '').toLowerCase();
+      const cat = document.getElementById('archive-filter-category').value;
+      const filtered = archiveRowsCache.filter(r => {
+        const matchQ = !q || (r.file_name || '').toLowerCase().includes(q) || (r.insured_name || '').toLowerCase().includes(q) || (r.policy_number || '').toLowerCase().includes(q);
+        const matchCat = !cat || r.category === cat;
+        return matchQ && matchCat;
+      });
+      renderArchiveTable(filtered);
+    }
+
+    async function downloadArchiveFile(path, name) {
+      try {
+        const { data, error } = await _supabase.storage.from('legacy-archive').createSignedUrl(path, 300);
+        if (error) throw error;
+        const a = document.createElement('a');
+        a.href = data.signedUrl; a.download = name || 'file'; a.target = '_blank';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      } catch (e) {
+        console.error('Archive download error:', e);
+        showToast('⚠ Download failed: ' + e.message);
+      }
+    }
+
+    async function deleteArchiveFile(id, path) {
+      if (!confirm('Delete this archived file? This cannot be undone.')) return;
+      try {
+        await _supabase.storage.from('legacy-archive').remove([path]);
+        const { error } = await _supabase.from('archived_files').delete().eq('id', id);
+        if (error) throw error;
+        showToast('✓ File deleted');
+        loadArchiveFiles();
+      } catch (e) {
+        console.error('Archive delete error:', e);
+        showToast('⚠ Delete failed: ' + e.message);
+      }
     }
 
     // ── CONTACT ENQUIRIES ──
