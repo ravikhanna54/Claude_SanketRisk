@@ -3199,8 +3199,16 @@
             <input id="building-value" type="text" placeholder="e.g. $3,200,000">
           </div>
           <div class="field">
+            <label>Insured Amount — Building (as submitted by customer)</label>
+            <input id="insured-amount-building" type="text" placeholder="Defaults to Building Value above if left blank">
+          </div>
+          <div class="field">
             <label>Business Personal Property Value</label>
             <input id="business-personal-property-value" type="text" placeholder="e.g. $850,000">
+          </div>
+          <div class="field">
+            <label>Insured Amount — Contents (as submitted by customer)</label>
+            <input id="insured-amount-contents" type="text" placeholder="Defaults to Business Personal Property Value above if left blank">
           </div>
           <div class="field">
             <label>Business Income / Extra Expense</label>
@@ -4441,6 +4449,10 @@
           <div class="field">
             <label>Sprinkler Design Area (sq ft)</label>
             <input type="number" id="pml-sprinkler-design-area" min="0" placeholder="Auto-detected from Sprinkler Supplement if left blank">
+          </div>
+          <div class="field">
+            <label>Adjacent Areas — 1-hr Fire Wall Separated (sq ft)</label>
+            <input type="number" id="pml-adjacent-fire-wall-area" min="0" placeholder="Multi-tenant buildings — e.g. adjoining unit(s)">
           </div>
         </div>
         <div style="margin:14px 0 12px;">
@@ -9925,15 +9937,22 @@
     var get = function(id) { var el = document.getElementById(id); return el ? el.value : ''; };
     var steps = [];
 
-    // Values
-    var buildingValue = pmlNum(get('building-value'));
-    var contentsValue = pmlNum(get('business-personal-property-value'));
+    // Values — customer-submitted Insured Amount takes precedence; default to our own calculated/assessed value
+    var buildingValueAssessed = pmlNum(get('building-value'));
+    var contentsValueAssessed = pmlNum(get('business-personal-property-value'));
+    var buildingValueInsured = pmlNum(get('insured-amount-building'));
+    var contentsValueInsured = pmlNum(get('insured-amount-contents'));
+    var buildingValue = buildingValueInsured || buildingValueAssessed;
+    var contentsValue = contentsValueInsured || contentsValueAssessed;
+    var buildingValueSource = buildingValueInsured ? 'Insured Amount (customer-submitted)' : 'Building Value (our assessed replacement cost)';
+    var contentsValueSource = contentsValueInsured ? 'Insured Amount (customer-submitted)' : 'Business Personal Property Value (our assessed figure)';
 
     // Areas
     var totalArea = pmlNum(get('total-area'));
     var largestUndivided = pmlNum(get('pml-largest-undivided-area')) || totalArea;
     var storeys = parseInt(get('stories-above-grade')) || 1;
     var basementArea = pmlNum(get('basement-area'));
+    var adjacentFireWallArea = pmlNum(get('pml-adjacent-fire-wall-area'));
 
     // Construction bucket per SRI paper's 4 categories (mapped from the platform's 6 ISO classes)
     var isoBtn = document.querySelector('#iso-class .radio-btn.selected');
@@ -9957,13 +9976,15 @@
       var avgFloorArea = storeys > 0 ? totalArea / storeys : totalArea;
       var addAbove = floorsAbove * avgFloorArea;
       var addBelow = Math.min(basementArea, 3 * avgFloorArea); // up to 3 floors below, capped by actual basement area on file
-      areaSubjectFactor = totalArea > 0 ? Math.min(1, (largestUndivided + addAbove + addBelow) / totalArea) : 1;
+      areaSubjectFactor = totalArea > 0 ? Math.min(1, (largestUndivided + addAbove + addBelow + adjacentFireWallArea) / totalArea) : 1;
       steps.push('  Table (i): +' + floorsAbove + ' floors above (' + Math.round(addAbove).toLocaleString() + ' sf) + basement addition (' + Math.round(addBelow).toLocaleString() + ' sf)');
-      steps.push('  = (' + largestUndivided.toLocaleString() + ' + ' + Math.round(addAbove).toLocaleString() + ' + ' + Math.round(addBelow).toLocaleString() + ') ÷ ' + totalArea.toLocaleString() + ' sf  =  ' + areaSubjectFactor.toFixed(3));
-      steps.push('  NOTE: Tables (ii) adjoining-unit and (iv) exposure-building additions are not yet automated — pad Largest Undivided Area manually if applicable.');
+      if (adjacentFireWallArea > 0) steps.push('  Table (ii): + adjacent area(s) separated by 1-hr fire wall (' + adjacentFireWallArea.toLocaleString() + ' sf) — multi-tenant building');
+      steps.push('  = (' + largestUndivided.toLocaleString() + ' + ' + Math.round(addAbove).toLocaleString() + ' + ' + Math.round(addBelow).toLocaleString() + (adjacentFireWallArea > 0 ? (' + ' + adjacentFireWallArea.toLocaleString()) : '') + ') ÷ ' + totalArea.toLocaleString() + ' sf  =  ' + areaSubjectFactor.toFixed(3));
+      steps.push('  NOTE: Table (iv) exposure-building additions are not yet automated — pad Largest Undivided Area manually if applicable.');
     } else {
       areaSubjectFactor = 1.00;
       steps.push('  Table (i): ' + bucket + ' construction adds 100% of building area to the largest undivided area  →  Area Subject Factor = 1.000 (capped)');
+      if (adjacentFireWallArea > 0) steps.push('  (Adjacent Areas field not applied — already capped at 100% for this construction type.)');
     }
 
     // STEP 2 — Public Protection Factor
@@ -10015,7 +10036,7 @@
     var pmlDollar = pmlPct * buildingValue;
     steps.push('');
     steps.push('BUILDING PML % = ' + areaSubjectFactor.toFixed(3) + ' × ' + protectionFactor.toFixed(2) + ' × ' + constructionFactor.toFixed(2) + ' × ' + occHazardFactor.toFixed(2) + ' × ' + exposuresFactor.toFixed(2) + '  =  ' + (pmlPct*100).toFixed(1) + '%  (capped at 100%)');
-    steps.push('BUILDING PML $ = ' + (pmlPct*100).toFixed(1) + '% × $' + buildingValue.toLocaleString() + '  =  $' + Math.round(pmlDollar).toLocaleString());
+    steps.push('BUILDING PML $ = ' + (pmlPct*100).toFixed(1) + '% × $' + buildingValue.toLocaleString() + ' (' + buildingValueSource + ')  =  $' + Math.round(pmlDollar).toLocaleString());
 
     // NLE — per SRI paper, gated on the platform's own Sprinkler Grading score (0-100), not just coverage
     var spkScoreEl = document.getElementById('spk-score');
@@ -10057,7 +10078,7 @@
     steps.push('');
     if (contentsFactor !== undefined) {
       steps.push('STEP 7 — CONTENTS PML');
-      steps.push('  Contents $' + contentsValue.toLocaleString() + ' × Susceptibility Factor ' + (contentsFactor*100).toFixed(1) + '% × Building PML ' + (pmlPct*100).toFixed(1) + '%  =  $' + Math.round(contentsPmlDollar).toLocaleString());
+      steps.push('  Contents $' + contentsValue.toLocaleString() + ' (' + contentsValueSource + ') × Susceptibility Factor ' + (contentsFactor*100).toFixed(1) + '% × Building PML ' + (pmlPct*100).toFixed(1) + '%  =  $' + Math.round(contentsPmlDollar).toLocaleString());
     } else {
       steps.push('STEP 7 — CONTENTS PML: Select a Contents Susceptibility Rating above to include.');
     }
