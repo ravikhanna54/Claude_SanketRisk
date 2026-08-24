@@ -4412,6 +4412,70 @@
         </div>
       </div>
       <div class="card">
+        <div class="card-title">📊 PML / NLE Calculator</div>
+        <div style="font-size:12px;color:var(--slate);margin-bottom:14px;">Probable Maximum Loss and Normal Loss Expectancy — SRI methodology. Optional worksheet — include in the customer-facing report only if requested.</div>
+        <div class="field" style="margin-bottom:16px">
+          <label>Include in Customer Report?</label>
+          <div class="radio-group" id="pml-include-report">
+            <label class="radio-btn" onclick="selectRadio(this,'pml-include-report');document.getElementById('pml-include-report-flag').value='no';">No — Internal Only</label>
+            <label class="radio-btn" onclick="selectRadio(this,'pml-include-report');document.getElementById('pml-include-report-flag').value='yes';">Yes — Customer Requested</label>
+          </div>
+        </div>
+        <input type="hidden" id="pml-include-report-flag" value="no">
+        <div class="form-grid">
+          <div class="field">
+            <label>Largest Undivided Area (sq ft)</label>
+            <input type="number" id="pml-largest-undivided-area" min="0" placeholder="Defaults to Total Area if left blank">
+          </div>
+          <div class="field">
+            <label>Contents Susceptibility Rating</label>
+            <select id="pml-contents-susceptibility">
+              <option value="">— Select —</option>
+              <option value="1">1 — Low (e.g. canned / metal goods)</option>
+              <option value="2">2 — Low-Moderate (furniture, machinery)</option>
+              <option value="3">3 — Moderate (electronics, clothing)</option>
+              <option value="4">4 — High (paper, plastics, chemicals)</option>
+              <option value="5">5 — Severe (food products, raw materials)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Sprinkler Design Area (sq ft)</label>
+            <input type="number" id="pml-sprinkler-design-area" min="0" placeholder="Auto-detected from Sprinkler Supplement if left blank">
+          </div>
+        </div>
+        <div style="margin:14px 0 12px;">
+          <button onclick="calculatePMLNLE()" style="padding:8px 20px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">
+            🧮 Calculate PML / NLE
+          </button>
+        </div>
+        <div id="pml-result-wrap" style="display:none;">
+          <div id="pml-steps" style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.9;background:#f7f9fc;border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:14px;color:var(--navy-mid);white-space:pre-wrap;"></div>
+          <div class="summary-score-card">
+            <div class="score-tile">
+              <div class="score-val" id="pml-result-pct">—</div>
+              <div class="score-lbl">Building PML %</div>
+            </div>
+            <div class="score-tile">
+              <div class="score-val" id="pml-result-dollar">—</div>
+              <div class="score-lbl">Building PML $</div>
+            </div>
+            <div class="score-tile">
+              <div class="score-val" id="nle-result-dollar">—</div>
+              <div class="score-lbl">NLE $</div>
+            </div>
+            <div class="score-tile" style="background:var(--gold)">
+              <div class="score-val" style="color:var(--navy)" id="contents-pml-dollar">—</div>
+              <div class="score-lbl" style="color:var(--navy-mid)">Contents PML $</div>
+            </div>
+          </div>
+          <div style="font-size:10.5px;color:var(--slate);margin-top:10px;line-height:1.5;">⚠ Built from your SRI PML/NLE paper. Table (ii) adjoining-unit and (iv) exposure-building additions to Area Subject aren't automated (pad Largest Undivided Area manually if needed); Exposures Factor is 1.00 per the paper's "to be determined" note; Occupancy Hazard uses range midpoints. See chat for the NLE Water/Smoke Damage wording I had to interpret.</div>
+        </div>
+        <input type="hidden" id="pml-percent-result">
+        <input type="hidden" id="pml-dollar-result">
+        <input type="hidden" id="nle-dollar-result">
+        <input type="hidden" id="pml-contents-dollar-result">
+      </div>
+      <div class="card">
         <div class="card-title">Overall Risk Quality</div>
         <div class="field" style="margin-bottom:16px">
           <label>Risk Quality Rating</label>
@@ -9850,6 +9914,169 @@
     if (card) card.style.display = 'block';
   }
 
+  // ── PML / NLE CALCULATOR (SRI Methodology) ──
+  function pmlNum(v) {
+    if (!v) return 0;
+    var n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+    return isNaN(n) ? 0 : n;
+  }
+
+  function calculatePMLNLE() {
+    var get = function(id) { var el = document.getElementById(id); return el ? el.value : ''; };
+    var steps = [];
+
+    // Values
+    var buildingValue = pmlNum(get('building-value'));
+    var contentsValue = pmlNum(get('business-personal-property-value'));
+
+    // Areas
+    var totalArea = pmlNum(get('total-area'));
+    var largestUndivided = pmlNum(get('pml-largest-undivided-area')) || totalArea;
+    var storeys = parseInt(get('stories-above-grade')) || 1;
+    var basementArea = pmlNum(get('basement-area'));
+
+    // Construction bucket per SRI paper's 4 categories (mapped from the platform's 6 ISO classes)
+    var isoBtn = document.querySelector('#iso-class .radio-btn.selected');
+    var conClass = isoBtn ? isoBtn.textContent.trim() : '';
+    var conLower = conClass.toLowerCase();
+    var bucket = 'Non-Combustible'; // default
+    if (conLower === 'fire resistive' || conLower === 'modified fire resistive') bucket = 'Fire Resistive/Mill';
+    else if (conLower === 'joisted masonry') bucket = 'Masonry Joisted';
+    else if (conLower === 'frame') bucket = 'Wood Frame';
+    else if (conLower === 'non-comb. / masonry' || conLower === 'masonry non-comb.') bucket = 'Non-Combustible';
+
+    // STEP 1 — Area Subject Factor (SRI paper tables i/ii/iv)
+    // Tables (i) and (ii) both add 100% of building area for Non-Combustible/Masonry
+    // Joisted/Wood Frame construction, which caps the factor at 1.00 regardless of table
+    // (iv) exposure additions — so only Fire Resistive/Mill construction produces a
+    // sub-1.00 factor, driven by the number of floors above/below the largest undivided area.
+    var areaSubjectFactor;
+    steps.push('STEP 1 — AREA SUBJECT FACTOR  (Construction bucket: ' + bucket + ')');
+    if (bucket === 'Fire Resistive/Mill') {
+      var floorsAbove = Math.min(4, Math.max(0, storeys - 1));
+      var avgFloorArea = storeys > 0 ? totalArea / storeys : totalArea;
+      var addAbove = floorsAbove * avgFloorArea;
+      var addBelow = Math.min(basementArea, 3 * avgFloorArea); // up to 3 floors below, capped by actual basement area on file
+      areaSubjectFactor = totalArea > 0 ? Math.min(1, (largestUndivided + addAbove + addBelow) / totalArea) : 1;
+      steps.push('  Table (i): +' + floorsAbove + ' floors above (' + Math.round(addAbove).toLocaleString() + ' sf) + basement addition (' + Math.round(addBelow).toLocaleString() + ' sf)');
+      steps.push('  = (' + largestUndivided.toLocaleString() + ' + ' + Math.round(addAbove).toLocaleString() + ' + ' + Math.round(addBelow).toLocaleString() + ') ÷ ' + totalArea.toLocaleString() + ' sf  =  ' + areaSubjectFactor.toFixed(3));
+      steps.push('  NOTE: Tables (ii) adjoining-unit and (iv) exposure-building additions are not yet automated — pad Largest Undivided Area manually if applicable.');
+    } else {
+      areaSubjectFactor = 1.00;
+      steps.push('  Table (i): ' + bucket + ' construction adds 100% of building area to the largest undivided area  →  Area Subject Factor = 1.000 (capped)');
+    }
+
+    // STEP 2 — Public Protection Factor
+    var fusGrade = parseInt(get('fus-grade')) || 10;
+    var hydrantDist = pmlNum(get('fus-hydrant-distance'));   // metres
+    var firehallDist = pmlNum(get('fus-distance-firehall')); // km
+    var adjGrade = fusGrade;
+    if (firehallDist > 8) adjGrade = 9;
+    else if (firehallDist > 5) adjGrade = Math.min(9, adjGrade + 2);
+    else if (firehallDist > 2.5) adjGrade = Math.min(9, adjGrade + 1);
+    if (hydrantDist > 304.8) adjGrade = 9;
+    else if (hydrantDist > 154.8) adjGrade = Math.min(9, adjGrade + 2);
+    else if (hydrantDist > 0) adjGrade = Math.min(9, adjGrade + 1);
+    adjGrade = Math.max(1, Math.min(10, adjGrade));
+    var protectionFactor = adjGrade <= 3 ? 1.00 : (adjGrade <= 5 ? 1.50 : 2.00);
+    steps.push('STEP 2 — PUBLIC PROTECTION FACTOR');
+    steps.push('  FUS Grade ' + fusGrade + ' → distance/hydrant-adjusted Grade ' + adjGrade + '  =  ' + protectionFactor.toFixed(2));
+
+    // STEP 3 — Construction Factor (not tabulated in the SRI paper — using agreed default table)
+    var constructionFactorMap = {
+      'frame': 0.93,
+      'joisted masonry': 0.78,
+      'non-comb. / masonry': 0.63,
+      'masonry non-comb.': 0.68,
+      'modified fire resistive': 0.48,
+      'fire resistive': 0.30
+    };
+    var constructionFactor = constructionFactorMap[conLower] !== undefined ? constructionFactorMap[conLower] : 0.70;
+    steps.push('STEP 3 — CONSTRUCTION FACTOR');
+    steps.push('  ISO Class: ' + (conClass || 'Not selected') + '  =  ' + constructionFactor.toFixed(2));
+
+    // STEP 4 — Occupancy Hazard Factor (paper gives ranges; using midpoint — top of range if "severe recommendations" apply)
+    var nfpa = get('nfpa-hazard-category');
+    var occHazardFactor = 1.25;
+    if (nfpa.indexOf('Low') === 0) occHazardFactor = 0.75;
+    else if (nfpa.indexOf('Ordinary') === 0) occHazardFactor = 1.25;
+    else if (nfpa.indexOf('High') === 0) occHazardFactor = 1.75;
+    else if (nfpa.indexOf('Extra High') === 0) occHazardFactor = 2.25;
+    steps.push('STEP 4 — OCCUPANCY HAZARD FACTOR');
+    steps.push('  NFPA Hazard: ' + (nfpa || 'Not selected') + '  =  ' + occHazardFactor.toFixed(2) + '  (midpoint of the paper\u2019s range \u2014 use higher end manually if severe recommendations apply)');
+
+    // STEP 5 — Exposures Factor (paper: "to be determined or 1 for now")
+    var exposuresFactor = 1.00;
+    steps.push('STEP 5 — EXPOSURES FACTOR');
+    steps.push('  Per SRI paper: to be determined — using 1.00 for now');
+
+    // PML
+    var pmlPct = Math.min(1, areaSubjectFactor * protectionFactor * constructionFactor * occHazardFactor * exposuresFactor);
+    var pmlDollar = pmlPct * buildingValue;
+    steps.push('');
+    steps.push('BUILDING PML % = ' + areaSubjectFactor.toFixed(3) + ' × ' + protectionFactor.toFixed(2) + ' × ' + constructionFactor.toFixed(2) + ' × ' + occHazardFactor.toFixed(2) + ' × ' + exposuresFactor.toFixed(2) + '  =  ' + (pmlPct*100).toFixed(1) + '%  (capped at 100%)');
+    steps.push('BUILDING PML $ = ' + (pmlPct*100).toFixed(1) + '% × $' + buildingValue.toLocaleString() + '  =  $' + Math.round(pmlDollar).toLocaleString());
+
+    // NLE — per SRI paper, gated on the platform's own Sprinkler Grading score (0-100), not just coverage
+    var spkScoreEl = document.getElementById('spk-score');
+    var spkScore = spkScoreEl ? parseFloat(spkScoreEl.textContent) : NaN;
+    var designArea = pmlNum(get('pml-sprinkler-design-area'));
+    if (!designArea && typeof designAreaCount !== 'undefined') {
+      var maxDa = 0;
+      for (var i = 1; i <= designAreaCount; i++) {
+        var daEl = document.getElementById('da-area-' + i);
+        if (daEl) { var v = pmlNum(daEl.value); if (v > maxDa) maxDa = v; }
+      }
+      designArea = maxDa;
+    }
+    var nleDollar;
+    steps.push('');
+    if (!isNaN(spkScore) && spkScore >= 50 && designArea > 0 && totalArea > 0) {
+      var valuePerSf = buildingValue / totalArea;
+      var fireDamage = designArea * 2 * valuePerSf;
+      var waterDamage = fireDamage * 1.5;
+      var smokeDamage = pmlDollar; // "PML of entire subject building" — read as the Building PML $ already computed above
+      nleDollar = Math.min(pmlDollar, fireDamage + waterDamage + smokeDamage);
+      steps.push('STEP 6 — NLE (Sprinkler Grading Score ' + spkScore + '/100 ≥ 50)');
+      steps.push('  Fire Damage = Design Area ' + designArea.toLocaleString() + ' sf × 2 × $' + valuePerSf.toFixed(0) + '/sf  =  $' + Math.round(fireDamage).toLocaleString());
+      steps.push('  Water Damage = Fire Damage × 1.5  =  $' + Math.round(waterDamage).toLocaleString());
+      steps.push('  Smoke Damage = Building PML $  =  $' + Math.round(smokeDamage).toLocaleString());
+      steps.push('  NLE $ = min(PML $, Fire + Water + Smoke)  =  $' + Math.round(nleDollar).toLocaleString());
+      steps.push('  ⚠ Paper text for Water/Smoke Damage was ambiguous — see chat for the exact wording and my reading of it.');
+    } else {
+      nleDollar = pmlDollar;
+      steps.push('STEP 6 — NLE (Sprinkler Grading Score ' + (isNaN(spkScore) ? 'not graded' : spkScore + '/100') + (isNaN(spkScore) || spkScore < 50 ? ' — below 50' : '') + ')');
+      steps.push('  Per SRI paper: sprinkler grading < 50 (or ungraded / no design area on file) → NLE $ = PML $  =  $' + Math.round(nleDollar).toLocaleString());
+    }
+
+    // Contents PML
+    var contentsRating = get('pml-contents-susceptibility');
+    var contentsFactorMap = { '1': 0.125, '2': 0.325, '3': 0.575, '4': 0.875, '5': 1.00 };
+    var contentsFactor = contentsFactorMap[contentsRating];
+    var contentsPmlDollar = (contentsFactor !== undefined) ? (contentsValue * contentsFactor * pmlPct) : 0;
+    steps.push('');
+    if (contentsFactor !== undefined) {
+      steps.push('STEP 7 — CONTENTS PML');
+      steps.push('  Contents $' + contentsValue.toLocaleString() + ' × Susceptibility Factor ' + (contentsFactor*100).toFixed(1) + '% × Building PML ' + (pmlPct*100).toFixed(1) + '%  =  $' + Math.round(contentsPmlDollar).toLocaleString());
+    } else {
+      steps.push('STEP 7 — CONTENTS PML: Select a Contents Susceptibility Rating above to include.');
+    }
+
+    // Render
+    document.getElementById('pml-steps').textContent = steps.join('\n');
+    document.getElementById('pml-result-pct').textContent = (pmlPct*100).toFixed(1) + '%';
+    document.getElementById('pml-result-dollar').textContent = '$' + Math.round(pmlDollar).toLocaleString();
+    document.getElementById('nle-result-dollar').textContent = '$' + Math.round(nleDollar).toLocaleString();
+    document.getElementById('contents-pml-dollar').textContent = (contentsFactor !== undefined) ? ('$' + Math.round(contentsPmlDollar).toLocaleString()) : '—';
+    document.getElementById('pml-result-wrap').style.display = 'block';
+
+    // Persist for save/report
+    document.getElementById('pml-percent-result').value = (pmlPct*100).toFixed(1) + '%';
+    document.getElementById('pml-dollar-result').value = '$' + Math.round(pmlDollar).toLocaleString();
+    document.getElementById('nle-dollar-result').value = '$' + Math.round(nleDollar).toLocaleString();
+    document.getElementById('pml-contents-dollar-result').value = (contentsFactor !== undefined) ? ('$' + Math.round(contentsPmlDollar).toLocaleString()) : '';
+  }
+
   function newInspection() {
     if (!confirm('Start a new inspection? Any unsaved changes will be lost.')) return;
     currentInspectionId = null;
@@ -12011,7 +12238,7 @@ ${lossComments}
 SAFETY ASSESSMENT (1-5 scale):
 ${safetyText}
 SCORES: Construction ${scoreC} | Protection ${scoreP} | Safety ${scoreS} | Overall ${scoreO}
-RECOMMENDATIONS:
+${(g('pml-percent-result') && g('pml-include-report-flag') === 'yes') ? ('PML/NLE (customer requested worksheet): Building PML ' + g('pml-percent-result') + ' (' + g('pml-dollar-result') + ') | NLE ' + g('nle-dollar-result') + (g('pml-contents-dollar-result') ? (' | Contents PML ' + g('pml-contents-dollar-result')) : '') + '\n') : ''}RECOMMENDATIONS:
 ${recText || 'None recorded.'}
 INSPECTOR EXECUTIVE SUMMARY:
 ${execSummary}
@@ -12025,7 +12252,7 @@ Write a complete narrative inspection report with the following sections:
 6. **Exposure Analysis** (1 paragraph): Neighboring exposures, natural hazards
 7. **Loss History** (1 paragraph): Prior loss experience and trend
 8. **Recommendations Summary** (concise paragraph): Key requirements and recommendations with reference numbers
-9. **Underwriter Conclusions** (1 paragraph): Final risk assessment and conditions
+9. **Underwriter Conclusions** (1 paragraph): Final risk assessment and conditions${(g('pml-percent-result') && g('pml-include-report-flag') === 'yes') ? '\n10. **PML/NLE Worksheet** (brief paragraph): Only include this section because the customer specifically requested this worksheet — summarize the Building PML, NLE, and Contents PML figures provided above.' : ' Do not mention PML, NLE, or probable maximum loss anywhere in the report — this worksheet was not requested.'}
 Write in formal insurance inspection language. Be specific with measurements, dates, and observations. Do not use bullet points — write in full paragraphs only.`;
   // ── Open new tab and show loading state ──
   var w = window.open('', '_blank');
@@ -14128,6 +14355,28 @@ function generateFormalReport() {
         <div class="risk-banner-rec">${fmt(uwRec)}</div>
       </div>
     </div>
+    ${(f['pml-percent-result'] && f['pml-include-report-flag'] === 'yes') ? `
+    <div class="sub-heading">PML / NLE Summary</div>
+    <div class="score-row">
+      <div class="score-tile">
+        <span class="score-val">${val('pml-percent-result')}</span>
+        <div class="score-lbl">Building PML %</div>
+      </div>
+      <div class="score-tile">
+        <span class="score-val" style="font-size:13pt;">${val('pml-dollar-result')}</span>
+        <div class="score-lbl">Building PML $</div>
+      </div>
+      <div class="score-tile">
+        <span class="score-val" style="font-size:13pt;">${val('nle-dollar-result')}</span>
+        <div class="score-lbl">NLE $</div>
+      </div>
+      <div class="score-tile overall">
+        <span class="score-val" style="font-size:13pt;">${val('pml-contents-dollar-result')}</span>
+        <div class="score-lbl">Contents PML $</div>
+      </div>
+    </div>
+    <hr class="sec-divider">
+    ` : ''}
     <div class="field-grid">
       ${field2('Inspection Type', val('inspection-type'))}
       ${field2('Inspector Signature', val('inspector-signature'))}
