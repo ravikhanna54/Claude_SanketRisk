@@ -12398,8 +12398,8 @@ async function generateNarrativeReport() {
   // Site location static maps (printable)
   const nMapQ = (typeof buildMapQuery === 'function') ? buildMapQuery() : '';
   const nHasKey = (typeof GOOGLE_MAPS_API_KEY !== 'undefined') && GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY.indexOf('PASTE_') !== 0;
-  const nMapAerial = (nHasKey && nMapQ) ? 'https://maps.googleapis.com/maps/api/staticmap?center=' + encodeURIComponent(nMapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=color:red%7C' + encodeURIComponent(nMapQ) + '&key=' + GOOGLE_MAPS_API_KEY : '';
-  const nMapRoad = (nHasKey && nMapQ) ? 'https://maps.googleapis.com/maps/api/staticmap?center=' + encodeURIComponent(nMapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=color:red%7C' + encodeURIComponent(nMapQ) + '&key=' + GOOGLE_MAPS_API_KEY : '';
+  const nMapAerial = (nHasKey && nMapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(nMapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=' + encodeURIComponent('color:red|' + nMapQ) : '';
+  const nMapRoad = (nHasKey && nMapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(nMapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=' + encodeURIComponent('color:red|' + nMapQ) : '';
   const occupancy     = d.occupancy_class|| g('occupancy-class') || '—';
   const inspName      = d.inspector_name || g('inspector-name')  || '—';
   const riskQuality   = g('risk-quality') || (pills['risk_quality_rating'] || []).join(', ')  || '—';
@@ -12830,8 +12830,8 @@ function generateFormalReport() {
   // Site location static maps (printable)
   var mapQ = (typeof buildMapQuery === 'function') ? buildMapQuery() : '';
   var hasMapKey = (typeof GOOGLE_MAPS_API_KEY !== 'undefined') && GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY.indexOf('PASTE_') !== 0;
-  var mapAerialUrl = (hasMapKey && mapQ) ? 'https://maps.googleapis.com/maps/api/staticmap?center=' + encodeURIComponent(mapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=color:red%7C' + encodeURIComponent(mapQ) + '&key=' + GOOGLE_MAPS_API_KEY : '';
-  var mapRoadUrl = (hasMapKey && mapQ) ? 'https://maps.googleapis.com/maps/api/staticmap?center=' + encodeURIComponent(mapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=color:red%7C' + encodeURIComponent(mapQ) + '&key=' + GOOGLE_MAPS_API_KEY : '';
+  var mapAerialUrl = (hasMapKey && mapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(mapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=' + encodeURIComponent('color:red|' + mapQ) : '';
+  var mapRoadUrl = (hasMapKey && mapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(mapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=' + encodeURIComponent('color:red|' + mapQ) : '';
   // Nat-Cat demerit breakdown (stored by the grade calculator)
   var ncDem = {};
   try { ncDem = JSON.parse(f['nc-demerits-json'] || '{}') || {}; } catch(e) { ncDem = {}; }
