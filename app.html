@@ -1839,6 +1839,7 @@
           <select id="cope-cost-type" onchange="updateCopeConstructionCostEstimate()">
             <option value="">&#x2014; Select if a close match exists &#x2014;</option>
           </select>
+          <div id="cope-cost-region-note"></div>
         </div>
         <div id="cope-construction-cost-result" style="margin-top:10px;"></div>
       </div>
@@ -11943,12 +11944,87 @@
   // ── CONSTRUCTION COST ESTIMATE (Altus Group 2026 Cost Guide) ──
   var _copeCostData = [];
   var _copePendingCostRowId = null;
-  var COPE_LOWER_MAINLAND_CITIES = ['vancouver','burnaby','surrey','richmond','coquitlam','delta',
-    'langley','maple ridge','new westminster','north vancouver','west vancouver',
-    'port coquitlam','port moody','white rock','pitt meadows','abbotsford','chilliwack','mission'];
+  // City → cost region mapping, covering all 9 metro regions in the Altus Group
+  // 2026 Canadian Cost Guide. Not exhaustive — add nearby municipalities as needed.
+  var COPE_CITY_TO_REGION = {
+    'vancouver':'Vancouver / Lower Mainland','burnaby':'Vancouver / Lower Mainland','surrey':'Vancouver / Lower Mainland',
+    'richmond':'Vancouver / Lower Mainland','coquitlam':'Vancouver / Lower Mainland','delta':'Vancouver / Lower Mainland',
+    'langley':'Vancouver / Lower Mainland','maple ridge':'Vancouver / Lower Mainland','new westminster':'Vancouver / Lower Mainland',
+    'north vancouver':'Vancouver / Lower Mainland','west vancouver':'Vancouver / Lower Mainland','port coquitlam':'Vancouver / Lower Mainland',
+    'port moody':'Vancouver / Lower Mainland','white rock':'Vancouver / Lower Mainland','pitt meadows':'Vancouver / Lower Mainland',
+    'abbotsford':'Vancouver / Lower Mainland','chilliwack':'Vancouver / Lower Mainland','mission':'Vancouver / Lower Mainland',
+    'calgary':'Calgary','airdrie':'Calgary','okotoks':'Calgary','cochrane':'Calgary','chestermere':'Calgary','strathmore':'Calgary',
+    'edmonton':'Edmonton','sherwood park':'Edmonton','st. albert':'Edmonton','st albert':'Edmonton','spruce grove':'Edmonton',
+    'leduc':'Edmonton','fort saskatchewan':'Edmonton','beaumont':'Edmonton',
+    'winnipeg':'Winnipeg','steinbach':'Winnipeg','selkirk':'Winnipeg','stonewall':'Winnipeg',
+    'toronto':'GTA (Greater Toronto Area)','mississauga':'GTA (Greater Toronto Area)','brampton':'GTA (Greater Toronto Area)',
+    'markham':'GTA (Greater Toronto Area)','vaughan':'GTA (Greater Toronto Area)','richmond hill':'GTA (Greater Toronto Area)',
+    'oakville':'GTA (Greater Toronto Area)','burlington':'GTA (Greater Toronto Area)','ajax':'GTA (Greater Toronto Area)',
+    'pickering':'GTA (Greater Toronto Area)','whitby':'GTA (Greater Toronto Area)','oshawa':'GTA (Greater Toronto Area)',
+    'milton':'GTA (Greater Toronto Area)','newmarket':'GTA (Greater Toronto Area)','aurora':'GTA (Greater Toronto Area)',
+    'caledon':'GTA (Greater Toronto Area)','halton hills':'GTA (Greater Toronto Area)','north york':'GTA (Greater Toronto Area)',
+    'scarborough':'GTA (Greater Toronto Area)','etobicoke':'GTA (Greater Toronto Area)',
+    'ottawa':'Ottawa','gatineau':'Ottawa','kanata':'Ottawa','nepean':'Ottawa','orleans':'Ottawa','barrhaven':'Ottawa','gloucester':'Ottawa',
+    'montreal':'Montreal','montréal':'Montreal','laval':'Montreal','longueuil':'Montreal','brossard':'Montreal',
+    'terrebonne':'Montreal','repentigny':'Montreal',
+    'halifax':'Halifax','dartmouth':'Halifax','bedford':'Halifax','sackville':'Halifax','cole harbour':'Halifax',
+    "st. john's":"St. John's", 'st johns':"St. John's", 'mount pearl':"St. John's", 'paradise':"St. John's",
+    'conception bay south':"St. John's", 'torbay':"St. John's"
+  };
+  function copeDetectCostRegion(city) {
+    var key = (city || '').trim().toLowerCase();
+    return COPE_CITY_TO_REGION[key] || null;
+  }
 
   function _copeCostMsg(msg) {
     return '<div style="font-size:12px;padding:10px 12px;border-radius:6px;background:#fffbeb;color:#92400e;">&#x26A0; ' + msg + '</div>';
+  }
+
+  // Rebuilds the dropdown from already-fetched data (_copeCostData), filtered
+  // to the region matching the property's City field when recognized. Called
+  // on initial load and again whenever the City field changes, so switching
+  // from a BC address to an Ontario one (or vice versa) doesn't leave stale
+  // options in the list.
+  function copeRebuildCostDropdown() {
+    var sel = document.getElementById('cope-cost-type');
+    if (!sel || !_copeCostData.length) return;
+    var previousValue = sel.value;
+    sel.innerHTML = '<option value="">— Select building type —</option>';
+
+    var cityEl = document.getElementById('city');
+    var cityVal = cityEl ? cityEl.value : '';
+    var matchedRegion = copeDetectCostRegion(cityVal);
+    var rows = matchedRegion ? _copeCostData.filter(function(r) { return r.region === matchedRegion; }) : _copeCostData;
+    var showRegionInLabel = !matchedRegion;
+
+    var currentCategory = null;
+    rows.forEach(function(row) {
+      if (row.category !== currentCategory) {
+        currentCategory = row.category;
+        var grp = document.createElement('optgroup');
+        grp.label = currentCategory;
+        sel.appendChild(grp);
+      }
+      var opt = document.createElement('option');
+      opt.value = row.id;
+      opt.textContent = row.building_type + (row.sub_type ? ' \u2014 ' + row.sub_type : '') + (showRegionInLabel ? ' [' + row.region + ']' : '');
+      sel.lastChild.appendChild(opt);
+    });
+
+    var noteEl = document.getElementById('cope-cost-region-note');
+    if (noteEl) {
+      if (matchedRegion) {
+        noteEl.innerHTML = '<div style="font-size:11px;color:var(--slate);margin:4px 0 8px;">Showing rates for <strong>' + matchedRegion + '</strong>, matched from City: "' + cityVal + '".</div>';
+      } else if (cityVal) {
+        noteEl.innerHTML = '<div style="font-size:11px;color:#92400e;margin:4px 0 8px;">City "' + cityVal + '" isn\'t mapped to a specific cost region — showing all regions below (region shown in brackets). Pick the closest metro area\'s figure manually.</div>';
+      } else {
+        noteEl.innerHTML = '<div style="font-size:11px;color:var(--slate);margin:4px 0 8px;">Enter a City above to filter this list to the matching region.</div>';
+      }
+    }
+
+    if (previousValue && rows.some(function(r) { return String(r.id) === String(previousValue); })) {
+      sel.value = previousValue;
+    }
   }
 
   async function loadCopeConstructionCostData() {
@@ -11958,21 +12034,16 @@
       });
       if (!resp.ok) { console.warn('[CostEstimate] Failed to load cost data, HTTP', resp.status); return; }
       _copeCostData = await resp.json();
+
       var sel = document.getElementById('cope-cost-type');
       if (!sel) return;
-      var currentCategory = null;
-      _copeCostData.forEach(function(row) {
-        if (row.category !== currentCategory) {
-          currentCategory = row.category;
-          var grp = document.createElement('optgroup');
-          grp.label = currentCategory;
-          sel.appendChild(grp);
-        }
-        var opt = document.createElement('option');
-        opt.value = row.id;
-        opt.textContent = row.building_type + (row.sub_type ? ' \u2014 ' + row.sub_type : '');
-        sel.lastChild.appendChild(opt);
-      });
+      copeRebuildCostDropdown();
+      var cityEl = document.getElementById('city');
+      if (cityEl && !cityEl._copeCostRegionHooked) {
+        cityEl.addEventListener('change', copeRebuildCostDropdown);
+        cityEl.addEventListener('blur', copeRebuildCostDropdown);
+        cityEl._copeCostRegionHooked = true;
+      }
       if (_copePendingCostRowId) {
         sel.value = _copePendingCostRowId;
         _copePendingCostRowId = null;
@@ -12005,8 +12076,8 @@
     var areaInput = document.getElementById('total-area');
     var area = parseFloat(areaInput ? areaInput.value : '');
     var cityEl = document.getElementById('city');
-    var city = (cityEl ? cityEl.value : '').trim().toLowerCase();
-    var isLowerMainland = COPE_LOWER_MAINLAND_CITIES.indexOf(city) >= 0;
+    var city = (cityEl ? cityEl.value : '').trim();
+    var matchedRegion = copeDetectCostRegion(city);
 
     var html = '';
     if (!area || area <= 0) {
@@ -12019,8 +12090,10 @@
         '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied</td><td style="padding:4px 0;">$' + row.cost_low + ' &#x2013; $' + row.cost_high + ' / sq ft \u00D7 ' + area.toLocaleString('en-CA') + ' sq ft</td></tr>' +
         '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">' + row.source + ' (' + row.year + '), ' + row.region + '</td></tr>' +
         '</table>';
-      if (!isLowerMainland && city) {
-        html += _copeCostMsg('This benchmark is priced for the Vancouver/Lower Mainland region. Altus Group does not publish a separate Rural/Interior BC figure — this range likely overstates cost for this location. Treat as a rough upper-bound reference only, and consider requesting a detailed CoreLogic or RSMeans valuation for an accurate rural/regional estimate.');
+      if (city && matchedRegion && row.region !== matchedRegion) {
+        html += _copeCostMsg('You selected a <strong>' + row.region + '</strong> rate, but "' + city + '" matches the <strong>' + matchedRegion + '</strong> region. Double-check this is the rate you intended.');
+      } else if (city && !matchedRegion) {
+        html += _copeCostMsg('"' + city + '" isn\'t mapped to a specific Altus Group cost region — this is the <strong>' + row.region + '</strong> rate, chosen manually. Altus Group does not publish a distinct rural/remote figure, so treat this as a rough reference only, and consider a detailed CoreLogic or RSMeans valuation for an accurate estimate.');
       }
       if (row.notes) {
         html += '<div style="font-size:11px;color:var(--slate-light);margin-top:4px;">Note: ' + row.notes + '</div>';
