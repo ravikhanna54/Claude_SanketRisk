@@ -425,6 +425,7 @@
           <div class="field"><label>Street Address</label><input type="text" id="s-address" placeholder="e.g. 1250 Industrial Pkwy"></div>
           <div class="field"><label>City</label><input type="text" id="s-city" placeholder="e.g. Mississauga"></div>
           <div class="field"><label>Province / State</label><input type="text" id="s-province" placeholder="e.g. ON"></div>
+          <div class="field"><label>Fire Hydrant Information <span style="font-size:10px;color:var(--slate);font-weight:400">(optional)</span></label><input type="text" id="s-hydrant-info" placeholder="e.g. 2 hydrants within 300m, nearest ~85m"></div>
           <div class="field"><label>Occupancy Type</label>
             <select id="s-occupancy">
               <option value="">&#x2014; Select &#x2014;</option>
@@ -1334,6 +1335,7 @@
       set('s-storeys',        fd.storeys);
       set('s-construction',   fd.construction);
       set('s-fire-protection',fd.fireProtection);
+      set('s-hydrant-info',   fd.hydrantInfo);
       set('s-tenure',         fd.tenure);
       set('s-context',        fd.context);
       set('s-losses',         fd.losses);
@@ -2080,6 +2082,7 @@
       address:    document.getElementById('s-address').value.trim(),
       city:       document.getElementById('s-city').value.trim(),
       province:   document.getElementById('s-province').value.trim(),
+      hydrantInfo: (document.getElementById('s-hydrant-info') ? document.getElementById('s-hydrant-info').value.trim() : ''),
       occupancy:  document.getElementById('s-occupancy').value,
       tenure:     document.getElementById('s-tenure').value,
       yearBuilt:  document.getElementById('s-year-built').value,
@@ -2395,9 +2398,29 @@
     if (!protEl) return;
     document.querySelectorAll('.res-hydrant-note').forEach(function(el){ el.remove(); });
 
+    // Manual override — if the submitter provided hydrant info directly (e.g.
+    // transcribed from Google Earth's US hydrant layer, or local knowledge for
+    // a Canadian address with sparse OSM tagging), use it as-is and skip the
+    // automated lookup entirely.
+    if (data.hydrantInfo && data.hydrantInfo.trim()) {
+      var manualNoteEl = document.createElement('div');
+      manualNoteEl.className = 'res-hydrant-note';
+      manualNoteEl.innerHTML =
+        '<strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">FIRE HYDRANT PROXIMITY</strong>' +
+        '<span style="font-size:12px;color:var(--navy);">' + data.hydrantInfo.trim() + ' (submitter-provided)</span>';
+      protEl.appendChild(manualNoteEl);
+      _dbg('[Hydrant] Using submitter-provided hydrant info — skipping automated lookup.');
+      return;
+    }
+
     var address = data.address, city = data.city, province = data.province;
     if (!address || !city) { _dbg('[Hydrant] Skipped — address or city missing.'); return; }
-    var fullAddr = address + ', ' + city + (province ? ', ' + province : '') + ', Canada';
+    // Canadian provinces only — anything else (US state codes, etc.) is left
+    // without a forced country so Google can resolve it on its own rather
+    // than incorrectly appending ", Canada" to a US address.
+    var CA_PROVINCES = ['ab','bc','mb','nb','nl','ns','nt','nu','on','pe','qc','sk','yt'];
+    var isCanadianProvince = CA_PROVINCES.indexOf((province || '').trim().toLowerCase()) !== -1;
+    var fullAddr = address + ', ' + city + (province ? ', ' + province : '') + (isCanadianProvince ? ', Canada' : '');
     var lat = null, lon = null;
 
     try {
@@ -2414,7 +2437,7 @@
 
     if (lat === null) {
       try {
-        var geoUrl = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=' + encodeURIComponent(fullAddr);
+        var geoUrl = 'https://nominatim.openstreetmap.org/search?format=json&limit=1' + (isCanadianProvince ? '&countrycodes=ca' : '') + '&q=' + encodeURIComponent(fullAddr);
         var geoResp = await fetch(geoUrl, { headers: { 'Accept': 'application/json' } });
         if (geoResp.ok) {
           var geoResults = await geoResp.json();
@@ -2423,32 +2446,43 @@
       } catch(nomErr) { _dbg('[Hydrant] Nominatim error:', nomErr.message); }
     }
 
-    if (lat === null) { _dbg('[Hydrant] Could not geocode address — skipping.'); return; }
+    if (lat === null) {
+      _dbg('[Hydrant] Could not geocode address — skipping.');
+      var geoFailNoteEl = document.createElement('div');
+      geoFailNoteEl.className = 'res-hydrant-note';
+      geoFailNoteEl.innerHTML =
+        '<strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">FIRE HYDRANT PROXIMITY</strong>' +
+        '<span style="font-size:12px;color:var(--navy);">Unable to geocode this address for fire hydrant lookup.</span>';
+      protEl.appendChild(geoFailNoteEl);
+      return;
+    }
 
     var hydrantText = '';
     try {
       var hydrantRadiusM = 500;
-      var hydrantQuery = '[out:json][timeout:15];node["emergency"="fire_hydrant"](around:' + hydrantRadiusM + ',' + lat + ',' + lon + ');out;';
-      var hydrantUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(hydrantQuery);
-      var hResp = await fetch(hydrantUrl);
+      var hResp = await fetch('/.netlify/functions/registry-intel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service: 'fire_hydrants', lat: lat, lon: lon, radius: hydrantRadiusM })
+      });
       if (hResp.ok) {
-        var hData = await hResp.json();
-        var hydrants = (hData.elements || []).filter(function(e) { return e.type === 'node'; });
-        if (hydrants.length) {
-          var nearestDist = Infinity;
-          hydrants.forEach(function(h) {
-            var d = _haversineMeters(lat, lon, h.lat, h.lon);
-            if (d < nearestDist) nearestDist = d;
-          });
-          hydrantText = hydrants.length + ' fire hydrant' + (hydrants.length !== 1 ? 's' : '') +
-            ' mapped within ' + hydrantRadiusM + 'm of the property; nearest approximately ' + Math.round(nearestDist) + ' m. Information obtained from community mapped open sources.';
+        var hJson = await hResp.json();
+        if (hJson.status === 'ok') {
+          if (hJson.count > 0) {
+            hydrantText = hJson.count + ' fire hydrant' + (hJson.count !== 1 ? 's' : '') +
+              ' mapped within ' + hydrantRadiusM + 'm of the property; nearest approximately ' + hJson.nearest_m + ' m. Information obtained from community mapped open sources.';
+          } else {
+            hydrantText = 'No fire hydrants mapped within ' + hydrantRadiusM + 'm of the property. Information obtained from community mapped open sources.';
+          }
         } else {
-          hydrantText = 'No fire hydrants mapped within ' + hydrantRadiusM + 'm of the property. Information obtained from community mapped open sources.';
+          _dbg('[Hydrant] Proxy returned error:', hJson.message);
         }
+      } else {
+        _dbg('[Hydrant] Proxy HTTP not ok:', hResp.status);
       }
-    } catch(hErr) { _dbg('[Hydrant] Overpass error:', hErr.message); return; }
+    } catch(hErr) { _dbg('[Hydrant] Proxy fetch error:', hErr.message); hydrantText = 'Unable to retrieve fire hydrant data for this address at this time.'; }
 
-    if (!hydrantText) return;
+    if (!hydrantText) hydrantText = 'Unable to retrieve fire hydrant data for this address at this time.';
 
     var noteEl = document.createElement('div');
     noteEl.className = 'res-hydrant-note';
@@ -3410,6 +3444,7 @@
             s('s-storeys',           fd.storeys);
             s('s-construction',      fd.construction);
             s('s-fire-protection',   fd.fireProtection);
+            s('s-hydrant-info',      fd.hydrantInfo);
             s('s-tenure',            fd.tenure);
             s('s-context',           fd.context);
             s('s-losses',            fd.losses);
