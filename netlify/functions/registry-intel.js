@@ -25,6 +25,18 @@ function httpsGet(url) {
   });
 }
 
+// Matches the client-side _haversineMeters in scan.html exactly.
+function _haversineMeters(lat1, lon1, lat2, lon2) {
+  var R = 6371000;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLon = (lon2 - lon1) * Math.PI / 180;
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 exports.handler = async function(event) {
   var headers = {
     'Content-Type': 'application/json',
@@ -188,6 +200,45 @@ exports.handler = async function(event) {
       return {
         statusCode: 200, headers: headers,
         body: JSON.stringify({ service: 'google_geocode', status: 'error', message: e.message })
+      };
+    }
+  }
+
+  // ── Fire Hydrants via OSM Overpass (server-side — avoids the flaky/CORS-
+  // inconsistent public Overpass endpoint being called directly from the
+  // browser, which was silently dropping this section on "Failed to fetch") ──
+  if (service === 'fire_hydrants') {
+    var hLat = parseFloat(body.lat);
+    var hLon = parseFloat(body.lon);
+    var hRadius = parseInt(body.radius, 10) || 500;
+    if (isNaN(hLat) || isNaN(hLon)) {
+      return { statusCode: 400, headers: headers, body: JSON.stringify({ error: 'lat and lon (numbers) are required' }) };
+    }
+    try {
+      var overpassQuery = '[out:json][timeout:15];node["emergency"="fire_hydrant"](around:' + hRadius + ',' + hLat + ',' + hLon + ');out;';
+      var overpassUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(overpassQuery);
+      var oR = await httpsGet(overpassUrl);
+      var oData = {};
+      try { oData = JSON.parse(oR.text); } catch(e) {}
+
+      var hydrants = (oData.elements || []).filter(function(el) { return el.type === 'node'; });
+      var nearestDist = null;
+      if (hydrants.length) {
+        nearestDist = Infinity;
+        hydrants.forEach(function(h) {
+          var d = _haversineMeters(hLat, hLon, h.lat, h.lon);
+          if (d < nearestDist) nearestDist = d;
+        });
+        nearestDist = Math.round(nearestDist);
+      }
+      return {
+        statusCode: 200, headers: headers,
+        body: JSON.stringify({ service: 'fire_hydrants', status: 'ok', count: hydrants.length, nearest_m: nearestDist, radius_m: hRadius })
+      };
+    } catch(e) {
+      return {
+        statusCode: 200, headers: headers,
+        body: JSON.stringify({ service: 'fire_hydrants', status: 'error', message: e.message })
       };
     }
   }
