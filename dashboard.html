@@ -828,6 +828,16 @@
           const icon = r.file_type === 'pdf' ? '📄' : '📝';
           const date = r.uploaded_at ? new Date(r.uploaded_at).toLocaleDateString('en-CA') : '—';
           const kb = r.file_size ? (r.file_size / 1024).toFixed(0) + ' KB' : '—';
+          var convertAction = '';
+          if (r.conversion_status === 'complete' && r.conversion_scan_submission_id) {
+            convertAction = '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;" onclick="window.open(\'scan.html?view_report=' + r.conversion_scan_submission_id + '\', \'_blank\')">📋 View SCAN ONE Report</button>';
+          } else if (r.conversion_status === 'processing') {
+            convertAction = '<button class="btn-open" disabled style="opacity:0.6;">⏳ Converting…</button>';
+          } else if (r.conversion_status === 'error') {
+            convertAction = '<button class="btn-open" style="color:#C53030;border-color:#C53030;" onclick="convertArchiveFile(\'' + r.id + '\')" title="' + (r.conversion_error || 'Conversion failed').replace(/"/g,'') + '">⚠ Retry Convert</button>';
+          } else {
+            convertAction = '<button class="btn-open" onclick="convertArchiveFile(\'' + r.id + '\')">🔄 Convert to SCAN ONE</button>';
+          }
           return '<tr>' +
             '<td style="font-size:12px;">' + icon + ' ' + (r.file_name || '—') + '</td>' +
             '<td style="font-size:12px;">' + (r.category || '—') + '</td>' +
@@ -835,10 +845,70 @@
             '<td style="font-size:12px;">' + (r.policy_number || '—') + '</td>' +
             '<td style="font-size:12px;">' + kb + '</td>' +
             '<td style="font-size:12px;">' + date + '</td>' +
-            '<td><div style="display:flex;gap:4px;"><button class="btn-open" onclick="downloadArchiveFile(\'' + r.storage_path + '\',\'' + (r.file_name || '').replace(/'/g, '') + '\')">⬇ Download</button>' +
+            '<td><div style="display:flex;gap:4px;flex-wrap:wrap;">' + convertAction + '<button class="btn-open" onclick="downloadArchiveFile(\'' + r.storage_path + '\',\'' + (r.file_name || '').replace(/'/g, '') + '\')">⬇ Download</button>' +
             '<button class="btn-open" style="color:#C53030;border-color:#C53030;" onclick="deleteArchiveFile(\'' + r.id + '\',\'' + r.storage_path + '\')">✕</button></div></td></tr>';
         }).join('') +
         '</tbody></table></div><div style="font-size:11px;color:var(--slate-light);padding:10px 14px;">' + rows.length + ' file' + (rows.length===1?'':'s') + ' archived</div>';
+    }
+
+    // ── ARCHIVE → SCAN ONE CONVERSION ──
+    // NOTE: Replace this URL with the actual Function URL once the
+    // sanketrisk-archive-convert Lambda is deployed and its Function URL
+    // is enabled (same pattern as scan.html's EDGE_URL).
+    const ARCHIVE_CONVERT_URL = 'REPLACE_WITH_LAMBDA_FUNCTION_URL';
+
+    async function convertArchiveFile(id) {
+      if (ARCHIVE_CONVERT_URL.indexOf('REPLACE_WITH') === 0) {
+        showToast('Archive conversion Lambda URL not configured yet — see comment in dashboard.html');
+        return;
+      }
+      // Optimistically show "processing" immediately without waiting for a
+      // full reload, then kick off polling.
+      const row = archiveRowsCache.find(r => String(r.id) === String(id));
+      if (row) row.conversion_status = 'processing';
+      renderArchiveTable(archiveRowsCache);
+
+      try {
+        const resp = await fetch(ARCHIVE_CONVERT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ archived_file_id: id })
+        });
+        if (!resp.ok) {
+          const errText = await resp.text();
+          showToast('⚠ Conversion request failed: ' + errText.substring(0, 150));
+        }
+      } catch (e) {
+        showToast('⚠ Conversion request error: ' + e.message);
+      }
+      pollArchiveConversion(id);
+    }
+
+    function pollArchiveConversion(id, attemptsLeft) {
+      if (attemptsLeft === undefined) attemptsLeft = 60; // ~10 min at 10s intervals, matches the Lambda's own long-running ceiling
+      if (attemptsLeft <= 0) { showToast('⚠ Conversion is taking longer than expected — refresh to check status.'); return; }
+      setTimeout(async () => {
+        try {
+          const { data, error } = await _supabase.from('archived_files').select('conversion_status,conversion_scan_submission_id,conversion_error').eq('id', id).single();
+          if (error) throw error;
+          const row = archiveRowsCache.find(r => String(r.id) === String(id));
+          if (row) {
+            row.conversion_status = data.conversion_status;
+            row.conversion_scan_submission_id = data.conversion_scan_submission_id;
+            row.conversion_error = data.conversion_error;
+          }
+          if (data.conversion_status === 'processing') {
+            pollArchiveConversion(id, attemptsLeft - 1);
+          } else {
+            renderArchiveTable(archiveRowsCache);
+            if (data.conversion_status === 'complete') showToast('✓ Converted to SCAN ONE report');
+            else if (data.conversion_status === 'error') showToast('⚠ Conversion failed: ' + (data.conversion_error || 'unknown error'));
+          }
+        } catch (e) {
+          console.error('Poll error:', e);
+          pollArchiveConversion(id, attemptsLeft - 1);
+        }
+      }, 10000);
     }
 
     function filterArchiveFiles() {
