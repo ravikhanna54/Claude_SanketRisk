@@ -4575,6 +4575,17 @@
 
     // Bold subheadings: converts ALL-CAPS section labels to bold styled headings
     // Matches patterns like "TRANSFORMER:" or "FIRE ALARM:" anywhere in the text
+    // Bolds "UNIT <number/range> — <tenant name>:" style headings for
+    // multi-tenant occupancy sections. Unlike addSubheadings below, this
+    // can't use a fixed string list since the unit number and tenant name
+    // vary per property — matched generically instead.
+    function boldUnitHeadings(html) {
+      if (!html) return html;
+      return html.replace(/\b(UNIT\s+[^:<]{1,80}):/gi, function(match, heading) {
+        return '<br><strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">' + heading + ':</strong>';
+      });
+    }
+
     function addSubheadings(html) {
       if (!html) return html;
       var headings = [
@@ -4593,6 +4604,16 @@
         // Exposure subheadings
         'EXTERIOR BUILDING ASSESSMENT',
         'EXPOSURE AND NATURAL HAZARDS',
+        'BURGLARY AND THEFT',
+        'COLLAPSE AND SUBSIDENCE',
+        'WATER AND LIQUID DAMAGE',
+        'SURFACE WATER AND SEWER BACK-UP',
+        'LIABILITY - PREMISES',
+        'LIABILITY',
+        'NORTH',
+        'SOUTH',
+        'EAST',
+        'WEST',
         'SEISMIC',
         'WIND/STORM',
         'WIND / STORM',
@@ -4644,7 +4665,7 @@
     }
 
     var occEl = document.getElementById('res-occupancy');
-    if (occEl) occEl.innerHTML = highlightSeverity(stripPhotoRefs(r.occupancy)) || '\u2014';
+    if (occEl) occEl.innerHTML = boldUnitHeadings(highlightSeverity(stripPhotoRefs(r.occupancy))) || '\u2014';
     var protEl = document.getElementById('res-protection');
     if (protEl) protEl.innerHTML = addSubheadings(highlightSeverity(stripPhotoRefs(r.protection))) || '\u2014';
     var expEl = document.getElementById('res-exposure');
