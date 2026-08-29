@@ -4647,12 +4647,19 @@
         'SPECIAL SYSTEMS'
       ];
       headings.forEach(function(h) {
-        // Match heading with colon preceded by: start of string, <br>, or a period+space (end of prior sentence)
-        var re = new RegExp('((?:^|<br\\s*/?>|(?<=\\.\\s))|(?=\\s*' + h + '))(' + h + ')(\\s*:)', 'gi');
-        // Simpler approach — replace anywhere the heading appears followed by colon
-        var re2 = new RegExp('(' + h + ')(\\s*:)', 'gi');
+        // Headings containing "&" (e.g. "HEATING & AIR CONDITIONING") need to
+        // match BOTH the literal character and its HTML-escaped form
+        // "&amp;", since some callers (e.g. the Construction section) HTML-
+        // escape their content before this function ever sees it — without
+        // this, any heading with an ampersand silently fails to match.
+        var hPattern = h.replace(/&/g, '(?:&amp;|&)');
+        var re2 = new RegExp('(' + hPattern + ')(\\s*:)', 'gi');
         html = html.replace(re2, function(match, heading, colon) {
-          return '<br><strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">' + heading.toUpperCase() + colon + '</strong>';
+          // Normalize any escaped entity back to a plain "&" before
+          // uppercasing (uppercasing "&amp;" directly would corrupt it into
+          // the invalid entity "&AMP;"), then re-escape for safe HTML output.
+          var headingDisplay = heading.replace(/&amp;/gi, '&').toUpperCase().replace(/&/g, '&amp;');
+          return '<br><strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">' + headingDisplay + colon + '</strong>';
         });
       });
       return html;
