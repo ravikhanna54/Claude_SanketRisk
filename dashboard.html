@@ -830,7 +830,13 @@
           const kb = r.file_size ? (r.file_size / 1024).toFixed(0) + ' KB' : '—';
           var convertAction = '';
           if (r.conversion_status === 'complete' && r.conversion_scan_submission_id) {
-            convertAction = '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;" onclick="window.open(\'scan.html?view_report=' + r.conversion_scan_submission_id + '\', \'_blank\')">📋 View SCAN ONE Report</button>';
+            convertAction = '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;" onclick="window.open(\'scan.html?view_report=' + r.conversion_scan_submission_id + '\', \'_blank\')">📋 View SCAN ONE Report</button>' +
+              '<button class="btn-open" title="Run the conversion again — creates a new SCAN ONE report from this file" onclick="convertArchiveFile(\'' + r.id + '\')">🔄 Reconvert</button>';
+          } else if (r.conversion_status === 'complete') {
+            // Completed, but the report link itself didn't get recorded — show
+            // this distinctly rather than silently reverting to the original
+            // Convert button, which hides a real problem worth investigating.
+            convertAction = '<button class="btn-open" style="color:#92400e;border-color:#92400e;" onclick="convertArchiveFile(\'' + r.id + '\')" title="Conversion completed but no report link was recorded — click to retry">⚠ Complete, no report link</button>';
           } else if (r.conversion_status === 'processing') {
             convertAction = '<button class="btn-open" disabled style="opacity:0.6;">⏳ Converting…</button>';
           } else if (r.conversion_status === 'error') {
@@ -855,7 +861,7 @@
     // NOTE: Replace this URL with the actual Function URL once the
     // sanketrisk-archive-convert Lambda is deployed and its Function URL
     // is enabled (same pattern as scan.html's EDGE_URL).
-    const ARCHIVE_CONVERT_URL = 'https://af6r6vc3zrlquoea7gfr63mmwa0snzmy.lambda-url.ap-southeast-2.on.aws/';
+    const ARCHIVE_CONVERT_URL = 'REPLACE_WITH_LAMBDA_FUNCTION_URL';
 
     async function convertArchiveFile(id) {
       if (ARCHIVE_CONVERT_URL.indexOf('REPLACE_WITH') === 0) {
@@ -879,7 +885,14 @@
           showToast('⚠ Conversion request failed: ' + errText.substring(0, 150));
         }
       } catch (e) {
-        showToast('⚠ Conversion request error: ' + e.message);
+        // A dropped connection here does NOT mean the conversion failed —
+        // this Lambda can run for several minutes, and some network layers
+        // between the browser and AWS close an idle-looking connection
+        // before the response comes back, even though the Lambda keeps
+        // running server-side regardless. Polling below is the real source
+        // of truth, so this is a quiet note, not an alarm.
+        console.log('Archive convert: connection dropped waiting for response (expected on long conversions):', e.message);
+        showToast('Conversion is running in the background — this can take a few minutes…');
       }
       pollArchiveConversion(id);
     }
