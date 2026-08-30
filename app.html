@@ -11878,7 +11878,55 @@
       fallbackTitle:'Significant recurring mould/water damage history', fallbackText:'A significant history of mould or water damage with active remediation was identified. The underlying moisture source should be identified and corrected, with remediation verified by a qualified professional.' },
     { id: 'multires-outstanding-safety-workorders', check: function(){ return ((document.getElementById('outstanding-work-orders-complaints')||{}).value||'').indexOf('Significant')===0; },
       keywords:['outstanding work orders', 'safety complaints'], priority:'Immediate', category:'Multi-Residential',
-      fallbackTitle:'Significant safety-related work orders remain open', fallbackText:'Significant safety-related tenant work orders/complaints remain outstanding. These items should be prioritized and resolved promptly given their safety implications.' }
+      fallbackTitle:'Significant safety-related work orders remain open', fallbackText:'Significant safety-related tenant work orders/complaints remain outstanding. These items should be prioritized and resolved promptly given their safety implications.' },
+    // ── Restaurant Supplement ──
+    { id: 'supp-rest-char-broiler-fuel', check: function(){ var v=(document.getElementById('char-broiler-present')||{}).value||''; return v.indexOf('Charcoal')!==-1; },
+      keywords:['solid fuel cooking', 'charcoal broiler'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Solid fuel (charcoal/wood) cooking equipment in use', fallbackText:'Solid fuel cooking equipment (charcoal or wood) is in use. This presents a higher fire load and requires suppression system and hood design specifically listed for solid fuel cooking per NFPA 96 — the system design should be verified as appropriate for this fuel type.' },
+    { id: 'supp-rest-gas-shutoff-blocked', check: function(){ return ((document.getElementById('gas-shutoff-accessible')||{}).value||'').indexOf('No')===0; },
+      keywords:['gas shutoff valve', 'emergency gas valve'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Emergency gas shutoff valve obstructed', fallbackText:'The emergency gas shutoff valve for the cooking line is obstructed and not readily accessible. Clear access to the gas shutoff should be restored immediately, as this is a critical life-safety and fire suppression control point.' },
+    { id: 'supp-rest-no-hood', check: function(){ return ((document.getElementById('type-i-hood-present')||{}).value||'') === 'No'; },
+      keywords:['type I hood', 'kitchen exhaust hood'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'No Type I exhaust hood over cooking equipment', fallbackText:'Cooking equipment producing grease-laden vapors is not provided with a Type I exhaust hood. A compliant Type I hood system should be installed per NFPA 96.' },
+    { id: 'supp-rest-no-suppression', check: function(){ return (document.getElementById('hood-suppression-system')||{}).value === 'None'; },
+      keywords:['hood suppression system', 'kitchen fire suppression'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'No automatic fire suppression system over cooking equipment', fallbackText:'No automatic fire suppression system is installed over the cooking equipment. A UL 300 compliant wet chemical system should be installed without delay.' },
+    { id: 'supp-rest-suppression-service-undocumented', check: function(){
+        var sys = (document.getElementById('hood-suppression-system')||{}).value || '';
+        var lastDate = (document.getElementById('last-hood-suppression-service')||{}).value || '';
+        var freq = (document.getElementById('service-frequency')||{}).value || '';
+        if (!sys || sys === 'None') return false;
+        return !lastDate || freq === 'Unknown / Not on schedule';
+      },
+      keywords:['hood suppression service', 'fire suppression inspection'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'No documented service for automatic fire suppression system', fallbackText:'The automatic fire suppression system over the cooking equipment has no documented service date, or is not on a regular service schedule. Semi-annual service by a licensed contractor should be performed and documented per NFPA 96.' },
+    { id: 'supp-rest-grease-trap-overdue', check: function(){ return ((document.getElementById('grease-trap-interceptor')||{}).value||'').indexOf('overdue')!==-1; },
+      keywords:['grease trap service', 'grease interceptor'], priority:'90-Day', category:'Fire Protection',
+      fallbackTitle:'Grease trap/interceptor service overdue', fallbackText:'The grease trap/interceptor is overdue for service. Regular servicing should be scheduled to prevent blockage and overflow.' },
+    { id: 'supp-rest-walkin-poor', check: function(){ return ((document.getElementById('walk-in-condition')||{}).value||'').indexOf('Poor')===0; },
+      keywords:['walk-in cooler condition', 'refrigeration'], priority:'30-Day', category:'Building Systems',
+      fallbackTitle:'Walk-in cooler/freezer in poor condition', fallbackText:'The walk-in cooler/freezer was assessed as having significant deficiencies. Repair by a qualified refrigeration contractor is recommended.' },
+    { id: 'supp-rest-health-inspection-failed', check: function(){ var v=(document.getElementById('health-inspection-result')||{}).value||''; return v.indexOf('Failed')===0 || v==='Conditional pass'; },
+      keywords:['health inspection', 'food safety'], priority:'Immediate', category:'Life Safety',
+      fallbackTitle:'Recent health inspection failed or conditional', fallbackText:'The most recent health/food safety inspection resulted in a failed or conditional pass. Violations should be corrected and re-inspection obtained promptly, as this may affect the ability to operate.' },
+    // ── Woodworking Supplement ──
+    { id: 'supp-wood-no-spark-arrestor', check: function(){ return (document.getElementById('dust-collector-spark-arrestor')||{}).value === 'No'; },
+      keywords:['spark arrestor', 'dust collector'], priority:'30-Day', category:'Woodworking Operations',
+      fallbackTitle:'Dust collection system lacks spark arrestor', fallbackText:'The dust collection system does not have a spark arrestor. A spark arrestor or spark detection/suppression system should be installed to reduce ignition risk within the dust collection ductwork.' },
+    { id: 'supp-wood-collector-not-cleaned', check: function(){ return ((document.getElementById('dust-collector-last-cleaned')||{}).value||'').indexOf('Over 3 months')===0; },
+      keywords:['dust collector cleaning', 'dust bin'], priority:'90-Day', category:'Woodworking Operations',
+      fallbackTitle:'Dust collector not cleaned within recommended interval', fallbackText:'The dust collector has not been emptied/cleaned within the past 3 months. A regular cleaning schedule should be established to reduce fuel load and fire risk.' },
+    { id: 'supp-wood-no-nfpa664-awareness', check: function(){ return (document.getElementById('nfpa-664-compliance-awareness')||{}).value === 'No'; },
+      keywords:['NFPA 664', 'combustible dust program'], priority:'90-Day', category:'Woodworking Operations',
+      fallbackTitle:'No NFPA 664 combustible dust hazard program', fallbackText:'No program is in place addressing NFPA 664 combustible wood dust hazard requirements. A written combustible dust management program should be developed, covering housekeeping, ignition control, and explosion protection as applicable.' },
+    // ── Apartments / Multi-Residential Supplement ──
+    { id: 'supp-apt-elevator-poor', check: function(){ var v=(document.getElementById('elevator-condition')||{}).value||''; return v.indexOf('Poor')===0 || v.indexOf('Fair')===0; },
+      keywords:['elevator maintenance', 'elevator certificate'], priority:'30-Day', category:'Multi-Residential',
+      fallbackTitle:'Residential elevator overdue for service or has safety concern', fallbackText:'The building elevator was assessed as overdue for service or presenting a safety concern. A licensed elevator contractor should be engaged to bring the unit current.' },
+    { id: 'supp-apt-no-co-detectors', check: function(){ return ((document.getElementById('co-detectors-required-present')||{}).value||'').indexOf('No')===0 || ((document.getElementById('co-detectors-required-present')||{}).value||'') === 'Partial'; },
+      keywords:['carbon monoxide detector', 'CO detector'], priority:'Immediate', category:'Multi-Residential',
+      fallbackTitle:'Carbon monoxide detectors missing where required', fallbackText:'Carbon monoxide detectors are missing or only partially present in units with gas appliances. CO detectors should be installed in all applicable units as required by code.' }
   ];
 
   function findBestLibraryMatch(keywords) {
