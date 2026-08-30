@@ -1736,6 +1736,35 @@
           </div>
         </div>
       </div>
+      <div class="card">
+        <div class="card-title">Contents & Values</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Building Value (Replacement Cost)</label>
+            <input id="building-value" type="text" placeholder="e.g. $3,200,000">
+          </div>
+          <div class="field">
+            <label>Insured Amount — Building (as submitted by customer)</label>
+            <input id="insured-amount-building" type="text" placeholder="Defaults to Building Value above if left blank">
+          </div>
+          <div class="field">
+            <label>Business Personal Property Value</label>
+            <input id="business-personal-property-value" type="text" placeholder="e.g. $850,000">
+          </div>
+          <div class="field">
+            <label>Insured Amount — Contents (as submitted by customer)</label>
+            <input id="insured-amount-contents" type="text" placeholder="Defaults to Business Personal Property Value above if left blank">
+          </div>
+          <div class="field">
+            <label>Business Income / Extra Expense</label>
+            <input id="business-income-extra-expense" type="text" placeholder="e.g. $500,000">
+          </div>
+          <div class="field">
+            <label>Max Value Any Single Item</label>
+            <input id="max-value-any-single-item" type="text" placeholder="e.g. $120,000 — CNC Machine">
+          </div>
+        </div>
+      </div>
     </div>
     <!-- ══ SECTION: CONSTRUCTION ══ -->
     <div class="section-panel" id="section-construction">
@@ -1931,6 +1960,16 @@
               <option>Aluminum (post-1972)</option>
               <option>Knob & Tube (older)</option>
               <option>Mixed</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Infrared (Thermographic) Testing of Electrical Distribution</label>
+            <select id="ir-testing">
+              <option value="">— Select —</option>
+              <option>Yes — Within past 12 months</option>
+              <option>Yes — Over 12 months ago</option>
+              <option>No — Not tested</option>
+              <option>Unknown</option>
             </select>
           </div>
           <div class="field form-full"><div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Heating Type</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100% of heated area.</div><div id="heat-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Gas Forced Air (Furnace)</option><option>Boiler — Hot Water</option><option>Boiler — Steam</option><option>Rooftop Unit (RTU) — Gas</option><option>Electric Baseboard</option><option>Radiant In-Floor</option><option>Heat Pump</option><option>District / Central Plant</option><option>Wood / Pellet</option><option>None</option><option>Other</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('heat-pct-rows','heat')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Heating Type</button></div></div>          <div class="field form-full"><div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Air Conditioning Type</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100% of conditioned area.</div><div id="ac-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Central Air — Split System</option><option>Rooftop Unit (RTU)</option><option>Chilled Water System</option><option>Variable Refrigerant Flow (VRF)</option><option>Window / Packaged Terminal (PTAC)</option><option>Evaporative Cooling</option><option>Heat Pump</option><option>District / Central Plant</option><option>None</option><option>Other</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('ac-pct-rows','ac')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Air Conditioning Type</button></div></div>          <div class="field">
@@ -2560,6 +2599,8 @@
             <label class="check-btn" onclick="toggleCheck(this);toggleHazDetail('cryogen',this)">Cryogenics</label>
             <label class="check-btn" onclick="toggleCheck(this);toggleHazDetail('printing',this)">Printing / Ink</label>
             <label class="check-btn" onclick="toggleCheck(this);toggleHazDetail('procheat',this)">Process Heat</label>
+            <label class="check-btn" onclick="toggleCheck(this);toggleHazDetail('boilervessel',this)">Process Boilers / Pressure Vessels</label>
+            <label class="check-btn" onclick="toggleCheck(this);toggleHazDetail('aircomp',this)">Compressors / Air Receivers</label>
             <label class="check-btn" onclick="toggleCheck(this)">None</label>
           </div>
         </div>
@@ -3125,6 +3166,96 @@
             </div>
           </div>
         </div>
+        <!-- Process Boilers / Pressure Vessels -->
+        <div class="haz-detail-panel" id="haz-detail-boilervessel" style="display:none;">
+          <div class="haz-detail-header">🔧 Process Boilers / Pressure Vessels — Detail</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Equipment Type</label>
+              <select id="haz-boilervessel-type">
+                <option value="">— Select —</option>
+                <option>Steam Boiler</option>
+                <option>Hot Water Boiler</option>
+                <option>Process Pressure Vessel</option>
+                <option>Autoclave</option>
+                <option>Reactor Vessel</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Operating Pressure</label>
+              <input type="text" id="haz-boilervessel-pressure" placeholder="e.g. 100 psi">
+            </div>
+            <div class="field">
+              <label>ASME / CRN Certified?</label>
+              <select id="haz-boilervessel-certified">
+                <option value="">— Select —</option>
+                <option>Yes — Current certification</option>
+                <option>Yes — Certification expired</option>
+                <option>No / Unknown</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Last Inspection Date</label>
+              <input type="date" id="haz-boilervessel-last-inspection">
+            </div>
+            <div class="field">
+              <label>Safety Devices Present</label>
+              <select id="haz-boilervessel-safety">
+                <option value="">— Select —</option>
+                <option>Yes — Pressure relief valve, low-water cutoff</option>
+                <option>Partial</option>
+                <option>No / Unknown</option>
+              </select>
+            </div>
+            <div class="field form-full">
+              <label>Notes</label>
+              <textarea spellcheck="true" id="haz-boilervessel-notes" placeholder="Manufacturer/model, age, jurisdictional inspection body, history of incidents..."></textarea>
+            </div>
+          </div>
+        </div>
+        <!-- Compressors / Air Receivers -->
+        <div class="haz-detail-panel" id="haz-detail-aircomp" style="display:none;">
+          <div class="haz-detail-header">💨 Compressors / Air Receivers — Detail</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Compressor Type</label>
+              <select id="haz-aircomp-type">
+                <option value="">— Select —</option>
+                <option>Reciprocating</option>
+                <option>Rotary Screw</option>
+                <option>Centrifugal</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Air Receiver Present?</label>
+              <select id="haz-aircomp-receiver">
+                <option value="">— Select —</option>
+                <option>Yes</option>
+                <option>No</option>
+                <option>Unknown</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Air Receiver Last Inspected</label>
+              <input type="date" id="haz-aircomp-last-inspection">
+            </div>
+            <div class="field">
+              <label>Pressure Relief Valve Present?</label>
+              <select id="haz-aircomp-relief-valve">
+                <option value="">— Select —</option>
+                <option>Yes</option>
+                <option>No</option>
+                <option>Unknown</option>
+              </select>
+            </div>
+            <div class="field form-full">
+              <label>Notes</label>
+              <textarea spellcheck="true" id="haz-aircomp-notes" placeholder="Location, capacity, maintenance schedule, history of incidents..."></textarea>
+            </div>
+          </div>
+        </div>
         <div class="form-grid" style="margin-top:16px;">
           <div class="field">
             <label>NFPA Hazard Category</label>
@@ -3189,35 +3320,6 @@
           <div class="field form-full">
             <label>Hazard Notes</label>
             <textarea spellcheck="true" id="hazard-notes" placeholder="List specific chemicals, quantities, storage methods, safety data sheet availability..."></textarea>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Contents & Values</div>
-        <div class="form-grid">
-          <div class="field">
-            <label>Building Value (Replacement Cost)</label>
-            <input id="building-value" type="text" placeholder="e.g. $3,200,000">
-          </div>
-          <div class="field">
-            <label>Insured Amount — Building (as submitted by customer)</label>
-            <input id="insured-amount-building" type="text" placeholder="Defaults to Building Value above if left blank">
-          </div>
-          <div class="field">
-            <label>Business Personal Property Value</label>
-            <input id="business-personal-property-value" type="text" placeholder="e.g. $850,000">
-          </div>
-          <div class="field">
-            <label>Insured Amount — Contents (as submitted by customer)</label>
-            <input id="insured-amount-contents" type="text" placeholder="Defaults to Business Personal Property Value above if left blank">
-          </div>
-          <div class="field">
-            <label>Business Income / Extra Expense</label>
-            <input id="business-income-extra-expense" type="text" placeholder="e.g. $500,000">
-          </div>
-          <div class="field">
-            <label>Max Value Any Single Item</label>
-            <input id="max-value-any-single-item" type="text" placeholder="e.g. $120,000 — CNC Machine">
           </div>
         </div>
       </div>
@@ -4266,17 +4368,25 @@
         <div class="section-tag">MODULE</div>
       </div>
       <div class="card">
-        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
           Recommendation Items
-          <button onclick="openRecLibrary()"
-            style="background:var(--gold);color:var(--navy);border:none;padding:7px 16px;
-                   border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;
-                   display:flex;align-items:center;gap:6px;">
-            📋 Search Library
-          </button>
+          <div style="display:flex;gap:8px;">
+            <button onclick="runAutoRecommendations()"
+              style="background:var(--navy);color:var(--gold);border:none;padding:7px 16px;
+                     border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;
+                     display:flex;align-items:center;gap:6px;">
+              🔍 Detect Deficiencies
+            </button>
+            <button onclick="openRecLibrary()"
+              style="background:var(--gold);color:var(--navy);border:none;padding:7px 16px;
+                     border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;
+                     display:flex;align-items:center;gap:6px;">
+              📋 Search Library
+            </button>
+          </div>
         </div>
         <div class="notice info" style="margin-bottom:0;">
-          ℹ️ Click <strong>Search Library</strong> to find and insert standard recommendations from the SRC database, or click <strong>＋ Add Recommendation</strong> to write your own.
+          ℹ️ Click <strong>Detect Deficiencies</strong> to auto-suggest recommendations based on what's already entered in the form (e.g. knob and tube wiring, poor roof condition, overdue sprinkler/extinguisher service) — review, edit, or delete any suggestion. Click <strong>Search Library</strong> to find and insert standard recommendations from the SRC database, or click <strong>＋ Add Recommendation</strong> to write your own.
         </div>
         <div id="rec-list">
           <div class="rec-item priority-high" id="rec-1">
@@ -11454,6 +11564,447 @@
     showToast('Recommendation inserted — #' + rc + ': ' + title.substring(0, 50));
     setTimeout(function() { div.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
   }
+
+  // ── AUTO-DETECTED RECOMMENDATIONS ──
+  // Scans the form's own field values (not photos — this is the manual COPE
+  // form, no AI vision involved) for a set of known deficiency patterns, and
+  // suggests a matching recommendation for each one detected — either pulled
+  // from the SRC library (best keyword match) or a sensible fallback if no
+  // library entry fits well. Every suggestion lands as a normal, fully
+  // editable/deletable recommendation — nothing here is final or locked.
+  var AUTO_REC_RULES = [
+    {
+      id: 'knob-tube-wiring',
+      check: function() { return (document.getElementById('wiring-type') || {}).value === 'Knob & Tube (older)'; },
+      keywords: ['knob and tube', 'knob & tube'],
+      priority: 'Immediate', category: 'Electrical',
+      fallbackTitle: 'Knob and tube wiring present — replacement recommended',
+      fallbackText: 'The building electrical system includes knob and tube wiring, an obsolete wiring method no longer permitted under current electrical codes. This wiring type presents an elevated fire risk due to aged insulation, lack of grounding, and incompatibility with modern electrical loads. A qualified licensed electrician should evaluate and replace all knob and tube wiring.'
+    },
+    {
+      id: 'poor-roof-condition',
+      check: function() { var v = (document.getElementById('roof-condition') || {}).value || ''; return v.indexOf('Poor') === 0 || v.indexOf('Critical') === 0; },
+      keywords: ['roof condition', 'roof covering', 'roof replacement'],
+      priority: '30-Day', category: 'Structural & Water Damage',
+      fallbackTitle: 'Roof condition deficient — repair or replacement required',
+      fallbackText: 'The roof covering was assessed as being in poor or critical condition, with significant deterioration noted. Continued deterioration increases the risk of water infiltration and interior damage. The insured should arrange for a qualified roofing contractor to inspect and repair or replace the roof covering as needed.'
+    },
+    {
+      id: 'sprinkler-impairment',
+      check: function() { var v = (document.getElementById('sprinkler-condition') || {}).value || ''; return v.indexOf('Fair') === 0 || v.indexOf('Poor') === 0; },
+      keywords: ['sprinkler system', 'impairment', 'sprinkler service'],
+      priority: 'Immediate', category: 'Fire Protection',
+      fallbackTitle: 'Sprinkler system service overdue or impaired',
+      fallbackText: 'The automatic sprinkler system was noted as having overdue service or active impairments. Any sprinkler system impairment significantly increases fire loss potential. The sprinkler system should be inspected, tested, and any impairments corrected by a qualified fire protection contractor without delay, in accordance with NFPA 25.'
+    },
+    {
+      id: 'extinguishers-insufficient',
+      check: function() { var v = (document.getElementById('extinguishers-present') || {}).value || ''; return v === 'No' || v.indexOf('Insufficient') !== -1; },
+      keywords: ['portable fire extinguisher', 'fire extinguisher'],
+      priority: '30-Day', category: 'Fire Protection',
+      fallbackTitle: 'Portable fire extinguishers absent or insufficient',
+      fallbackText: 'Portable fire extinguishers were found to be absent or provided in insufficient quantity for the occupancy and hazard classification. Extinguishers should be provided and located in accordance with NFPA 10 requirements, with coverage adequate for the occupancy hazard class.'
+    },
+    {
+      id: 'extinguisher-inspection-overdue',
+      check: function() {
+        var d = (document.getElementById('extinguisher-last-inspection') || {}).value;
+        if (!d) return false;
+        var days = (Date.now() - new Date(d).getTime()) / 86400000;
+        return days > 365;
+      },
+      keywords: ['annual inspection', 'fire extinguisher service'],
+      priority: '90-Day', category: 'Fire Protection',
+      fallbackTitle: 'Portable fire extinguishers overdue for annual inspection',
+      fallbackText: 'Portable fire extinguishers have not been serviced within the past 12 months. NFPA 10 requires annual inspection and servicing of portable fire extinguishers by a qualified service provider. Annual servicing should be scheduled and tags updated accordingly.'
+    },
+    {
+      id: 'flammable-storage-no-cabinet',
+      check: function() {
+        var level = (document.getElementById('flammable-storage') || {}).value || '';
+        var cabinet = (document.getElementById('haz-flam-cabinet') || {}).value || '';
+        var significantLevels = ['Significant', 'Large', 'Bulk'];
+        var isSignificant = significantLevels.some(function(l) { return level.indexOf(l) === 0; });
+        return isSignificant && cabinet.indexOf('No') === 0;
+      },
+      keywords: ['flammable liquid storage', 'approved cabinet', 'safety container'],
+      priority: '30-Day', category: 'Flammable & Combustible Liquids',
+      fallbackTitle: 'Flammable liquids stored without approved cabinet or room',
+      fallbackText: 'Flammable liquids are stored in significant quantity without an approved (listed FM/UL) flammable storage cabinet or dedicated storage room. Flammable liquid storage should be relocated to an approved flammable storage cabinet or room in accordance with NFPA 30 requirements.'
+    },
+    {
+      id: 'infrared-testing-overdue',
+      check: function() {
+        var v = (document.getElementById('ir-testing') || {}).value || '';
+        return v === 'No — Not tested' || v.indexOf('Over 12 months') !== -1;
+      },
+      keywords: ['infrared', 'thermographic', 'electrical distribution'],
+      priority: '90-Day', category: 'Electrical',
+      fallbackTitle: 'Infrared testing of electrical distribution not current',
+      fallbackText: 'Infrared (thermographic) testing of the electrical distribution system has not been performed within the past 12 months, or has not been performed at all. Infrared testing is recommended to identify loose connections, overloaded circuits, and other conditions that may present a fire hazard before failure occurs. Testing should be conducted by a qualified thermographer on an annual basis.'
+    },
+    // ── Basement / Mezzanine ──
+    { id: 'basement-no-fire-sep', check: function(){ var v=(document.getElementById('basement-fire-sep')||{}).value||''; return v.indexOf('No')===0 || v==='Unknown'; },
+      keywords:['basement fire separation'], priority:'30-Day', category:'Structural & Water Damage',
+      fallbackTitle:'Basement lacks adequate fire separation', fallbackText:'The basement area does not have a confirmed rated fire separation from the floor above. A rated fire separation should be provided or verified by a qualified contractor to limit fire spread between floors.' },
+    { id: 'basement-unsprinklered', check: function(){ return (document.getElementById('basement-sprinklered')||{}).value === 'No'; },
+      keywords:['basement sprinkler', 'unsprinklered area'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Basement area unsprinklered', fallbackText:'The basement area is not protected by automatic sprinklers. Extending sprinkler protection to this area should be evaluated in accordance with NFPA 13.' },
+    { id: 'mezzanine-no-fire-sep', check: function(){ var p=(document.getElementById('mezzanine-present')||{}).value; var v=(document.getElementById('mezzanine-fire-sep')||{}).value||''; return p==='Yes' && v.indexOf('Open')===0; },
+      keywords:['mezzanine fire separation'], priority:'90-Day', category:'Structural & Water Damage',
+      fallbackTitle:'Mezzanine lacks fire separation from area below', fallbackText:'The mezzanine has no fire separation from the level below (open construction only). A rated fire separation, or extension of sprinkler protection above and below the mezzanine, should be considered.' },
+    { id: 'mezzanine-unsprinklered', check: function(){ var p=(document.getElementById('mezzanine-present')||{}).value; var v=(document.getElementById('mezzanine-sprinklered')||{}).value||''; return p==='Yes' && v==='No'; },
+      keywords:['mezzanine sprinkler'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Mezzanine area unsprinklered', fallbackText:'The mezzanine level is not protected by automatic sprinklers above or below. Sprinkler coverage should be extended to this area in accordance with NFPA 13.' },
+    // ── Elevator ──
+    { id: 'elevator-cert-issue', check: function(){ var v=(document.getElementById('elev-certificate')||{}).value||''; return v.indexOf('Expired')===0 || v.indexOf('No')===0; },
+      keywords:['elevator certificate', 'elevator inspection'], priority:'Immediate', category:'Safety & Compliance',
+      fallbackTitle:'Elevator inspection certificate expired or missing', fallbackText:'The elevator inspection certificate is expired or the elevator has not been recently inspected. A current jurisdictional inspection should be arranged and the certificate posted as required by code.' },
+    { id: 'elevator-poor-condition', check: function(){ return ((document.getElementById('elev-condition')||{}).value||'').indexOf('Poor')===0; },
+      keywords:['elevator maintenance'], priority:'30-Day', category:'Building Systems',
+      fallbackTitle:'Elevator maintenance overdue', fallbackText:'The elevator was assessed as having overdue maintenance. A qualified elevator contractor should be engaged to bring the unit current on required servicing.' },
+    { id: 'elevator-no-maintenance-contract', check: function(){ return ((document.getElementById('elev-maintenance')||{}).value||'').indexOf('No')===0; },
+      keywords:['elevator maintenance contract'], priority:'90-Day', category:'Building Systems',
+      fallbackTitle:'No elevator maintenance contract in place', fallbackText:'No formal elevator maintenance contract is in place. A maintenance agreement with a licensed elevator contractor is recommended to ensure regular servicing and prompt response to deficiencies.' },
+    // ── Cooking / Kitchen ──
+    { id: 'cooking-no-suppression', check: function(){ return ((document.getElementById('haz-cooking-suppression')||{}).value||'').indexOf('No')===0; },
+      keywords:['hood suppression system', 'kitchen fire suppression'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Commercial cooking hood suppression system missing or non-functional', fallbackText:'The commercial cooking operation lacks a functional hood suppression system. A UL 300 compliant wet chemical suppression system should be installed and serviced by a qualified contractor without delay.' },
+    { id: 'hood-cleaning-overdue', check: function(){ return ((document.getElementById('haz-cooking-hood-cleaning')||{}).value||'').indexOf('Over 12 months')===0; },
+      keywords:['hood cleaning', 'grease duct cleaning'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Kitchen exhaust hood cleaning overdue', fallbackText:'Kitchen exhaust hood and duct cleaning has not been performed within the past 12 months. Cleaning frequency should follow NFPA 96, with more frequent service for high-volume cooking operations.' },
+    { id: 'grease-accumulation-heavy', check: function(){ return ((document.getElementById('grease-accumulation-observed')||{}).value||'').indexOf('Heavy')===0; },
+      keywords:['grease accumulation', 'hood cleaning'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Heavy grease accumulation observed in kitchen exhaust', fallbackText:'Heavy grease accumulation was observed requiring immediate cleaning. This condition presents a significant fire hazard and should be addressed by a qualified hood cleaning service without delay.' },
+    { id: 'grease-filter-poor', check: function(){ var v=(document.getElementById('grease-filter-condition')||{}).value||''; return v.indexOf('Poor')===0 || v.indexOf('Missing')===0; },
+      keywords:['grease filter'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Kitchen grease filters missing or in poor condition', fallbackText:'Grease filters were found missing or in poor condition with heavy buildup. Filters should be cleaned or replaced and a regular maintenance schedule established.' },
+    // ── Welding / Hot Work ──
+    { id: 'welding-no-permit', check: function(){ return ((document.getElementById('haz-welding-permit')||{}).value||'').indexOf('No')===0; },
+      keywords:['hot work permit', 'welding'], priority:'30-Day', category:'Safety & Compliance',
+      fallbackTitle:'No formal hot work permit program', fallbackText:'Welding and cutting operations are performed without a formal written hot work permit program. A hot work permit system should be implemented in accordance with NFPA 51B, including pre-work area inspection and fire watch requirements.' },
+    { id: 'welding-no-fire-watch', check: function(){ return ((document.getElementById('haz-welding-fire-watch')||{}).value||'').indexOf('No')===0; },
+      keywords:['fire watch', 'hot work'], priority:'30-Day', category:'Safety & Compliance',
+      fallbackTitle:'No post-work fire watch for hot work operations', fallbackText:'No fire watch is maintained following welding/cutting operations. A minimum 30-minute post-work fire watch should be established per NFPA 51B to detect smoldering ignition.' },
+    // ── Spray Finishing / Paint Booth ──
+    { id: 'spray-no-booth', check: function(){ return ((document.getElementById('haz-spray-booth')||{}).value||'').indexOf('No')===0; },
+      keywords:['spray booth', 'spray finishing'], priority:'30-Day', category:'Spray Finishing',
+      fallbackTitle:'Spray finishing performed without an approved booth', fallbackText:'Spray finishing operations are conducted in an open area without an approved spray booth. An NFPA 33 compliant listed spray booth with proper exhaust should be installed.' },
+    { id: 'spray-booth-poor', check: function(){ return ((document.getElementById('haz-spray-booth-condition')||{}).value||'').indexOf('Poor')===0; },
+      keywords:['spray booth filter', 'exhaust'], priority:'Immediate', category:'Spray Finishing',
+      fallbackTitle:'Spray booth filters/exhaust in poor condition', fallbackText:'The spray booth filters are clogged and/or exhaust is impaired. This presents a fire hazard and should be corrected immediately by servicing or replacing filters and verifying exhaust function.' },
+    { id: 'spray-heavy-residue', check: function(){ return ((document.getElementById('haz-spray-residue')||{}).value||'').indexOf('Heavy')===0; },
+      keywords:['spray booth residue', 'overspray'], priority:'30-Day', category:'Spray Finishing',
+      fallbackTitle:'Significant overspray residue buildup', fallbackText:'Significant combustible overspray residue accumulation was noted. Booth surfaces should be cleaned on a regular schedule to reduce fire load.' },
+    { id: 'paint-booth-filter-poor', check: function(){ return ((document.getElementById('booth-filter-condition')||{}).value||'').indexOf('Poor')===0; },
+      keywords:['paint booth filter'], priority:'Immediate', category:'Spray Finishing',
+      fallbackTitle:'Paint booth filters clogged — fire hazard', fallbackText:'Paint booth filters were found clogged, presenting a fire hazard. Filters should be replaced immediately and a regular replacement schedule established.' },
+    { id: 'paint-booth-no-explosion-proof', check: function(){ return ((document.getElementById('explosion-proof-electrical-in-booth')||{}).value||'').indexOf('No')===0; },
+      keywords:['explosion proof electrical', 'spray booth electrical'], priority:'Immediate', category:'Spray Finishing',
+      fallbackTitle:'Non-explosion-proof electrical within paint booth', fallbackText:'Standard (non-explosion-proof) electrical equipment was observed within the paint booth hazardous area. Explosion-proof/classified electrical equipment should be installed in accordance with NFPA 33 requirements.' },
+    // ── Chemical Storage ──
+    { id: 'chemical-no-sds', check: function(){ return ((document.getElementById('haz-chem-sds')||{}).value||'').indexOf('No')===0; },
+      keywords:['safety data sheet', 'SDS'], priority:'90-Day', category:'Safety & Compliance',
+      fallbackTitle:'Safety Data Sheets not available for chemicals stored', fallbackText:'Safety Data Sheets (SDS) were not available for chemicals on site. A complete, current SDS binder or electronic system should be maintained and accessible to employees.' },
+    { id: 'chemical-no-containment', check: function(){ return ((document.getElementById('haz-chem-containment')||{}).value||'').indexOf('No')===0; },
+      keywords:['secondary containment', 'chemical storage'], priority:'30-Day', category:'Flammable & Combustible Liquids',
+      fallbackTitle:'No secondary containment for stored chemicals', fallbackText:'Chemical storage areas lack secondary containment adequate for the volumes stored. Spill containment (curbing, containment pallets, or berms) should be provided to prevent uncontrolled release.' },
+    // ── Woodworking ──
+    { id: 'wood-no-dust-collection', check: function(){ return ((document.getElementById('haz-wood-dust-collection')||{}).value||'').indexOf('No')===0; },
+      keywords:['dust collection', 'woodworking'], priority:'30-Day', category:'Woodworking Operations',
+      fallbackTitle:'No dust collection system for woodworking equipment', fallbackText:'Woodworking machinery is not connected to a dust collection system. A central or portable dust collection system should be installed to control combustible dust accumulation, per NFPA 664.' },
+    { id: 'wood-heavy-dust', check: function(){ return ((document.getElementById('haz-wood-accumulation')||{}).value||'').indexOf('Heavy')===0 || ((document.getElementById('sawdust-wood-dust-accumulation')||{}).value||'').indexOf('Heavy')===0; },
+      keywords:['combustible dust', 'wood dust accumulation'], priority:'Immediate', category:'Woodworking Operations',
+      fallbackTitle:'Heavy combustible wood dust accumulation observed', fallbackText:'Significant wood dust accumulation was observed on beams, ledges, and equipment, presenting a combustible dust hazard. Housekeeping practices should be improved with regular dust removal per NFPA 664.' },
+    { id: 'wood-machinery-unguarded', check: function(){ return ((document.getElementById('major-machinery-present-table-saw-band-saw-planer')||{}).value||'').indexOf('No')===0; },
+      keywords:['machine guarding'], priority:'Immediate', category:'Safety & Compliance',
+      fallbackTitle:'Multiple unguarded woodworking machines', fallbackText:'Multiple woodworking machines were observed with missing guards. All point-of-operation and drive guards should be restored to protect operators from injury.' },
+    { id: 'no-lockout-tagout', check: function(){ return ((document.getElementById('lockout-tagout-program')||{}).value||'').indexOf('No')===0; },
+      keywords:['lockout tagout', 'LOTO'], priority:'30-Day', category:'Safety & Compliance',
+      fallbackTitle:'No lockout/tagout program in place', fallbackText:'No formal lockout/tagout program exists for machinery servicing. A written LOTO program with trained staff should be implemented to prevent unexpected machine start-up during maintenance.' },
+    // ── Compressed Gas / Cryogenics ──
+    { id: 'gas-cylinders-unsecured', check: function(){ return ((document.getElementById('haz-gas-secured')||{}).value||'').indexOf('No')===0; },
+      keywords:['compressed gas cylinders', 'cylinder securement'], priority:'Immediate', category:'Safety & Compliance',
+      fallbackTitle:'Compressed gas cylinders not secured', fallbackText:'Unsecured compressed gas cylinders were observed. All cylinders should be chained or otherwise restrained in an upright position to prevent tipping and valve damage.' },
+    { id: 'gas-no-separation', check: function(){ return ((document.getElementById('haz-gas-separation')||{}).value||'').indexOf('No')===0; },
+      keywords:['oxidizer separation', 'fuel gas separation'], priority:'30-Day', category:'Safety & Compliance',
+      fallbackTitle:'Flammable and oxidizing gases stored together', fallbackText:'Flammable and oxidizing compressed gas cylinders are stored together without adequate separation. A minimum 20 ft separation or fire-rated barrier should be provided per code.' },
+    { id: 'cryo-no-monitor', check: function(){ return ((document.getElementById('haz-cryo-monitor')||{}).value||'').indexOf('No')===0; },
+      keywords:['oxygen deficiency monitor', 'cryogenic'], priority:'30-Day', category:'Safety & Compliance',
+      fallbackTitle:'No oxygen deficiency monitoring for cryogenic storage', fallbackText:'No fixed oxygen deficiency monitor is present where cryogenic materials are stored/used. A fixed monitor with audible/visual alarm should be installed to protect against asphyxiation hazard.' },
+    // ── Printing ──
+    { id: 'printing-no-ventilation', check: function(){ var solv=(document.getElementById('haz-print-solvent')||{}).value||''; var vent=(document.getElementById('haz-print-ventilation')||{}).value||''; return solv.indexOf('Solvent')===0 && vent.indexOf('No')===0; },
+      keywords:['solvent ventilation', 'printing exhaust'], priority:'30-Day', category:'Safety & Compliance',
+      fallbackTitle:'Inadequate ventilation for solvent-based printing inks', fallbackText:'Solvent-based printing inks are used without dedicated press exhaust ventilation. Adequate mechanical ventilation should be provided to control vapor accumulation.' },
+    // ── Warehouse / Storage / Racking ──
+    { id: 'rack-poor-condition', check: function(){ return ((document.getElementById('rack-condition')||{}).value||'').indexOf('Poor')===0; },
+      keywords:['rack damage', 'storage rack condition'], priority:'Immediate', category:'Warehouse & Storage',
+      fallbackTitle:'Storage racking has structural damage', fallbackText:'Storage racking was observed with structural damage presenting a collapse concern. Damaged racking should be repaired or replaced by a qualified rack contractor before further loading.' },
+    { id: 'rack-no-repair-program', check: function(){ return ((document.getElementById('rack-repair-replacement-program')||{}).value||'').indexOf('No')===0; },
+      keywords:['rack inspection program'], priority:'90-Day', category:'Warehouse & Storage',
+      fallbackTitle:'No formal rack inspection and repair program', fallbackText:'No formal program exists for inspecting and repairing damaged storage racking. A periodic rack inspection program should be implemented, consistent with RMI/ANSI MH16.1 guidance.' },
+    { id: 'sprinkler-design-not-verified', check: function(){ var v=(document.getElementById('sprinkler-design-adequate-for-commodity')||{}).value||''; return v.indexOf('Unknown')===0 || v.indexOf('No')===0; },
+      keywords:['sprinkler design commodity', 'storage height sprinkler'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Sprinkler design adequacy for storage commodity/height not verified', fallbackText:'The adequacy of the sprinkler system design for the current storage commodity classification and height has not been formally verified, or has been identified as requiring upgrade. A qualified fire protection engineer should review the system design against current storage conditions.' },
+    { id: 'forklift-no-training', check: function(){ var present=(document.getElementById('forklifts-powered-industrial-trucks')||{}).value||''; var v=(document.getElementById('forklift-operator-training')||{}).value||''; return present!=='No' && present!=='' && v.indexOf('No documented')===0; },
+      keywords:['forklift operator training', 'powered industrial truck'], priority:'30-Day', category:'Safety & Compliance',
+      fallbackTitle:'No documented forklift operator training', fallbackText:'Forklift operators do not have documented training on file. A formal training and certification program should be established for all powered industrial truck operators.' },
+    { id: 'aisle-obstructed', check: function(){ return ((document.getElementById('aisle-widths-maintained')||{}).value||'').indexOf('No')===0; },
+      keywords:['aisle width', 'warehouse aisle'], priority:'30-Day', category:'Warehouse & Storage',
+      fallbackTitle:'Warehouse aisles blocked or undefined', fallbackText:'Warehouse aisles were found blocked or undefined, restricting emergency egress and sprinkler/hose access. Aisles should be clearly marked and kept clear at all times.' },
+    // ── Auto Service ──
+    { id: 'lift-poor-condition', check: function(){ return ((document.getElementById('lift-condition')||{}).value||'').indexOf('Poor')===0; },
+      keywords:['vehicle lift', 'hoist safety'], priority:'Immediate', category:'Auto Service',
+      fallbackTitle:'Vehicle lift safety concerns present', fallbackText:'Vehicle lifts were assessed as having safety concerns present. Lifts should be inspected and serviced by a qualified technician before further use.' },
+    { id: 'inground-lift-leak', check: function(){ return ((document.getElementById('in-ground-lifts-leak-evidence')||{}).value||'').indexOf('Active leak')===0; },
+      keywords:['in-ground lift leak', 'hydraulic leak'], priority:'Immediate', category:'Auto Service',
+      fallbackTitle:'Active hydraulic leak from in-ground lift — environmental concern', fallbackText:'An active hydraulic fluid leak was observed from an in-ground lift, presenting an environmental contamination concern. The lift should be taken out of service and repaired, with any contaminated soil assessed by a qualified environmental consultant.' },
+    { id: 'waste-oil-improper', check: function(){ return ((document.getElementById('waste-oil-storage')||{}).value||'') === 'Improper storage observed'; },
+      keywords:['waste oil storage'], priority:'30-Day', category:'Auto Service',
+      fallbackTitle:'Improper waste oil storage observed', fallbackText:'Waste oil was found stored improperly. Waste oil should be stored in an approved container or tank pending licensed disposal.' },
+    { id: 'ust-abandoned-unknown', check: function(){ var v=(document.getElementById('underground-storage-tank')||{}).value||''; return v.indexOf('Abandoned')===0 || v.indexOf('Unknown')===0; },
+      keywords:['underground storage tank', 'UST'], priority:'30-Day', category:'Structural & Water Damage',
+      fallbackTitle:'Underground storage tank status unresolved', fallbackText:'An underground storage tank was identified as abandoned/out of service or of unknown status. Tank records should be obtained and, if abandoned, proper closure/removal by a licensed contractor should be confirmed.' },
+    // ── Detailed Sprinkler Grading (spk- fields) ──
+    { id: 'spk-design-mismatch', check: function(){ var v=(document.getElementById('spk-design-match')||{}).value||''; return v.indexOf('Significant')===0 || v.indexOf('Critical')===0; },
+      keywords:['sprinkler design mismatch', 'underdesigned'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Sprinkler system significantly underdesigned for current hazard', fallbackText:'The sprinkler system design does not match the current occupancy/hazard classification. A fire protection engineer should evaluate the system against current occupancy conditions and recommend upgrades.' },
+    { id: 'spk-water-deficient', check: function(){ var v=(document.getElementById('spk-water-adequacy')||{}).value||''; return v.indexOf('Deficient')===0 || v.indexOf('Seriously')===0; },
+      keywords:['water supply adequacy', 'sprinkler demand'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Water supply deficient for sprinkler system demand', fallbackText:'Available water supply volume and/or pressure is below the design demand for the sprinkler system. A current water flow test should be conducted and supply deficiencies corrected.' },
+    { id: 'spk-heads-deteriorated', check: function(){ var v=(document.getElementById('spk-head-condition')||{}).value||''; return v.indexOf('Serious')===0 || v.indexOf('Critical')===0; },
+      keywords:['sprinkler head condition', 'corroded heads'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Widespread sprinkler head corrosion or damage', fallbackText:'Sprinkler heads were found with widespread corrosion, painting, or physical damage of doubtful reliability. Affected heads should be replaced by a qualified fire protection contractor.' },
+    { id: 'spk-riser-freeze-risk', check: function(){ var v=(document.getElementById('spk-riser-heat')||{}).value||''; return v.indexOf('Inadequate')===0 || v.indexOf('No heating')===0; },
+      keywords:['riser room heating', 'freeze protection sprinkler'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Sprinkler riser room freeze protection inadequate', fallbackText:'The sprinkler riser room lacks adequate heating, presenting a freeze risk to the wet system. Heating should be provided/restored to maintain temperatures above 40°F (4°C).' },
+    { id: 'spk-fdc-issue', check: function(){ var v=(document.getElementById('spk-fdc')||{}).value||''; return v.indexOf('obstructed')!==-1 || v.indexOf('Not present')===0; },
+      keywords:['fire department connection', 'FDC'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Fire department connection obstructed or missing', fallbackText:'The fire department connection (FDC) is obstructed, capped improperly, or not present as required by code. This should be corrected to ensure fire department pumper access during an emergency.' },
+    { id: 'spk-no-monitoring', check: function(){ var v=(document.getElementById('spk-monitoring')||{}).value||''; return v.indexOf('Local alarm')===0 || v.indexOf('No alarm')===0; },
+      keywords:['sprinkler central station monitoring'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Sprinkler system not centrally monitored', fallbackText:'The sprinkler system water flow and valve tamper alarms are not monitored by a UL listed central station. Central station monitoring should be provided so an unnoticed fire is not permitted to burn undetected.' },
+    { id: 'spk-annual-overdue', check: function(){ return ((document.getElementById('spk-annual-insp')||{}).value||'').indexOf('overdue')!==-1; },
+      keywords:['sprinkler annual inspection'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Sprinkler system annual inspection overdue', fallbackText:'The sprinkler system is overdue for its annual inspection per NFPA 25. An inspection should be scheduled with a qualified fire protection contractor without delay.' },
+    { id: 'spk-pump-test-overdue', check: function(){ return ((document.getElementById('spk-pump-test')||{}).value||'').indexOf('overdue')!==-1 || ((document.getElementById('spk-pump-test')||{}).value||'').indexOf('Never')!==-1; },
+      keywords:['fire pump test'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Fire pump acceptance/annual test overdue', fallbackText:'The fire pump is overdue for annual testing, or has never been acceptance tested. Testing should be conducted per NFPA 25 to confirm the pump will perform as required.' },
+    { id: 'spk-trip-test-overdue', check: function(){ var v=(document.getElementById('spk-trip-test')||{}).value||''; return v.indexOf('overdue')!==-1 || v.indexOf('Never')!==-1; },
+      keywords:['dry pipe trip test'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Dry pipe valve trip test overdue', fallbackText:'The dry pipe sprinkler valve is overdue for trip testing, or has never been trip tested. Testing should be performed per NFPA 25 to confirm reliable operation.' },
+    { id: 'spk-5yr-overdue', check: function(){ return ((document.getElementById('spk-5yr-insp')||{}).value||'').indexOf('Overdue')===0 || ((document.getElementById('spk-5yr-insp')||{}).value||'').indexOf('Significantly')===0; },
+      keywords:['5 year internal sprinkler inspection'], priority:'90-Day', category:'Fire Protection',
+      fallbackTitle:'5-year internal sprinkler pipe inspection overdue', fallbackText:'The required 5-year internal sprinkler piping inspection is overdue. This should be scheduled per NFPA 25, as obstruction of piping can significantly reduce system effectiveness.' },
+    { id: 'spk-impairment-active', check: function(){ return ((document.getElementById('spk-impairments')||{}).value||'').indexOf('None')!==0 && (document.getElementById('spk-impairments')||{}).value; },
+      keywords:['sprinkler impairment program'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Active or inadequately controlled sprinkler impairment', fallbackText:'An active sprinkler system impairment was identified, or the impairment control program was assessed as inadequate. Impairments should be corrected promptly and a formal impairment notification/tag-out program maintained per NFPA 25.' },
+    { id: 'spk-valve-not-supervised', check: function(){ var v=(document.getElementById('main-control-valve-position')||{}).value||''; return v.indexOf('Closed')===0 || v.indexOf('not locked')!==-1 || v.indexOf('Could not verify')===0; },
+      keywords:['sprinkler control valve supervision'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Sprinkler control valve closed or unsupervised', fallbackText:'The sprinkler system main control valve was found closed, or not locked/electronically supervised in the open position. The valve should be confirmed open and properly supervised to prevent inadvertent closure.' },
+    { id: 'nfpa25-noncompliant', check: function(){ var v=(document.getElementById('nfpa-25-compliance-level')||{}).value||''; return v.indexOf('Non-compliant')===0 || v.indexOf('Unknown')===0; },
+      keywords:['NFPA 25 compliance'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Sprinkler system testing/maintenance records non-compliant with NFPA 25', fallbackText:'Sprinkler system inspection, testing, and maintenance records show significant gaps relative to NFPA 25 requirements, or are unavailable. A qualified fire protection contractor should bring the system current and establish a compliant records program.' },
+    // ── Fire Alarm / Detection ──
+    { id: 'no-fire-alarm', check: function(){ return (document.getElementById('fire-alarm-system')||{}).value === 'None'; },
+      keywords:['fire alarm system'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'No fire alarm system present', fallbackText:'No fire alarm system is present at the property. Installation of a fire alarm system appropriate to the occupancy should be considered, including smoke/heat detection and notification appliances.' },
+    // ── Exposure / Site ──
+    { id: 'exposure-poor-critical', check: function(){ var v=(document.getElementById('exposure-rating')||{}).value||''; return v.indexOf('Poor')===0 || v.indexOf('Critical')===0; },
+      keywords:['exposure hazard', 'adjoining occupancy'], priority:'Advisory', category:'Premises Liability',
+      fallbackTitle:'Elevated exposure from neighboring occupancies', fallbackText:'Neighboring occupancies present an elevated exposure hazard to this property. While generally outside the insured\u2019s direct control, this should be noted for underwriting consideration and any mitigating separation/protection features documented.' },
+    // ── Parking / Premises Safety ──
+    { id: 'parking-lot-poor', check: function(){ return ((document.getElementById('parking-surface-type')||{}).value||'').indexOf('Poor')!==-1; },
+      keywords:['parking lot condition', 'pavement repair'], priority:'90-Day', category:'Premises Liability',
+      fallbackTitle:'Parking lot surface needs repair', fallbackText:'The parking lot surface was assessed as needing repair, presenting a potential trip/vehicle hazard. Repair or resurfacing should be scheduled.' },
+    { id: 'parking-lighting-poor', check: function(){ var v=(document.getElementById('parking-lot-lighting')||{}).value||''; return v.indexOf('Poor')===0 || v==='None'; },
+      keywords:['parking lot lighting'], priority:'30-Day', category:'Premises Liability',
+      fallbackTitle:'Parking lot lighting inadequate', fallbackText:'Parking lot lighting was assessed as poor or absent, presenting a security and slip/fall liability concern. Adequate lighting coverage should be provided.' },
+    { id: 'no-snow-ice-program', check: function(){ var v=(document.getElementById('snow-ice-removal-program')||{}).value||''; return v==='No program'; },
+      keywords:['snow removal', 'ice control'], priority:'30-Day', category:'Premises Liability',
+      fallbackTitle:'No snow/ice removal program in place', fallbackText:'No formal snow/ice removal program exists for the property. A written contract with a qualified vendor, or a documented in-house program, should be established to reduce slip-and-fall exposure.' },
+    { id: 'no-wet-floor-signs', check: function(){ return (document.getElementById('wet-floor-hazard-warning-signs-available')||{}).value === 'No'; },
+      keywords:['wet floor sign', 'slip fall warning'], priority:'90-Day', category:'Premises Liability',
+      fallbackTitle:'Wet floor warning signage not available', fallbackText:'Wet floor warning signs are not available on the premises. Signage should be provided and used during cleaning/mopping and after spills to reduce slip-and-fall exposure.' },
+    { id: 'emergency-signage-inadequate', check: function(){ return ((document.getElementById('emergency-exit-signage')||{}).value||'').indexOf('Inadequate')===0; },
+      keywords:['exit signage', 'emergency egress'], priority:'30-Day', category:'Life Safety',
+      fallbackTitle:'Emergency exit signage inadequate or missing', fallbackText:'Emergency exit signage was found inadequate or missing at required locations. Illuminated exit signs should be installed/restored in accordance with the applicable fire/life safety code.' },
+    // ── ADA / Accessibility ──
+    { id: 'ada-noncompliant', check: function(){ return ((document.getElementById('ada-compliance-status')||{}).value||'').indexOf('Non-compliant')===0; },
+      keywords:['ADA compliance', 'accessibility'], priority:'90-Day', category:'Premises Liability',
+      fallbackTitle:'Significant ADA accessibility deficiencies noted', fallbackText:'Significant accessibility deficiencies were noted relative to ADA requirements. A qualified accessibility consultant should be engaged to identify and prioritize corrective measures.' },
+    // ── Pool ──
+    { id: 'pool-no-enclosure', check: function(){ var present=(document.getElementById('swimming-pool-present')||{}).value||''; var v=(document.getElementById('pool-fencing-enclosure')||{}).value||''; return present!=='No' && present!=='' && v.indexOf('No enclosure')===0; },
+      keywords:['pool fencing', 'pool enclosure'], priority:'Immediate', category:'Pool, Playground & Amenities',
+      fallbackTitle:'Swimming pool lacks required enclosure', fallbackText:'The swimming pool has no fencing/enclosure. A compliant self-latching enclosure should be installed immediately to prevent unsupervised access, a significant liability and life-safety exposure.' },
+    // ── Premises / Products Liability ──
+    { id: 'no-coi-vendors', check: function(){ return ((document.getElementById('certificates-of-insurance-on-file')||{}).value||'') === 'No'; },
+      keywords:['certificate of insurance', 'vendor COI'], priority:'90-Day', category:'Premises Liability',
+      fallbackTitle:'Certificates of insurance not obtained from vendors/subcontractors', fallbackText:'Certificates of insurance are not being obtained from vendors and subcontractors working on the premises. A COI collection process should be implemented before allowing outside contractors on site.' },
+    { id: 'no-recall-plan', check: function(){ var recalls=(document.getElementById('any-product-recalls')||{}).value||''; var plan=(document.getElementById('written-recall-plan-in-place')||{}).value||''; return recalls.indexOf('Yes')===0 && plan === 'No'; },
+      keywords:['product recall plan'], priority:'30-Day', category:'Premises Liability',
+      fallbackTitle:'No written product recall plan despite recall history', fallbackText:'The insured has a history of product recall(s) but no written recall plan is in place. A formal recall plan should be developed to enable a prompt, coordinated response if needed.' },
+    { id: 'no-formal-qa', check: function(){ return (document.getElementById('formal-qc-qa-program')||{}).value === 'No'; },
+      keywords:['quality control program', 'QA program'], priority:'90-Day', category:'Premises Liability',
+      fallbackTitle:'No formal quality control/QA program', fallbackText:'No formal quality control or quality assurance program is in place for manufactured products. Implementing a documented QC/QA program is recommended to reduce products liability exposure.' },
+    // ── Fleet / Auto ──
+    { id: 'dot-unsatisfactory', check: function(){ return (document.getElementById('dot-safety-rating')||{}).value === 'Unsatisfactory'; },
+      keywords:['DOT safety rating'], priority:'Immediate', category:'Fleet Safety',
+      fallbackTitle:'Unsatisfactory DOT safety rating', fallbackText:'The fleet carries an Unsatisfactory DOT safety rating. Corrective action addressing the underlying compliance issues should be prioritized, as this materially affects insurability.' },
+    { id: 'no-mvr-review', check: function(){ return (document.getElementById('mvr-reviewed')||{}).value === 'No'; },
+      keywords:['motor vehicle record', 'MVR review'], priority:'30-Day', category:'Fleet Safety',
+      fallbackTitle:'Driver motor vehicle records not reviewed', fallbackText:'Driver motor vehicle records (MVRs) are not being reviewed. A formal pre-hire and periodic MVR review process should be established to identify high-risk drivers.' },
+    { id: 'no-driver-training', check: function(){ return (document.getElementById('driver-training-program')||{}).value === 'No'; },
+      keywords:['driver training program'], priority:'90-Day', category:'Fleet Safety',
+      fallbackTitle:'No formal driver training program', fallbackText:'No formal driver training program exists. A documented training program covering defensive driving and company policies is recommended.' },
+    { id: 'no-preventive-maintenance', check: function(){ return (document.getElementById('written-preventive-maintenance-program')||{}).value === 'No'; },
+      keywords:['vehicle maintenance program'], priority:'30-Day', category:'Fleet Safety',
+      fallbackTitle:'No written vehicle preventive maintenance program', fallbackText:'No written preventive maintenance program exists for fleet vehicles. A documented maintenance schedule with records retention is recommended to reduce mechanical failure exposure.' },
+    // ── Multi-Residential ──
+    { id: 'multires-common-poor', check: function(){ return ((document.getElementById('common-areas-present-lobby-entrance-hall-elevator')||{}).value||'').indexOf('Poor')===0; },
+      keywords:['common area maintenance'], priority:'90-Day', category:'Multi-Residential',
+      fallbackTitle:'Common areas show significant deferred maintenance', fallbackText:'Common areas (lobby, hallways, elevators) were assessed as having significant deferred maintenance issues. A maintenance plan should be developed to address deficiencies.' },
+    { id: 'multires-balconies-poor', check: function(){ return ((document.getElementById('balconies-decks-present')||{}).value||'').indexOf('Poor')!==-1; },
+      keywords:['balcony inspection', 'deck safety'], priority:'Immediate', category:'Multi-Residential',
+      fallbackTitle:'Balconies/decks show safety concerns', fallbackText:'Balconies or decks were noted with safety concerns. A structural engineer should inspect affected balconies/decks and corrective repairs made before continued use.' },
+    { id: 'multires-no-dryer-vent-program', check: function(){ return ((document.getElementById('dryer-vent-maintenance-program')||{}).value||'') === 'No formal program'; },
+      keywords:['dryer vent cleaning'], priority:'90-Day', category:'Multi-Residential',
+      fallbackTitle:'No dryer vent cleaning program', fallbackText:'No formal dryer vent cleaning/inspection program is in place. Annual cleaning and inspection is recommended to reduce lint-related fire risk, particularly for common laundry facilities.' },
+    { id: 'multires-smoke-detector-noncompliant', check: function(){ return ((document.getElementById('smoke-detectors-unit-compliance')||{}).value||'').indexOf('Non-compliant')===0; },
+      keywords:['smoke detector compliance', 'unit smoke alarm'], priority:'Immediate', category:'Multi-Residential',
+      fallbackTitle:'Smoke detectors non-compliant in residential units', fallbackText:'Smoke detectors were found non-compliant in residential units. All units should be brought into compliance with working, tested smoke detectors as required by code.' },
+    { id: 'multires-mould-significant', check: function(){ return ((document.getElementById('mould-water-damage-history')||{}).value||'').indexOf('Significant')===0; },
+      keywords:['mould remediation', 'water damage history'], priority:'Immediate', category:'Structural & Water Damage',
+      fallbackTitle:'Significant recurring mould/water damage history', fallbackText:'A significant history of mould or water damage with active remediation was identified. The underlying moisture source should be identified and corrected, with remediation verified by a qualified professional.' },
+    { id: 'multires-outstanding-safety-workorders', check: function(){ return ((document.getElementById('outstanding-work-orders-complaints')||{}).value||'').indexOf('Significant')===0; },
+      keywords:['outstanding work orders', 'safety complaints'], priority:'Immediate', category:'Multi-Residential',
+      fallbackTitle:'Significant safety-related work orders remain open', fallbackText:'Significant safety-related tenant work orders/complaints remain outstanding. These items should be prioritized and resolved promptly given their safety implications.' }
+  ];
+
+  function findBestLibraryMatch(keywords) {
+    if (!recLibraryData || !recLibraryData.length) return null;
+    var best = null, bestScore = 0;
+    recLibraryData.forEach(function(r) {
+      var haystack = ((r.title || '') + ' ' + (r.rec_text || '') + ' ' + (r.category || '') + ' ' + (r.subcategory || '')).toLowerCase();
+      var score = 0;
+      keywords.forEach(function(k) { if (haystack.indexOf(k.toLowerCase()) !== -1) score++; });
+      if (score > bestScore) { bestScore = score; best = r; }
+    });
+    return bestScore > 0 ? best : null;
+  }
+
+  async function runAutoRecommendations() {
+    if (!recLibraryLoaded) { try { await loadRecLibrary(); } catch(e) { /* fall through to fallback text only */ } }
+    var triggered = AUTO_REC_RULES.filter(function(r) { try { return r.check(); } catch(e) { return false; } });
+    if (!triggered.length) { showToast('No obvious deficiencies detected from the current form data.'); return; }
+    var alreadyInserted = Array.from(document.querySelectorAll('[data-auto-rule]')).map(function(el) { return el.getAttribute('data-auto-rule'); });
+    var newCount = 0;
+    triggered.forEach(function(rule) {
+      if (alreadyInserted.indexOf(rule.id) !== -1) return; // don't insert the same auto-suggestion twice
+      var libMatch = findBestLibraryMatch(rule.keywords);
+      var title    = libMatch ? libMatch.title    : rule.fallbackTitle;
+      var text     = libMatch ? libMatch.rec_text : rule.fallbackText;
+      var priority = libMatch ? libMatch.priority : rule.priority;
+      var category = libMatch ? libMatch.category : rule.category;
+      insertRecommendationProgrammatic(title, text, priority, category, rule.id);
+      newCount++;
+    });
+    if (newCount) showToast('✓ ' + newCount + ' recommendation(s) suggested from detected deficiencies — review, edit, or delete as needed.');
+    else showToast('Detected deficiencies already have suggested recommendations in the list.');
+  }
+
+  // Mirrors insertRecFromLibrary's insertion behavior exactly (fill rec-1 if
+  // empty, else append a new numbered item) but takes plain values instead
+  // of reading from a clicked library button, and tags the created item with
+  // data-auto-rule so repeated auto-detection runs don't duplicate it.
+  function insertRecommendationProgrammatic(title, text, priority, category, ruleId) {
+    var prioMap = { 'Immediate': 'high', '30-Day': 'high', '90-Day': 'med', 'Advisory': 'low' };
+    var level = prioMap[priority] || 'med';
+    var rec1 = document.getElementById('rec-1');
+    if (rec1) {
+      var rec1ta = rec1.querySelector('textarea');
+      if (rec1ta && !rec1ta.value.trim()) {
+        rec1ta.value = text;
+        var rec1title = rec1.querySelector('.rec-title-field');
+        if (rec1title && title) rec1title.value = title;
+        rec1.className = 'rec-item priority-' + level;
+        var priorityLbl = rec1.querySelector('[data-level="' + level + '"]');
+        if (priorityLbl) setRecPriority(priorityLbl, 'rec-1', level);
+        addDeleteBtn(rec1);
+        rec1.setAttribute('data-auto-rule', ruleId);
+        setTimeout(function() { rec1.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
+        return;
+      }
+    }
+    recCount++;
+    var div = document.createElement('div');
+    div.className = 'rec-item priority-' + level;
+    div.id = 'rec-' + recCount;
+    div.setAttribute('data-auto-rule', ruleId);
+    var catToSection = {
+      'Fire Protection': 'Protection — Fire', 'Electrical': 'Construction', 'Life Safety': 'Protection — Fire',
+      'Premises Liability': 'Other', 'Housekeeping': 'Housekeeping', 'Safety & Compliance': 'Safety / Compliance',
+      'Security': 'Protection — Security', 'Spray Finishing': 'Occupancy', 'Heating Systems': 'Construction',
+      'Flammable & Combustible Liquids': 'Occupancy', 'Structural & Water Damage': 'Construction',
+      'Warehouse & Storage': 'Occupancy', 'Woodworking Operations': 'Occupancy', 'Auto Service': 'Occupancy',
+      'Fleet Safety': 'Other', 'Building Systems': 'Construction', 'Pool, Playground & Amenities': 'Other',
+      'Multi-Residential': 'Occupancy', 'Contractors & Administration': 'Other'
+    };
+    var sectionVal = catToSection[category] || 'Other';
+    var sectionOptions = ['Construction','Occupancy','Protection — Fire','Protection — Security','Exposure','Safety / Compliance','Housekeeping','Other'];
+    var sectionOpts = sectionOptions.map(function(o) { return '<option' + (o === sectionVal ? ' selected' : '') + '>' + o + '</option>'; }).join('');
+    var hHigh = level === 'high' ? ' selected' : '';
+    var hMed  = level === 'med'  ? ' selected' : '';
+    var hLow  = level === 'low'  ? ' selected' : '';
+    var rc = recCount;
+    div.innerHTML =
+      '<div class="rec-header">' +
+        '<span class="rec-num">#' + rc + ' <span style="font-size:10px;font-weight:400;color:var(--gold-dark);text-transform:uppercase;letter-spacing:.04em;">Auto-suggested</span></span>' +
+        '<div class="radio-group" style="flex-wrap:nowrap;gap:6px">' +
+          '<label class="radio-btn' + hHigh + '" style="padding:4px 10px;font-size:11px" data-level="high" data-rec="rec-' + rc + '">High</label>' +
+          '<label class="radio-btn' + hMed  + '" style="padding:4px 10px;font-size:11px" data-level="med"  data-rec="rec-' + rc + '">Medium</label>' +
+          '<label class="radio-btn' + hLow  + '" style="padding:4px 10px;font-size:11px" data-level="low"  data-rec="rec-' + rc + '">Low</label>' +
+        '</div>' +
+        '<select style="margin-left:auto;width:160px;font-size:12px"><option>Requirement</option><option>Recommendation</option></select>' +
+      '</div>' +
+      '<div class="form-grid">' +
+        '<div class="field"><label>Reference Number</label>' +
+          '<input type="text" class="rec-ref-field" placeholder="e.g. 2026-03-001" style="font-family:IBM Plex Mono,monospace;font-weight:700;color:var(--navy);"></div>' +
+        '<div class="field form-full"><label>Brief Title / Heading</label>' +
+          '<input type="text" class="rec-title-field" placeholder="e.g. Sprinkler system overdue for annual inspection"></div>' +
+        '<div class="field form-full"><label>Description of Deficiency / Recommendation</label>' +
+          '<textarea spellcheck="true" style="min-height:100px"></textarea>' +
+        '</div>' +
+        '<div class="field"><label>Section / Area</label>' +
+          '<select><option value="">— Select —</option>' + sectionOpts + '</select>' +
+        '</div>' +
+        '<div class="field"><label>Compliance Deadline</label><input type="date"></div>' +
+        '<div class="field"><label>Follow-Up Required?</label>' +
+          '<select><option>Yes — Re-inspection</option><option>Yes — Documentation only</option><option>No</option></select>' +
+        '</div>' +
+        '<div class="field"><label>Consequence if Not Corrected</label>' +
+          '<select><option value="">— Select —</option>' +
+            '<option>Premium surcharge</option><option>Coverage restriction</option>' +
+            '<option>Cancellation / Non-renewal</option><option>Informational only</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="field form-full"><label>Inspector Notes / Remarks</label>' +
+          '<textarea spellcheck="true" class="rec-notes-field" placeholder="e.g. Insured advised — target date March 31. Landlord responsibility per lease..."></textarea>' +
+        '</div>' +
+      '</div>';
+    div.querySelectorAll('[data-level]').forEach(function(lbl) {
+      lbl.addEventListener('click', function() {
+        setRecPriority(this, this.getAttribute('data-rec'), this.getAttribute('data-level'));
+      });
+    });
+    div.querySelector('textarea').value = text;
+    var titleInput = div.querySelector('.rec-title-field');
+    if (titleInput && title) titleInput.value = title;
+    addDeleteBtn(div);
+    document.getElementById('rec-list').appendChild(div);
+    setTimeout(function() { div.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
+  }
+
   function addDeleteBtn(recDiv) {
     // Don't add if already has one
     if (recDiv.querySelector('.rec-delete-btn')) return;
@@ -12284,6 +12835,10 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
         fields: [['Operation Type', 'haz-print-type'], ['Ink/Solvent Type', 'haz-print-solvent'], ['Storage Volume', 'haz-print-volume'], ['Ventilation', 'haz-print-ventilation']], notes: 'haz-print-notes' },
       { id: 'haz-detail-procheat', name: 'Process Heat',
         fields: [['Type of Process', 'haz-procheat-type', 'checkgroup'], ['Direct/Indirect Heat', 'haz-procheat-direct'], ['Construction of Heat Device', 'haz-procheat-construction'], ['Temperature(s) Used', 'haz-procheat-temp'], ['Fuel Used', 'haz-procheat-fuel'], ['Controls/Shut-off Devices', 'haz-procheat-controls', 'checkgroup'], ['Clearance to Combustibles', 'haz-procheat-clearance'], ['Ventilation/Exhaust', 'haz-procheat-ventilation'], ['Maintenance/Inspection Frequency', 'haz-procheat-maintenance'], ['Applicable NFPA Standard', 'haz-procheat-nfpa']], notes: 'haz-procheat-notes' },
+      { id: 'haz-detail-boilervessel', name: 'Process Boilers / Pressure Vessels',
+        fields: [['Equipment Type', 'haz-boilervessel-type'], ['Operating Pressure', 'haz-boilervessel-pressure'], ['ASME/CRN Certified', 'haz-boilervessel-certified'], ['Last Inspection Date', 'haz-boilervessel-last-inspection'], ['Safety Devices Present', 'haz-boilervessel-safety']], notes: 'haz-boilervessel-notes' },
+      { id: 'haz-detail-aircomp', name: 'Compressors / Air Receivers',
+        fields: [['Compressor Type', 'haz-aircomp-type'], ['Air Receiver Present', 'haz-aircomp-receiver'], ['Air Receiver Last Inspected', 'haz-aircomp-last-inspection'], ['Pressure Relief Valve Present', 'haz-aircomp-relief-valve']], notes: 'haz-aircomp-notes' },
     ];
     hazDetails.forEach(function(h) {
       var panel = document.getElementById(h.id);
@@ -14355,6 +14910,19 @@ function generateFormalReport() {
           ['Maintenance / Inspection Frequency', v('haz-procheat-maintenance')],
           ['Applicable NFPA Standard', v('haz-procheat-nfpa')],
         ], notes: ta('haz-procheat-notes') },
+        { id: 'haz-detail-boilervessel', label: '🔧 Process Boilers / Pressure Vessels', fields: [
+          ['Equipment Type', v('haz-boilervessel-type')],
+          ['Operating Pressure', v('haz-boilervessel-pressure')],
+          ['ASME / CRN Certified', v('haz-boilervessel-certified')],
+          ['Last Inspection Date', v('haz-boilervessel-last-inspection')],
+          ['Safety Devices Present', v('haz-boilervessel-safety')],
+        ], notes: ta('haz-boilervessel-notes') },
+        { id: 'haz-detail-aircomp', label: '💨 Compressors / Air Receivers', fields: [
+          ['Compressor Type', v('haz-aircomp-type')],
+          ['Air Receiver Present', v('haz-aircomp-receiver')],
+          ['Air Receiver Last Inspected', v('haz-aircomp-last-inspection')],
+          ['Pressure Relief Valve Present', v('haz-aircomp-relief-valve')],
+        ], notes: ta('haz-aircomp-notes') },
       ];
       return hazPanels.map(p => {
         const panel = document.getElementById(p.id);
