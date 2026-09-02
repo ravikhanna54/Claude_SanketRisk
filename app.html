@@ -11926,19 +11926,117 @@
       fallbackTitle:'Residential elevator overdue for service or has safety concern', fallbackText:'The building elevator was assessed as overdue for service or presenting a safety concern. A licensed elevator contractor should be engaged to bring the unit current.' },
     { id: 'supp-apt-no-co-detectors', check: function(){ return ((document.getElementById('co-detectors-required-present')||{}).value||'').indexOf('No')===0 || ((document.getElementById('co-detectors-required-present')||{}).value||'') === 'Partial'; },
       keywords:['carbon monoxide detector', 'CO detector'], priority:'Immediate', category:'Multi-Residential',
-      fallbackTitle:'Carbon monoxide detectors missing where required', fallbackText:'Carbon monoxide detectors are missing or only partially present in units with gas appliances. CO detectors should be installed in all applicable units as required by code.' }
+      fallbackTitle:'Carbon monoxide detectors missing where required', fallbackText:'Carbon monoxide detectors are missing or only partially present in units with gas appliances. CO detectors should be installed in all applicable units as required by code.' },
+    // ── Roof ──
+    { id: 'roof-drains-insufficient', check: function(){ return (document.getElementById('roof-drains')||{}).value === 'Insufficient'; },
+      keywords:['roof drainage', 'roof drains'], priority:'30-Day', category:'Structural & Water Damage',
+      fallbackTitle:'Insufficient roof drainage', fallbackText:'The roof drainage system was assessed as insufficient for the roof area. Inadequate drainage can lead to ponding and structural overload. A qualified contractor should evaluate and upgrade the roof drain capacity.' },
+    // ── NatCat Wind / Tree Exposure ──
+    { id: 'natcat-wind-cladding-damaged', check: function(){ return ((document.getElementById('wind-cladding')||{}).value||'').indexOf('Loose/damaged')===0; },
+      keywords:['cladding damage', 'wind uplift'], priority:'30-Day', category:'Structural & Water Damage',
+      fallbackTitle:'Loose or damaged cladding/flashing observed', fallbackText:'Loose or damaged exterior cladding or flashing was observed, presenting a wind uplift and water infiltration risk. Repairs should be made by a qualified contractor before the next storm season.' },
+    { id: 'natcat-tree-overhang', check: function(){ return ((document.getElementById('wind-exposure-debris')||{}).value||'').indexOf('Significant')===0; },
+      keywords:['tree overhang', 'wind debris exposure'], priority:'90-Day', category:'Structural & Water Damage',
+      fallbackTitle:'Significant overhanging trees or debris exposure near building', fallbackText:'Significant overhanging trees or substantial debris sources were noted near the building, presenting a wind-driven impact and debris exposure. Tree trimming/removal and yard storage management should be undertaken to reduce this exposure.' },
+    // ── Woodworking Supplement (additional) ──
+    { id: 'supp-wood-no-collection-system', check: function(){ return (document.getElementById('dust-collection-system')||{}).value === 'None'; },
+      keywords:['dust collection system', 'woodworking'], priority:'30-Day', category:'Woodworking Operations',
+      fallbackTitle:'No dust collection system installed', fallbackText:'Woodworking machinery has no dust collection system at all. A central or portable dust collection system should be installed to control combustible dust accumulation, per NFPA 664.' },
+    { id: 'supp-wood-open-spray-area', check: function(){ return (document.getElementById('spray-finishing-operations')||{}).value === 'Yes — Open area spraying'; },
+      keywords:['open area spraying', 'spray finishing booth'], priority:'30-Day', category:'Spray Finishing',
+      fallbackTitle:'Wood finishing performed by open area spraying', fallbackText:'Wood finishing operations are conducted by open area spraying rather than within an approved spray booth. An NFPA 33 compliant listed spray booth should be installed to control vapor accumulation and fire spread.' },
+    { id: 'supp-wood-spray-booth-fire-hazard', check: function(){ return (document.getElementById('spray-booth-condition')||{}).value === 'Poor — Fire hazard present'; },
+      keywords:['spray booth fire hazard', 'overspray accumulation'], priority:'Immediate', category:'Spray Finishing',
+      fallbackTitle:'Spray booth condition presents an active fire hazard', fallbackText:'The spray booth was assessed as being in poor condition with an active fire hazard present, due to overspray accumulation. The booth should be cleaned immediately and a regular cleaning schedule established.' },
+    // ── Warehouse Supplement (additional) ──
+    { id: 'supp-warehouse-floor-poor', check: function(){ return ((document.getElementById('floor-condition')||{}).value||'').indexOf('Poor')===0; },
+      keywords:['warehouse floor condition', 'trip hazard'], priority:'30-Day', category:'Warehouse & Storage',
+      fallbackTitle:'Warehouse floor presents trip hazards or structural concerns', fallbackText:'The warehouse floor was assessed as having trip hazards or structural concerns. Repairs should be made to eliminate uneven surfaces and cracks that could cause injury or affect material handling equipment.' },
+    { id: 'supp-warehouse-forklift-training-undocumented', check: function(){ return ((document.getElementById('forklift-operator-training')||{}).value||'').indexOf('No documented')===0; },
+      keywords:['forklift operator training', 'powered industrial truck'], priority:'30-Day', category:'Safety & Compliance',
+      fallbackTitle:'Forklift operator training undocumented', fallbackText:'Forklift/powered industrial truck operator training is not documented. A formal training and certification program with retained records should be established for all operators.' },
+    // ── Auto Service Supplement (additional) ──
+    { id: 'supp-auto-lift-service-overdue', check: function(){
+        var d = (document.getElementById('last-lift-inspection-certification')||{}).value;
+        if (!d) return false;
+        var days = (Date.now() - new Date(d).getTime()) / 86400000;
+        return days > 365;
+      },
+      keywords:['vehicle lift inspection', 'hoist certification'], priority:'30-Day', category:'Auto Service',
+      fallbackTitle:'Vehicle lift inspection/certification overdue', fallbackText:'The vehicle lift has not been inspected/certified within the past 12 months. Annual inspection and certification by a qualified lift service company should be scheduled.' },
+    // ── Restaurant Supplement (additional) ──
+    { id: 'supp-rest-service-frequency-insufficient', check: function(){
+        var sys = (document.getElementById('hood-suppression-system')||{}).value || '';
+        var freq = (document.getElementById('service-frequency')||{}).value || '';
+        return sys && sys !== 'None' && freq === 'Annually';
+      },
+      keywords:['hood suppression semi-annual', 'six month service'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Fire suppression system serviced annually — semi-annual servicing required', fallbackText:'The automatic fire suppression system is currently serviced annually. NFPA 96 requires a minimum semi-annual (every 6 months) service interval. The service schedule should be updated accordingly with the servicing contractor.' },
+    { id: 'supp-rest-no-grease-trap', check: function(){ return (document.getElementById('grease-trap-interceptor')||{}).value === 'None'; },
+      keywords:['grease trap', 'grease interceptor'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'No grease trap/interceptor installed', fallbackText:'No grease trap or interceptor is installed for the kitchen operation. Installation should be evaluated with local plumbing code requirements to prevent grease discharge into the sewer system.' },
+    // ── Sprinkler Supplement — full review of detailed grading fields ──
+    { id: 'spk-qod-slow-or-missing', check: function(){ var v=(document.getElementById('spk-qod')||{}).value||''; return v.indexOf('exceeds 1 minute')!==-1 || v.indexOf('required but not installed')!==-1 || v.indexOf('unacceptable')!==-1; },
+      keywords:['quick opening device', 'QOD trip time'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Quick Opening Device (QOD) deficiency on dry pipe system', fallbackText:'The dry pipe system\u2019s Quick Opening Device trip time exceeds the 1-minute standard, is missing where required, or the dry pipe valve was assessed as unacceptable/unreliable. A qualified fire protection contractor should evaluate and correct this deficiency, as delayed water delivery significantly reduces fire control effectiveness.' },
+    { id: 'spk-content-comb-elevated', check: function(){ return ((document.getElementById('spk-content-comb')||{}).value||'').indexOf('Significantly elevated')===0; },
+      keywords:['storage commodity combustibility', 'foam plastics'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Stored commodity combustibility significantly elevated for sprinkler design', fallbackText:'Stored commodities (e.g. foam plastics, cotton bales, excelsior) present significantly elevated combustibility relative to the sprinkler system\u2019s design basis. A fire protection engineer should review the system design against current storage conditions.' },
+    { id: 'spk-ceiling-height-concern', check: function(){ return ((document.getElementById('spk-ceiling')||{}).value||'').indexOf('over 7.6m')!==-1; },
+      keywords:['ceiling height sprinkler', 'clearance to storage'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Ceiling height or storage clearance exceeds sprinkler design basis', fallbackText:'Ceiling height exceeds 7.6m (25 ft), or clearance to storage exceeds 3m (10 ft) beyond the sprinkler system\u2019s design assumptions. A fire protection engineer should confirm the system remains adequate for this configuration.' },
+    { id: 'spk-obstruction-significant', check: function(){ return ((document.getElementById('spk-obstruction')||{}).value||'').indexOf('Significant')===0; },
+      keywords:['sprinkler discharge obstruction'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Significant obstruction to sprinkler discharge pattern', fallbackText:'Stock, ducts, or structural members were observed significantly obstructing sprinkler discharge patterns. Obstructions should be relocated or additional sprinklers added as needed to restore effective coverage.' },
+    { id: 'spk-openings-significant', check: function(){ return ((document.getElementById('spk-openings')||{}).value||'').indexOf('Significant')===0; },
+      keywords:['unprotected floor openings', 'sprinkler vertical openings'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Significant unprotected openings affecting multiple floors', fallbackText:'Significant unprotected openings were identified affecting multiple floors, allowing fire and smoke to spread vertically bypassing sprinkler protection. These openings should be fire-stopped or otherwise protected without delay.' },
+    { id: 'spk-internal-exposure-significant', check: function(){ return ((document.getElementById('spk-internal-exp')||{}).value||'').indexOf('Significant')===0; },
+      keywords:['unsprinklered area exposure', 'internal exposure'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Large unsprinklered area exposes sprinklered zone', fallbackText:'A large unsprinklered area was identified adjacent to and exposing a sprinklered zone. Extending sprinkler protection to the exposing area, or providing a fire-rated separation, should be evaluated.' },
+    { id: 'spk-connections-deficient', check: function(){ var v=(document.getElementById('spk-connections')||{}).value||''; return v.indexOf('Two connections required')!==-1 || v.indexOf('Dead-end')===0; },
+      keywords:['sprinkler water supply connections', 'looped feed'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Sprinkler water supply connection arrangement deficient', fallbackText:'The sprinkler system\u2019s water supply connection was assessed as requiring a second independent connection, or is fed by a dead-end main exceeding 305m (1000 ft). A fire protection engineer should evaluate the water supply reliability for this hazard.' },
+    { id: 'spk-valve-access-poor', check: function(){ var v=(document.getElementById('spk-valve-access')||{}).value||''; return v.indexOf('Not locked or supervised')!==-1 || v.indexOf('Poor accessibility')===0; },
+      keywords:['sprinkler control valve access', 'valve supervision'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Sprinkler main control valve access or supervision deficient', fallbackText:'The main sprinkler control valve is not locked/electronically supervised, or has poor accessibility. The valve should be secured in the open position with proper supervision to prevent inadvertent or unauthorized closure.' },
+    { id: 'spk-drain-drop-high', check: function(){ var v=(document.getElementById('spk-drain-drop')||{}).value||''; return v.indexOf('105')===0 || v.indexOf('140')===0 || v.indexOf('Over 210')===0; },
+      keywords:['main drain test', 'sprinkler pressure drop'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Main drain test shows excessive pressure drop — possible blockage', fallbackText:'The main drain test showed a pressure drop suggesting possible internal obstruction of the water supply piping. Further investigation, and potentially internal pipe inspection/flushing, should be conducted per NFPA 25.' },
+    { id: 'spk-piping-corroded', check: function(){ var v=(document.getElementById('spk-piping')||{}).value||''; return v.indexOf('Moderate')===0 || v.indexOf('Serious')===0; },
+      keywords:['sprinkler piping corrosion'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Significant sprinkler piping corrosion identified', fallbackText:'Significant corrosion was identified in the sprinkler piping, potentially requiring flushing or pipe replacement due to obstruction risk. Further investigation by a qualified fire protection contractor is recommended.' },
+    { id: 'spk-underground-never-tested', check: function(){ return (document.getElementById('spk-underground-test')||{}).value === 'Never pressure tested at installation'; },
+      keywords:['underground main pressure test'], priority:'90-Day', category:'Fire Protection',
+      fallbackTitle:'Underground sprinkler supply main never pressure tested', fallbackText:'The underground water supply main was never pressure tested at installation, and records are unavailable. A hydrostatic test should be conducted to confirm integrity of the underground piping.' },
+    // ── Apartments Supplement (additional) ──
+    { id: 'supp-apt-coi-not-enforced', check: function(){ return (document.getElementById('tenant-insurance-required')||{}).value === 'Yes — Required but not enforced'; },
+      keywords:['tenant insurance requirement', 'certificate of insurance enforcement'], priority:'90-Day', category:'Multi-Residential',
+      fallbackTitle:'Tenant insurance requirement not enforced', fallbackText:'Tenant insurance is required by lease but the requirement is not actively enforced, and certificates of insurance are not consistently collected/verified. A process should be implemented to obtain and track COIs from all tenants at lease signing and renewal.' }
   ];
 
   function findBestLibraryMatch(keywords) {
     if (!recLibraryData || !recLibraryData.length) return null;
     var best = null, bestScore = 0;
     recLibraryData.forEach(function(r) {
-      var haystack = ((r.title || '') + ' ' + (r.rec_text || '') + ' ' + (r.category || '') + ' ' + (r.subcategory || '')).toLowerCase();
+      var title = (r.title || '').toLowerCase();
+      var body  = ((r.rec_text || '') + ' ' + (r.category || '') + ' ' + (r.subcategory || '')).toLowerCase();
       var score = 0;
-      keywords.forEach(function(k) { if (haystack.indexOf(k.toLowerCase()) !== -1) score++; });
+      keywords.forEach(function(k) {
+        var kw = k.toLowerCase();
+        if (title.indexOf(kw) !== -1) score += 3;       // a title match is a strong, reliable signal
+        else if (body.indexOf(kw) !== -1) score += 1;    // an incidental mention buried in body text is weak
+      });
       if (score > bestScore) { bestScore = score; best = r; }
     });
-    return bestScore > 0 ? best : null;
+    // Require a meaningfully strong match before trusting a library entry
+    // over our own carefully-written fallback text. A single weak, incidental
+    // keyword hit somewhere in a long rec_text isn't enough on its own —
+    // that's exactly how an unrelated entry (e.g. a Fire Door recommendation
+    // that happens to mention "extinguisher" in passing) could get selected
+    // for a completely different deficiency. This effectively requires a real
+    // title match for most rules, which is a much safer bar.
+    return bestScore >= 3 ? best : null;
   }
 
   async function runAutoRecommendations() {
@@ -11965,9 +12063,29 @@
   // empty, else append a new numbered item) but takes plain values instead
   // of reading from a clicked library button, and tags the created item with
   // data-auto-rule so repeated auto-detection runs don't duplicate it.
+  // Generates the next sequential reference number (YYYY-MM-NNN), scanning
+  // existing reference fields on the page so auto-inserted recommendations
+  // never collide with numbers already used, whether typed manually or
+  // inserted from the library.
+  function generateNextRecRefNumber() {
+    var now = new Date();
+    var prefix = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-';
+    var existingNums = [];
+    document.querySelectorAll('.rec-ref-field').forEach(function(el) {
+      var v = (el.value || '').trim();
+      if (v.indexOf(prefix) === 0) {
+        var n = parseInt(v.slice(prefix.length), 10);
+        if (!isNaN(n)) existingNums.push(n);
+      }
+    });
+    var next = existingNums.length ? Math.max.apply(null, existingNums) + 1 : 1;
+    return prefix + String(next).padStart(3, '0');
+  }
+
   function insertRecommendationProgrammatic(title, text, priority, category, ruleId) {
     var prioMap = { 'Immediate': 'high', '30-Day': 'high', '90-Day': 'med', 'Advisory': 'low' };
     var level = prioMap[priority] || 'med';
+    var refNumber = generateNextRecRefNumber();
     var rec1 = document.getElementById('rec-1');
     if (rec1) {
       var rec1ta = rec1.querySelector('textarea');
@@ -11975,6 +12093,8 @@
         rec1ta.value = text;
         var rec1title = rec1.querySelector('.rec-title-field');
         if (rec1title && title) rec1title.value = title;
+        var rec1ref = rec1.querySelector('.rec-ref-field');
+        if (rec1ref && !rec1ref.value.trim()) rec1ref.value = refNumber;
         rec1.className = 'rec-item priority-' + level;
         var priorityLbl = rec1.querySelector('[data-level="' + level + '"]');
         if (priorityLbl) setRecPriority(priorityLbl, 'rec-1', level);
@@ -12048,6 +12168,8 @@
     div.querySelector('textarea').value = text;
     var titleInput = div.querySelector('.rec-title-field');
     if (titleInput && title) titleInput.value = title;
+    var refInput = div.querySelector('.rec-ref-field');
+    if (refInput) refInput.value = refNumber;
     addDeleteBtn(div);
     document.getElementById('rec-list').appendChild(div);
     setTimeout(function() { div.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
