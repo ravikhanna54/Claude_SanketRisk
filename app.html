@@ -12512,7 +12512,7 @@
   // approves/declines anything — only the human QA Supervisor does that;
   // this only surfaces findings for a human to weigh.
   // NOTE: replace this with the actual Lambda Function URL once deployed.
-  const QA_REVIEW_URL = 'https://hu3gfvyixtjadk7m63csf3tsq40rxzhh.lambda-url.ap-southeast-2.on.aws/';
+  const QA_REVIEW_URL = 'REPLACE_WITH_LAMBDA_FUNCTION_URL';
 
   function renderAIReviewFindings(findings, containerId, prepend) {
     var container = document.getElementById(containerId);
@@ -12545,8 +12545,9 @@
     var resultsEl = document.getElementById('ai-prereview-results');
     btn.disabled = true; btn.textContent = '🤖 Reviewing…';
     resultsEl.style.display = 'block';
-    resultsEl.innerHTML = '<div style="font-size:12px;color:var(--slate);padding:10px;">Running AI pre-review — this takes a moment…</div>';
+    resultsEl.innerHTML = '<div style="font-size:12px;color:var(--slate);padding:10px;">Running AI pre-review — this can take up to a minute…</div>';
     await saveInspection();
+    var requestStartedAt = new Date().toISOString();
     try {
       const resp = await fetch(QA_REVIEW_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -12555,10 +12556,41 @@
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Review failed');
       renderAIReviewFindings(data.findings, 'ai-prereview-results', false);
+      btn.disabled = false; btn.textContent = '🤖 AI Pre-Review — Check for Issues Before Submitting';
     } catch (e) {
-      resultsEl.innerHTML = '<div style="font-size:12px;color:#C53030;padding:10px;">⚠ AI review failed: ' + e.message + '</div>';
+      // A dropped connection here does NOT mean the review failed — this
+      // call can take 20-30+ seconds, and some network layers give up
+      // waiting well before that, even though the Lambda keeps running and
+      // completes successfully regardless. Poll the database directly for
+      // the actual result rather than treating a dropped connection as a
+      // definitive failure (same pattern already proven for archive-convert).
+      resultsEl.innerHTML = '<div style="font-size:12px;color:var(--slate);padding:10px;">Connection dropped waiting for a response — checking whether the review actually completed…</div>';
+      pollAIPreReviewResult(requestStartedAt, 10);
     }
-    btn.disabled = false; btn.textContent = '🤖 AI Pre-Review — Check for Issues Before Submitting';
+  }
+
+  function pollAIPreReviewResult(requestStartedAt, attemptsLeft) {
+    var btn = document.getElementById('btn-ai-prereview');
+    var resultsEl = document.getElementById('ai-prereview-results');
+    if (attemptsLeft <= 0) {
+      resultsEl.innerHTML = '<div style="font-size:12px;color:#C53030;padding:10px;">⚠ Could not confirm the review completed — click AI Pre-Review to try again.</div>';
+      btn.disabled = false; btn.textContent = '🤖 AI Pre-Review — Check for Issues Before Submitting';
+      return;
+    }
+    setTimeout(async function() {
+      try {
+        const { data, error } = await _supabase.from('inspections').select('ai_review_inspector,ai_review_inspector_at').eq('id', currentInspectionId).single();
+        if (error) throw error;
+        if (data.ai_review_inspector_at && new Date(data.ai_review_inspector_at).getTime() > new Date(requestStartedAt).getTime()) {
+          renderAIReviewFindings(data.ai_review_inspector, 'ai-prereview-results', false);
+          btn.disabled = false; btn.textContent = '🤖 AI Pre-Review — Check for Issues Before Submitting';
+        } else {
+          pollAIPreReviewResult(requestStartedAt, attemptsLeft - 1);
+        }
+      } catch (e) {
+        pollAIPreReviewResult(requestStartedAt, attemptsLeft - 1);
+      }
+    }, 5000);
   }
 
   async function submitForQA() {
