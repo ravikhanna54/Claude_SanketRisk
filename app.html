@@ -9157,7 +9157,8 @@
           desc: textareas[0] ? textareas[0].value.trim() : '',
           section: selects[1] ? selects[1].value : '',
           consequence: selects[3] ? selects[3].value : '',
-          notes: notesEl ? notesEl.value.trim() : ''
+          notes: notesEl ? notesEl.value.trim() : '',
+          autoRuleId: item.getAttribute('data-auto-rule') || ''
         });
       });
     }
@@ -10243,6 +10244,12 @@
             if (titleEl3 && r.title) titleEl3.value = r.title;
             var refEl3 = item.querySelector('.rec-ref-field');
             if (refEl3 && r.refnum) refEl3.value = r.refnum;
+            // Restore the auto-suggestion tag so Detect Deficiencies can
+            // still find and discard this item on a future run, even after
+            // a full save/reload cycle — without this, the tag only ever
+            // existed in memory for the session that created it, so it was
+            // silently invisible to the discard step in every later session.
+            if (r.autoRuleId) item.setAttribute('data-auto-rule', r.autoRuleId);
           });
         }
       }
