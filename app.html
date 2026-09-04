@@ -12174,36 +12174,62 @@
     var debugEl = document.getElementById('autorec-debug');
     var debugLines = [];
     if (!recLibraryLoaded) { try { await loadRecLibrary(); } catch(e) { /* fall through to fallback text only */ } }
+
+    // Discard every previously auto-suggested recommendation first, same as
+    // the AI Pre-Review does with its own results panel — this is a fresh
+    // scan every time, not an accumulating one. Manually-added or library-
+    // inserted recommendations (no data-auto-rule tag) are left untouched.
+    var oldAutoItems = Array.from(document.querySelectorAll('[data-auto-rule]'));
+    var discardedCount = oldAutoItems.length;
+    oldAutoItems.forEach(function(item) {
+      // rec-1 is a permanent slot in the page, never actually removable —
+      // if it was serving as an auto-suggestion, just clear it back to an
+      // empty state rather than deleting the element itself.
+      if (item.id === 'rec-1') {
+        var ta = item.querySelector('textarea'); if (ta) ta.value = '';
+        var titleF = item.querySelector('.rec-title-field'); if (titleF) titleF.value = '';
+        var refF = item.querySelector('.rec-ref-field'); if (refF) refF.value = '';
+        item.removeAttribute('data-auto-rule');
+      } else {
+        item.remove();
+      }
+    });
+    // Renumber whatever's left after discarding, same badge-preserving logic
+    // used by the delete button.
+    document.querySelectorAll('#rec-list .rec-item').forEach(function(item, idx) {
+      var numEl = item.querySelector('.rec-num');
+      if (!numEl) return;
+      var badge = numEl.querySelector('span');
+      numEl.innerHTML = '#' + (idx + 1) + (badge ? ' ' + badge.outerHTML : '');
+    });
+    recCount = document.querySelectorAll('#rec-list .rec-item').length;
+
     var triggered = AUTO_REC_RULES.filter(function(r) {
       var neededSupplement = ruleRequiredSupplement(r.id);
       if (neededSupplement && !activeSupplements.has(neededSupplement)) return false;
       try { return r.check(); } catch(e) { return false; }
     });
+    debugLines.push('Previous auto-suggestions discarded: ' + discardedCount);
     debugLines.push('Rules matched from current field values: ' + triggered.length);
-    if (triggered.length) debugLines.push('  → ' + triggered.map(r => r.id).join(', '));
     if (!triggered.length) {
       debugLines.push('No rules matched — either no deficiencies are present in the current field values, or the relevant supplement toggle is inactive.');
       if (debugEl) { debugEl.style.display = 'block'; debugEl.textContent = debugLines.join('\n'); }
       showToast('No obvious deficiencies detected from the current form data.'); return;
     }
-    var alreadyInserted = Array.from(document.querySelectorAll('[data-auto-rule]')).map(function(el) { return el.getAttribute('data-auto-rule'); });
-    debugLines.push('Already-inserted rule IDs found on the page: ' + alreadyInserted.length);
-    if (alreadyInserted.length) debugLines.push('  → ' + alreadyInserted.join(', '));
-    var newCount = 0;
+    var insertedRefs = [];
     triggered.forEach(function(rule) {
-      if (alreadyInserted.indexOf(rule.id) !== -1) return; // don't insert the same auto-suggestion twice
       var libMatch = findBestLibraryMatch(rule.keywords);
       var title    = libMatch ? libMatch.title    : rule.fallbackTitle;
       var text     = libMatch ? libMatch.rec_text : rule.fallbackText;
       var priority = libMatch ? libMatch.priority : rule.priority;
       var category = libMatch ? libMatch.category : rule.category;
-      insertRecommendationProgrammatic(title, text, priority, category, rule.id);
-      newCount++;
+      var ref = insertRecommendationProgrammatic(title, text, priority, category, rule.id);
+      insertedRefs.push((ref || '?') + ' — ' + (title || rule.id));
     });
-    debugLines.push('New recommendations actually inserted this run: ' + newCount);
+    debugLines.push('New recommendations inserted this run: ' + insertedRefs.length);
+    insertedRefs.forEach(function(r) { debugLines.push('  → ' + r); });
     if (debugEl) { debugEl.style.display = 'block'; debugEl.textContent = debugLines.join('\n'); }
-    if (newCount) showToast('✓ ' + newCount + ' recommendation(s) suggested from detected deficiencies — review, edit, or delete as needed.');
-    else showToast('Detected deficiencies already have suggested recommendations in the list.');
+    showToast('✓ ' + insertedRefs.length + ' recommendation(s) suggested from detected deficiencies — review, edit, or delete as needed.');
   }
 
   // Mirrors insertRecFromLibrary's insertion behavior exactly (fill rec-1 if
@@ -12248,7 +12274,7 @@
         addDeleteBtn(rec1);
         rec1.setAttribute('data-auto-rule', ruleId);
         setTimeout(function() { rec1.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
-        return;
+        return refNumber;
       }
     }
     recCount++;
@@ -12320,6 +12346,7 @@
     addDeleteBtn(div);
     document.getElementById('rec-list').appendChild(div);
     setTimeout(function() { div.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
+    return refNumber;
   }
 
   function addDeleteBtn(recDiv) {
