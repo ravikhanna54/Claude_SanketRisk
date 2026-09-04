@@ -796,19 +796,20 @@
     position: absolute;
     top: 6px;
     right: 6px;
-    background: rgba(0,0,0,0.55);
+    background: rgba(197,48,48,0.85);
     border: none;
     color: white;
     border-radius: 50%;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     cursor: pointer;
-    font-size: 14px;
-    line-height: 24px;
+    font-size: 15px;
+    line-height: 28px;
     text-align: center;
     display: none;
+    z-index: 5;
   }
-  .photo-preview-wrap:hover .photo-remove-btn { display: block; }
+  .photo-preview-wrap:has(img.loaded) .photo-remove-btn { display: block; }
   /* Print styles for photos */
   @media print {
     .photo-grid-wrap { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 14px !important; }
@@ -1862,7 +1863,7 @@
       </div>
       <div class="card">
         <div class="card-title">Construction Cost Estimate</div>
-        <div style="font-size:11px;color:var(--slate);margin-bottom:12px;">Optional — select a matching building type to estimate replacement cost from the declared area above.</div>
+        <div style="font-size:11px;color:var(--slate);margin-bottom:12px;">Optional — select a matching building type to estimate replacement cost from the declared area above. <strong>Note:</strong> this estimate reflects the cost to rebuild the <em>entire building</em>. For a multi-tenant property, the figure shown must be pro-rated to each tenant's individual occupied area (e.g. tenant area ÷ total building area × estimated cost) rather than applied in full to any single unit.</div>
         <div class="field">
           <label>Building Type (Altus Group 2026 Cost Guide)</label>
           <select id="cope-cost-type" onchange="updateCopeConstructionCostEstimate()">
@@ -1899,6 +1900,14 @@
           <div class="field form-full"><div style="margin-bottom:0;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Roof Type</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100% across all roof areas.</div><div id="rooftype-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Flat / Low Slope</option><option>Gable</option><option>Hip</option><option>Gambrel</option><option>Shed / Mono-Slope</option><option>Sawtooth / Industrial</option><option>Curved / Barrel</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('rooftype-pct-rows','rooftype')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Roof Type</button></div></div>
           <div class="field form-full"><div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Roof Covering</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100% across all roof areas.</div><div id="roof-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>EPDM / Single-Ply Membrane</option><option>TPO</option><option>Built-Up (BUR / Tar & Gravel)</option><option>Metal / Standing Seam</option><option>Asphalt Shingle</option><option>Tile (Clay / Concrete)</option><option>Slate</option><option>Modified Bitumen</option><option>Insulated Metal Panel</option><option>Other</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('roof-pct-rows','roof')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Roof Covering</button></div></div>
           <div class="field form-full"><div style="margin-bottom:0;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Roof Deck</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100%.</div><div id="deck-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Steel / Metal Deck</option><option>Wood / Plywood</option><option>Concrete — Poured</option><option>Concrete — Precast</option><option>Insulated Metal Panel (IMP)</option><option>Cementitious Wood Fibre</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('deck-pct-rows','deck')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Roof Deck</button></div></div>
+          <div class="field">
+            <label>Roof — Last Updated Status</label>
+            <select id="roof-updated-status">
+              <option value="">— Select —</option>
+              <option>Original — Never Replaced</option>
+              <option>Replaced / Updated (see year)</option>
+            </select>
+          </div>
           <div class="field">
             <label>Year Roof Last Replaced</label>
             <input id="roof-year" type="number" placeholder="e.g. 2018" min="1950">
@@ -1945,6 +1954,14 @@
           <div class="field">
             <label>Electrical — Amperage</label>
             <input id="electrical-amperage" type="text" placeholder="e.g. 400A / 3-phase">
+          </div>
+          <div class="field">
+            <label>Electrical — Last Updated Status</label>
+            <select id="electrical-updated-status">
+              <option value="">— Select —</option>
+              <option>Original — Never Replaced</option>
+              <option>Replaced / Updated (see year)</option>
+            </select>
           </div>
           <div class="field">
             <label>Electrical — Last Updated</label>
@@ -1996,6 +2013,18 @@
             </select>
           </div>
           <div class="field">
+            <label>Plumbing — Last Updated Status</label>
+            <select id="plumbing-updated-status">
+              <option value="">— Select —</option>
+              <option>Original — Never Replaced</option>
+              <option>Replaced / Updated (see year)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Plumbing — Year Last Replaced</label>
+            <input id="plumbing-updated" type="number" placeholder="Year" min="1900">
+          </div>
+          <div class="field">
             <label>Hot Water System</label>
             <select id="hot-water-system">
               <option value="">— Select —</option>
@@ -2005,6 +2034,18 @@
               <option>Boiler</option>
               <option>None</option>
             </select>
+          </div>
+          <div class="field">
+            <label>Hot Water Tank — Last Updated Status</label>
+            <select id="hotwater-updated-status">
+              <option value="">— Select —</option>
+              <option>Original — Never Replaced</option>
+              <option>Replaced / Updated (see year)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Hot Water Tank — Year Last Replaced</label>
+            <input id="hotwater-updated" type="number" placeholder="Year" min="1900">
           </div>
           <div class="field form-full">
             <label>Systems Notes</label>
@@ -3369,6 +3410,8 @@
               <option>Good — Minor issues noted</option>
               <option>Fair — Service overdue</option>
               <option>Poor — Impairments present</option>
+              <option>Not Known</option>
+              <option>Inaccessible</option>
             </select>
           </div>
           <div class="field">
@@ -3379,7 +3422,12 @@
               <option>Yes — Non-UL Station</option>
               <option>No</option>
               <option>Not Applicable</option>
+              <option>Not Known / Unable to Determine</option>
             </select>
+          </div>
+          <div class="field form-full">
+            <label>Sprinkler System Notes</label>
+            <textarea spellcheck="true" id="sprinkler-main-notes" placeholder="Any additional observations — riser location, access, distinguishing features..."></textarea>
           </div>
         </div>
       </div>
@@ -3423,6 +3471,10 @@
             <label>Alarm Last Tested</label>
             <input id="alarm-last-tested" type="date">
           </div>
+          <div class="field form-full">
+            <label>Fire Alarm Notes</label>
+            <textarea spellcheck="true" id="fire-alarm-main-notes" placeholder="Panel location, zones, distinguishing features, any observed deficiencies..."></textarea>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -3452,6 +3504,10 @@
               <option>Partially</option>
               <option>No — Obstructed</option>
             </select>
+          </div>
+          <div class="field form-full">
+            <label>Fire Extinguisher Notes</label>
+            <textarea spellcheck="true" id="extinguisher-main-notes" placeholder="Service tags, locations, any observed deficiencies..."></textarea>
           </div>
         </div>
       </div>
@@ -3559,6 +3615,7 @@
             <label class="check-btn" onclick="toggleCheck(this)">Fenced / Gated Perimeter</label>
             <label class="check-btn" onclick="toggleCheck(this)">Exterior Lighting</label>
             <label class="check-btn" onclick="toggleCheck(this)">Safe / Vault</label>
+            <label class="check-btn" onclick="toggleCheck(this)">None</label>
           </div>
         </div>
         <div class="field">
@@ -8447,12 +8504,31 @@
   }
   function clearPhoto(event, num) {
     event.stopPropagation();
+    if (!confirm('Remove this photo?')) return;
     const img = document.getElementById(`photo-${num}-img`);
     const placeholder = document.getElementById(`photo-${num}-placeholder`);
+    const storagePath = img ? img.getAttribute('data-storage-path') : null;
     img.src = '';
     img.classList.remove('loaded');
+    img.removeAttribute('data-storage-path');
+    img.removeAttribute('data-local');
     placeholder.style.display = 'flex';
     document.getElementById(`photo-${num}-file`).value = '';
+    // Also clear caption/category — otherwise they're left behind, making
+    // an empty slot look like it still belongs to a photo.
+    const caption = document.getElementById(`photo-${num}-caption`);
+    const category = document.getElementById(`photo-${num}-category`);
+    if (caption) caption.value = '';
+    if (category) category.selectedIndex = 0;
+    delete pendingPhotoUploads[num];
+    // Best-effort cleanup of the actual file in storage — the metadata
+    // save already correctly omits this photo going forward regardless
+    // (it only includes slots with the 'loaded' class), so a failure here
+    // just leaves an orphaned file rather than breaking anything visible.
+    if (storagePath) {
+      _supabase.storage.from('inspection-photos').remove([storagePath])
+        .catch(function(e) { console.warn('Storage file cleanup failed (non-fatal):', e.message); });
+    }
   }
   function addPhotoSlot() {
     photoCount++;
@@ -11983,7 +12059,7 @@
       keywords:['hood suppression semi-annual', 'six month service'], priority:'30-Day', category:'Fire Protection',
       fallbackTitle:'Fire suppression system serviced annually — semi-annual servicing required', fallbackText:'The automatic fire suppression system is currently serviced annually. NFPA 96 requires a minimum semi-annual (every 6 months) service interval. The service schedule should be updated accordingly with the servicing contractor.' },
     { id: 'supp-rest-no-grease-trap', check: function(){ return (document.getElementById('grease-trap-interceptor')||{}).value === 'None'; },
-      keywords:['grease trap', 'grease interceptor'], priority:'30-Day', category:'Fire Protection',
+      keywords:['grease trap', 'grease interceptor'], priority:'Advisory', category:'Fire Protection',
       fallbackTitle:'No grease trap/interceptor installed', fallbackText:'No grease trap or interceptor is installed for the kitchen operation. Installation should be evaluated with local plumbing code requirements to prevent grease discharge into the sewer system.' },
     // ── Sprinkler Supplement — full review of detailed grading fields ──
     { id: 'spk-qod-slow-or-missing', check: function(){ var v=(document.getElementById('spk-qod')||{}).value||''; return v.indexOf('exceeds 1 minute')!==-1 || v.indexOf('required but not installed')!==-1 || v.indexOf('unacceptable')!==-1; },
@@ -12049,9 +12125,40 @@
     return bestScore >= 3 ? best : null;
   }
 
+  // Maps a rule to the supplement it depends on, so a stray or leftover
+  // field value in a supplement the inspector never actually engaged with
+  // can't trigger a recommendation that doesn't belong on this report.
+  // Prefix-based for supplement rules added after the naming convention
+  // started; an explicit list for the older ones that predate it.
+  var SUPPLEMENT_ONLY_RULE_IDS = {
+    'cooking-no-suppression': 'restaurant', 'hood-cleaning-overdue': 'restaurant',
+    'grease-accumulation-heavy': 'restaurant', 'grease-filter-poor': 'restaurant',
+    'lift-poor-condition': 'autoservice', 'inground-lift-leak': 'autoservice',
+    'waste-oil-improper': 'autoservice', 'ust-abandoned-unknown': 'autoservice',
+    'rack-poor-condition': 'warehouse', 'rack-no-repair-program': 'warehouse',
+    'forklift-no-training': 'warehouse', 'aisle-obstructed': 'warehouse',
+    'sprinkler-design-not-verified': 'warehouse',
+    'multires-common-poor': 'apartments', 'multires-balconies-poor': 'apartments',
+    'multires-no-dryer-vent-program': 'apartments', 'multires-smoke-detector-noncompliant': 'apartments',
+    'multires-mould-significant': 'apartments', 'multires-outstanding-safety-workorders': 'apartments'
+  };
+  function ruleRequiredSupplement(ruleId) {
+    if (ruleId.indexOf('supp-rest-') === 0) return 'restaurant';
+    if (ruleId.indexOf('supp-wood-') === 0) return 'woodworking';
+    if (ruleId.indexOf('supp-warehouse-') === 0) return 'warehouse';
+    if (ruleId.indexOf('supp-auto-') === 0) return 'autoservice';
+    if (ruleId.indexOf('supp-apt-') === 0) return 'apartments';
+    if (ruleId.indexOf('spk-') === 0) return 'sprinkler';
+    return SUPPLEMENT_ONLY_RULE_IDS[ruleId] || null;
+  }
+
   async function runAutoRecommendations() {
     if (!recLibraryLoaded) { try { await loadRecLibrary(); } catch(e) { /* fall through to fallback text only */ } }
-    var triggered = AUTO_REC_RULES.filter(function(r) { try { return r.check(); } catch(e) { return false; } });
+    var triggered = AUTO_REC_RULES.filter(function(r) {
+      var neededSupplement = ruleRequiredSupplement(r.id);
+      if (neededSupplement && !activeSupplements.has(neededSupplement)) return false;
+      try { return r.check(); } catch(e) { return false; }
+    });
     if (!triggered.length) { showToast('No obvious deficiencies detected from the current form data.'); return; }
     var alreadyInserted = Array.from(document.querySelectorAll('[data-auto-rule]')).map(function(el) { return el.getAttribute('data-auto-rule'); });
     var newCount = 0;
@@ -13033,6 +13140,16 @@
       console.warn('[SRC] Session restore failed:', e.message);
     }
   })();
+  // The very first recommendation (rec-1) ships in the static HTML with no
+  // delete button — it only gets one added when auto-detect or the library
+  // fills it in programmatically. If an inspector just types into it
+  // directly (the most common path), there's no way to remove it without
+  // this. Deferred to DOMContentLoaded so it's safe regardless of exactly
+  // where this script tag sits relative to the rec-1 element.
+  document.addEventListener('DOMContentLoaded', function() {
+    var rec1 = document.getElementById('rec-1');
+    if (rec1) addDeleteBtn(rec1);
+  });
   // Phase 3 — login screen handles connection; just show connecting state
   setDbStatus('saving', 'Sign in to connect');
 </script>
@@ -13304,6 +13421,7 @@ async function generateNarrativeReport() {
   const nHasKey = (typeof GOOGLE_MAPS_API_KEY !== 'undefined') && GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY.indexOf('PASTE_') !== 0;
   const nMapAerial = (nHasKey && nMapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(nMapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=' + encodeURIComponent('color:red|' + nMapQ) : '';
   const nMapRoad = (nHasKey && nMapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(nMapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=' + encodeURIComponent('color:red|' + nMapQ) : '';
+  const nMapStreet = (nHasKey && nMapQ) ? '/.netlify/functions/maps-proxy?location=' + encodeURIComponent(nMapQ) + '&size=640x420&fov=90' : '';
   const occupancy     = d.occupancy_class|| g('occupancy-class') || '—';
   const inspName      = d.inspector_name || g('inspector-name')  || '—';
   const riskQuality   = g('risk-quality') || (pills['risk_quality_rating'] || []).join(', ')  || '—';
@@ -13588,7 +13706,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
   ${nMapAerial ? `
   <div class="section" style="break-inside:avoid;">
     <h3>Site Location</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:12px;">
       <div style="break-inside:avoid;">
         <img src="${nMapAerial}" alt="Aerial view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Aerial / Hybrid View</strong> — site, roof, and immediate exposures</div>
@@ -13596,6 +13714,10 @@ Write in formal insurance inspection language. Be specific with measurements, da
       <div style="break-inside:avoid;">
         <img src="${nMapRoad}" alt="Area road map" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Area Context</strong> — surrounding streets and district</div>
+      </div>
+      <div style="break-inside:avoid;">
+        <img src="${nMapStreet}" alt="Street view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
+        <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Street View</strong> — building exterior from street level</div>
       </div>
     </div>
     <div style="font-size:8pt;color:#8a8472;margin-top:4px;">Location: ${nMapQ} · Imagery and map data © Google</div>
@@ -13736,6 +13858,7 @@ function generateFormalReport() {
   var hasMapKey = (typeof GOOGLE_MAPS_API_KEY !== 'undefined') && GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY.indexOf('PASTE_') !== 0;
   var mapAerialUrl = (hasMapKey && mapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(mapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=' + encodeURIComponent('color:red|' + mapQ) : '';
   var mapRoadUrl = (hasMapKey && mapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(mapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=' + encodeURIComponent('color:red|' + mapQ) : '';
+  var mapStreetUrl = (hasMapKey && mapQ) ? '/.netlify/functions/maps-proxy?location=' + encodeURIComponent(mapQ) + '&size=640x420&fov=90' : '';
   // Nat-Cat demerit breakdown (stored by the grade calculator)
   var ncDem = {};
   try { ncDem = JSON.parse(f['nc-demerits-json'] || '{}') || {}; } catch(e) { ncDem = {}; }
@@ -15303,7 +15426,7 @@ function generateFormalReport() {
     ${fieldFull('Exposure Notes', val('exposure-notes'))}
     ${mapAerialUrl ? `<hr class="sec-divider">
     <div class="sub-heading">Site Location Maps</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
       <div style="break-inside:avoid;">
         <img src="${mapAerialUrl}" alt="Aerial view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Aerial / Hybrid View</strong> — site, roof, and immediate exposures</div>
@@ -15311,6 +15434,10 @@ function generateFormalReport() {
       <div style="break-inside:avoid;">
         <img src="${mapRoadUrl}" alt="Area road map" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Area Context</strong> — surrounding streets and district</div>
+      </div>
+      <div style="break-inside:avoid;">
+        <img src="${mapStreetUrl}" alt="Street view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
+        <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Street View</strong> — building exterior from street level</div>
       </div>
     </div>
     <div style="font-size:8pt;color:#8a8472;margin-top:4px;">Location: ${mapQ} · Imagery and map data © Google</div>` : ''}
