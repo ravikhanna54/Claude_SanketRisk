@@ -2674,6 +2674,7 @@
               <select id="haz-cooking-suppression">
                 <option value="">— Select —</option>
                 <option>Yes — UL 300 compliant, current service</option>
+                <option>Yes — UL Compliant, overdue service</option>
                 <option>Yes — Older system, service unknown</option>
                 <option>No — Missing or non-functional</option>
                 <option>N/A — No commercial cooking</option>
@@ -4453,6 +4454,7 @@
         <div class="notice info" style="margin-bottom:0;">
           ℹ️ Click <strong>Detect Deficiencies</strong> to auto-suggest recommendations based on what's already entered in the form (e.g. knob and tube wiring, poor roof condition, overdue sprinkler/extinguisher service) — review, edit, or delete any suggestion. Click <strong>Search Library</strong> to find and insert standard recommendations from the SRC database, or click <strong>＋ Add Recommendation</strong> to write your own.
         </div>
+        <div id="autorec-debug" style="display:none;margin-top:8px;padding:10px 12px;background:#f7f9fc;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--navy);white-space:pre-wrap;"></div>
         <div id="rec-list">
           <div class="rec-item priority-high" id="rec-1">
             <div class="rec-header">
@@ -12169,16 +12171,24 @@
   }
 
   async function runAutoRecommendations() {
+    var debugEl = document.getElementById('autorec-debug');
+    var debugLines = [];
     if (!recLibraryLoaded) { try { await loadRecLibrary(); } catch(e) { /* fall through to fallback text only */ } }
     var triggered = AUTO_REC_RULES.filter(function(r) {
       var neededSupplement = ruleRequiredSupplement(r.id);
       if (neededSupplement && !activeSupplements.has(neededSupplement)) return false;
       try { return r.check(); } catch(e) { return false; }
     });
-    console.log('[AutoRec] Rules that matched current field values:', triggered.length, triggered.map(r => r.id));
-    if (!triggered.length) { showToast('No obvious deficiencies detected from the current form data.'); return; }
+    debugLines.push('Rules matched from current field values: ' + triggered.length);
+    if (triggered.length) debugLines.push('  → ' + triggered.map(r => r.id).join(', '));
+    if (!triggered.length) {
+      debugLines.push('No rules matched — either no deficiencies are present in the current field values, or the relevant supplement toggle is inactive.');
+      if (debugEl) { debugEl.style.display = 'block'; debugEl.textContent = debugLines.join('\n'); }
+      showToast('No obvious deficiencies detected from the current form data.'); return;
+    }
     var alreadyInserted = Array.from(document.querySelectorAll('[data-auto-rule]')).map(function(el) { return el.getAttribute('data-auto-rule'); });
-    console.log('[AutoRec] Already-inserted rule IDs found in the DOM:', alreadyInserted.length, alreadyInserted);
+    debugLines.push('Already-inserted rule IDs found on the page: ' + alreadyInserted.length);
+    if (alreadyInserted.length) debugLines.push('  → ' + alreadyInserted.join(', '));
     var newCount = 0;
     triggered.forEach(function(rule) {
       if (alreadyInserted.indexOf(rule.id) !== -1) return; // don't insert the same auto-suggestion twice
@@ -12190,7 +12200,8 @@
       insertRecommendationProgrammatic(title, text, priority, category, rule.id);
       newCount++;
     });
-    console.log('[AutoRec] New recommendations actually inserted this run:', newCount);
+    debugLines.push('New recommendations actually inserted this run: ' + newCount);
+    if (debugEl) { debugEl.style.display = 'block'; debugEl.textContent = debugLines.join('\n'); }
     if (newCount) showToast('✓ ' + newCount + ' recommendation(s) suggested from detected deficiencies — review, edit, or delete as needed.');
     else showToast('Detected deficiencies already have suggested recommendations in the list.');
   }
@@ -12324,10 +12335,17 @@
     btn.addEventListener('click', function() {
       if (confirm('Remove this recommendation?')) {
         recDiv.remove();
-        // Renumber remaining recs
+        // Renumber remaining recs. Rebuild each .rec-num's full content
+        // (rather than just overwriting textContent) so an "Auto-suggested"
+        // badge on a remaining auto-inserted item isn't silently wiped out
+        // by this — textContent replaces ALL child content, including that
+        // nested badge span, not just the visible number.
         document.querySelectorAll('#rec-list .rec-item').forEach(function(item, idx) {
           var numEl = item.querySelector('.rec-num');
-          if (numEl) numEl.textContent = '#' + (idx + 1);
+          if (!numEl) return;
+          var badge = numEl.querySelector('span');
+          var badgeHtml = badge ? badge.outerHTML : '';
+          numEl.innerHTML = '#' + (idx + 1) + (badgeHtml ? ' ' + badgeHtml : '');
         });
         recCount = document.querySelectorAll('#rec-list .rec-item').length;
       }
