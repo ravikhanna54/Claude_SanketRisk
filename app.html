@@ -1880,13 +1880,13 @@
           <div class="radio-group" id="iso-class">
             <label class="radio-btn" onclick="selectRadio(this, 'iso-class')"><input id="iso-construction-class" type="radio" name="iso">Frame</label>
             <label class="radio-btn" onclick="selectRadio(this, 'iso-class')"><input type="radio" name="iso">Joisted Masonry</label>
-            <label class="radio-btn" onclick="selectRadio(this, 'iso-class')"><input id="joisted-masonry" type="radio" name="iso">Non-Comb. / Masonry</label>
+            <label class="radio-btn" onclick="selectRadio(this, 'iso-class')"><input id="joisted-masonry" type="radio" name="iso">Non-Combustible</label>
             <label class="radio-btn" onclick="selectRadio(this, 'iso-class')"><input type="radio" name="iso">Masonry Non-Comb.</label>
             <label class="radio-btn" onclick="selectRadio(this, 'iso-class')"><input id="masonry-non-comb" type="radio" name="iso">Modified Fire Resistive</label>
             <label class="radio-btn" onclick="selectRadio(this, 'iso-class')"><input type="radio" name="iso">Fire Resistive</label>
           </div>
         </div>
-        <div style="margin-top:16px;"><div style="margin-bottom:0;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">ISO Construction Class Breakdown</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">For mixed construction buildings. Percentages should total 100%.</div><div id="iso-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Class 1 — Frame</option><option>Class 2 — Joisted Masonry</option><option>Class 3 — Non-Combustible / Masonry</option><option>Class 4 — Masonry Non-Combustible</option><option>Class 5 — Modified Fire Resistive</option><option>Class 6 — Fire Resistive</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('iso-pct-rows','isoclass')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add ISO Construction Class Breakdown</button></div></div>
+        <div style="margin-top:16px;"><div style="margin-bottom:0;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">ISO Construction Class Breakdown</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">For mixed construction buildings. Percentages should total 100%.</div><div id="iso-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Class 1 — Frame</option><option>Class 2 — Joisted Masonry</option><option>Class 3 — Non-Combustible</option><option>Class 4 — Masonry Non-Combustible</option><option>Class 5 — Modified Fire Resistive</option><option>Class 6 — Fire Resistive</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('iso-pct-rows','isoclass')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add ISO Construction Class Breakdown</button></div></div>
         <div class="divider"></div>
         <div class="form-grid">
           <div class="field form-full"><div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Exterior Wall Construction</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100% across all wall types.</div><div id="wall-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Wood Frame</option><option>Brick / Masonry</option><option>Concrete Block (CMU)</option><option>Tilt-Up Concrete</option><option>Precast Concrete</option><option>Steel / Metal Panel</option><option>EIFS / Stucco</option><option>Glass Curtainwall</option><option>Mixed / Other</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('wall-pct-rows','wall')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Exterior Wall Construction</button></div></div>
@@ -2067,6 +2067,10 @@
               <option>Yes</option>
               <option>No</option>
             </select>
+          </div>
+          <div class="field form-full">
+            <label>General Notes</label>
+            <textarea spellcheck="true" id="mezzanine-general-notes" placeholder="Any observations regardless of whether a mezzanine is present..."></textarea>
           </div>
         </div>
         <div id="mezzanine-details" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
@@ -2604,6 +2608,10 @@
           <div class="field">
             <label>% Building Occupied</label>
             <input id="pct-occupied" type="number" placeholder="e.g. 85" min="0" max="100">
+          </div>
+          <div class="field">
+            <label>Area Occupied by Insured (sq ft)</label>
+            <input id="area-occupied-by-insured" type="number" placeholder="e.g. 12000" min="0">
           </div>
           <div class="field">
             <label>Hours of Operation</label>
@@ -9030,6 +9038,14 @@
 
   function collectFormData() {
     const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    // For .radio-group pills (like Risk Quality), which have no .value of
+    // their own — the actual selection lives on whichever child .radio-btn
+    // carries the "selected" class.
+    const getRadioGroupValue = groupId => {
+      const group = document.getElementById(groupId);
+      const sel = group ? group.querySelector('.radio-btn.selected') : null;
+      return sel ? sel.textContent.trim() : '';
+    };
     var panels = document.querySelectorAll('.section-panel');
     // Walk every input/select/textarea and collect by id
     const fields = {};
@@ -9069,7 +9085,7 @@
       province_state: get('province') || '',
       occupancy_class: document.getElementById('occupancy-class-select')?.value || '',
       uw_recommendation: get('uw-recommendation') || '',
-      risk_quality:   get('risk-quality-rating') || '',
+      risk_quality:   getRadioGroupValue('risk-quality') || '',
       inspector_name: get('inspector-name') || '',
       lob:            get('line-of-business') || '',
     };
@@ -10971,7 +10987,7 @@
               <option value="">— Select —</option>
               <option>Class 1 — Frame</option>
               <option>Class 2 — Joisted Masonry</option>
-              <option>Class 3 — Light Non-Combustible</option>
+              <option>Class 3 — Non-Combustible</option>
               <option>Class 4 — Masonry Non-Combustible</option>
               <option>Class 5 — Modified Fire Resistive</option>
               <option>Class 6 — Fire Resistive</option>
@@ -12159,8 +12175,10 @@
       if (neededSupplement && !activeSupplements.has(neededSupplement)) return false;
       try { return r.check(); } catch(e) { return false; }
     });
+    console.log('[AutoRec] Rules that matched current field values:', triggered.length, triggered.map(r => r.id));
     if (!triggered.length) { showToast('No obvious deficiencies detected from the current form data.'); return; }
     var alreadyInserted = Array.from(document.querySelectorAll('[data-auto-rule]')).map(function(el) { return el.getAttribute('data-auto-rule'); });
+    console.log('[AutoRec] Already-inserted rule IDs found in the DOM:', alreadyInserted.length, alreadyInserted);
     var newCount = 0;
     triggered.forEach(function(rule) {
       if (alreadyInserted.indexOf(rule.id) !== -1) return; // don't insert the same auto-suggestion twice
@@ -12172,6 +12190,7 @@
       insertRecommendationProgrammatic(title, text, priority, category, rule.id);
       newCount++;
     });
+    console.log('[AutoRec] New recommendations actually inserted this run:', newCount);
     if (newCount) showToast('✓ ' + newCount + ' recommendation(s) suggested from detected deficiencies — review, edit, or delete as needed.');
     else showToast('Detected deficiencies already have suggested recommendations in the list.');
   }
@@ -12820,7 +12839,7 @@
     rooftype: ['Flat / Low Slope','Gable','Hip','Gambrel','Shed / Mono-Slope','Sawtooth / Industrial','Curved / Barrel'],
     deck:     ['Steel / Metal Deck','Wood / Plywood','Concrete — Poured','Concrete — Precast','Insulated Metal Panel (IMP)','Cementitious Wood Fibre'],
     extfinish:['Brick — Standard','Brick — Face / Decorative','Stone — Natural','Stone — Simulated / Manufactured','Stucco / EIFS','Glass Curtainwall','Architectural Precast Concrete','Exposed Concrete','Metal Cladding / Composite Panel','Vinyl Siding','Wood Siding','Fibre Cement Board','GFRC Panel','Other'],
-    isoclass: ['Class 1 — Frame','Class 2 — Joisted Masonry','Class 3 — Non-Combustible / Masonry','Class 4 — Masonry Non-Combustible','Class 5 — Modified Fire Resistive','Class 6 — Fire Resistive'],
+    isoclass: ['Class 1 — Frame','Class 2 — Joisted Masonry','Class 3 — Non-Combustible','Class 4 — Masonry Non-Combustible','Class 5 — Modified Fire Resistive','Class 6 — Fire Resistive'],
     bsmtuse:  ['Parking Garage — Open','Parking Garage — Enclosed','Storage / Warehouse','Mechanical / Utility','Retail / Commercial','Office','Residential Units','Crawl Space — Unoccupied','Crawl Space — Service Only','Industrial / Processing','Other']
   };
   function addPctRowTo(containerId, type) {
@@ -13706,7 +13725,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
   ${nMapAerial ? `
   <div class="section" style="break-inside:avoid;">
     <h3>Site Location</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:12px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
       <div style="break-inside:avoid;">
         <img src="${nMapAerial}" alt="Aerial view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Aerial / Hybrid View</strong> — site, roof, and immediate exposures</div>
@@ -13715,8 +13734,8 @@ Write in formal insurance inspection language. Be specific with measurements, da
         <img src="${nMapRoad}" alt="Area road map" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Area Context</strong> — surrounding streets and district</div>
       </div>
-      <div style="break-inside:avoid;">
-        <img src="${nMapStreet}" alt="Street view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
+      <div style="break-inside:avoid;grid-column:1 / -1;">
+        <img src="${nMapStreet}" alt="Street view of site" style="width:100%;max-height:480px;object-fit:cover;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Street View</strong> — building exterior from street level</div>
       </div>
     </div>
@@ -15426,7 +15445,7 @@ function generateFormalReport() {
     ${fieldFull('Exposure Notes', val('exposure-notes'))}
     ${mapAerialUrl ? `<hr class="sec-divider">
     <div class="sub-heading">Site Location Maps</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
       <div style="break-inside:avoid;">
         <img src="${mapAerialUrl}" alt="Aerial view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Aerial / Hybrid View</strong> — site, roof, and immediate exposures</div>
@@ -15435,8 +15454,8 @@ function generateFormalReport() {
         <img src="${mapRoadUrl}" alt="Area road map" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Area Context</strong> — surrounding streets and district</div>
       </div>
-      <div style="break-inside:avoid;">
-        <img src="${mapStreetUrl}" alt="Street view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
+      <div style="break-inside:avoid;grid-column:1 / -1;">
+        <img src="${mapStreetUrl}" alt="Street view of site" style="width:100%;max-height:480px;object-fit:cover;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Street View</strong> — building exterior from street level</div>
       </div>
     </div>
