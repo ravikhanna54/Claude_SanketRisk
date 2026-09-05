@@ -4443,6 +4443,12 @@
                      display:flex;align-items:center;gap:6px;">
               🔍 Detect Deficiencies
             </button>
+            <button onclick="removeDuplicateRecommendations()"
+              style="background:#fff;color:#C05621;border:1px solid #C05621;padding:7px 16px;
+                     border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;
+                     display:flex;align-items:center;gap:6px;">
+              🧹 Remove Duplicates
+            </button>
             <button onclick="openRecLibrary()"
               style="background:var(--gold);color:var(--navy);border:none;padding:7px 16px;
                      border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;
@@ -12175,6 +12181,75 @@
     if (ruleId.indexOf('supp-apt-') === 0) return 'apartments';
     if (ruleId.indexOf('spk-') === 0) return 'sprinkler';
     return SUPPLEMENT_ONLY_RULE_IDS[ruleId] || null;
+  }
+
+  // ── REMOVE DUPLICATE RECOMMENDATIONS ──
+  // Two-tier, deliberately conservative: only auto-removes recommendations
+  // that share the SAME internal auto-rule tag (each such rule checks one
+  // building-level field once, so two items with the same tag are always a
+  // genuine duplicate from the persistence bug, never a legitimate case).
+  // Anything else that merely LOOKS similar by text is only flagged for
+  // manual review, never auto-deleted — a multi-tenant building can
+  // legitimately need the exact same recommendation worded identically for
+  // two different units, and this must never be silently removed.
+  function removeDuplicateRecommendations() {
+    var debugEl = document.getElementById('autorec-debug');
+    var debugLines = [];
+    var items = Array.from(document.querySelectorAll('#rec-list .rec-item'));
+
+    // Tier 1 — safe auto-removal: same data-auto-rule tag
+    var seenRuleIds = {};
+    var toRemove = [];
+    items.forEach(function(item) {
+      var ruleId = item.getAttribute('data-auto-rule');
+      if (!ruleId) return; // no tag at all — never eligible for auto-removal
+      if (seenRuleIds[ruleId]) { toRemove.push(item); }
+      else { seenRuleIds[ruleId] = item; }
+    });
+    toRemove.forEach(function(item) { item.remove(); });
+
+    // Tier 2 — flag only: matching text but NOT a confirmed same-rule match
+    // (different or missing tags on at least one side) — never removed here.
+    var remaining = Array.from(document.querySelectorAll('#rec-list .rec-item'));
+    remaining.forEach(function(item) { item.style.outline = ''; item.style.outlineOffset = ''; });
+    var textGroups = {};
+    remaining.forEach(function(item) {
+      var titleEl = item.querySelector('.rec-title-field');
+      var textEl = item.querySelector('textarea');
+      var key = ((titleEl ? titleEl.value.trim() : '') + '|' + (textEl ? textEl.value.trim() : '')).toLowerCase();
+      if (!key.trim().replace(/\|/g, '')) return; // skip empty items
+      (textGroups[key] = textGroups[key] || []).push(item);
+    });
+    var flaggedCount = 0;
+    Object.keys(textGroups).forEach(function(key) {
+      var group = textGroups[key];
+      if (group.length < 2) return;
+      // Only flag if they're NOT all sharing the same confirmed rule tag —
+      // if they DO all share one tag, tier 1 already handled it above.
+      var ruleIds = group.map(function(i) { return i.getAttribute('data-auto-rule') || ''; });
+      var allSameConfirmedRule = ruleIds.every(function(r) { return r && r === ruleIds[0]; });
+      if (allSameConfirmedRule) return;
+      group.forEach(function(item) {
+        item.style.outline = '2px solid #C05621';
+        item.style.outlineOffset = '2px';
+      });
+      flaggedCount += group.length;
+    });
+
+    // Renumber whatever's left, preserving Auto-suggested badges
+    document.querySelectorAll('#rec-list .rec-item').forEach(function(item, idx) {
+      var numEl = item.querySelector('.rec-num');
+      if (!numEl) return;
+      var badge = numEl.querySelector('span');
+      numEl.innerHTML = '#' + (idx + 1) + (badge ? ' ' + badge.outerHTML : '');
+    });
+    recCount = document.querySelectorAll('#rec-list .rec-item').length;
+
+    debugLines.push('Confirmed duplicates auto-removed (same source rule): ' + toRemove.length);
+    debugLines.push('Possible duplicates flagged for your review (matching text, not confirmed same rule — e.g. could be legitimate multi-tenant repeats): ' + flaggedCount);
+    if (flaggedCount) debugLines.push('Flagged items are outlined in orange below — please review each before deciding whether to keep or remove.');
+    if (debugEl) { debugEl.style.display = 'block'; debugEl.textContent = debugLines.join('\n'); }
+    showToast('✓ Removed ' + toRemove.length + ' confirmed duplicate(s)' + (flaggedCount ? ', flagged ' + flaggedCount + ' for review' : '') + '.');
   }
 
   async function runAutoRecommendations() {
