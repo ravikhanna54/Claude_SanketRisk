@@ -12292,6 +12292,7 @@
       try { return r.check(); } catch(e) { return false; }
     });
     debugLines.push('Previous auto-suggestions discarded: ' + discardedCount);
+    debugLines.push('Currently active supplements: ' + (activeSupplements.size ? Array.from(activeSupplements).join(', ') : '(none)'));
     debugLines.push('Rules matched from current field values: ' + triggered.length);
     if (!triggered.length) {
       debugLines.push('No rules matched — either no deficiencies are present in the current field values, or the relevant supplement toggle is inactive.');
