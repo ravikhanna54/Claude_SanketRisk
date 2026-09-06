@@ -10148,7 +10148,7 @@
       });
       // ── Restore active supplements ──
       // First deactivate any currently active supplements
-      [...activeSupplements].forEach(id => { if (activeSupplements.has(id)) toggleSupplement(id); });
+      [...activeSupplements].forEach(id => { if (activeSupplements.has(id)) toggleSupplement(id, true); });
       (fd.supplements || fd.active_supplements || []).forEach(id => {
         if (!activeSupplements.has(id)) toggleSupplement(id);
       });
@@ -10901,15 +10901,34 @@
     toast.style.opacity = '1';
     setTimeout(() => { toast.style.opacity = '0'; }, 3500);
   }
-  function toggleSupplement(id) {
+  function toggleSupplement(id, skipConfirmAndClear) {
     const card = document.getElementById('supp-card-' + id);
     const label = card.querySelector('.supp-toggle-label');
     const isActive = activeSupplements.has(id);
     if (isActive) {
+      if (!skipConfirmAndClear && !confirm('Deactivate ' + SUPPLEMENTS[id].label + '? This will clear all information entered in this supplement.')) return;
       activeSupplements.delete(id);
       card.classList.remove('active-supp');
       label.textContent = 'Inactive';
       removeSuppNav(id);
+      // Clear every field within this supplement's section so stale values
+      // don't linger after deactivation — otherwise the AI QA review (which
+      // reads all saved field values directly, not through the auto-
+      // recommendation engine's own supplement gate) has no way to know
+      // this data no longer applies, and reasonably flags it as an
+      // inconsistency against the rest of the report. Skipped during the
+      // internal reset-before-restore step when loading a saved inspection —
+      // that's not a user deactivating anything, and the fields are about to
+      // be correctly repopulated from saved data immediately after anyway.
+      if (!skipConfirmAndClear) {
+        const section = document.getElementById('section-' + SUPPLEMENTS[id].section);
+        if (section) {
+          section.querySelectorAll('input, textarea').forEach(function(el) { el.value = ''; });
+          section.querySelectorAll('select').forEach(function(el) { el.selectedIndex = 0; });
+          section.querySelectorAll('.radio-btn.selected, .check-btn.selected').forEach(function(el) { el.classList.remove('selected'); });
+          section.querySelectorAll('.haz-detail-panel').forEach(function(el) { el.style.display = 'none'; });
+        }
+      }
     } else {
       activeSupplements.add(id);
       card.classList.add('active-supp');
@@ -15907,10 +15926,10 @@ ${activeSuppHTML}
 </div><!-- /report-wrap -->
 </body>
 </html>`;
-  var fblob = new Blob([html], { type: 'text/html' });
-  var fblobUrl = URL.createObjectURL(fblob);
-  var w = window.open(fblobUrl, '_blank');
+  var w = window.open('', '_blank');
   if (!w) { document.open(); document.write(html); document.close(); return; }
+  w.document.write(html);
+  w.document.close();
   generateAndStoreReportPdf(html, 'formal');
 
   // After report opens, render PDFs as images using PDF.js
