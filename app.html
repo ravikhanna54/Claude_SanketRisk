@@ -12132,12 +12132,12 @@
       fallbackTitle:'Tenant insurance requirement not enforced', fallbackText:'Tenant insurance is required by lease but the requirement is not actively enforced, and certificates of insurance are not consistently collected/verified. A process should be implemented to obtain and track COIs from all tenants at lease signing and renewal.' }
   ];
 
-  function findBestLibraryMatch(keywords) {
+  function findBestLibraryMatch(keywords, ruleCategory) {
     if (!recLibraryData || !recLibraryData.length) return null;
     var best = null, bestScore = 0;
     recLibraryData.forEach(function(r) {
       var title = (r.title || '').toLowerCase();
-      var body  = ((r.rec_text || '') + ' ' + (r.category || '') + ' ' + (r.subcategory || '')).toLowerCase();
+      var body  = ((r.rec_text || '') + ' ' + (r.subcategory || '')).toLowerCase();
       var score = 0;
       keywords.forEach(function(k) {
         var kw = k.toLowerCase();
@@ -12153,7 +12153,18 @@
     // that happens to mention "extinguisher" in passing) could get selected
     // for a completely different deficiency. This effectively requires a real
     // title match for most rules, which is a much safer bar.
-    return bestScore >= 3 ? best : null;
+    if (bestScore < 3 || !best) return null;
+    // Second, independent safeguard: a strong keyword/title score alone isn't
+    // enough either, as this exact scenario proved — a rule about extinguisher
+    // or elevator "annual inspection" can title-match an unrelated "Automotive
+    // Hoist — Annual Inspection Overdue" entry purely because both titles
+    // happen to share that generic phrase, even though the actual subject
+    // matter is completely different. Requiring the matched entry's own
+    // declared category to align with the rule's own declared category
+    // catches exactly this cross-topic contamination, which keyword scoring
+    // alone cannot distinguish.
+    if (ruleCategory && best.category && best.category.toLowerCase() !== ruleCategory.toLowerCase()) return null;
+    return best;
   }
 
   // Maps a rule to the supplement it depends on, so a stray or leftover
@@ -12301,7 +12312,7 @@
     }
     var insertedRefs = [];
     triggered.forEach(function(rule) {
-      var libMatch = findBestLibraryMatch(rule.keywords);
+      var libMatch = findBestLibraryMatch(rule.keywords, rule.category);
       var title    = libMatch ? libMatch.title    : rule.fallbackTitle;
       var text     = libMatch ? libMatch.rec_text : rule.fallbackText;
       var priority = libMatch ? libMatch.priority : rule.priority;
