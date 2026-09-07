@@ -360,7 +360,9 @@
             <option>Policy Document</option>
             <option>Other</option>
           </select>
+          <button class="btn-open" onclick="selectAllFilteredArchiveFiles()" style="white-space:nowrap;">☑ Select All Matching</button>
         </div>
+        <div id="archive-selection-bar" style="display:none;align-items:center;gap:10px;padding:10px 20px;background:#eef6f1;border-top:1px solid var(--border);border-bottom:1px solid var(--border);font-size:12px;"></div>
         <div class="table-scroll-wrap">
           <div id="archive-table-wrap">
             <div class="empty-state"><div class="empty-icon">🗄️</div><div class="empty-text">Click Refresh or upload files to view the archive</div></div>
@@ -707,7 +709,12 @@
 
     // ── FILE ARCHIVE ──
     let archiveUploadQueue = [];
-    let archiveRowsCache = [];
+    let archiveAllRows = [];       // every row from the DB, unfiltered — source of truth
+    let archiveRowsCache = [];     // currently filtered rows (search/category applied)
+    let archiveTotalCount = 0;     // exact DB row count, independent of any page-size cap
+    let archiveSelectedIds = new Set();
+    let archivePage = 1;
+    const ARCHIVE_PAGE_SIZE = 15;
     const ARCHIVE_MAX_BYTES = 52428800; // 50MB
 
     function handleArchiveFileSelect(input) {
@@ -807,9 +814,28 @@
       const wrap = document.getElementById('archive-table-wrap');
       wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Loading archive…</div></div>';
       try {
-        const { data: rows, error } = await _supabase.from('archived_files').select('*').order('uploaded_at', { ascending: false }).limit(500);
-        if (error) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚙️</div><div class="empty-text">archived_files table not yet created</div></div>'; return; }
-        archiveRowsCache = rows || [];
+        // Exact total first — head:true returns no rows, just the count, so
+        // this is cheap and gives an accurate number regardless of how many
+        // rows we go on to fetch.
+        const { count, error: countErr } = await _supabase.from('archived_files').select('id', { count: 'exact', head: true });
+        if (countErr) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚙️</div><div class="empty-text">archived_files table not yet created</div></div>'; return; }
+        archiveTotalCount = count || 0;
+
+        // Fetch every row in chunks of 1000 (PostgREST's per-request cap) so
+        // the in-browser cache always reflects the true archive rather than
+        // being silently truncated at some fixed number.
+        let allRows = [];
+        const CHUNK = 1000;
+        for (let offset = 0; offset < archiveTotalCount; offset += CHUNK) {
+          const { data: rows, error } = await _supabase.from('archived_files').select('*').order('uploaded_at', { ascending: false }).range(offset, offset + CHUNK - 1);
+          if (error) throw error;
+          allRows = allRows.concat(rows || []);
+          if (!rows || rows.length < CHUNK) break;
+        }
+        archiveAllRows = allRows;
+        archiveRowsCache = allRows;
+        archiveSelectedIds.clear();
+        archivePage = 1;
         renderArchiveTable(archiveRowsCache);
       } catch (e) {
         console.error('Archive load error:', e);
@@ -818,16 +844,31 @@
     }
 
     function renderArchiveTable(rows) {
+      archiveRowsCache = rows;
       const wrap = document.getElementById('archive-table-wrap');
-      if (!rows.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🗄️</div><div class="empty-text">No archived files yet</div></div>'; return; }
+      if (!rows.length) {
+        wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🗄️</div><div class="empty-text">No archived files yet</div></div>';
+        renderArchiveSelectionBar();
+        return;
+      }
+      const totalPages = Math.max(1, Math.ceil(rows.length / ARCHIVE_PAGE_SIZE));
+      if (archivePage > totalPages) archivePage = totalPages;
+      if (archivePage < 1) archivePage = 1;
+      const startIdx = (archivePage - 1) * ARCHIVE_PAGE_SIZE;
+      const pageRows = rows.slice(startIdx, startIdx + ARCHIVE_PAGE_SIZE);
+
       const thS = 'background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:\'IBM Plex Mono\',monospace;white-space:nowrap';
-      wrap.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;min-width:800px;border-collapse:collapse;font-size:13px;"><thead><tr>' +
+      const allOnPageSelected = pageRows.length > 0 && pageRows.every(r => archiveSelectedIds.has(String(r.id)));
+
+      wrap.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;min-width:820px;border-collapse:collapse;font-size:13px;"><thead><tr>' +
+        '<th style="' + thS + ';width:30px;"><input type="checkbox" id="archive-select-all" ' + (allOnPageSelected ? 'checked' : '') + ' onchange="toggleArchiveSelectAll(this.checked)"></th>' +
         '<th style="' + thS + '">File</th><th style="' + thS + '">Category</th><th style="' + thS + '">Insured</th><th style="' + thS + '">Policy #</th><th style="' + thS + '">Size</th><th style="' + thS + '">Uploaded</th><th style="' + thS + '">Actions</th>' +
         '</tr></thead><tbody>' +
-        rows.map(r => {
+        pageRows.map(r => {
           const icon = r.file_type === 'pdf' ? '📄' : '📝';
           const date = r.uploaded_at ? new Date(r.uploaded_at).toLocaleDateString('en-CA') : '—';
           const kb = r.file_size ? (r.file_size / 1024).toFixed(0) + ' KB' : '—';
+          const checked = archiveSelectedIds.has(String(r.id)) ? 'checked' : '';
           var convertAction = '';
           if (r.conversion_status === 'complete' && r.conversion_scan_submission_id) {
             convertAction = '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;" onclick="window.open(\'scan.html?view_report=' + r.conversion_scan_submission_id + '\', \'_blank\')">📋 View SCAN ONE Report</button>' +
@@ -845,6 +886,7 @@
             convertAction = '<button class="btn-open" onclick="convertArchiveFile(\'' + r.id + '\')">🔄 Convert to SCAN ONE</button>';
           }
           return '<tr>' +
+            '<td style="text-align:center;"><input type="checkbox" class="archive-row-check" data-id="' + r.id + '" ' + checked + ' onchange="toggleArchiveSelect(\'' + r.id + '\', this.checked)"></td>' +
             '<td style="font-size:12px;">' + icon + ' ' + (r.file_name || '—') + '</td>' +
             '<td style="font-size:12px;">' + (r.category || '—') + '</td>' +
             '<td style="font-size:12px;">' + (r.insured_name || '—') + '</td>' +
@@ -854,7 +896,106 @@
             '<td><div style="display:flex;gap:4px;flex-wrap:wrap;">' + convertAction + '<button class="btn-open" onclick="downloadArchiveFile(\'' + r.storage_path + '\',\'' + (r.file_name || '').replace(/'/g, '') + '\')">⬇ Download</button>' +
             '<button class="btn-open" style="color:#C53030;border-color:#C53030;" onclick="deleteArchiveFile(\'' + r.id + '\',\'' + r.storage_path + '\')">✕</button></div></td></tr>';
         }).join('') +
-        '</tbody></table></div><div style="font-size:11px;color:var(--slate-light);padding:10px 14px;">' + rows.length + ' file' + (rows.length===1?'':'s') + ' archived</div>';
+        '</tbody></table></div>' + archivePaginationHtml(rows.length, totalPages);
+      renderArchiveSelectionBar();
+    }
+
+    function archivePaginationHtml(filteredCount, totalPages) {
+      const start = (archivePage - 1) * ARCHIVE_PAGE_SIZE + 1;
+      const end = Math.min(filteredCount, archivePage * ARCHIVE_PAGE_SIZE);
+      const countLine = start + '–' + end + ' of ' + filteredCount + ' file' + (filteredCount === 1 ? '' : 's') +
+        (archiveTotalCount && archiveTotalCount !== filteredCount ? ' (filtered from ' + archiveTotalCount + ' total)' : '');
+      let pageBtns = '';
+      for (let p = 1; p <= totalPages; p++) {
+        const nearEdge = p === 1 || p === totalPages;
+        const nearCurrent = Math.abs(p - archivePage) <= 2;
+        if (!nearEdge && !nearCurrent) {
+          if (p === 2 || p === totalPages - 1) pageBtns += '<span style="padding:0 4px;color:var(--slate-light);">…</span>';
+          continue;
+        }
+        const active = p === archivePage;
+        pageBtns += '<button onclick="goToArchivePage(' + p + ')" style="min-width:26px;padding:4px 7px;margin:0 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;cursor:pointer;' +
+          (active ? 'background:var(--navy);color:#fff;border-color:var(--navy);' : 'background:#fff;color:var(--navy);') + '">' + p + '</button>';
+      }
+      return '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--slate-light);">' +
+        '<div>' + countLine + '</div>' +
+        '<div style="display:flex;align-items:center;">' +
+          '<button onclick="goToArchivePage(' + (archivePage - 1) + ')" ' + (archivePage <= 1 ? 'disabled' : '') + ' style="padding:4px 8px;margin-right:4px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;' + (archivePage <= 1 ? 'opacity:0.4;' : '') + '">‹ Prev</button>' +
+          pageBtns +
+          '<button onclick="goToArchivePage(' + (archivePage + 1) + ')" ' + (archivePage >= totalPages ? 'disabled' : '') + ' style="padding:4px 8px;margin-left:4px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;' + (archivePage >= totalPages ? 'opacity:0.4;' : '') + '">Next ›</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function goToArchivePage(p) {
+      archivePage = p;
+      renderArchiveTable(archiveRowsCache);
+    }
+
+    function toggleArchiveSelect(id, checked) {
+      id = String(id);
+      if (checked) archiveSelectedIds.add(id); else archiveSelectedIds.delete(id);
+      const headCb = document.getElementById('archive-select-all');
+      if (headCb) {
+        const startIdx = (archivePage - 1) * ARCHIVE_PAGE_SIZE;
+        const pageRows = archiveRowsCache.slice(startIdx, startIdx + ARCHIVE_PAGE_SIZE);
+        headCb.checked = pageRows.length > 0 && pageRows.every(r => archiveSelectedIds.has(String(r.id)));
+      }
+      renderArchiveSelectionBar();
+    }
+
+    function toggleArchiveSelectAll(checked) {
+      const startIdx = (archivePage - 1) * ARCHIVE_PAGE_SIZE;
+      const pageRows = archiveRowsCache.slice(startIdx, startIdx + ARCHIVE_PAGE_SIZE);
+      pageRows.forEach(r => {
+        const id = String(r.id);
+        if (checked) archiveSelectedIds.add(id); else archiveSelectedIds.delete(id);
+        const cb = document.querySelector('.archive-row-check[data-id="' + id + '"]');
+        if (cb) cb.checked = checked;
+      });
+      renderArchiveSelectionBar();
+    }
+
+    function selectAllFilteredArchiveFiles() {
+      archiveRowsCache.forEach(r => archiveSelectedIds.add(String(r.id)));
+      renderArchiveTable(archiveRowsCache);
+      showToast(archiveSelectedIds.size + ' file(s) selected');
+    }
+
+    function clearArchiveSelection() {
+      archiveSelectedIds.clear();
+      renderArchiveTable(archiveRowsCache);
+    }
+
+    function renderArchiveSelectionBar() {
+      const bar = document.getElementById('archive-selection-bar');
+      if (!bar) return;
+      const n = archiveSelectedIds.size;
+      if (!n) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+      bar.style.display = 'flex';
+      bar.innerHTML = '<span style="font-weight:600;color:var(--navy);">' + n + ' selected</span>' +
+        '<button class="btn-new-insp" style="background:#2f855a;" onclick="convertSelectedArchiveFiles()">🔄 Convert Selected (' + n + ')</button>' +
+        '<button class="btn-open" onclick="clearArchiveSelection()">Clear</button>';
+    }
+
+    async function convertSelectedArchiveFiles() {
+      const ids = Array.from(archiveSelectedIds);
+      if (!ids.length) return;
+      const targets = ids.filter(id => {
+        const row = archiveAllRows.find(r => String(r.id) === id);
+        return row && row.conversion_status !== 'processing';
+      });
+      const skipped = ids.length - targets.length;
+      if (!targets.length) { showToast('Selected file(s) are already converting'); return; }
+      showToast('Starting conversion of ' + targets.length + ' file(s)' + (skipped ? ' — ' + skipped + ' already in progress skipped' : '') + '. This runs in the background.');
+      // Stagger requests rather than firing them all at once, so we don't
+      // slam the archive-convert Lambda with dozens of simultaneous
+      // invocations. Each call still runs and polls independently.
+      const STAGGER_MS = 1500;
+      targets.forEach((id, i) => {
+        setTimeout(() => { convertArchiveFile(id); }, i * STAGGER_MS);
+      });
+      clearArchiveSelection();
     }
 
     // ── ARCHIVE → SCAN ONE CONVERSION ──
@@ -870,7 +1011,7 @@
       }
       // Optimistically show "processing" immediately without waiting for a
       // full reload, then kick off polling.
-      const row = archiveRowsCache.find(r => String(r.id) === String(id));
+      const row = archiveAllRows.find(r => String(r.id) === String(id));
       if (row) row.conversion_status = 'processing';
       renderArchiveTable(archiveRowsCache);
 
@@ -904,7 +1045,7 @@
         try {
           const { data, error } = await _supabase.from('archived_files').select('conversion_status,conversion_scan_submission_id,conversion_error').eq('id', id).single();
           if (error) throw error;
-          const row = archiveRowsCache.find(r => String(r.id) === String(id));
+          const row = archiveAllRows.find(r => String(r.id) === String(id));
           if (row) {
             row.conversion_status = data.conversion_status;
             row.conversion_scan_submission_id = data.conversion_scan_submission_id;
@@ -927,11 +1068,12 @@
     function filterArchiveFiles() {
       const q = (document.getElementById('archive-search').value || '').toLowerCase();
       const cat = document.getElementById('archive-filter-category').value;
-      const filtered = archiveRowsCache.filter(r => {
+      const filtered = archiveAllRows.filter(r => {
         const matchQ = !q || (r.file_name || '').toLowerCase().includes(q) || (r.insured_name || '').toLowerCase().includes(q) || (r.policy_number || '').toLowerCase().includes(q);
         const matchCat = !cat || r.category === cat;
         return matchQ && matchCat;
       });
+      archivePage = 1;
       renderArchiveTable(filtered);
     }
 
