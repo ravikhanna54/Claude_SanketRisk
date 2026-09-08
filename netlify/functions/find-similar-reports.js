@@ -44,11 +44,17 @@ async function fetchMetadata(client, sourceTable, ids) {
       let r = {};
       try { r = typeof row.scan_result === 'string' ? JSON.parse(row.scan_result) : (row.scan_result || {}); } catch (e) {}
       const overall = parseFloat(r.score_overall);
+      // A raw score of exactly 0 is treated as missing rather than real —
+      // seen in practice paired with risk_quality "Acceptable", which is
+      // an impossible combination for a genuinely 0/100 property. That
+      // pairing means the field was never populated for these rows
+      // (likely older or archive-converted reports), not an actual score.
+      const hasScore = !isNaN(overall) && overall !== 0;
       out[row.id] = {
         insured_name: row.insured_name, city: row.city, province: row.province, occupancy: row.occupancy,
         risk_label: r.risk_quality || null,
-        overall_score_raw: isNaN(overall) ? null : overall,
-        overall_score_normalized: isNaN(overall) ? null : overall / 100,
+        overall_score_raw: hasScore ? overall : null,
+        overall_score_normalized: hasScore ? overall / 100 : null,
       };
     });
   }
@@ -63,11 +69,12 @@ async function fetchMetadata(client, sourceTable, ids) {
       let fd = {};
       try { fd = typeof row.form_data === 'string' ? JSON.parse(row.form_data) : (row.form_data || {}); } catch (e) {}
       const overall = parseFloat(fd.scores && fd.scores.overall);
+      const hasScore = !isNaN(overall) && overall !== 0;
       out[row.id] = {
         insured_name: row.insured_name, city: row.city, province: row.province, occupancy: row.occupancy,
         risk_label: row.risk_quality || null,
-        overall_score_raw: isNaN(overall) ? null : overall,
-        overall_score_normalized: isNaN(overall) ? null : overall / 5,
+        overall_score_raw: hasScore ? overall : null,
+        overall_score_normalized: hasScore ? overall / 5 : null,
       };
     });
   }
@@ -152,33 +159,66 @@ exports.handler = async function (event) {
     const metaByTable = { scan_submissions: scanMeta, inspections: inspMeta };
     const targetMeta = targetMetaWrap[body.id] || {};
 
-    // Attach metadata to each neighbor, and compute a simple deviation flag
-    // per section: target's normalized overall score vs the neighbor
-    // average, when both are available.
+    // Attach metadata to each neighbor, and compute a per-section score
+    // comparison. Every section gets an entry in score_comparison — even
+    // when there wasn't enough scored data to compare — so the caller can
+    // tell "checked, no deviation" apart from "couldn't check, too few
+    // scored neighbors." That distinction matters here specifically:
+    // the vast majority of embedded reports are archive conversions with
+    // no AI-generated score at all, so most similarity searches will turn
+    // up few or zero scored neighbors, and silently omitting a flag in
+    // that case would read as a false "all clear."
+    const MIN_SCORED_NEIGHBORS = 2;
+    const DEVIATION_THRESHOLD = 0.2; // >20 points on a 100-scale, or >1 point on a 5-scale
+
     const deviationFlags = [];
+    const scoreComparison = {};
+
     Object.keys(sections).forEach(section => {
       sections[section] = sections[section].map(n => ({
         ...n,
         ...(metaByTable[n.source_table][n.source_id] || {}),
       }));
 
-      if (targetMeta.overall_score_normalized !== null && targetMeta.overall_score_normalized !== undefined) {
-        const neighborScores = sections[section]
-          .map(n => n.overall_score_normalized)
-          .filter(s => s !== null && s !== undefined);
-        if (neighborScores.length >= 2) {
-          const avg = neighborScores.reduce((a, b) => a + b, 0) / neighborScores.length;
-          const diff = targetMeta.overall_score_normalized - avg;
-          if (Math.abs(diff) > 0.2) { // >20 points on a 100-scale, or >1 point on a 5-scale
-            deviationFlags.push({
-              section,
-              target_score_normalized: targetMeta.overall_score_normalized,
-              neighbor_avg_normalized: Math.round(avg * 1000) / 1000,
-              direction: diff > 0 ? 'higher_than_similar_past_reports' : 'lower_than_similar_past_reports',
-              neighbor_count: neighborScores.length,
-            });
-          }
-        }
+      const hasTargetScore = targetMeta.overall_score_normalized !== null && targetMeta.overall_score_normalized !== undefined;
+      const neighborScores = sections[section]
+        .map(n => n.overall_score_normalized)
+        .filter(s => s !== null && s !== undefined);
+
+      if (!hasTargetScore) {
+        scoreComparison[section] = { available: false, reason: 'target report has no score' };
+        return;
+      }
+      if (neighborScores.length < MIN_SCORED_NEIGHBORS) {
+        scoreComparison[section] = {
+          available: false,
+          reason: 'too few scored neighbors to compare',
+          scored_neighbor_count: neighborScores.length,
+          total_neighbor_count: sections[section].length,
+        };
+        return;
+      }
+
+      const avg = neighborScores.reduce((a, b) => a + b, 0) / neighborScores.length;
+      const diff = targetMeta.overall_score_normalized - avg;
+      const deviates = Math.abs(diff) > DEVIATION_THRESHOLD;
+      scoreComparison[section] = {
+        available: true,
+        target_score_normalized: targetMeta.overall_score_normalized,
+        neighbor_avg_normalized: Math.round(avg * 1000) / 1000,
+        scored_neighbor_count: neighborScores.length,
+        total_neighbor_count: sections[section].length,
+        deviates,
+        direction: deviates ? (diff > 0 ? 'higher_than_similar_past_reports' : 'lower_than_similar_past_reports') : null,
+      };
+      if (deviates) {
+        deviationFlags.push({
+          section,
+          target_score_normalized: targetMeta.overall_score_normalized,
+          neighbor_avg_normalized: scoreComparison[section].neighbor_avg_normalized,
+          direction: scoreComparison[section].direction,
+          neighbor_count: neighborScores.length,
+        });
       }
     });
 
@@ -187,6 +227,7 @@ exports.handler = async function (event) {
       body: JSON.stringify({
         target: { source_table: sourceTable, id: body.id, ...targetMeta },
         sections,
+        score_comparison: scoreComparison,
         deviation_flags: deviationFlags,
       }),
     };
