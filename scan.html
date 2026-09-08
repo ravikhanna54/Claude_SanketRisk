@@ -4425,7 +4425,11 @@
     // Build cover page (print only) — pass file number so it shows immediately
     buildCoverPage(data, _draftInspId || null);
 
-    var _pc = (data.photoCount || uploadedPhotos.length || 0); document.getElementById('res-sub').textContent = 'Photo-Based Preliminary Assessment \u00B7 ' + new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'}) + ' \u00B7 ' + _pc + ' photo' + (_pc !== 1 ? 's' : '') + ' analyzed';
+    var _pc = (data.photoCount || uploadedPhotos.length || 0);
+    var _dateLabel = data.surveyDate
+      ? 'Inspection/Survey Date \u00B7 ' + new Date(data.surveyDate + 'T00:00:00').toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'})
+      : 'Photo-Based Preliminary Assessment \u00B7 ' + new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'});
+    document.getElementById('res-sub').textContent = _dateLabel + ' \u00B7 ' + _pc + ' photo' + (_pc !== 1 ? 's' : '') + ' analyzed';
 
     // Populate brand header date and submitter
     var prepDate = document.getElementById('res-prepared-date');
@@ -4453,7 +4457,8 @@
         ['Occupancy', data.occupancy],
         ['Year Built', data.yearBuilt],
         ['Building Area', data.buildingArea ? data.buildingArea + ' sq ft' : null],
-        ['Assessment Date', new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})],
+        [data.surveyDate ? 'Inspection/Survey Date' : 'Assessment Date',
+          data.surveyDate ? new Date(data.surveyDate + 'T00:00:00').toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'}) : new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})],
         ['Photos Analysed', (data.photoCount || uploadedPhotos.length) + ' photo' + ((data.photoCount || uploadedPhotos.length) !== 1 ? 's' : '')],
         ['Submitted By', data.submitterName || null],
         ['Company / Broker', data.submitterCompany || null],
@@ -5339,7 +5344,8 @@
     metaWrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:28px;margin-top:40px;';
     var _coverFileNum = fileNum || (typeof _draftInspId !== 'undefined' && _draftInspId) || '';
     var metaItems = [
-      ['Assessment Date', new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'})],
+      [data.surveyDate ? 'Inspection/Survey Date' : 'Assessment Date',
+        data.surveyDate ? new Date(data.surveyDate + 'T00:00:00').toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'}) : new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'})],
       ['Prepared By',     (data.submitterName || 'Sanket Risk Consultants') + (data.submitterCompany ? ' — ' + data.submitterCompany : '')],
       ['File Number',     _coverFileNum || 'Pending'],
     ];
