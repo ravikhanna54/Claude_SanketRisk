@@ -3412,6 +3412,15 @@
             <input id="last-inspection-test-date" type="date">
           </div>
           <div class="field">
+            <label>Sprinkler Service Tag</label>
+            <select id="sprinkler-tag-status">
+              <option value="">— Select —</option>
+              <option>Tag Present — Date Recorded</option>
+              <option>Service Tag Missing / Not Observed</option>
+              <option>Unknown / Not Verified</option>
+            </select>
+          </div>
+          <div class="field">
             <label>Sprinkler Condition</label>
             <select id="sprinkler-condition">
               <option value="">— Select —</option>
@@ -3480,6 +3489,15 @@
             <label>Alarm Last Tested</label>
             <input id="alarm-last-tested" type="date">
           </div>
+          <div class="field">
+            <label>Alarm / Monitoring Service Tag</label>
+            <select id="alarm-tag-status">
+              <option value="">— Select —</option>
+              <option>Tag Present — Date Recorded</option>
+              <option>Service Tag Missing / Not Observed</option>
+              <option>Unknown / Not Verified</option>
+            </select>
+          </div>
           <div class="field form-full">
             <label>Fire Alarm Notes</label>
             <textarea spellcheck="true" id="fire-alarm-main-notes" placeholder="Panel location, zones, distinguishing features, any observed deficiencies..."></textarea>
@@ -3501,6 +3519,15 @@
           <div class="field">
             <label>Last Annual Inspection</label>
             <input id="extinguisher-last-inspection" type="date">
+          </div>
+          <div class="field">
+            <label>Extinguisher Service Tag</label>
+            <select id="extinguisher-tag-status">
+              <option value="">— Select —</option>
+              <option>Tag Present — Date Recorded</option>
+              <option>Service Tag Missing / Not Observed</option>
+              <option>Unknown / Not Verified</option>
+            </select>
           </div>
           <div class="field">
             <label>Type(s) Present</label>
@@ -11758,6 +11785,30 @@
       fallbackText: 'The roof covering was assessed as being in poor or critical condition, with significant deterioration noted. Continued deterioration increases the risk of water infiltration and interior damage. The insured should arrange for a qualified roofing contractor to inspect and repair or replace the roof covering as needed.'
     },
     {
+      id: 'sprinkler-tag-missing',
+      check: function() { var v = (document.getElementById('sprinkler-tag-status') || {}).value || ''; return v.indexOf('Missing')===0 || v.indexOf('Unknown')===0; },
+      keywords: ['sprinkler service tag', 'sprinkler inspection tag'],
+      priority: 'Immediate', category: 'Fire Protection',
+      fallbackTitle: 'Sprinkler system service tag missing or unverifiable',
+      fallbackText: 'No current service/inspection tag was observed on the sprinkler system riser or control valve assembly, and inspection currency could not otherwise be confirmed. Per NFPA 25 and the National Fire Code of Canada, annual inspection and testing by a licensed sprinkler contractor is required. Documentation of current annual inspection should be obtained and a current service tag affixed to all assemblies.'
+    },
+    {
+      id: 'alarm-tag-missing',
+      check: function() { var v = (document.getElementById('alarm-tag-status') || {}).value || ''; return v.indexOf('Missing')===0 || v.indexOf('Unknown')===0; },
+      keywords: ['fire alarm service tag', 'alarm monitoring verification'],
+      priority: '30-Day', category: 'Fire Protection',
+      fallbackTitle: 'Fire alarm / monitoring service tag missing or unverifiable',
+      fallbackText: 'No current service tag or monitoring verification was observed for the fire alarm system, and test currency could not otherwise be confirmed. Annual testing of the fire alarm system, and confirmation of active central station monitoring where applicable, should be arranged by a licensed fire alarm contractor and documented with a current service tag.'
+    },
+    {
+      id: 'extinguisher-tag-missing',
+      check: function() { var v = (document.getElementById('extinguisher-tag-status') || {}).value || ''; return v.indexOf('Missing')===0 || v.indexOf('Unknown')===0; },
+      keywords: ['fire extinguisher service tag', 'extinguisher inspection tag'],
+      priority: '30-Day', category: 'Fire Protection',
+      fallbackTitle: 'Fire extinguisher service tag missing or unverifiable',
+      fallbackText: 'No current annual service tag was observed on the portable fire extinguishers, and inspection currency could not otherwise be confirmed. NFPA 10 requires annual inspection and servicing of portable fire extinguishers by a qualified service provider. Annual servicing should be scheduled and current tags affixed.'
+    },
+    {
       id: 'sprinkler-impairment',
       check: function() { var v = (document.getElementById('sprinkler-condition') || {}).value || ''; return v.indexOf('Fair') === 0 || v.indexOf('Poor') === 0; },
       keywords: ['sprinkler system', 'impairment', 'sprinkler service'],
@@ -11844,9 +11895,15 @@
     { id: 'grease-accumulation-heavy', check: function(){ return ((document.getElementById('grease-accumulation-observed')||{}).value||'').indexOf('Heavy')===0; },
       keywords:['grease accumulation', 'hood cleaning'], priority:'Immediate', category:'Fire Protection',
       fallbackTitle:'Heavy grease accumulation observed in kitchen exhaust', fallbackText:'Heavy grease accumulation was observed requiring immediate cleaning. This condition presents a significant fire hazard and should be addressed by a qualified hood cleaning service without delay.' },
-    { id: 'grease-filter-poor', check: function(){ var v=(document.getElementById('grease-filter-condition')||{}).value||''; return v.indexOf('Poor')===0 || v.indexOf('Missing')===0; },
-      keywords:['grease filter'], priority:'30-Day', category:'Fire Protection',
-      fallbackTitle:'Kitchen grease filters missing or in poor condition', fallbackText:'Grease filters were found missing or in poor condition with heavy buildup. Filters should be cleaned or replaced and a regular maintenance schedule established.' },
+    { id: 'grease-filter-missing-damaged', check: function(){ return ((document.getElementById('grease-filter-condition')||{}).value||'').indexOf('Missing')===0; },
+      keywords:['grease filter missing', 'grease filter damaged'], priority:'Immediate', category:'Fire Protection',
+      fallbackTitle:'Kitchen grease filters missing or damaged / improperly installed', fallbackText:'Grease filters were found missing, damaged, or improperly installed, allowing grease-laden vapours to bypass filtration into the exhaust duct. Filters should be replaced and properly installed without delay, and a regular maintenance schedule established.' },
+    { id: 'grease-filter-heavy-buildup', check: function(){ return ((document.getElementById('grease-filter-condition')||{}).value||'').indexOf('Poor')===0; },
+      keywords:['grease filter buildup', 'grease filter cleaning'], priority:'30-Day', category:'Fire Protection',
+      fallbackTitle:'Kitchen grease filters have heavy buildup — cleaning required', fallbackText:'Grease filters were observed with heavy buildup, restricting airflow and increasing fire load in the exhaust system. Filters should be cleaned or replaced and a regular maintenance schedule established.' },
+    { id: 'grease-filter-some-buildup', check: function(){ return ((document.getElementById('grease-filter-condition')||{}).value||'').indexOf('Fair')===0; },
+      keywords:['grease filter buildup'], priority:'Advisory', category:'Fire Protection',
+      fallbackTitle:'Kitchen grease filters showing some buildup', fallbackText:'Grease filters were observed with some buildup. While not yet a significant concern, routine cleaning on the established maintenance schedule is recommended to prevent progression to a heavier accumulation.' },
     // ── Welding / Hot Work ──
     { id: 'welding-no-permit', check: function(){ return ((document.getElementById('haz-welding-permit')||{}).value||'').indexOf('No')===0; },
       keywords:['hot work permit', 'welding'], priority:'30-Day', category:'Safety & Compliance',
@@ -12225,7 +12282,8 @@
   // started; an explicit list for the older ones that predate it.
   var SUPPLEMENT_ONLY_RULE_IDS = {
     'cooking-no-suppression': 'restaurant', 'hood-cleaning-overdue': 'restaurant',
-    'grease-accumulation-heavy': 'restaurant', 'grease-filter-poor': 'restaurant',
+    'grease-accumulation-heavy': 'restaurant',
+    'grease-filter-missing-damaged': 'restaurant', 'grease-filter-heavy-buildup': 'restaurant', 'grease-filter-some-buildup': 'restaurant',
     'lift-poor-condition': 'autoservice', 'inground-lift-leak': 'autoservice',
     'waste-oil-improper': 'autoservice', 'ust-abandoned-unknown': 'autoservice',
     'rack-poor-condition': 'warehouse', 'rack-no-repair-program': 'warehouse',
