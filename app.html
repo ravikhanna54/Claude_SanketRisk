@@ -9986,12 +9986,11 @@
     // Give the form a moment to become visible then populate
     setTimeout(() => {
       const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-      // Generate a new inspection ID
-      const now = new Date();
-      const newId = 'INS-' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(Math.floor(Math.random()*900)+100);
-      set('inspection-id', newId);
-      const badge = document.getElementById('inspection-id-badge');
-      if (badge) badge.textContent = newId;
+      // Inspection ID is intentionally left as its default 'NEW' here —
+      // saveInspection() assigns the real sequential SRC file number via
+      // get_next_file_number() on first save. Setting a placeholder here
+      // previously blocked that from ever firing, since it only triggers
+      // when the field is still empty/'NEW'.
       set('account-number',  r.account_number);
       set('policy-number',   r.policy_number);
       set('inspection-date', new Date().toISOString().split('T')[0]);
