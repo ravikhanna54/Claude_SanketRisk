@@ -1303,7 +1303,7 @@
             return '<tr style="' + (isCompleted?'opacity:0.65;':'') + '">' +
               '<td><span style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;background:var(--gold-pale);color:var(--navy);padding:2px 8px;border-radius:10px;">' + (r.request_ref||'—') + '</span></td>' +
               '<td style="font-size:12px;">' + date + '</td>' +
-              '<td><strong style="font-size:12px;">' + (r.insured_name||'—') + '</strong><br><span style="font-size:10px;color:var(--slate)">' + [r.city,r.province].filter(Boolean).join(', ') + '</span></td>' +
+              '<td><strong style="font-size:12px;">' + (r.insured_name||'—') + '</strong><br><span style="font-size:10px;color:var(--slate)">' + [r.address, r.city, r.province].filter(Boolean).join(', ') + '</span></td>' +
               '<td style="font-size:12px;">' + (r.occupancy_type||'—') + '</td>' +
               '<td style="font-size:12px;">' + (r.purpose||'—') + '</td>' +
               '<td><span style="font-size:11px;font-weight:600;color:' + urgencyColor(r.urgency) + '">' + (r.urgency?r.urgency.split('—')[0].trim():'—') + '</span></td>' +
