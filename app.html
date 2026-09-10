@@ -9981,11 +9981,43 @@
       set('city',            r.city);
       set('province',        r.province);
       set('postal-code',     r.postal_code);
+      // Line of business — this select's option values equal their visible
+      // text, so a direct assignment matches whenever the request's wording
+      // lines up with an option exactly (same approach as Purpose below).
+      set('line-of-business', r.line_of_business);
+      // The request's on-site contact becomes this inspection's contact
+      set('contact-name', r.site_contact);
       // Purpose of inspection
       const purposeSel = document.querySelector('#section-intro select');
       if (purposeSel && r.purpose) {
         Array.from(purposeSel.options).forEach(o => { if (o.text === r.purpose) purposeSel.value = o.value; });
       }
+      // Occupancy type — attempt a direct match against the COPE-O dropdown.
+      // Also recorded in Inspection Conditions below regardless of whether
+      // it matched, so the original wording is never silently lost.
+      const occSel = document.getElementById('occupancy-class-select');
+      if (occSel && r.occupancy_type) {
+        const occMatched = Array.from(occSel.options).some(o => o.value === r.occupancy_type);
+        if (occMatched) occSel.value = r.occupancy_type;
+      }
+      // ── Carry over every remaining request field that has no dedicated
+      // form field elsewhere, so nothing from the original request is lost
+      // even though it isn't reflected in a specific input. ──
+      (function() {
+        const condParts = [];
+        if (r.occupancy_type)        condParts.push('Requested Occupancy Type: ' + r.occupancy_type);
+        if (r.preferred_date)        condParts.push('Requestor Preferred Date: ' + r.preferred_date);
+        if (r.preferred_time)        condParts.push('Requestor Preferred Time: ' + r.preferred_time);
+        if (r.requestor_phone)       condParts.push('Requestor Phone: ' + r.requestor_phone);
+        if (r.requestor_role)        condParts.push('Requestor Role: ' + r.requestor_role);
+        if (r.urgency)               condParts.push('Urgency: ' + r.urgency);
+        if (r.special_instructions)  condParts.push('Special Instructions: ' + r.special_instructions);
+        if (r.comments)              condParts.push('Requestor Comments: ' + r.comments);
+        if (condParts.length) {
+          const condEl = document.getElementById('inspection-conditions');
+          if (condEl && !condEl.value) condEl.value = condParts.join('\n');
+        }
+      })();
       // ── Auto-activate supplements from request ──
       var svcText = (r.special_instructions || '') + ' ' + (r.comments || '');
       var svcKeyMap = {
@@ -13312,6 +13344,28 @@
       const loadId = params.get('load');
       if (loadId) {
         setTimeout(() => loadInspection(loadId), 400);
+      }
+      // ── CONVERT AN INSPECTION REQUEST FROM URL PARAM ──
+      // dashboard.html's "Convert" button navigates here as ?convert=<id>
+      // rather than opening app.html's own request-browsing modal, so the
+      // request row has to be fetched here before handing it to the same
+      // convertRequest() used by that modal — reuses its existing,
+      // already-correct field-population logic rather than duplicating it.
+      const convertId = params.get('convert');
+      if (convertId) {
+        setTimeout(async () => {
+          try {
+            const { data: reqRow, error } = await _supabase
+              .from('inspection_requests').select('*').eq('id', convertId).single();
+            if (error || !reqRow) {
+              showToast('⚠ Could not load request: ' + (error ? error.message : 'not found'));
+              return;
+            }
+            convertRequest(reqRow);
+          } catch(e) {
+            showToast('⚠ Could not load request: ' + e.message);
+          }
+        }, 400);
       }
     } catch(e) {
       console.warn('[SRC] Session restore failed:', e.message);
