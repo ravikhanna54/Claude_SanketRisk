@@ -3835,7 +3835,7 @@
       <div class="section-header">
         <div>
           <div class="section-title">Natural Catastrophe Exposure</div>
-          <div class="section-subtitle">Earthquake, wind and flood exposure — NBC 2025 climatic &amp; seismic design data with inspector site observations</div>
+          <div class="section-subtitle">Earthquake, wind and flood exposure — climatic &amp; seismic design data (Canada NBC 2025 or USA ASCE 7-22/USGS) with inspector site observations</div>
         </div>
         <div class="section-tag">NAT-CAT</div>
       </div>
@@ -4171,7 +4171,7 @@
           <span style="font-size:11px;font-weight:400;color:var(--text-light);">SRC Demerit Assessment — NBC 2025 Tier-Weighted</span>
         </div>
         <div class="notice info" style="margin-bottom:16px;">
-          ℹ️ Demerits are derived automatically from the observation cards above — complete all dropdowns first. Earthquake demerits are weighted by the NBC seismic hazard tier (Low ×0.25 · Moderate ×0.5 · High ×0.75 · Very High ×1.0), so an NBC reference location must be selected. A starting score of 100 is reduced by accumulated demerits. Grade boundaries: 90–100 = Grade 1 | 75–89 = Grade 2 | 55–74 = Grade 3 | 35–54 = Grade 4 | Below 35 = Grade 5.
+          ℹ️ Demerits are derived automatically from the observation cards above — complete all dropdowns first. Earthquake demerits are weighted by the seismic hazard tier from whichever country tab you completed above (Low ×0.25 · Moderate ×0.5 · High ×0.75 · Very High ×1.0), so a Canada reference location or USA seismic lookup must be completed. A starting score of 100 is reduced by accumulated demerits. Grade boundaries: 90–100 = Grade 1 | 75–89 = Grade 2 | 55–74 = Grade 3 | 35–54 = Grade 4 | Below 35 = Grade 5.
         </div>
         <div style="background:var(--gold-pale);border:1.5px solid var(--gold);border-radius:8px;padding:16px;margin-bottom:16px;">
           <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:12px;">📊 Nat-Cat Grade Calculator</div>
@@ -8840,9 +8840,20 @@
   // ══════════════════════════════════════════
   // PHASE 2 — SUPABASE DATABASE INTEGRATION
   // ══════════════════════════════════════════
-  // ── GOOGLE MAPS API KEY — paste your key between the quotes below ──
-  // Restrict it in Google Cloud Console to your Netlify domain (HTTP referrer)
-  const GOOGLE_MAPS_API_KEY = 'AIzaSyDAHNS9_C-NLzVhAUDhD9HfSP-7X-xTVkI';
+  // ── GOOGLE MAPS API KEY (PUBLIC / CLIENT-SIDE) ──
+  // This key ships to every visitor's browser (used directly in the Maps
+  // Embed API iframe below) — it must be a SEPARATE key from the one used
+  // server-side in Netlify Functions (maps-proxy.js, natcat-usa-lookup.js,
+  // registry-intel.js), and must NEVER be the same value as anything
+  // marked "Contains secret values" in Netlify — Netlify's build-time
+  // secret scanner will fail every deploy if a secret-flagged value shows
+  // up in client-shipped code like this file, since it has no way to know
+  // that this particular exposure is intentional.
+  // In Google Cloud Console: create a key restricted by HTTP referrer to
+  // your Netlify domain, and restricted to only the Maps Embed API (the
+  // API actually used below). Paste that key here, replacing the
+  // placeholder — until then, the map iframe below stays disabled.
+  const GOOGLE_MAPS_API_KEY = 'PASTE_YOUR_PUBLIC_MAPS_EMBED_KEY_HERE';
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const HEADERS = {
@@ -13722,20 +13733,37 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   var s6b = '**7. Natural Catastrophe Assessment**' + NL;
   function ncv(id){ var el=document.getElementById(id); var v=el?String(el.value).trim():''; var skip=['','\u2014','-','none','n/a','na','nil']; return (skip.indexOf(v.toLowerCase())===-1) ? v : null; }
   function lcf(s){ return s ? s.charAt(0).toLowerCase() + s.slice(1) : s; }
-  var ncLoc = ncv('cdd-location');
-  if (ncLoc) {
-    s6b += 'Climatic and seismic design data were referenced from the National Building Code of Canada 2025, Appendix C, for the nearest reference location of ' + ncLoc + (ncv('cdd-elev') ? ' (elevation ' + ncv('cdd-elev') + ' m)' : '') + '. ';
-    var climBits = [];
-    if (ncv('cdd-snow-ss')) climBits.push('a ground snow load (Ss 1/50) of ' + ncv('cdd-snow-ss') + ' kPa');
-    if (ncv('cdd-wind-q50')) climBits.push('a 1-in-50-year hourly wind pressure of ' + ncv('cdd-wind-q50') + ' kPa');
-    if (ncv('cdd-rain-1day')) climBits.push('a 1-in-50-year one-day rainfall of ' + ncv('cdd-rain-1day') + ' mm');
-    if (climBits.length) s6b += 'Design values for this location include ' + climBits.join(', ') + '. ';
-    if (ncv('cdd-seismic-tier')) s6b += 'The seismic hazard tier for the location is assessed as **' + ncv('cdd-seismic-tier') + '**' + (ncv('cdd-smax') ? ' (Smax ' + ncv('cdd-smax') + ', site class unknown)' : '') + '. ';
-    s6b += NL;
+  var ncCountry = (document.getElementById('natcat-country')||{}).value || 'ca';
+  if (ncCountry === 'us') {
+    var usAddr = ncv('usa-cdd-resolved-address');
+    if (usAddr) {
+      s6b += 'Seismic design data were referenced from the USGS Earthquake Hazards Program Design Ground Motions service (ASCE 7-22) for ' + usAddr + '. ';
+      var usBits = [];
+      if (ncv('usa-cdd-sds')) usBits.push('a design spectral response acceleration (SDS) of ' + ncv('usa-cdd-sds') + ' g');
+      if (ncv('usa-cdd-sd1')) usBits.push('SD1 of ' + ncv('usa-cdd-sd1') + ' g');
+      if (ncv('usa-cdd-pga')) usBits.push('a peak ground acceleration (PGA) of ' + ncv('usa-cdd-pga') + ' g');
+      if (usBits.length) s6b += 'Design values for this location include ' + usBits.join(', ') + '. ';
+      if (ncv('usa-cdd-sdc')) s6b += 'The Seismic Design Category is **' + ncv('usa-cdd-sdc') + '**' + (ncv('usa-cdd-tier') ? ', assessed as ' + ncv('usa-cdd-tier') + ' seismic hazard tier' : '') + '. ';
+      s6b += NL;
+    } else {
+      s6b += 'No USGS seismic design data lookup was performed for this inspection; seismic design data were not recorded.' + NL;
+    }
   } else {
-    s6b += 'No NBC 2025 reference location was selected for this inspection; climatic and seismic design data were not recorded.' + NL;
+    var ncLoc = ncv('cdd-location');
+    if (ncLoc) {
+      s6b += 'Climatic and seismic design data were referenced from the National Building Code of Canada 2025, Appendix C, for the nearest reference location of ' + ncLoc + (ncv('cdd-elev') ? ' (elevation ' + ncv('cdd-elev') + ' m)' : '') + '. ';
+      var climBits = [];
+      if (ncv('cdd-snow-ss')) climBits.push('a ground snow load (Ss 1/50) of ' + ncv('cdd-snow-ss') + ' kPa');
+      if (ncv('cdd-wind-q50')) climBits.push('a 1-in-50-year hourly wind pressure of ' + ncv('cdd-wind-q50') + ' kPa');
+      if (ncv('cdd-rain-1day')) climBits.push('a 1-in-50-year one-day rainfall of ' + ncv('cdd-rain-1day') + ' mm');
+      if (climBits.length) s6b += 'Design values for this location include ' + climBits.join(', ') + '. ';
+      if (ncv('cdd-seismic-tier')) s6b += 'The seismic hazard tier for the location is assessed as **' + ncv('cdd-seismic-tier') + '**' + (ncv('cdd-smax') ? ' (Smax ' + ncv('cdd-smax') + ', site class unknown)' : '') + '. ';
+      s6b += NL;
+    } else {
+      s6b += 'No NBC 2025 reference location was selected for this inspection; climatic and seismic design data were not recorded.' + NL;
+    }
   }
-  if (ncv('cdd-notes')) s6b += ncv('cdd-notes') + NL;
+  if (ncv('cdd-notes') || ncv('usa-cdd-notes')) s6b += (ncv('cdd-notes') || ncv('usa-cdd-notes')) + NL;
   var eqBits = [];
   if (ncv('eq-construction-era')) eqBits.push('the construction era relative to seismic code provisions is ' + lcf(ncv('eq-construction-era')));
   if (ncv('eq-vulnerability')) eqBits.push('structural vulnerability is assessed as ' + lcf(ncv('eq-vulnerability')));
@@ -15866,7 +15894,26 @@ function generateFormalReport() {
 <div class="report-section" id="sec-natcat">
   ${secHeader('🌐', 'Natural Catastrophe Assessment', 'NAT-CAT')}
   <div class="sec-body">
-    <div class="sub-heading">Climatic &amp; Seismic Design Data — NBC 2025 Appendix C</div>
+    ${(() => {
+      const ncCountryVal = val('natcat-country');
+      const ncCountry = (ncCountryVal !== '—' && ncCountryVal) ? ncCountryVal : 'ca';
+      if (ncCountry === 'us') {
+        return `<div class="sub-heading">Seismic Design Data — ASCE 7-22 (USGS)</div>
+    <div class="field-grid">
+      ${field2('Resolved Address', val('usa-cdd-resolved-address'))}
+      ${field2('Ss \u2014 MCE<sub>R</sub> 0.2s (g)', val('usa-cdd-ss'))}
+      ${field2('SDS \u2014 Design 0.2s (g)', val('usa-cdd-sds'))}
+      ${field2('S1 \u2014 MCE<sub>R</sub> 1.0s (g)', val('usa-cdd-s1'))}
+      ${field2('SD1 \u2014 Design 1.0s (g)', val('usa-cdd-sd1'))}
+      ${field2('PGA (g)', val('usa-cdd-pga'))}
+      ${field2('PGA<sub>M</sub> \u2014 Site-Modified (g)', val('usa-cdd-pgam'))}
+      ${field2('Seismic Design Category', val('usa-cdd-sdc'))}
+      ${field2('Seismic Hazard Tier', val('usa-cdd-tier') !== '\u2014' ? '<strong>' + val('usa-cdd-tier') + '</strong>' : '\u2014')}
+    </div>
+    ${fieldFull('Climatic Data Notes', val('usa-cdd-notes'))}
+    <div style="font-size:10px;color:#8a8472;margin-top:4px;">Source: USGS Earthquake Hazards Program, Design Ground Motions web service (ASCE 7-22). Values are probabilistic estimates for the resolved coordinate and declared Site Class/Risk Category \u2014 not a substitute for a site-specific seismic hazard study or a licensed engineer's determination.</div>`;
+      }
+      return `<div class="sub-heading">Climatic &amp; Seismic Design Data \u2014 NBC 2025 Appendix C</div>
     <div class="field-grid">
       ${field2('NBC Reference Location', val('cdd-location'))}
       ${field2('Elevation (m)', val('cdd-elev'))}
@@ -15880,10 +15927,11 @@ function generateFormalReport() {
       ${field2('Annual Precipitation (mm)', val('cdd-ann-precip'))}
       ${field2('Driving Rain Wind Pressure (Pa, 1/5)', val('cdd-driving-rain'))}
       ${field2('Seismic Smax (Site Class Unknown)', val('cdd-smax'))}
-      ${field2('Seismic Hazard Tier', val('cdd-seismic-tier') !== '—' ? '<strong>' + val('cdd-seismic-tier') + '</strong>' : '—')}
+      ${field2('Seismic Hazard Tier', val('cdd-seismic-tier') !== '\u2014' ? '<strong>' + val('cdd-seismic-tier') + '</strong>' : '\u2014')}
     </div>
     ${fieldFull('Climatic Data Notes', val('cdd-notes'))}
-    <div style="font-size:10px;color:#8a8472;margin-top:4px;">Source: National Building Code of Canada 2025, Appendix C, Tables C-2 and C-3 (NRC). Values apply to the listed reference location and elevation. Seismic tier derived from Smax thresholds in NBC Parts 4/9 — verify for binding design decisions.</div>
+    <div style="font-size:10px;color:#8a8472;margin-top:4px;">Source: National Building Code of Canada 2025, Appendix C, Tables C-2 and C-3 (NRC). Values apply to the listed reference location and elevation. Seismic tier derived from Smax thresholds in NBC Parts 4/9 \u2014 verify for binding design decisions.</div>`;
+    })()}
     <hr class="sec-divider">
     <div class="sub-heading">Earthquake — Site &amp; Building Observations</div>
     <div class="field-grid">
@@ -15948,7 +15996,7 @@ function generateFormalReport() {
       </div>
       <div class="score-tile">
         <span class="score-val" style="font-size:14pt;">${ncDem.tier ? ncDem.tier + ' ×' + ncDem.tierMult : '—'}</span>
-        <div class="score-lbl">NBC Seismic Tier Weighting</div>
+        <div class="score-lbl">Seismic Tier Weighting</div>
       </div>
     </div>
     <div class="field-grid">
