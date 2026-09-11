@@ -103,14 +103,14 @@ exports.handler = async function (event) {
     const usgsResp = await fetch(usgsUrl);
     const usgsData = await usgsResp.json();
 
-    if (usgsData.status !== 'success' || !usgsData.response || !usgsData.response.data) {
+    if (!usgsData.request || usgsData.request.status !== 'success' || !usgsData.data) {
       return {
         statusCode: 502, headers: CORS,
-        body: JSON.stringify({ error: 'USGS design maps service did not return a valid result', usgs_status: usgsData.status || null }),
+        body: JSON.stringify({ error: 'USGS design maps service did not return a valid result', usgs_status: (usgsData.request && usgsData.request.status) || null }),
       };
     }
 
-    const d = usgsData.response.data;
+    const d = usgsData.data;
 
     return {
       statusCode: 200, headers: CORS,
@@ -125,13 +125,13 @@ exports.handler = async function (event) {
         ss: d.ss, sms: d.sms, sds: d.sds,
         // 1-second period values
         s1: d.s1, sm1: d.sm1, sd1: d.sd1,
-        // Peak ground acceleration
+        // Peak ground acceleration (pgam = site-modified; pga may be absent
+        // depending on location/edition — pgam is the design-relevant value)
         pga: d.pga, pgam: d.pgam,
         // Final seismic design category and SanketRisk's tier bucket for it
         seismic_design_category: d.sdc,
         seismic_tier: sdcTier(d.sdc),
         long_period_transition: d.tl,
-        usgs_model_version: usgsData.response.data.modelVersion || null,
         source: 'USGS Earthquake Hazards Program — Design Ground Motions web service (ASCE 7-22)',
       }),
     };
