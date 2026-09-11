@@ -997,6 +997,8 @@
     #section-recommendations,
     #section-photos,
     #section-summary { page-break-before: always !important; }
+    .natcat-country-tab { background:#f7f4ed; border:1.5px solid var(--border,#d8d0c0); border-radius:8px; padding:9px 18px; font-family:inherit; font-size:13px; font-weight:600; color:#8a8472; cursor:pointer; transition:all .15s; }
+    .natcat-country-tab.active { background:var(--navy,#0d1b2a); border-color:var(--navy,#0d1b2a); color:var(--gold,#e2c97e); }
     /* ── Page breaks between active supplements ── */
     [id^="section-supp-"],
     [id^="section-gl-"] { page-break-before: always !important; }
@@ -3839,7 +3841,18 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Climatic &amp; Seismic Design Data — NBC 2025 Appendix C</div>
+        <div class="card-title">Climatic &amp; Seismic Design Data</div>
+
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <button type="button" id="natcat-tab-ca-btn" class="natcat-country-tab active"
+            onclick="switchNatCatCountry('ca')">🇨🇦 Canada — NBC 2025</button>
+          <button type="button" id="natcat-tab-us-btn" class="natcat-country-tab"
+            onclick="switchNatCatCountry('us')">🇺🇸 USA — ASCE 7-22 / USGS</button>
+        </div>
+        <input id="natcat-country" type="hidden" value="ca">
+
+        <!-- CANADA PANEL -->
+        <div id="natcat-panel-ca">
         <div class="form-grid">
           <div class="field">
             <label>Province Filter (optional)</label>
@@ -3894,6 +3907,56 @@
         </div>
         <input id="cdd-json" type="hidden">
         <div style="font-size:12px;color:#8a8472;margin-top:6px;">Source: National Building Code of Canada 2025, Appendix C, Tables C-2 and C-3 (NRC). Values apply to the listed reference location and elevation. Seismic tier derived from Smax thresholds in NBC Parts 4/9 — verify for binding design decisions.</div>
+        </div>
+        <!-- END CANADA PANEL -->
+
+        <!-- USA PANEL -->
+        <div id="natcat-panel-us" style="display:none;">
+        <div class="form-grid">
+          <div class="field form-full">
+            <label>Lookup Address</label>
+            <input id="usa-cdd-address" type="text" placeholder="Defaults to the property address entered in Section 2 — Insured">
+          </div>
+          <div class="field">
+            <label>Risk Category</label>
+            <select id="usa-cdd-risk-category">
+              <option value="I">I — Low hazard to human life if failure occurs</option>
+              <option value="II" selected>II — Standard (most commercial/residential)</option>
+              <option value="III">III — Substantial hazard to human life if failure occurs</option>
+              <option value="IV">IV — Essential facility</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Site Class</label>
+            <select id="usa-cdd-site-class">
+              <option>A</option><option>B</option><option>C</option>
+              <option selected>D</option><option>E</option><option>F</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button type="button" class="btn-secondary" id="usa-cdd-lookup-btn" onclick="natcatUsaLookup()">🔍 Look Up Seismic Design Data</button>
+          </div>
+        </div>
+        <div class="form-grid cdd-value-grid">
+          <div class="field form-full"><label>Resolved Address</label><input id="usa-cdd-resolved-address" type="text" readonly></div>
+          <div class="field"><label>Ss — MCE<sub>R</sub> Ground Motion, 0.2s (g)</label><input id="usa-cdd-ss" type="text" readonly></div>
+          <div class="field"><label>SDS — Design Value, 0.2s (g)</label><input id="usa-cdd-sds" type="text" readonly></div>
+          <div class="field"><label>S1 — MCE<sub>R</sub> Ground Motion, 1.0s (g)</label><input id="usa-cdd-s1" type="text" readonly></div>
+          <div class="field"><label>SD1 — Design Value, 1.0s (g)</label><input id="usa-cdd-sd1" type="text" readonly></div>
+          <div class="field"><label>PGA (g)</label><input id="usa-cdd-pga" type="text" readonly></div>
+          <div class="field"><label>PGA<sub>M</sub> — Site-Modified (g)</label><input id="usa-cdd-pgam" type="text" readonly></div>
+          <div class="field"><label>Seismic Design Category</label><input id="usa-cdd-sdc" type="text" readonly></div>
+          <div class="field"><label>Seismic Hazard Tier</label><input id="usa-cdd-tier" class="cdd-tier" type="text" readonly></div>
+          <div class="field form-full">
+            <label>Climatic Data Notes</label>
+            <textarea spellcheck="true" id="usa-cdd-notes" placeholder="e.g. Site class assumed as D — no geotechnical report available. Verify for binding design decisions."></textarea>
+          </div>
+        </div>
+        <input id="usa-cdd-json" type="hidden">
+        <div style="font-size:12px;color:#8a8472;margin-top:6px;">Source: USGS Earthquake Hazards Program, Design Ground Motions web service (ASCE 7-22). Values are probabilistic estimates for the resolved coordinate and declared Site Class/Risk Category — not a substitute for a site-specific seismic hazard study or a licensed engineer's determination. Seismic tier is SanketRisk's own Low/Moderate/High/Very High bucketing of the Seismic Design Category, for consistency with the demerit-weighting below.</div>
+        </div>
+        <!-- END USA PANEL -->
       </div>
 
       <div class="card">
@@ -8903,6 +8966,69 @@
     var box = document.getElementById('cdd-results');
     if (box && !e.target.closest('.cdd-wrap')) { box.classList.remove('open'); }
   });
+
+  /* ══ NAT-CAT: country tab switch (Canada NBC vs USA USGS) ══ */
+  function switchNatCatCountry(country) {
+    var caPanel = document.getElementById('natcat-panel-ca');
+    var usPanel = document.getElementById('natcat-panel-us');
+    if (caPanel) caPanel.style.display = country === 'ca' ? 'block' : 'none';
+    if (usPanel) usPanel.style.display = country === 'us' ? 'block' : 'none';
+    var caBtn = document.getElementById('natcat-tab-ca-btn');
+    var usBtn = document.getElementById('natcat-tab-us-btn');
+    if (caBtn) caBtn.classList.toggle('active', country === 'ca');
+    if (usBtn) usBtn.classList.toggle('active', country === 'us');
+    var hidden = document.getElementById('natcat-country');
+    if (hidden) hidden.value = country;
+  }
+
+  /* ══ NAT-CAT: USA seismic design data lookup (USGS ASCE 7-22, live per-address) ══ */
+  async function natcatUsaLookup() {
+    var addrEl = document.getElementById('usa-cdd-address');
+    var address = (addrEl ? addrEl.value : '').trim();
+    if (!address) {
+      // Default to the property address already entered in Section 2 — Insured
+      var parts = [get('street-address'), get('city'), get('province'), get('postal-code')].filter(Boolean);
+      address = parts.join(', ');
+      if (addrEl) addrEl.value = address;
+    }
+    if (!address) { showToast('⚠ Enter an address to look up seismic design data', 'warn'); return; }
+
+    var btn = document.getElementById('usa-cdd-lookup-btn');
+    var btnOrigText = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Looking up…'; }
+
+    try {
+      var riskCategory = (document.getElementById('usa-cdd-risk-category') || {}).value || 'II';
+      var siteClass    = (document.getElementById('usa-cdd-site-class') || {}).value || 'D';
+      var resp = await fetch('/.netlify/functions/natcat-usa-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: address, riskCategory: riskCategory, siteClass: siteClass })
+      });
+      var data = await resp.json();
+      if (!resp.ok || data.status !== 'ok') throw new Error(data.error || 'Lookup failed');
+
+      var set = function(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.value = (val === null || val === undefined) ? '' : String(val);
+      };
+      set('usa-cdd-resolved-address', data.resolved_address || address);
+      set('usa-cdd-ss',   data.ss);
+      set('usa-cdd-sds',  data.sds);
+      set('usa-cdd-s1',   data.s1);
+      set('usa-cdd-sd1',  data.sd1);
+      set('usa-cdd-pga',  data.pga);
+      set('usa-cdd-pgam', data.pgam);
+      set('usa-cdd-sdc',  data.seismic_design_category);
+      set('usa-cdd-tier', data.seismic_tier);
+      set('usa-cdd-json', JSON.stringify(data));
+      showToast('✓ Seismic design data retrieved from USGS');
+    } catch (e) {
+      showToast('⚠ ' + e.message, 'warn');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = btnOrigText; }
+    }
+  }
   // ── Header Reports dropdown ──
   // Renders a full report HTML string to a paginated PDF (offscreen, independent
   // of whatever tab/window is shown to the inspector) and stores it in Supabase
@@ -11367,11 +11493,16 @@
     }
     var incomplete = [];
 
-    // ── Seismic tier multiplier (requires NBC lookup) ──
-    var tierEl = document.getElementById('cdd-seismic-tier');
+    // ── Seismic tier multiplier (requires a Nat-Cat lookup — Canada or USA) ──
+    var natcatCountry = (document.getElementById('natcat-country') || {}).value || 'ca';
+    var tierFieldId = natcatCountry === 'us' ? 'usa-cdd-tier' : 'cdd-seismic-tier';
+    var tierEl = document.getElementById(tierFieldId);
     var tier = tierEl ? String(tierEl.value).trim() : '';
     if (tier === '') {
-      showToast('⚠ Select an NBC reference location first — the seismic tier weights the earthquake demerits.', 'warn');
+      var missingMsg = natcatCountry === 'us'
+        ? '⚠ Look up the property\'s seismic design data first (USA tab) — the seismic tier weights the earthquake demerits.'
+        : '⚠ Select an NBC reference location first (Canada tab) — the seismic tier weights the earthquake demerits.';
+      showToast(missingMsg, 'warn');
       return;
     }
     var tierMult = 0.5;
