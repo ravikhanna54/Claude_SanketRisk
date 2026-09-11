@@ -297,6 +297,9 @@
         <button class="btn-new-insp" onclick="loadScanSubmissions()">🔄 Refresh</button>
       </div>
       <div class="table-card">
+        <div class="table-toolbar">
+          <input class="search-input" id="scan-search" type="text" placeholder="🔍  Search by insured, address, city, file #, or occupancy…" oninput="filterScanSubmissions()">
+        </div>
         <div class="table-scroll-wrap">
           <div id="scan-table-wrap">
             <div class="empty-state"><div class="empty-icon">📸</div><div class="empty-text">Click Refresh to load submissions</div></div>
@@ -1131,13 +1134,15 @@
     }
 
     // ── SCAN ONE SUBMISSIONS ──
+    var _scanAllRows = [];  // full fetched set, cached for client-side search
+
     async function loadScanSubmissions() {
       const wrap = document.getElementById('scan-table-wrap');
       wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Loading submissions…</div></div>';
       try {
         const { data: rows, error } = await _supabase
           .from('scan_submissions')
-          .select('id, file_number, inspection_id, insured_name, city, province, occupancy, photo_count, submitted_at, status, qa_status, scan_result, form_data, report_pdf_path')
+          .select('id, file_number, inspection_id, insured_name, address, city, province, occupancy, photo_count, submitted_at, status, qa_status, scan_result, form_data, report_pdf_path')
           .order('submitted_at', { ascending: false });
 
         if (error) {
@@ -1146,10 +1151,31 @@
           } else { throw error; }
           return;
         }
-        if (!rows || !rows.length) {
-          wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No submissions yet</div></div>';
+        _scanAllRows = rows || [];
+        var searchEl = document.getElementById('scan-search');
+        if (searchEl) searchEl.value = '';
+        renderScanTable(_scanAllRows);
+      } catch(e) {
+        wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error: ' + e.message + '</div></div>';
+      }
+    }
+
+    function filterScanSubmissions() {
+      var q = (document.getElementById('scan-search').value || '').toLowerCase();
+      var filtered = !q ? _scanAllRows : _scanAllRows.filter(function(r) {
+        return [r.insured_name, r.address, r.city, r.province, r.occupancy, r.file_number, r.inspection_id]
+          .some(function(v) { return v && String(v).toLowerCase().indexOf(q) !== -1; });
+      });
+      renderScanTable(filtered);
+    }
+
+    function renderScanTable(rows) {
+      const wrap = document.getElementById('scan-table-wrap');
+      if (!rows || !rows.length) {
+          wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No submissions ' + (_scanAllRows.length ? 'match your search' : 'yet') + '</div></div>';
           return;
-        }
+      }
+      try {
 
         function buildRow(r) {
           var date   = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-CA', {year:'numeric',month:'short',day:'numeric'}) : '—';
@@ -1172,7 +1198,7 @@
             '<td><span style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;background:var(--gold-pale);color:var(--navy);padding:2px 8px;border-radius:8px;font-weight:700;">' + fileNo + '</span></td>' +
             '<td style="font-size:12px;color:var(--slate)">' + date + '</td>' +
             '<td><div style="font-weight:600;font-size:13px">' + (r.insured_name||'—') + '</div>' +
-            '<div style="font-size:11px;color:var(--slate)">' + [r.city,r.province].filter(Boolean).join(', ') + '</div></td>' +
+            '<div style="font-size:11px;color:var(--slate)">' + [r.address,r.city,r.province].filter(Boolean).join(', ') + '</div></td>' +
             '<td style="font-size:12px">' + (r.occupancy||'—') + '</td>' +
             '<td style="text-align:center"><span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;background:' + sBg + ';color:' + sColor + '">' + sLabel + '</span></td>' +
             '<td style="text-align:center"><span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;background:' + qaBg + ';color:' + qaColor + '">' + qaLabel + '</span></td>' +
@@ -1237,7 +1263,8 @@
 
         var footer = document.createElement('div');
         footer.style.cssText = 'font-size:11px;color:var(--slate-light);padding:10px 14px';
-        footer.textContent = rows.length + ' submission' + (rows.length !== 1 ? 's' : '') + ' received';
+        footer.textContent = rows.length + ' submission' + (rows.length !== 1 ? 's' : '') +
+          (rows.length !== _scanAllRows.length ? ' (filtered from ' + _scanAllRows.length + ' total)' : ' received');
 
         wrap.innerHTML = '';
         wrap.appendChild(container);
