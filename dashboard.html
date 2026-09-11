@@ -180,28 +180,28 @@
       </div>
       <button class="btn-new-insp" id="btn-new-insp" style="display:none" onclick="window.location.href='/app.html'">＋ New Inspection</button>
       <button class="btn-new-insp" id="btn-scan-one" style="display:none;background:linear-gradient(135deg,#065f73,#0891b2);" onclick="window.location.href='/scan.html'">📸 SCAN ONE</button>
-    </div>
 
-    <div class="table-card">
-      <div class="table-toolbar">
-        <input class="search-input" id="search-input" type="text" placeholder="🔍  Search by name, ID, city…" oninput="filterTable()">
-        <select class="filter-select" id="filter-status" onchange="filterTable()">
-          <option value="">All Statuses</option>
-          <option value="draft">Draft</option>
-          <option value="submitted">Submitted</option>
-          <option value="inreview">In Review</option>
-          <option value="approved">Approved</option>
-          <option value="returned">Returned</option>
-        </select>
-        <select class="filter-select" id="filter-inspector" style="display:none" onchange="filterTable()">
-          <option value="">All Inspectors</option>
-        </select>
-      </div>
-      <div class="table-scroll-wrap">
-        <div id="table-wrap">
-          <div class="empty-state">
-            <div class="empty-icon">🔄</div>
-            <div class="empty-text">Loading inspections…</div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <input class="search-input" id="search-input" type="text" placeholder="🔍  Search by name, ID, city…" oninput="filterTable()">
+          <select class="filter-select" id="filter-status" onchange="filterTable()">
+            <option value="">All Statuses</option>
+            <option value="draft">Draft</option>
+            <option value="submitted">Submitted</option>
+            <option value="inreview">In Review</option>
+            <option value="approved">Approved</option>
+            <option value="returned">Returned</option>
+          </select>
+          <select class="filter-select" id="filter-inspector" style="display:none" onchange="filterTable()">
+            <option value="">All Inspectors</option>
+          </select>
+        </div>
+        <div class="table-scroll-wrap">
+          <div id="table-wrap">
+            <div class="empty-state">
+              <div class="empty-icon">🔄</div>
+              <div class="empty-text">Loading inspections…</div>
+            </div>
           </div>
         </div>
       </div>
