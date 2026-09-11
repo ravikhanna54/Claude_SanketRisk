@@ -68,7 +68,10 @@ exports.handler = async function(event) {
     if (!fullAddress) {
       return { statusCode: 400, headers: headers, body: JSON.stringify({ error: 'fullAddress required' }) };
     }
-    var GMAPS_KEY = 'AIzaSyDAHNS9_C-NLzVhAUDhD9HfSP-7X-xTVkI';
+    var GMAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
+    if (!GMAPS_KEY) {
+      return { statusCode: 500, headers: headers, body: JSON.stringify({ error: 'GOOGLE_MAPS_API_KEY env var not set' }) };
+    }
     try {
       // Step 1: PLAIN geocode — no preview params. This must always succeed on its own
       // so a rejected/unsupported preview parameter can never take down lat/lon resolution.
