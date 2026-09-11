@@ -41,12 +41,14 @@ exports.handler = async function(event) {
       const fov      = q.fov     || '90';
       const heading   = q.heading || '0';
       const pitch     = q.pitch   || '0';
+      const source    = q.source  || '';
       url = 'https://maps.googleapis.com/maps/api/streetview'
         + '?location=' + encodeURIComponent(location)
         + '&size=' + encodeURIComponent(size)
         + '&fov=' + encodeURIComponent(fov)
         + '&heading=' + encodeURIComponent(heading)
         + '&pitch=' + encodeURIComponent(pitch)
+        + (source ? '&source=' + encodeURIComponent(source) : '')
         + '&key=' + GOOGLE_MAPS_API_KEY;
     } else {
       // Static Maps API — original behavior, unchanged
