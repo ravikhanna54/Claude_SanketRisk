@@ -1253,7 +1253,6 @@
 <script>
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
-  const GMAPS_KEY    = 'AIzaSyDAHNS9_C-NLzVhAUDhD9HfSP-7X-xTVkI';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let uploadedPhotos = []; // Array of {file, dataUrl}
@@ -4927,11 +4926,13 @@
     var locationEnc = encodeURIComponent(locationStr);
 
     // Satellite aerial — zoom 17 (wider view showing surroundings), full width, 600x400
-    mapSat.src = 'https://maps.googleapis.com/maps/api/staticmap' +
+    // Routed through maps-proxy.js (same-origin) rather than calling Google
+    // directly — avoids needing any Google Maps key client-side here, and
+    // matches the pattern already used for the printable report's map images.
+    mapSat.src = '/.netlify/functions/maps-proxy' +
       '?center=' + locationEnc +
       '&zoom=17&size=640x400&maptype=hybrid&scale=2' +
-      '&markers=color:red%7Clabel:P%7C' + locationEnc +
-      '&key=' + GMAPS_KEY;
+      '&markers=' + encodeURIComponent('color:red|label:P|' + locationStr);
     mapSat.onerror = function() {
       mapSat.style.display = 'none';
     };
@@ -4943,13 +4944,13 @@
       : 'Use satellite view to estimate building footprint and surrounding exposures';
 
     // Google Street View Static API — 640x400, heading auto (Google picks best angle)
+    // Also routed through maps-proxy.js — see note above.
     if (mapStreetView) {
-      mapStreetView.src = 'https://maps.googleapis.com/maps/api/streetview' +
+      mapStreetView.src = '/.netlify/functions/maps-proxy' +
         '?size=640x400&scale=2' +
         '&location=' + locationEnc +
         '&fov=90&pitch=5' +
-        '&source=outdoor' +
-        '&key=' + GMAPS_KEY;
+        '&source=outdoor';
       mapStreetView.onerror = function() {
         // Street View not available for this location
         mapStreetView.style.display = 'none';
