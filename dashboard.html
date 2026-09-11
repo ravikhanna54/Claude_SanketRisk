@@ -534,7 +534,7 @@
       const isAdmin = currentUserRole === 'admin';
       let query = _supabase
         .from('inspections')
-        .select('id,inspection_id,insured_name,city,province_state,occupancy_class,inspector_name,user_id,report_status,report_published,inspection_date,updated_at,qa_reviewer,form_data,report_pdf_path,report_format,report_generated_at')
+        .select('id,inspection_id,insured_name,location,city,province_state,occupancy_class,inspector_name,user_id,report_status,report_published,inspection_date,updated_at,qa_reviewer,form_data,report_pdf_path,report_format,report_generated_at')
         .order('updated_at', { ascending: false })
         .limit(300);
       if (isAdmin) {
@@ -655,7 +655,7 @@
             : '';
           return '<tr onclick="openInspection(\'' + r.id + '\')">' +
             '<td class="td-id">' + (r.inspection_id || r.id?.substring(0,8) || '—') + '</td>' +
-            '<td><div class="td-name">' + (r.insured_name || '—') + '</div><div class="td-sub">' + ([r.city, r.province_state].filter(Boolean).join(', ') || r.occupancy_class || '') + '</div></td>' +
+            '<td><div class="td-name">' + (r.insured_name || '—') + '</div><div class="td-sub">' + ([r.location, r.city, r.province_state].filter(Boolean).join(', ') || r.occupancy_class || '') + '</div></td>' +
             '<td style="font-size:12px;color:var(--slate);">' + formatDate(r.inspection_date) + '</td>' +
             '<td><span class="status-badge ' + statusClass + '">' + statusLabel + '</span></td>' +
             adminCell +
