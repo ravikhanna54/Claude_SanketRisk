@@ -26,7 +26,10 @@ exports.handler = async function(event) {
 
   try {
     // ── CONFIG ──
-    const GOOGLE_MAPS_API_KEY = 'AIzaSyDAHNS9_C-NLzVhAUDhD9HfSP-7X-xTVkI';
+    const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+    if (!GOOGLE_MAPS_API_KEY) {
+      return { statusCode: 500, headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'GOOGLE_MAPS_API_KEY env var not set' }) };
+    }
 
     const q = event.queryStringParameters || {};
     const size = q.size || '640x420';
