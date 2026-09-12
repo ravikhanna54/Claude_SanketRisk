@@ -103,14 +103,23 @@ exports.handler = async function (event) {
     const usgsResp = await fetch(usgsUrl);
     const usgsData = await usgsResp.json();
 
-    if (!usgsData.request || usgsData.request.status !== 'success' || !usgsData.data) {
+    // USGS's own documentation is inconsistent about the exact response
+    // shape for this endpoint (flat {request,data} vs nested
+    // {request,response:{data}}) — handle both rather than guess again.
+    const reqStatus = usgsData.request && usgsData.request.status;
+    const d = usgsData.data || (usgsData.response && usgsData.response.data);
+
+    if (reqStatus !== 'success' || !d) {
+      console.error('USGS raw response (unrecognized shape):', JSON.stringify(usgsData).substring(0, 2000));
       return {
         statusCode: 502, headers: CORS,
-        body: JSON.stringify({ error: 'USGS design maps service did not return a valid result', usgs_status: (usgsData.request && usgsData.request.status) || null }),
+        body: JSON.stringify({
+          error: 'USGS design maps service did not return a valid result',
+          usgs_status: reqStatus || null,
+          usgs_top_level_keys: Object.keys(usgsData || {}),
+        }),
       };
     }
-
-    const d = usgsData.data;
 
     return {
       statusCode: 200, headers: CORS,
