@@ -3955,6 +3955,37 @@
         </div>
         <input id="usa-cdd-json" type="hidden">
         <div style="font-size:12px;color:#8a8472;margin-top:6px;">Source: USGS Earthquake Hazards Program, Design Ground Motions web service (ASCE 7-22). Values are probabilistic estimates for the resolved coordinate and declared Site Class/Risk Category — not a substitute for a site-specific seismic hazard study or a licensed engineer's determination. Seismic tier is SanketRisk's own Low/Moderate/High/Very High bucketing of the Seismic Design Category, for consistency with the demerit-weighting below.</div>
+
+        <div style="border-top:1px solid #e5e0d0;margin:18px 0 14px;"></div>
+        <div class="form-grid">
+          <div class="field">
+            <label>&nbsp;</label>
+            <button type="button" class="btn-secondary" id="usa-flood-lookup-btn" onclick="natcatUsaFloodLookup()">🔍 Look Up Flood Zone</button>
+          </div>
+        </div>
+        <div class="form-grid cdd-value-grid">
+          <div class="field"><label>FEMA Flood Zone</label><input id="usa-flood-zone" type="text" readonly></div>
+          <div class="field"><label>Zone Subtype</label><input id="usa-flood-subtype" type="text" readonly></div>
+          <div class="field"><label>Special Flood Hazard Area (SFHA)</label><input id="usa-flood-sfha" type="text" readonly></div>
+          <div class="field form-full"><label>Description</label><input id="usa-flood-description" type="text" readonly></div>
+        </div>
+        <input id="usa-flood-json" type="hidden">
+        <div style="font-size:12px;color:#8a8472;margin-top:6px;">Source: FEMA National Flood Hazard Layer (NFHL). Coverage is not complete for every US location — a blank result may mean data isn't yet digitized for this address, not that risk is minimal.</div>
+
+        <div style="border-top:1px solid #e5e0d0;margin:18px 0 14px;"></div>
+        <div class="form-grid">
+          <div class="field">
+            <label>&nbsp;</label>
+            <button type="button" class="btn-secondary" id="usa-rain-lookup-btn" onclick="natcatUsaRainLookup()">🔍 Look Up Rainfall Data</button>
+          </div>
+        </div>
+        <div class="form-grid cdd-value-grid">
+          <div class="field"><label>15-min Rain, 1/50 (in)</label><input id="usa-rain-15min" type="text" readonly></div>
+          <div class="field"><label>1-Hour Rain, 1/50 (in)</label><input id="usa-rain-1hr" type="text" readonly></div>
+          <div class="field"><label>24-Hour Rain, 1/50 (in)</label><input id="usa-rain-24hr" type="text" readonly></div>
+        </div>
+        <input id="usa-rain-json" type="hidden">
+        <div style="font-size:12px;color:#8a8472;margin-top:6px;">Source: NOAA Atlas 14 — Precipitation Frequency Data Server (PFDS), 1-in-50-year return period. NOAA does not publish an annual-precipitation figure through this service — that field has no automated USA equivalent.</div>
         </div>
         <!-- END USA PANEL -->
       </div>
@@ -8853,7 +8884,7 @@
   // your Netlify domain, and restricted to only the Maps Embed API (the
   // API actually used below). Paste that key here, replacing the
   // placeholder — until then, the map iframe below stays disabled.
-  const GOOGLE_MAPS_API_KEY = 'AIzaSyBk36S14deL7sDw-WN4joVQ7jXBMRwFm3c';
+  const GOOGLE_MAPS_API_KEY = 'PASTE_YOUR_PUBLIC_MAPS_EMBED_KEY_HERE';
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const HEADERS = {
@@ -9040,6 +9071,89 @@
       if (btn) { btn.disabled = false; btn.textContent = btnOrigText; }
     }
   }
+
+  // Shared by the flood/rain lookups below — reuses whatever address the
+  // seismic lookup already used, then falls back to the property address,
+  // matching natcatUsaLookup()'s own fallback so the inspector only has to
+  // type an address once for all three USA lookups.
+  function usaLookupAddress() {
+    var addrEl = document.getElementById('usa-cdd-address');
+    var address = (addrEl ? addrEl.value : '').trim();
+    if (!address) {
+      var parts = [get('street-address'), get('city'), get('province'), get('postal-code')].filter(Boolean);
+      address = parts.join(', ');
+      if (addrEl) addrEl.value = address;
+    }
+    return address;
+  }
+
+  async function natcatUsaFloodLookup() {
+    var address = usaLookupAddress();
+    if (!address) { showToast('⚠ Enter an address to look up flood zone data', 'warn'); return; }
+
+    var btn = document.getElementById('usa-flood-lookup-btn');
+    var btnOrigText = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Looking up…'; }
+
+    try {
+      var resp = await fetch('/.netlify/functions/natcat-usa-flood-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: address })
+      });
+      var data = await resp.json();
+      if (!resp.ok || data.status !== 'ok') throw new Error(data.error || 'Lookup failed');
+
+      var set = function(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.value = (val === null || val === undefined) ? '' : String(val);
+      };
+      set('usa-flood-zone', data.flood_zone);
+      set('usa-flood-subtype', data.flood_zone_subtype);
+      set('usa-flood-sfha', data.in_special_flood_hazard_area === null ? '' : (data.in_special_flood_hazard_area ? 'Yes' : 'No'));
+      set('usa-flood-description', data.description);
+      set('usa-flood-json', JSON.stringify(data));
+      showToast(data.flood_zone ? '✓ Flood zone data retrieved from FEMA' : '⚠ No FEMA flood data available for this location', data.flood_zone ? undefined : 'warn');
+    } catch (e) {
+      showToast('⚠ ' + e.message, 'warn');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = btnOrigText; }
+    }
+  }
+
+  async function natcatUsaRainLookup() {
+    var address = usaLookupAddress();
+    if (!address) { showToast('⚠ Enter an address to look up rainfall data', 'warn'); return; }
+
+    var btn = document.getElementById('usa-rain-lookup-btn');
+    var btnOrigText = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Looking up…'; }
+
+    try {
+      var resp = await fetch('/.netlify/functions/natcat-usa-rain-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: address })
+      });
+      var data = await resp.json();
+      if (!resp.ok || data.status !== 'ok') throw new Error(data.error || 'Lookup failed');
+
+      var set = function(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.value = (val === null || val === undefined) ? '' : String(val);
+      };
+      set('usa-rain-15min', data.rain_15min_in);
+      set('usa-rain-1hr', data.rain_1hr_in);
+      set('usa-rain-24hr', data.rain_24hr_in);
+      set('usa-rain-json', JSON.stringify(data));
+      showToast(data.rain_24hr_in !== null ? '✓ Rainfall data retrieved from NOAA' : '⚠ No NOAA Atlas 14 data available for this location', data.rain_24hr_in !== null ? undefined : 'warn');
+    } catch (e) {
+      showToast('⚠ ' + e.message, 'warn');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = btnOrigText; }
+    }
+  }
+
   // ── Header Reports dropdown ──
   // Renders a full report HTML string to a paginated PDF (offscreen, independent
   // of whatever tab/window is shown to the inspector) and stores it in Supabase
