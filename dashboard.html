@@ -118,6 +118,7 @@
     <div class="nav-right">
       <span class="nav-user">Signed in as <strong id="nav-name">—</strong></span>
       <span class="role-pill" id="nav-role-pill">inspector</span>
+      <button class="btn-signout" id="nav-analytics-link" onclick="window.location.href='/analytics.html'" style="display:none;border-color:rgba(201,168,76,.4);color:var(--gold);">📊 Analytics</button>
       <button class="btn-signout" onclick="window.location.href='/backup.html'" id="btn-backup" style="display:none;border-color:rgba(201,168,76,.4);color:var(--gold);">💾 Backup</button>
       <button class="btn-signout" onclick="signOut()">Sign Out</button>
     </div>
@@ -507,7 +508,7 @@
       const { data: { session } } = await _supabase.auth.getSession();
       if (!session) { window.location.replace('/login.html'); return; }
       currentUser = session.user;
-      const { data: profiles } = await _supabase.from('profiles').select('role, full_name').eq('id', currentUser.id);
+      const { data: profiles } = await _supabase.from('profiles').select('role, full_name, analytics_access').eq('id', currentUser.id);
       currentUserRole = profiles?.[0]?.role || 'inspector';
       currentUserName = profiles?.[0]?.full_name || currentUser.email.split('@')[0];
       document.getElementById('nav-name').textContent = currentUserName;
@@ -526,6 +527,12 @@
         document.getElementById('admin-tabs').style.display = 'inline';
         document.getElementById('btn-backup').style.display = 'inline-block';
         document.getElementById('btn-scan-one').style.display = 'inline-block';
+      }
+      // Analytics access is a separate flag from admin — deliberately, since
+      // admin includes clerical staff who shouldn't see portfolio analytics.
+      if (profiles?.[0]?.analytics_access) {
+        var analyticsLink = document.getElementById('nav-analytics-link');
+        if (analyticsLink) analyticsLink.style.display = 'inline-block';
       }
       Promise.all([loadReviewers(), loadInspectors()]).then(function(){ loadInspections(); });
     }
