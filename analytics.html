@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SanketRisk — AI Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { --navy:#0d1b2a; --gold:#e2c97e; --gold-pale:#f5ecd4; --slate:#4a6580; --slate-light:#8a9bb0; --border:#d8d0c0; --green:#276749; --red:#c53030; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'IBM Plex Sans',sans-serif; background:#f7f4ed; color:var(--navy); }
+  header { background:var(--navy); color:#fff; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; }
+  header .brand { font-family:'Playfair Display',serif; font-weight:700; font-size:18px; display:flex; align-items:center; gap:10px; }
+  header .brand .tag { font-family:'IBM Plex Mono',monospace; font-size:9px; background:var(--gold); color:var(--navy); padding:2px 8px; border-radius:8px; font-weight:700; letter-spacing:.05em; }
+  header a.back { color:var(--gold); text-decoration:none; font-size:13px; font-weight:600; }
+  main { max-width:960px; margin:0 auto; padding:32px 20px 60px; }
+  .gate { text-align:center; padding:80px 20px; color:var(--slate); }
+  .ask-card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:24px; margin-bottom:24px; }
+  .ask-row { display:flex; gap:10px; }
+  #question { flex:1; padding:12px 14px; font-size:14px; font-family:inherit; border:1.5px solid var(--border); border-radius:8px; }
+  #ask-btn { padding:12px 22px; font-size:14px; font-weight:700; background:var(--navy); color:var(--gold); border:none; border-radius:8px; cursor:pointer; white-space:nowrap; }
+  #ask-btn:disabled { opacity:.5; cursor:not-allowed; }
+  .examples { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
+  .example-chip { font-size:12px; background:var(--gold-pale); color:var(--navy); padding:5px 12px; border-radius:14px; cursor:pointer; border:none; }
+  .example-chip:hover { background:var(--gold); }
+  .result-card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:24px; margin-bottom:20px; }
+  .narrative { background:var(--gold-pale); border-left:4px solid var(--gold); padding:14px 18px; border-radius:6px; font-size:15px; line-height:1.6; margin-bottom:18px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { background:#f0f2f5; text-align:left; padding:8px 12px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--slate); border-bottom:1px solid var(--border); white-space:nowrap; }
+  td { padding:8px 12px; border-bottom:1px solid #f0f0f0; }
+  .row-count { font-size:12px; color:var(--slate-light); margin-top:8px; }
+  details { margin-top:14px; font-size:12px; color:var(--slate); }
+  details pre { background:var(--navy); color:var(--gold); padding:12px; border-radius:6px; overflow-x:auto; font-size:11px; }
+  .error-box { background:#fee2e2; border-left:4px solid var(--red); color:#742a2a; padding:14px 18px; border-radius:6px; font-size:14px; }
+  .clarify-box { background:#ebf4ff; border-left:4px solid #3182ce; color:#2c5282; padding:14px 18px; border-radius:6px; font-size:14px; }
+  .loading { color:var(--slate-light); font-size:14px; padding:20px 0; }
+  .bar-chart { margin:6px 0 18px; }
+  .bar-row { display:flex; align-items:center; gap:10px; margin-bottom:6px; font-size:12px; }
+  .bar-label { width:180px; text-align:right; color:var(--slate); flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bar-track { flex:1; background:#f0f2f5; border-radius:4px; height:20px; overflow:hidden; }
+  .bar-fill { background:linear-gradient(90deg,var(--navy),var(--slate)); height:100%; border-radius:4px; }
+  .bar-value { width:50px; font-weight:600; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">🧭 SanketRisk <span class="tag">AI ANALYTICS</span></div>
+    <a class="back" href="/dashboard.html">← Back to Dashboard</a>
+  </header>
+
+  <main>
+    <div id="gate-wrap" class="gate">Checking access…</div>
+
+    <div id="app-wrap" style="display:none;">
+      <div class="ask-card">
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px;">Ask a question about your portfolio</div>
+        <div style="font-size:13px;color:var(--slate);margin-bottom:14px;">Answers combine an AI-generated summary with the actual underlying data — every query is read-only and restricted to SCAN ONE submissions, manual inspections, and inspection requests.</div>
+        <div class="ask-row">
+          <input id="question" type="text" placeholder="e.g. Which occupancy classes had the most sprinkler deficiencies last quarter?" onkeydown="if(event.key==='Enter')askQuestion()">
+          <button id="ask-btn" onclick="askQuestion()">Ask</button>
+        </div>
+        <div class="examples">
+          <button class="example-chip" onclick="setQuestion(this)">Average COPE score by province</button>
+          <button class="example-chip" onclick="setQuestion(this)">How many inspection requests are still unassigned?</button>
+          <button class="example-chip" onclick="setQuestion(this)">Which inspector has the most completed inspections?</button>
+          <button class="example-chip" onclick="setQuestion(this)">Occupancy classes with the lowest average protection score</button>
+        </div>
+      </div>
+
+      <div id="results-wrap"></div>
+    </div>
+  </main>
+
+<script>
+  const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  let _accessToken = null;
+
+  function setQuestion(btn) {
+    document.getElementById('question').value = btn.textContent;
+    askQuestion();
+  }
+
+  function escapeHtml(v) {
+    if (v === null || v === undefined) return '';
+    return String(v).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  // If the result looks like a simple category+number pair, render a bar
+  // chart above the table — purely a convenience view, the table is
+  // always shown too since it's the actual data.
+  function maybeBarChart(columns, rows) {
+    if (columns.length !== 2 || rows.length < 2 || rows.length > 20) return '';
+    const numCol = columns.find(function(c, i) { return rows.every(function(r) { return typeof r[c] === 'number' || !isNaN(parseFloat(r[c])); }); });
+    const labelCol = columns.find(function(c) { return c !== numCol; });
+    if (!numCol || !labelCol) return '';
+    const vals = rows.map(function(r) { return parseFloat(r[numCol]) || 0; });
+    const max = Math.max.apply(null, vals);
+    if (max <= 0) return '';
+    return '<div class="bar-chart">' + rows.map(function(r) {
+      const v = parseFloat(r[numCol]) || 0;
+      const pct = Math.max(2, Math.round((v / max) * 100));
+      return '<div class="bar-row"><div class="bar-label">' + escapeHtml(r[labelCol]) + '</div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="bar-value">' + escapeHtml(r[numCol]) + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  async function askQuestion() {
+    const q = document.getElementById('question').value.trim();
+    if (!q) return;
+    const btn = document.getElementById('ask-btn');
+    const wrap = document.getElementById('results-wrap');
+    btn.disabled = true; btn.textContent = 'Thinking…';
+    wrap.innerHTML = '<div class="loading">⏳ Translating your question, running the query, and summarizing the result…</div>';
+
+    try {
+      const resp = await fetch('/.netlify/functions/analytics-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _accessToken },
+        body: JSON.stringify({ question: q }),
+      });
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        wrap.innerHTML = '<div class="result-card"><div class="error-box">⚠ ' + escapeHtml(data.error || 'Something went wrong') + '</div></div>';
+        return;
+      }
+      if (data.status === 'clarify') {
+        wrap.innerHTML = '<div class="result-card"><div class="clarify-box">🤔 ' + escapeHtml(data.question) + '</div></div>';
+        return;
+      }
+
+      const chart = maybeBarChart(data.columns, data.rows);
+      const tableHtml = data.rows.length
+        ? '<table><thead><tr>' + data.columns.map(function(c) { return '<th>' + escapeHtml(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+          data.rows.map(function(r) { return '<tr>' + data.columns.map(function(c) { return '<td>' + escapeHtml(r[c]) + '</td>'; }).join('') + '</tr>'; }).join('') +
+          '</tbody></table>'
+        : '<div style="color:var(--slate-light);font-size:13px;">No rows matched this query.</div>';
+
+      wrap.innerHTML = '<div class="result-card">' +
+        '<div class="narrative">💡 ' + escapeHtml(data.narrative) + '</div>' +
+        chart + tableHtml +
+        '<div class="row-count">' + data.row_count + ' row' + (data.row_count !== 1 ? 's' : '') + ' · queried by ' + escapeHtml(data.queried_by) + '</div>' +
+        '<details><summary>View generated SQL</summary><pre>' + escapeHtml(data.sql) + '</pre></details>' +
+        '</div>';
+
+    } catch (e) {
+      wrap.innerHTML = '<div class="result-card"><div class="error-box">⚠ ' + escapeHtml(e.message) + '</div></div>';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Ask';
+    }
+  }
+
+  (async function init() {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) { window.location.replace('/login.html'); return; }
+    _accessToken = session.access_token;
+
+    const { data: profiles } = await _supabase.from('profiles').select('analytics_access, full_name').eq('id', session.user.id);
+    const profile = profiles && profiles[0];
+
+    if (!profile || !profile.analytics_access) {
+      document.getElementById('gate-wrap').innerHTML =
+        '<div style="font-size:40px;margin-bottom:12px;">🔒</div>' +
+        '<div style="font-size:16px;font-weight:600;color:var(--navy);margin-bottom:6px;">Analytics access is not enabled for your account</div>' +
+        '<div style="font-size:13px;">Contact an administrator if you believe you should have access.</div>';
+      return;
+    }
+
+    document.getElementById('gate-wrap').style.display = 'none';
+    document.getElementById('app-wrap').style.display = 'block';
+  })();
+</script>
+</body>
+</html>
