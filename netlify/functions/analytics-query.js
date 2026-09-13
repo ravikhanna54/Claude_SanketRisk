@@ -139,8 +139,18 @@ async function callClaude(system, userMsg, maxTokens) {
     }),
   });
   const data = await resp.json();
-  if (data.error) throw new Error('Anthropic API: ' + data.error.message);
-  return data.content[0].text;
+
+  if (!resp.ok || data.error) {
+    console.error('Anthropic API error response:', resp.status, JSON.stringify(data).substring(0, 1000));
+    throw new Error('Anthropic API error (' + resp.status + '): ' + (data.error ? data.error.message : 'unrecognized response — see function log for details'));
+  }
+
+  const textBlock = Array.isArray(data.content) && data.content.find(function(b) { return b.type === 'text'; });
+  if (!textBlock || typeof textBlock.text !== 'string') {
+    console.error('Anthropic API returned no usable text block:', JSON.stringify(data).substring(0, 1000));
+    throw new Error('Anthropic API returned an unexpected response shape — see function log for the full response');
+  }
+  return textBlock.text;
 }
 
 exports.handler = async function (event) {
