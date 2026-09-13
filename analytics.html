@@ -41,6 +41,20 @@
   .bar-track { flex:1; background:#f0f2f5; border-radius:4px; height:20px; overflow:hidden; }
   .bar-fill { background:linear-gradient(90deg,var(--navy),var(--slate)); height:100%; border-radius:4px; }
   .bar-value { width:50px; font-weight:600; }
+  .card-actions { display:flex; gap:8px; margin-top:16px; }
+  .card-actions button { font-size:12px; font-weight:600; padding:7px 14px; border-radius:6px; cursor:pointer; border:1px solid var(--border); background:#fff; color:var(--navy); }
+  .card-actions button:hover { background:var(--gold-pale); }
+  .print-header { display:none; }
+  @media print {
+    header, .ask-card, #question, .card-actions, details { display:none !important; }
+    body { background:#fff; }
+    main { max-width:100%; padding:0; }
+    .result-card { border:none; box-shadow:none; padding:0; page-break-inside:avoid; }
+    .print-header { display:block; margin-bottom:16px; border-bottom:2px solid var(--navy); padding-bottom:10px; }
+    .print-header .brand { font-family:'Playfair Display',serif; font-weight:700; font-size:18px; color:var(--navy); }
+    .print-header .meta { font-size:11px; color:var(--slate); margin-top:4px; }
+    table { font-size:11px; }
+  }
 </style>
 </head>
 <body>
@@ -77,10 +91,37 @@
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   let _accessToken = null;
+  let _lastResult = null;
 
   function setQuestion(btn) {
     document.getElementById('question').value = btn.textContent;
     askQuestion();
+  }
+
+  function csvEscape(v) {
+    if (v === null || v === undefined) return '';
+    var s = String(v);
+    if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function exportCsv() {
+    if (!_lastResult || !_lastResult.rows.length) return;
+    var cols = _lastResult.columns;
+    var lines = [cols.map(csvEscape).join(',')];
+    _lastResult.rows.forEach(function(r) {
+      lines.push(cols.map(function(c) { return csvEscape(r[c]); }).join(','));
+    });
+    var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = 'sanketrisk-analytics-' + stamp + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   function escapeHtml(v) {
@@ -142,11 +183,19 @@
           '</tbody></table>'
         : '<div style="color:var(--slate-light);font-size:13px;">No rows matched this query.</div>';
 
+      _lastResult = data; // used by exportCsv()
+
       wrap.innerHTML = '<div class="result-card">' +
+        '<div class="print-header"><div class="brand">🧭 SanketRisk — AI Analytics</div>' +
+          '<div class="meta">' + escapeHtml(data.question) + ' · ' + new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'}) + ' · queried by ' + escapeHtml(data.queried_by) + '</div></div>' +
         '<div class="narrative">💡 ' + escapeHtml(data.narrative) + '</div>' +
         chart + tableHtml +
         '<div class="row-count">' + data.row_count + ' row' + (data.row_count !== 1 ? 's' : '') + ' · queried by ' + escapeHtml(data.queried_by) + '</div>' +
         '<details><summary>View generated SQL</summary><pre>' + escapeHtml(data.sql) + '</pre></details>' +
+        '<div class="card-actions">' +
+          '<button onclick="window.print()">🖨️ Print / Save PDF</button>' +
+          (data.rows.length ? '<button onclick="exportCsv()">⬇ Export CSV</button>' : '') +
+        '</div>' +
         '</div>';
 
     } catch (e) {
