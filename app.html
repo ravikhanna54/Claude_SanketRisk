@@ -1894,6 +1894,7 @@
           <div class="field form-full"><div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Exterior Wall Construction</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100% across all wall types.</div><div id="wall-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Wood Frame</option><option>Brick / Masonry</option><option>Concrete Block (CMU)</option><option>Tilt-Up Concrete</option><option>Precast Concrete</option><option>Steel / Metal Panel</option><option>EIFS / Stucco</option><option>Glass Curtainwall</option><option>Mixed / Other</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('wall-pct-rows','wall')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Exterior Wall Construction</button></div></div>
           <div class="field form-full"><div style="margin-bottom:0;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Exterior Wall Finish</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100% across all exterior wall finish types.</div><div id="ext-finish-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Brick — Standard</option><option>Brick — Face / Decorative</option><option>Stone — Natural</option><option>Stone — Simulated / Manufactured</option><option>Stucco / EIFS</option><option>Glass Curtainwall</option><option>Architectural Precast Concrete</option><option>Exposed Concrete</option><option>Metal Cladding / Composite Panel</option><option>Vinyl Siding</option><option>Wood Siding</option><option>Fibre Cement Board</option><option>GFRC Panel</option><option>Other</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('ext-finish-pct-rows','extfinish')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Exterior Wall Finish</button></div></div>
           <div class="field form-full"><div style="margin-bottom:0;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Structural Frame</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100%.</div><div id="frame-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Wood Frame</option><option>Steel Frame</option><option>Reinforced Concrete</option><option>Load-Bearing Masonry</option><option>Pre-Engineered Metal</option><option>Hybrid / Mixed</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('frame-pct-rows','frame')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Structural Frame</button></div></div>
+          <div class="field form-full"><div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Floor Construction</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100% across all floor levels.</div><div id="floor-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Concrete Slab on Grade</option><option>Concrete — Elevated / Suspended</option><option>Precast Concrete Plank</option><option>Steel Deck with Concrete Topping</option><option>Wood Frame / Joist</option><option>Raised Access Floor</option><option>Other</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('floor-pct-rows','floor')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Floor Construction</button></div></div>
         </div>
       </div>
       <div class="card">
@@ -9377,7 +9378,7 @@
     };
     // Collect pct-row tables (wall, roof, heating, AC, etc.)
     var pctRows = {};
-    var pctContainerIds = ['wall-pct-rows', 'frame-pct-rows', 'rooftype-pct-rows', 'roof-pct-rows', 'deck-pct-rows', 'heat-pct-rows', 'ac-pct-rows', 'ext-finish-pct-rows', 'iso-pct-rows', 'bsmt-use-pct-rows'];
+    var pctContainerIds = ['wall-pct-rows', 'frame-pct-rows', 'floor-pct-rows', 'rooftype-pct-rows', 'roof-pct-rows', 'deck-pct-rows', 'heat-pct-rows', 'ac-pct-rows', 'ext-finish-pct-rows', 'iso-pct-rows', 'bsmt-use-pct-rows'];
     pctContainerIds.forEach(function(cid) {
       var container = document.getElementById(cid);
       if (!container) return;
@@ -10477,7 +10478,7 @@
         while (container.querySelectorAll('.pct-row').length < rows.length) {
           // Determine type from container id
           var typeMap = {
-            'wall-pct-rows':'wall','frame-pct-rows':'frame','rooftype-pct-rows':'rooftype',
+            'wall-pct-rows':'wall','frame-pct-rows':'frame','floor-pct-rows':'floor','rooftype-pct-rows':'rooftype',
             'roof-pct-rows':'roof','deck-pct-rows':'deck','heat-pct-rows':'heat',
             'ac-pct-rows':'ac','ext-finish-pct-rows':'extfinish',
             'iso-pct-rows':'isoclass','bsmt-use-pct-rows':'bsmtuse'
@@ -13339,6 +13340,7 @@
     heat:  ['Gas Forced Air (Furnace)','Boiler — Hot Water','Boiler — Steam','Rooftop Unit (RTU) — Gas','Electric Baseboard','Radiant In-Floor','Heat Pump','District / Central Plant','Wood / Pellet','None','Other'],
     ac:    ['Central Air — Split System','Rooftop Unit (RTU)','Chilled Water System','Variable Refrigerant Flow (VRF)','Window / Packaged Terminal (PTAC)','Evaporative Cooling','Heat Pump','District / Central Plant','None','Other'],
     frame:    ['Wood Frame','Steel Frame','Reinforced Concrete','Load-Bearing Masonry','Pre-Engineered Metal','Hybrid / Mixed'],
+    floor:    ['Concrete Slab on Grade','Concrete — Elevated / Suspended','Precast Concrete Plank','Steel Deck with Concrete Topping','Wood Frame / Joist','Raised Access Floor','Other'],
     rooftype: ['Flat / Low Slope','Gable','Hip','Gambrel','Shed / Mono-Slope','Sawtooth / Industrial','Curved / Barrel'],
     deck:     ['Steel / Metal Deck','Wood / Plywood','Concrete — Poured','Concrete — Precast','Insulated Metal Panel (IMP)','Cementitious Wood Fibre'],
     extfinish:['Brick — Standard','Brick — Face / Decorative','Stone — Natural','Stone — Simulated / Manufactured','Stucco / EIFS','Glass Curtainwall','Architectural Precast Concrete','Exposed Concrete','Metal Cladding / Composite Panel','Vinyl Siding','Wood Siding','Fibre Cement Board','GFRC Panel','Other'],
@@ -13700,7 +13702,7 @@
 <script>
 // ── NARRATIVE REPORT GENERATOR ──
 // Uses Anthropic API to generate a professional written narrative inspection report
-function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,insuredName,inspId,inspDate,city,province,occupancy,inspName,riskQuality,uwRec,execSummary,yearBuilt,stories,totalArea,constructClass,extWall,extFinish,structFrame,roofType,roofCovering,roofDeck,roofYear,electrical,heating,constNotes,occupancyDesc,hazardNotes,sprinklerCoverage,sprinklerType,sprinklerCond,fireAlarm,extPresent,fusDistance,fusDeptType,fusGrade,security,protNotes,northExp,southExp,eastExp,westExp,expRating,floodZone,earthquake,expNotes,totalLosses,totalIncurred,primaryCause,lossComments,safetyText,recText) {
+function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,insuredName,inspId,inspDate,city,province,occupancy,inspName,riskQuality,uwRec,execSummary,yearBuilt,stories,totalArea,constructClass,extWall,extFinish,structFrame,floorConstruction,roofType,roofCovering,roofDeck,roofYear,electrical,heating,constNotes,occupancyDesc,hazardNotes,sprinklerCoverage,sprinklerType,sprinklerCond,fireAlarm,extPresent,fusDistance,fusDeptType,fusGrade,security,protNotes,northExp,southExp,eastExp,westExp,expRating,floodZone,earthquake,expNotes,totalLosses,totalIncurred,primaryCause,lossComments,safetyText,recText) {
   function fmt(v) { return (v && v !== '\u2014') ? v : null; }
   var loc = city && province ? city + ', ' + province : (city || province || 'the subject location');
   var recItems = d.rec_items || [];
@@ -13727,6 +13729,7 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   if (fmt(extWall)) s2 += 'Exterior wall construction consists of ' + String(extWall) + '. ';
   if (fmt(extFinish)) s2 += 'The exterior wall finish is ' + String(extFinish) + '. ';
   if (fmt(structFrame)) s2 += 'The structural frame is ' + String(structFrame) + '. ';
+  if (fmt(floorConstruction)) s2 += 'Floor construction consists of ' + String(floorConstruction) + '. ';
   if (fmt(constNotes)) s2 += constNotes + ' ';
   s2 += NL;
   s2 += 'The roof ';
@@ -13998,6 +14001,7 @@ async function generateNarrativeReport() {
   const extWall     = pctRowSummary(d.pct_rows, 'wall-pct-rows') || (pills['exterior_wall_construction'] || []).join(', ') || '—';
   const extFinish   = pctRowSummary(d.pct_rows, 'ext-finish-pct-rows') || '—';
   const structFrame = pctRowSummary(d.pct_rows, 'frame-pct-rows') || '—';
+  const floorConstruction = pctRowSummary(d.pct_rows, 'floor-pct-rows') || '—';
   const roofDeck    = pctRowSummary(d.pct_rows, 'deck-pct-rows') || '—';
   const roofType    = pctRowSummary(d.pct_rows, 'rooftype-pct-rows') || '—';
   const roofCovering  = pctRowSummary(d.pct_rows, 'roof-pct-rows') || '—';
@@ -14153,7 +14157,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
     var narrativeText = generateNarrativeText(d, g, ratings, pills, scoreC, scoreP, scoreS, scoreO,
       insuredName, inspId, inspDate, city, province, occupancy, inspName,
       riskQuality, uwRec, execSummary, yearBuilt, stories, totalArea,
-      constructClass, extWall, extFinish, structFrame, roofType, roofCovering, roofDeck, roofYear,
+      constructClass, extWall, extFinish, structFrame, floorConstruction, roofType, roofCovering, roofDeck, roofYear,
       electrical, heating, constNotes, occupancyDesc, hazardNotes,
       sprinklerCoverage, sprinklerType, sprinklerCond, fireAlarm,
       extPresent, fusDistance, fusDeptType, fusGrade, security, protNotes,
@@ -15706,6 +15710,10 @@ function generateFormalReport() {
     <div class="field-block field-full" style="margin-top:10px;">
       <div class="field-label">Structural Frame</div>
       <div class="pct-items">${pctTable('frame-pct-rows')}</div>
+    </div>
+    <div class="field-block field-full" style="margin-top:10px;">
+      <div class="field-label">Floor Construction</div>
+      <div class="pct-items">${pctTable('floor-pct-rows')}</div>
     </div>
     <hr class="sec-divider">
     <div class="sub-heading">Roof</div>
