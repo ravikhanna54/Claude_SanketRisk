@@ -45,8 +45,20 @@
   .card-actions button { font-size:12px; font-weight:600; padding:7px 14px; border-radius:6px; cursor:pointer; border:1px solid var(--border); background:#fff; color:var(--navy); }
   .card-actions button:hover { background:var(--gold-pale); }
   .print-header { display:none; }
+  .overview-card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:24px; margin-bottom:24px; }
+  .overview-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .overview-head .title { font-weight:700; font-size:16px; }
+  .overview-head button { font-size:12px; font-weight:600; padding:6px 12px; border-radius:6px; cursor:pointer; border:1px solid var(--border); background:#fff; color:var(--navy); }
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
+  .kpi-tile { background:var(--gold-pale); border-radius:10px; padding:16px; text-align:center; }
+  .kpi-num { font-size:28px; font-weight:700; color:var(--navy); font-family:'IBM Plex Mono',monospace; }
+  .kpi-label { font-size:11px; color:var(--slate); text-transform:uppercase; letter-spacing:.05em; margin-top:4px; }
+  .breakdown-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:20px; }
+  @media (max-width:700px) { .breakdown-grid { grid-template-columns:1fr; } }
+  .breakdown-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--slate); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:6px; }
+  .score-scale-note { font-size:11px; color:var(--slate-light); margin-top:6px; font-style:italic; }
   @media print {
-    header, .ask-card, #question, .card-actions, details { display:none !important; }
+    header, .ask-card, #question, .card-actions, details, .overview-card { display:none !important; }
     body { background:#fff; }
     main { max-width:100%; padding:0; }
     .result-card { border:none; box-shadow:none; padding:0; page-break-inside:avoid; }
@@ -67,6 +79,14 @@
     <div id="gate-wrap" class="gate">Checking access…</div>
 
     <div id="app-wrap" style="display:none;">
+      <div class="overview-card">
+        <div class="overview-head">
+          <div class="title">📋 Portfolio Overview <span style="font-weight:400;font-size:12px;color:var(--slate-light);">— ground-truth reference data, no AI involved</span></div>
+          <button onclick="loadOverview()">🔄 Refresh</button>
+        </div>
+        <div id="overview-body"><div class="loading">⏳ Loading portfolio overview…</div></div>
+      </div>
+
       <div class="ask-card">
         <div style="font-weight:700;font-size:16px;margin-bottom:4px;">Ask a question about your portfolio</div>
         <div style="font-size:13px;color:var(--slate);margin-bottom:14px;">Answers combine an AI-generated summary with the actual underlying data — every query is read-only and restricted to SCAN ONE submissions, manual inspections, inspection requests, and the File Archive.</div>
@@ -152,6 +172,77 @@
     }).join('') + '</div>';
   }
 
+  // Fixed-shape version of the bar chart, for known label/value rows
+  // (the overview section's breakdowns) rather than auto-detected columns.
+  function renderBarList(rows, labelKey, valueKey) {
+    if (!rows.length) return '<div style="color:var(--slate-light);font-size:12px;">No data.</div>';
+    const max = Math.max.apply(null, rows.map(function(r) { return parseFloat(r[valueKey]) || 0; }));
+    if (max <= 0) return '<div style="color:var(--slate-light);font-size:12px;">No data.</div>';
+    return '<div class="bar-chart">' + rows.map(function(r) {
+      const v = parseFloat(r[valueKey]) || 0;
+      const pct = Math.max(2, Math.round((v / max) * 100));
+      return '<div class="bar-row"><div class="bar-label">' + escapeHtml(r[labelKey] || '(none)') + '</div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="bar-value">' + escapeHtml(r[valueKey]) + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  async function loadOverview() {
+    const body = document.getElementById('overview-body');
+    body.innerHTML = '<div class="loading">⏳ Loading portfolio overview…</div>';
+    try {
+      const resp = await fetch('/.netlify/functions/analytics-overview', {
+        headers: { 'Authorization': 'Bearer ' + _accessToken },
+      });
+      const d = await resp.json();
+      if (!resp.ok) throw new Error(d.error || 'Failed to load overview');
+
+      const t = d.totals;
+      const kpis = '<div class="kpi-grid">' +
+        '<div class="kpi-tile"><div class="kpi-num">' + t.inspections + '</div><div class="kpi-label">Inspections</div></div>' +
+        '<div class="kpi-tile"><div class="kpi-num">' + t.scan_submissions + '</div><div class="kpi-label">SCAN ONE Submissions</div></div>' +
+        '<div class="kpi-tile"><div class="kpi-num">' + t.requests + '</div><div class="kpi-label">Inspection Requests</div></div>' +
+        '<div class="kpi-tile"><div class="kpi-num">' + t.archived_files + '</div><div class="kpi-label">File Archive</div></div>' +
+        '</div>';
+
+      const scoresScan = d.avg_scores_scan_submissions;
+      const scoresInsp = d.avg_scores_inspections;
+      const scoresHtml = '<div class="breakdown-title">Average COPE Scores</div>' +
+        '<div style="display:flex;gap:24px;flex-wrap:wrap;">' +
+        '<div><strong>SCAN ONE</strong> (0–100 scale, n=' + (scoresScan.n || 0) + ')<br>' +
+          'Construction: ' + (scoresScan.construction ?? '—') + ' · Protection: ' + (scoresScan.protection ?? '—') +
+          ' · Safety: ' + (scoresScan.safety ?? '—') + ' · Overall: ' + (scoresScan.overall ?? '—') + '</div>' +
+        '<div><strong>Manual Inspections</strong> (0–5 scale, n=' + (scoresInsp.n || 0) + ')<br>' +
+          'Construction: ' + (scoresInsp.construction ?? '—') + ' · Protection: ' + (scoresInsp.protection ?? '—') +
+          ' · Safety: ' + (scoresInsp.safety ?? '—') + ' · Overall: ' + (scoresInsp.overall ?? '—') + '</div>' +
+        '</div><div class="score-scale-note">Scales differ between the two sources — do not compare the raw numbers directly.</div>';
+
+      const recentHtml = d.recent_scan_submissions.length
+        ? '<table><thead><tr><th>Insured</th><th>City</th><th>Occupancy</th><th>Risk</th><th>Score</th><th>Date</th></tr></thead><tbody>' +
+          d.recent_scan_submissions.map(function(r) {
+            return '<tr><td>' + escapeHtml(r.insured_name) + '</td><td>' + escapeHtml(r.city) + '</td><td>' + escapeHtml(r.occupancy) +
+              '</td><td>' + escapeHtml(r.risk_quality) + '</td><td>' + escapeHtml(r.score_overall) + '</td>' +
+              '<td>' + (r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-CA') : '—') + '</td></tr>';
+          }).join('') + '</tbody></table>'
+        : '<div style="color:var(--slate-light);font-size:12px;">No submissions yet.</div>';
+
+      body.innerHTML = kpis + scoresHtml +
+        '<div class="breakdown-grid">' +
+          '<div><div class="breakdown-title">Risk Quality Distribution</div>' + renderBarList(d.risk_quality_distribution, 'risk_quality', 'n') + '</div>' +
+          '<div><div class="breakdown-title">Top Occupancy Classes</div>' + renderBarList(d.top_occupancy_classes, 'occ', 'n') + '</div>' +
+          '<div><div class="breakdown-title">Top Provinces / States</div>' + renderBarList(d.top_provinces, 'prov', 'n') + '</div>' +
+          '<div><div class="breakdown-title">Inspection Request Status</div>' + renderBarList(d.request_status, 'status', 'n') + '</div>' +
+          '<div><div class="breakdown-title">File Archive Conversion Status</div>' + renderBarList(d.archive_conversion_status, 'status', 'n') + '</div>' +
+        '</div>' +
+        '<div class="breakdown-title" style="margin-top:20px;">Most Recent SCAN ONE Submissions</div>' + recentHtml +
+        '<div class="row-count">Generated ' + new Date(d.generated_at).toLocaleString('en-CA') + '</div>';
+
+    } catch (e) {
+      body.innerHTML = '<div class="error-box">⚠ ' + escapeHtml(e.message) + '</div>';
+    }
+  }
+
+
   async function askQuestion() {
     const q = document.getElementById('question').value.trim();
     if (!q) return;
@@ -224,6 +315,7 @@
 
     document.getElementById('gate-wrap').style.display = 'none';
     document.getElementById('app-wrap').style.display = 'block';
+    loadOverview();
   })();
 </script>
 </body>
