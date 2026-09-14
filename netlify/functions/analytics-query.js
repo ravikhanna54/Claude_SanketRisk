@@ -41,7 +41,7 @@ const CORS = {
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-5';
 
-const ALLOWED_VIEWS = ['v_analytics_scan_submissions', 'v_analytics_inspections', 'v_analytics_requests'];
+const ALLOWED_VIEWS = ['v_analytics_scan_submissions', 'v_analytics_inspections', 'v_analytics_requests', 'v_analytics_archived_files'];
 
 const SCHEMA_DESCRIPTION = `
 You may query ONLY these three views. Do not reference any other table or view under any circumstances.
@@ -72,6 +72,17 @@ v_analytics_requests (one row per inspection request from the public portal):
   purpose text, line_of_business text, city text, province text,
   submitted_at timestamptz, preferred_date date, assigned_to text,
   report_format text
+
+v_analytics_archived_files (one row per uploaded legacy file in the File Archive):
+  id uuid, file_name text, category text, insured_name text,
+  policy_number text, file_type text, file_size int, uploaded_at timestamptz,
+  conversion_status text, conversion_scan_submission_id uuid, conversion_error text
+  -- conversion_status is null (not yet converted), 'processing', 'complete',
+  -- or 'error'. conversion_scan_submission_id is set once a file has been
+  -- successfully converted into a SCAN ONE report (joins to
+  -- v_analytics_scan_submissions.id). "How many files are in the archive"
+  -- or "how many have been converted" questions belong here, not in
+  -- scan_submissions.
 `;
 
 async function verifyAccess(authHeader) {
