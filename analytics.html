@@ -69,7 +69,7 @@
     <div id="app-wrap" style="display:none;">
       <div class="ask-card">
         <div style="font-weight:700;font-size:16px;margin-bottom:4px;">Ask a question about your portfolio</div>
-        <div style="font-size:13px;color:var(--slate);margin-bottom:14px;">Answers combine an AI-generated summary with the actual underlying data — every query is read-only and restricted to SCAN ONE submissions, manual inspections, and inspection requests.</div>
+        <div style="font-size:13px;color:var(--slate);margin-bottom:14px;">Answers combine an AI-generated summary with the actual underlying data — every query is read-only and restricted to SCAN ONE submissions, manual inspections, inspection requests, and the File Archive.</div>
         <div class="ask-row">
           <input id="question" type="text" placeholder="e.g. Which occupancy classes had the most sprinkler deficiencies last quarter?" onkeydown="if(event.key==='Enter')askQuestion()">
           <button id="ask-btn" onclick="askQuestion()">Ask</button>
@@ -79,6 +79,7 @@
           <button class="example-chip" onclick="setQuestion(this)">How many inspection requests are still unassigned?</button>
           <button class="example-chip" onclick="setQuestion(this)">Which inspector has the most completed inspections?</button>
           <button class="example-chip" onclick="setQuestion(this)">Occupancy classes with the lowest average protection score</button>
+          <button class="example-chip" onclick="setQuestion(this)">How many File Archive uploads have been converted vs. not yet converted?</button>
         </div>
       </div>
 
