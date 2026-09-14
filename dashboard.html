@@ -397,6 +397,7 @@
     let currentUser     = null;
     let currentUserRole = 'inspector';
     let currentUserName = '';
+    let hasAnalyticsAccess = false; // grants admin-equivalent VIEWING scope only — not destructive actions
     var _scanRowData = {};  // keyed by row id for inline onclick access
     var _inspRowData = {};  // keyed by row id — COPE inspections, for Email Report
     let allInspections  = [];
@@ -511,26 +512,34 @@
       const { data: profiles } = await _supabase.from('profiles').select('role, full_name, analytics_access').eq('id', currentUser.id);
       currentUserRole = profiles?.[0]?.role || 'inspector';
       currentUserName = profiles?.[0]?.full_name || currentUser.email.split('@')[0];
+      hasAnalyticsAccess = !!profiles?.[0]?.analytics_access;
       document.getElementById('nav-name').textContent = currentUserName;
       const pill = document.getElementById('nav-role-pill');
       pill.textContent = currentUserRole;
       pill.className = 'role-pill ' + currentUserRole;
       const isAdmin = currentUserRole === 'admin';
-      document.getElementById('page-title').textContent = isAdmin ? 'Admin Dashboard' : 'My Dashboard';
-      document.getElementById('page-subtitle').textContent = isAdmin
+      // canViewAll grants the same VIEWING scope as admin (see everything,
+      // not just your own assigned items) to an analytics_access account
+      // too — deliberately NOT the same as isAdmin, which still gates
+      // destructive actions (delete, etc.) to actual admins only.
+      const canViewAll = isAdmin || hasAnalyticsAccess;
+      document.getElementById('page-title').textContent = canViewAll ? 'Admin Dashboard' : 'My Dashboard';
+      document.getElementById('page-subtitle').textContent = canViewAll
         ? 'All inspectors · All open inspections'
         : 'Welcome back, ' + currentUserName + ' — your assigned inspections';
-      if (isAdmin) {
-        document.getElementById('btn-new-insp').style.display = 'inline-block';
+      if (canViewAll) {
         document.getElementById('table-title').textContent = 'All Open Inspections';
         document.getElementById('filter-inspector').style.display = 'inline-block';
         document.getElementById('admin-tabs').style.display = 'inline';
+      }
+      if (isAdmin) {
+        document.getElementById('btn-new-insp').style.display = 'inline-block';
         document.getElementById('btn-backup').style.display = 'inline-block';
         document.getElementById('btn-scan-one').style.display = 'inline-block';
       }
       // Analytics access is a separate flag from admin — deliberately, since
       // admin includes clerical staff who shouldn't see portfolio analytics.
-      if (profiles?.[0]?.analytics_access) {
+      if (hasAnalyticsAccess) {
         var analyticsLink = document.getElementById('nav-analytics-link');
         if (analyticsLink) analyticsLink.style.display = 'inline-block';
       }
@@ -538,13 +547,13 @@
     }
 
     async function loadInspections() {
-      const isAdmin = currentUserRole === 'admin';
+      const canViewAll = currentUserRole === 'admin' || hasAnalyticsAccess;
       let query = _supabase
         .from('inspections')
         .select('id,inspection_id,insured_name,location,city,province_state,occupancy_class,inspector_name,user_id,report_status,report_published,inspection_date,updated_at,qa_reviewer,form_data,report_pdf_path,report_format,report_generated_at')
         .order('updated_at', { ascending: false })
         .limit(300);
-      if (isAdmin) {
+      if (canViewAll) {
         query = query.not('report_status', 'eq', 'closed');
       } else {
         query = query.eq('user_id', currentUser.id).not('report_status', 'eq', 'closed').not('inspector_name', 'is', null);
@@ -619,11 +628,12 @@
     function renderTable(rows) {
       const wrap = document.getElementById('table-wrap');
       const isAdmin = currentUserRole === 'admin';
+      const canViewAll = isAdmin || hasAnalyticsAccess;
       if (!rows.length) {
         wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">No inspections found</div><div class="empty-sub">Try adjusting your filters</div></div>';
         return;
       }
-      const adminCol = isAdmin ? '<th>Inspector</th><th>Reviewer</th>' : '';
+      const adminCol = canViewAll ? '<th>Inspector</th><th>Reviewer</th>' : '';
       wrap.innerHTML = '<table><thead><tr><th>Ref ID</th><th>Insured / Property</th><th>Date</th><th>Status</th>' + adminCol + '<th>Updated</th><th></th></tr></thead><tbody>' +
         rows.map(r => {
           const statusClass = 'status-' + (r.report_status || 'draft');
@@ -635,6 +645,8 @@
                 return '<option value="' + iv.name + '"' + (r.inspector_name === iv.name ? ' selected' : '') + '>' + iv.name + '</option>';
               }).join('');
             adminCell = '<td onclick="event.stopPropagation()"><select onchange="assignInspectorToInspection(\'' + r.id + '\', this.value)" style="font-size:11px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);max-width:130px;">' + inspectorOpts + '</select></td>';
+          } else if (canViewAll) {
+            adminCell = '<td><span style="font-size:11px;color:var(--slate);">' + (r.inspector_name || '—') + '</span></td>';
           }
           const deleteBtn = isAdmin ? '<button class="btn-open" style="color:#c53030;border-color:#c53030;margin-left:4px;" onclick="event.stopPropagation();deleteInspection(\'' + r.id + '\',\'' + (r.insured_name||'this inspection').replace(/'/g,'') + '\')">🗑</button>' : '';
           // Reviewer column - only show for submitted/inreview/approved/returned
@@ -650,6 +662,8 @@
             } else {
               reviewerCell = '<td><span style="font-size:11px;color:var(--slate);">' + (r.qa_reviewer || '—') + '</span></td>';
             }
+          } else if (canViewAll) {
+            reviewerCell = '<td><span style="font-size:11px;color:var(--slate);">' + (r.qa_reviewer || '—') + '</span></td>';
           }
           _inspRowData[r.id] = r;  // store for inline onclick access
           var canEmail = r.report_status && r.report_status !== 'draft' && r.report_status !== 'returned';
