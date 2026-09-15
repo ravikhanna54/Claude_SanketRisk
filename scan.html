@@ -2315,7 +2315,7 @@
         if (lat === null) {
           _dbg('[Footprint] No lat/lon yet — falling back to Nominatim geocode for:', fullAddr);
           try {
-            var geoUrl = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=' + encodeURIComponent(fullAddr);
+            var geoUrl = 'https://nominatim.openstreetmap.org/search?format=json&limit=1' + (isCanadianProvince ? '&countrycodes=ca' : '') + '&q=' + encodeURIComponent(fullAddr);
             var geoResp = await fetch(geoUrl, { headers: { 'Accept': 'application/json' } });
             if (geoResp.ok) {
               var geoResults = await geoResp.json();
@@ -2388,10 +2388,16 @@
           el.innerHTML = _riMsg('Address could not be geocoded: "' + fullAddr + '". Building footprint not available for this address.', 'warn');
           return;
         }
+        var datasetNote = provinceMatch
+          ? 'The "' + provinceMatch + '" building footprint dataset was checked and had no match within range of this location. '
+          : 'No province/state was entered, so the loaded building footprint datasets could not be checked. ';
+        var regionNote = isCanadianProvince
+          ? 'The satellite aerial image in the Site Location section provides a visual footprint reference \u2014 cross-reference with BC Assessment lot size for area estimation where available.'
+          : 'The satellite aerial image in the Site Location section provides a visual footprint reference for area estimation.';
         footprintHtml = _riMsg(
           'No mapped building outline found near this address (geocoded to ' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '). ' +
-          'Google building outlines are in Preview and have limited coverage in rural Canadian areas. OpenStreetMap data is also unavailable for this location. ' +
-          'The satellite aerial image in the Site Location section provides a visual footprint reference \u2014 cross-reference with BC Assessment lot size for area estimation.',
+          'Google building outlines are in Preview and have limited coverage. OpenStreetMap data is also unavailable for this location. ' +
+          datasetNote + regionNote,
           'info'
         );
       }
