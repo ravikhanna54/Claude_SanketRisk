@@ -125,20 +125,30 @@ exports.handler = async function (event) {
         // centroid rather than the building itself — especially on the
         // larger commercial/industrial sites this platform is built for,
         // where the address point can legitimately sit 100m+ from the
-        // actual structure). 200m matches the wider end of the radius
-        // range scan.html's own OSM/Overpass building search already uses
-        // for the same reason.
+        // actual structure).
+        //
+        // IMPORTANT: this uses PostGIS's index-assisted KNN operator (<->)
+        // on the raw geometry column, NOT ST_DWithin on a geom::geography
+        // cast. Casting the indexed column inside the spatial predicate
+        // (the previous version of this query) prevents the GIST index
+        // from being used at all — PostGIS falls back to a full sequential
+        // scan, checking every row in the table one by one. That was
+        // silently slow (10-25+ seconds, scaling with table size) on every
+        // province/state table, not just Arizona, until larger tables
+        // started actually timing out. The <-> operator is genuinely
+        // index-assisted and returns in milliseconds even on multi-
+        // million-row tables — the 200m cutoff is then applied here in
+        // code, after the actual distance is known, rather than in SQL.
         const nearestResult = await client.query(
           `SELECT id, ST_Area(geom::geography) AS area_sq_m,
                   ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS distance_m
            FROM ${table}
-           WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, 200)
-           ORDER BY distance_m ASC
+           ORDER BY geom <-> ST_SetSRID(ST_MakePoint($1, $2), 4326)
            LIMIT 1`,
           [lon, lat]
         );
 
-        if (nearestResult.rows.length > 0) {
+        if (nearestResult.rows.length > 0 && nearestResult.rows[0].distance_m <= 200) {
           const row = nearestResult.rows[0];
           return {
             statusCode: 200, headers: CORS,
