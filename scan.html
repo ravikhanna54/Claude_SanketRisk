@@ -2214,7 +2214,12 @@
       return;
     }
 
-    var fullAddr = address + ', ' + city + (province ? ', ' + province : '') + ', Canada';
+    // Canadian provinces only — anything else (US state codes, etc.) is left
+    // without a forced country so Google can resolve it on its own rather
+    // than incorrectly appending ", Canada" to a US address.
+    var CA_PROVINCES = ['ab','bc','mb','nb','nl','ns','nt','nu','on','pe','qc','sk','yt'];
+    var isCanadianProvince = CA_PROVINCES.indexOf((province || '').trim().toLowerCase()) !== -1;
+    var fullAddr = address + ', ' + city + (province ? ', ' + province : '') + (isCanadianProvince ? ', Canada' : '');
     _dbg('[Footprint] Starting lookup for:', fullAddr);
     var lat = null, lon = null;
     var footprintHtml = '';
@@ -2261,20 +2266,21 @@
         }
       } catch(gErr) { _dbg('[Footprint] Google building outline error (fetch threw):', gErr.message); }
 
-      // ── Step 1.5 — Province-specific building footprint lookup (Microsoft
-      // dataset, loaded into our own Supabase PostGIS tables: BC, AB, ON).
-      // This takes priority over Google's outline and OSM for these provinces
-      // specifically, since it's the most complete and reliable source we
-      // have for them — Google's outline feature is still Preview/limited-
+      // ── Step 1.5 — Province/state-specific building footprint lookup
+      // (Microsoft dataset, loaded into our own Supabase PostGIS tables).
+      // This takes priority over Google's outline and OSM wherever we've
+      // loaded a table for it, since it's the most complete and reliable
+      // source we have — Google's outline feature is still Preview/limited-
       // coverage, and OSM has been the source of prior inaccuracies (e.g.
-      // Hope, BC). ──
-      var provinceMatch = /\bB\.?C\.?\b|\bBRITISH COLUMBIA\b/i.test(province || '') ? 'BC'
-        : /\bA\.?B\.?\b|\bALBERTA\b/i.test(province || '') ? 'AB'
-        : /\bO\.?N\.?\b|\bONTARIO\b/i.test(province || '') ? 'ON'
-        : null;
+      // Hope, BC). No allow-list here deliberately: building-footprint-
+      // lookup.js already knows every Canadian province and all 50 US
+      // states, and gracefully returns not_found for any table that
+      // hasn't actually been loaded yet — so this works automatically for
+      // every future province/state added, with no change needed here. ──
+      var provinceMatch = (province || '').trim() || null;
       if (lat !== null && provinceMatch) {
         try {
-          _dbg('[Footprint] Province is', provinceMatch, '— checking Microsoft building footprint dataset at', lat, lon);
+          _dbg('[Footprint] Province/state is', provinceMatch, '— checking Microsoft building footprint dataset at', lat, lon);
           var bcResp = await fetch('/.netlify/functions/building-footprint-lookup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
