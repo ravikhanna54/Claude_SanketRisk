@@ -121,13 +121,18 @@ exports.handler = async function (event) {
         }
 
         // Step 2: no polygon contains the exact point (common when a geocode
-        // lands slightly off, e.g. on the road centreline rather than the
-        // building itself) — fall back to the nearest polygon within 50m.
+        // lands on a road centreline, parking lot entrance, or parcel
+        // centroid rather than the building itself — especially on the
+        // larger commercial/industrial sites this platform is built for,
+        // where the address point can legitimately sit 100m+ from the
+        // actual structure). 200m matches the wider end of the radius
+        // range scan.html's own OSM/Overpass building search already uses
+        // for the same reason.
         const nearestResult = await client.query(
           `SELECT id, ST_Area(geom::geography) AS area_sq_m,
                   ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS distance_m
            FROM ${table}
-           WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, 50)
+           WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, 200)
            ORDER BY distance_m ASC
            LIMIT 1`,
           [lon, lat]
