@@ -5056,9 +5056,10 @@
     }
 
     // Address line with Google Maps link
-    var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + locationEnc;
+    var displayAddr = window._siteLocationStr || locationStr;
+    var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(displayAddr);
     mapAddress.innerHTML =
-      '<span>\uD83D\uDCCD ' + locationStr + '</span>' +
+      '<span>\uD83D\uDCCD ' + displayAddr + '</span>' +
       '<a href="' + mapsUrl + '" target="_blank" style="font-size:11px;color:#0891b2;text-decoration:none;white-space:nowrap;">&#x2197; Open in Google Maps</a>';
 
     mapSection.style.display = 'block';
