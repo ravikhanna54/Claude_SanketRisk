@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frequently Asked Questions — SanketRisk ONE</title>
+  <meta name="description" content="Answers to common questions about SanketRisk ONE's inspection platform, AI features, risk grading, geographic data coverage, and roadmap.">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --navy:#0a1628;--navy-mid:#162236;--navy-light:#1e3050;
+      --gold:#c9a84c;--gold-light:#e2c97e;--gold-pale:#f5ecd4;--gold-dim:rgba(201,168,76,.15);
+      --slate:#4a6580;--slate-light:#7a9ab5;--border:#d0c9bb;--bg:#f8f5f0;
+      --vision:#3a86c8;--lidar:#38a169;--valuation:#9b59b6;--ir:#e05c3a;--scan:#0891b2;--natcat:#0d9488;
+    }
+    html{scroll-behavior:smooth}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--navy);overflow-x:hidden}
+
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:0 48px;height:68px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,22,40,.97);backdrop-filter:blur(16px);box-shadow:0 1px 0 rgba(201,168,76,.2)}
+    .nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+    .nav-logo-mark{width:36px;height:36px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--navy)}
+    .nav-wordmark{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:700;color:#fff}
+    .nav-wordmark span{color:var(--gold)}
+    .nav-one{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--gold);letter-spacing:.12em;margin-left:4px;opacity:.8}
+    .nav-links{display:flex;align-items:center;gap:28px}
+    .nav-links a{font-size:13px;font-weight:500;color:rgba(255,255,255,.65);text-decoration:none;transition:color .2s}
+    .nav-links a:hover{color:var(--gold)}
+    .nav-links a.active{color:var(--gold)}
+    .btn-nav-cta{padding:8px 22px;background:var(--gold);color:var(--navy);border:none;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:all .2s}
+    .btn-nav-cta:hover{background:var(--gold-light);transform:translateY(-1px)}
+    @media (max-width:900px){ .nav-links{display:none} }
+
+    .faq-hero{background:var(--navy);padding:150px 48px 70px;text-align:center;position:relative;overflow:hidden}
+    .faq-hero::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(201,168,76,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,.025) 1px,transparent 1px);background-size:72px 72px}
+    .faq-hero-inner{position:relative;z-index:2;max-width:700px;margin:0 auto}
+    .faq-kicker{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:20px;display:inline-flex;align-items:center;gap:12px}
+    .faq-kicker::before,.faq-kicker::after{content:'';width:32px;height:1px;background:var(--gold);opacity:.5}
+    .faq-title{font-family:'Cormorant Garamond',serif;font-size:clamp(34px,5vw,52px);font-weight:600;color:#fff;line-height:1.15;margin-bottom:14px}
+    .faq-title span{color:var(--gold)}
+    .faq-sub{font-size:15px;color:rgba(255,255,255,.55);line-height:1.7}
+
+    .faq-main{max-width:820px;margin:0 auto;padding:60px 24px 100px}
+    .faq-cat{margin-bottom:52px}
+    .faq-cat-title{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;color:var(--navy);margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid var(--gold)}
+    .faq-item{background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden}
+    .faq-q{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;font-size:14px;font-weight:600;color:var(--navy);user-select:none}
+    .faq-q:hover{color:var(--gold)}
+    .faq-q-mark{font-family:'DM Mono',monospace;font-size:16px;color:var(--gold);flex-shrink:0;transition:transform .25s}
+    .faq-item.open .faq-q-mark{transform:rotate(45deg)}
+    .faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease}
+    .faq-a-inner{padding:0 20px 18px;font-size:13.5px;color:var(--slate);line-height:1.75}
+    .faq-a-inner strong{color:var(--navy)}
+    .badge-live{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:10px;background:rgba(56,161,105,.15);color:#276749;font-family:'DM Mono',monospace;margin-left:8px;vertical-align:middle}
+    .badge-roadmap{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:10px;background:rgba(192,86,33,.15);color:#c05621;font-family:'DM Mono',monospace;margin-left:8px;vertical-align:middle}
+
+    .faq-cta{background:var(--navy);border-radius:16px;padding:44px 40px;text-align:center;margin-top:20px}
+    .faq-cta-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:#fff;margin-bottom:10px}
+    .faq-cta-sub{font-size:13px;color:rgba(255,255,255,.55);margin-bottom:22px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.6}
+    .btn-primary{display:inline-block;padding:12px 28px;background:var(--gold);color:var(--navy);border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;transition:all .2s}
+    .btn-primary:hover{background:var(--gold-light);transform:translateY(-1px)}
+
+    footer{background:var(--navy);padding:36px 48px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+    .footer-logo{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:700;color:#fff}
+    .footer-logo span{color:var(--gold)}
+    .footer-one{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);letter-spacing:.1em;margin-left:4px;opacity:.7}
+    .footer-links{display:flex;gap:22px}
+    .footer-links a{font-size:12px;color:rgba(255,255,255,.45);text-decoration:none}
+    .footer-links a:hover{color:var(--gold)}
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="marketing.html" class="nav-logo">
+    <div class="nav-logo-mark">S</div>
+    <div><span class="nav-wordmark">Sanket<span>Risk</span></span><span class="nav-one">_ONE</span></div>
+  </a>
+  <div class="nav-links">
+    <a href="marketing.html#suite">Product Suite</a>
+    <a href="marketing.html#features">Platform</a>
+    <a href="marketing.html#coming-soon">Services &amp; Roadmap</a>
+    <a href="marketing.html#workflow">Workflow</a>
+    <a href="faq.html" class="active">FAQ</a>
+    <a href="marketing.html#contact">Contact</a>
+    <a href="https://sanketrisk.netlify.app" target="_blank" class="btn-nav-cta">Access Platform &rarr;</a>
+  </div>
+</nav>
+
+<section class="faq-hero">
+  <div class="faq-hero-inner">
+    <div class="faq-kicker">Support &amp; Documentation</div>
+    <h1 class="faq-title">Frequently Asked<br><span>Questions</span></h1>
+    <p class="faq-sub">Answers covering the full SanketRisk ONE platform &mdash; inspections, AI-assisted features, risk grading, geographic data coverage, and what&rsquo;s on the roadmap.</p>
+  </div>
+</section>
+
+<main class="faq-main">
+
+  <div class="faq-cat">
+    <div class="faq-cat-title">Platform &amp; Getting Started</div>
+
+    <div class="faq-item">
+      <div class="faq-q"><span>What is SanketRisk ONE?</span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">A unified commercial property risk intelligence platform covering the full inspection lifecycle &mdash; assignment, field data collection, AI-assisted analysis and recommendations, quantitative risk grading, QA review, and report generation &mdash; for loss control consultants, inspection firms, and insurance underwriters.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>Who is the platform built for?</span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Field inspectors performing full manual COPE inspections, QA reviewers approving submitted reports, underwriters relying on the finished grades and narratives, and executives using the analytics layer to review portfolio-wide trends. Access to each area is controlled separately by account role.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>Where does inspection data live, and how is it secured?</span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">All data is stored in a Supabase-hosted PostgreSQL database with Row Level Security enforced at the database level &mdash; not just hidden in the interface. Role-based access separates admin, inspector, and executive analytics accounts, and every account&rsquo;s visibility is checked fresh on each request, not just cached at login.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>Is there a mobile-friendly way to submit inspection requests?</span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Yes &mdash; a public-facing Inspection Request Portal lets brokers, insureds, or property managers submit a request directly. Requests appear on the admin dashboard for assignment, and convert directly into a pre-populated inspection form once assigned &mdash; no re-keying of the requestor&rsquo;s details.</div></div>
+    </div>
+  </div>
+
+  <div class="faq-cat">
+    <div class="faq-cat-title">Inspections &amp; Reporting</div>
+
+    <div class="faq-item">
+      <div class="faq-q"><span>What does a full inspection cover?</span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">A structured COPE framework &mdash; Construction, Occupancy, Protection, and Exposure &mdash; along with Natural Catastrophe, Loss History, and Safety sections. A library of 35+ specialist supplement modules (restaurant, warehouse, woodworking, auto service, sprinkler systems, and more) activate automatically or manually based on the occupancy.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>What report formats can I generate?</span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Three, all generated from the same underlying field data: a Screen Print view for quick reference, a Formal Structured Report with full field-by-field detail, and an AI-generated Narrative Report that turns the same data into readable prose. All three include a cover page and the risk scores.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>How does the automatic recommendation engine work? <span class="badge-live">Live</span></span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Specific field entries &mdash; a sprinkler condition marked "Poor," a service tag marked missing, heavy grease buildup on a kitchen exhaust filter &mdash; automatically generate a prioritized, NFPA-referenced recommendation with no manual drafting. Each recommendation carries a defined priority level (Immediate, 30-Day, Advisory) tied directly to what was observed, so the same observation always produces the same recommendation across every inspector.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>What does the AI Pre-Review actually check for? <span class="badge-live">Live</span></span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Before a report reaches QA, an AI pass reviews the completed form for internal inconsistencies &mdash; for example, a deficiency described in a recommendation but not reflected in the related score, or a field left blank where a related observation implies it shouldn&rsquo;t be. This is the kind of gap a senior consultant&rsquo;s review would normally catch, surfaced automatically before submission rather than after.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>How does QA review work?</span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">A submitted report moves through a structured pipeline &mdash; submit, assign to a reviewer, approve or return with feedback &mdash; with a full audit trail preserved at every step. Reviewers see the same AI Pre-Review flags the inspector saw, plus the complete field history.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>Can I bring in existing legacy inspection files? <span class="badge-live">Live</span></span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Yes &mdash; the File Archive lets you upload existing Word or PDF inspection reports and convert them into SanketRisk ONE&rsquo;s standard structured format, including COPE scores generated from the document&rsquo;s own content. This brings years of archived inspections into one searchable, gradeable system rather than leaving them as static files.</div></div>
+    </div>
+  </div>
+
+  <div class="faq-cat">
+    <div class="faq-cat-title">Risk Grading</div>
+
+    <div class="faq-item">
+      <div class="faq-q"><span>How many separate grading systems does a report carry?</span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Three, independently calculated: a COPE-based risk grade (Construction, Protection, Safety, and an overall composite score), a five-tier Sprinkler System grade based on SRC demerit methodology and NFPA 25 deficiency classification, and a Natural Catastrophe grade covering earthquake, wind/storm, and flood/water exposure. Each is fully traceable back to its component factors in the Formal Report.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>Is the grading actually consistent between inspectors?</span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Every demerit value is fixed and documented &mdash; the same observation always carries the same point weight, regardless of which inspector recorded it. This is deliberately not left to individual judgment on the numbers themselves; the judgment call is choosing which option best matches what was observed, and the reference guide is built specifically to standardize that choice.</div></div>
+    </div>
+  </div>
+
+  <div class="faq-cat">
+    <div class="faq-cat-title">Nat-Cat &amp; Geographic Data</div>
+
+    <div class="faq-item">
+      <div class="faq-q"><span>Does Nat-Cat grading work for both Canada and the U.S.? <span class="badge-live">Live</span></span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Yes. Canadian properties reference the National Building Code of Canada 2025, Appendix C. U.S. properties use live data from the U.S. Geological Survey (seismic), FEMA (flood zone), and NOAA (rainfall) &mdash; queried fresh for the specific address at the time of the report, not pulled from a static table. This means U.S. coverage works immediately for any address, without waiting for a particular region&rsquo;s data to be pre-loaded.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>What is the building footprint verification feature? <span class="badge-live">Live</span></span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">An independent cross-check of the declared building area against mapped building outline data, sourced from Microsoft&rsquo;s building footprint datasets. This is loaded region-by-region for both Canada and the U.S. and expands over time; where a region isn&rsquo;t yet loaded, the platform falls back to other available sources rather than showing nothing.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>What is the hydrant location feature, and how reliable is it? <span class="badge-live">Live</span></span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Nearby fire hydrant locations surface directly within SCAN ONE assessments, sourced from OpenStreetMap. This is genuinely useful as a convenience cross-check, but it&rsquo;s crowdsourced data &mdash; coverage varies significantly by area, and a "no hydrants found" result means none have been mapped nearby, not that none exist. It&rsquo;s presented as a best-effort reference, not an authoritative source, and the platform says so directly wherever it&rsquo;s shown.</div></div>
+    </div>
+  </div>
+
+  <div class="faq-cat">
+    <div class="faq-cat-title">SCAN ONE &amp; AI Analytics</div>
+
+    <div class="faq-item">
+      <div class="faq-q"><span>What is Sanket SCAN ONE? <span class="badge-live">Live</span></span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">A photo-based AI property assessment. The insured, broker, or property manager submits photos via a simple upload link; the AI analyzes them to identify construction class, building characteristics, occupancy indicators, hazards, and exposure factors, then generates a structured report in the standard SanketRisk ONE format &mdash; without a physical site visit. Clearly delivered as a Photo-Based Preliminary Assessment, suited to renewals, lower-value properties, and high-volume preliminary screening.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>What is the AI Analytics dashboard? <span class="badge-live">Live</span></span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">A natural-language query tool over your own portfolio data &mdash; ask a plain-English question and get back both an AI-generated summary and the actual underlying data it was drawn from, side by side. It's restricted to specifically authorized executive-level accounts, kept separate from ordinary admin access, and every query runs read-only against a fixed, curated set of data views &mdash; it can never write to or alter your data.</div></div>
+    </div>
+  </div>
+
+  <div class="faq-cat">
+    <div class="faq-cat-title">Roadmap</div>
+
+    <div class="faq-item">
+      <div class="faq-q"><span>Can reports carry my own company&rsquo;s branding? <span class="badge-roadmap">Roadmap</span></span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Not yet &mdash; every report currently carries SanketRisk branding. White-label report delivery, showing a client&rsquo;s own logo and name in place of ours, is on the roadmap as part of the planned Carrier Integration &amp; White-Label Delivery product.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>Can I export a report directly to ACORD format, or push it into my PAS? <span class="badge-roadmap">Roadmap</span></span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Not yet &mdash; both ACORD-standard form export and direct Policy Administration System (PAS) API integration are planned, not currently available. See the Services &amp; Roadmap section for the current state of this work.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q"><span>Is building replacement cost valuation available? <span class="badge-live">Partially Live</span></span><span class="faq-q-mark">+</span></div>
+      <div class="faq-a"><div class="faq-a-inner">Sanket VALUATION ONE currently delivers RSMeans-based replacement cost estimates as a consultant-assisted service &mdash; not yet a fully self-serve, automated feature. A direct API-integrated valuation provider for full self-serve automation is under evaluation as a future upgrade.</div></div>
+    </div>
+  </div>
+
+  <div class="faq-cta">
+    <div class="faq-cta-title">Still have a question?</div>
+    <p class="faq-cta-sub">Reach out directly &mdash; we&rsquo;ll walk you through any feature in detail, or talk through what your team actually needs.</p>
+    <a href="marketing.html#contact" class="btn-primary">Get in Touch &rarr;</a>
+  </div>
+
+</main>
+
+<footer>
+  <div>
+    <div class="footer-logo">Sanket<span>Risk</span><span class="footer-one">_ONE</span></div>
+  </div>
+  <div class="footer-links">
+    <a href="https://sanketrisk.netlify.app" target="_blank">Platform Login</a>
+    <a href="marketing.html#suite">Products</a>
+    <a href="marketing.html#coming-soon">Roadmap</a>
+    <a href="marketing.html#contact">Contact</a>
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll('.faq-item').forEach(function(item) {
+    var q = item.querySelector('.faq-q');
+    var a = item.querySelector('.faq-a');
+    q.addEventListener('click', function() {
+      var isOpen = item.classList.contains('open');
+      // Close any other open item in the same category for a cleaner read
+      item.parentElement.querySelectorAll('.faq-item.open').forEach(function(other) {
+        if (other !== item) {
+          other.classList.remove('open');
+          other.querySelector('.faq-a').style.maxHeight = null;
+        }
+      });
+      if (isOpen) {
+        item.classList.remove('open');
+        a.style.maxHeight = null;
+      } else {
+        item.classList.add('open');
+        a.style.maxHeight = a.scrollHeight + 'px';
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
