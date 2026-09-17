@@ -3683,7 +3683,7 @@
         }
 
         // 6. Update banner to final state
-        loadBanner.style.cssText = 'background:linear-gradient(135deg,#065f73,#0891b2);color:#fff;padding:10px 24px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
+        loadBanner.style.cssText = 'background:linear-gradient(135deg,#065f73,#0891b2);color:#fff;padding:10px 24px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:58px;z-index:101;';
         loadBanner.innerHTML =
           '<span>&#x1F4CB; Saved SCAN ONE Report' +
           (sub.inspection_id ? ' &mdash; ' + sub.inspection_id : '') +
