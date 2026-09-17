@@ -3683,16 +3683,24 @@
         }
 
         // 6. Update banner to final state
-        loadBanner.style.cssText = 'background:linear-gradient(135deg,#065f73,#0891b2);color:#fff;padding:10px 24px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:58px;z-index:101;';
+        // In report-only mode, activateReportOnlyMode() already added a clean
+        // Print/Dashboard bar at the very top of the page — don't duplicate
+        // those buttons here too. This was the actual cause of both the
+        // duplicate Print/Dashboard buttons AND the unresponsive click: two
+        // stacked elements with the identical onclick="printScanReport()"
+        // handler, from two code paths that were never meant to run their
+        // full button-rendering logic at the same time.
+        loadBanner.style.cssText = 'background:linear-gradient(135deg,#065f73,#0891b2);color:#fff;padding:10px 24px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap;' + (isReportOnly ? '' : 'position:sticky;top:58px;z-index:101;');
         loadBanner.innerHTML =
           '<span>&#x1F4CB; Saved SCAN ONE Report' +
           (sub.inspection_id ? ' &mdash; ' + sub.inspection_id : '') +
           (savedResult ? ' &mdash; Report loaded.' : ' &mdash; No saved report yet &mdash; click Analyse with AI.') +
           '</span>' +
-          '<div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;">' +
-          '<button onclick="printScanReport()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;">&#x1F5A8; Print</button>' +
-          '<a href="/dashboard.html" style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;text-decoration:none;font-family:IBM Plex Sans,sans-serif;display:flex;align-items:center;">&#x2190; Dashboard</a>' +
-          '</div>';
+          (isReportOnly ? '' :
+            '<div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;">' +
+            '<button onclick="printScanReport()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:IBM Plex Sans,sans-serif;">&#x1F5A8; Print</button>' +
+            '<a href="/dashboard.html" style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;text-decoration:none;font-family:IBM Plex Sans,sans-serif;display:flex;align-items:center;">&#x2190; Dashboard</a>' +
+            '</div>');
 
         if (savedResult) {
           window.scrollTo({ top: document.getElementById('results-wrap').offsetTop - 20, behavior: 'smooth' });
