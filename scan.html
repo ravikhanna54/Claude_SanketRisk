@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 359 — 2026-07-10 — Wire in BC building footprint dataset (Microsoft CanadianBuildingFootprints, 1.36M buildings, loaded into Supabase PostGIS) as the priority footprint source for BC addresses — takes precedence over Google's Preview outline feature and OSM/Overpass, since it's now the most complete/reliable data we have for this province -->
+<!-- SanketRisk SCAN ONE — Deploy 360 — 2026-09-23 — Fix "_draftInspId is not defined" on fresh Scan One submissions: declared let _draftInspId = null alongside _reviewId/_draftId — it was only ever assigned when loading an existing submission (reviewId/viewId branches), so a brand-new submission left it undeclared and unguarded reads (buildCoverPage, pdfPath) threw a ReferenceError -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -4147,6 +4147,7 @@
   let _storagePaths = [];
   let _reviewId = null;  // set when opened from dashboard — enables lazy photo fetch
   let _draftId  = null;  // Supabase row ID of current draft
+  let _draftInspId = null;  // Supabase inspection_id of current draft — set only when loading an existing submission (reviewId/viewId branches); stays null on a fresh submission
   let _autosaveTimer = null;  // debounce handle for autosave
 
   async function uploadPhotos() {
