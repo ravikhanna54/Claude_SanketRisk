@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 360 — 2026-09-23 — Fix "_draftInspId is not defined" on fresh Scan One submissions: declared let _draftInspId = null alongside _reviewId/_draftId — it was only ever assigned when loading an existing submission (reviewId/viewId branches), so a brand-new submission left it undeclared and unguarded reads (buildCoverPage, pdfPath) threw a ReferenceError -->
+<!-- SanketRisk SCAN ONE — Deploy 361 — 2026-09-26 — Added e2Value live valuation as an alternate Construction Cost Estimate source alongside the existing Altus benchmark: a radio toggle dims whichever source isn't selected; e2Value fields (structure type, postal code) and a manual "Get e2Value Estimate" button call the new netlify/functions/e2value-estimate.js (never auto-fetches, since each call is a paid credit); the parsed result is cached and saved into form data so reopening a draft or re-rendering a report replays it instead of re-calling e2Value; a matching results-section card (res-e2value-section) mirrors the Altus one in the report, and only the chosen source's section renders. Requires E2VALUE_USERNAME/E2VALUE_PASSWORD Netlify env vars. Carries forward Deploy 360's _draftInspId fix. -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -505,16 +505,40 @@
         </div>
       </div>
       <div class="card-body">
-        <div class="form-grid">
-          <div class="field">
-            <label>Building Type (Altus Group 2026 Cost Guide)</label>
-            <select id="s-cost-type" onchange="updateConstructionCostEstimate()">
-              <option value="">&#x2014; Select if a close match exists &#x2014;</option>
-            </select>
-            <div id="s-cost-region-note"></div>
-          </div>
+        <div style="margin-bottom:12px;">
+          <label style="margin-right:16px;font-weight:600;font-size:12px;"><input type="radio" name="s-cost-source" id="s-cost-source-altus" value="altus" checked onchange="onCostSourceChange()"> Altus Group Cost Guide (static benchmark)</label>
+          <label style="font-weight:600;font-size:12px;"><input type="radio" name="s-cost-source" id="s-cost-source-e2value" value="e2value" onchange="onCostSourceChange()"> e2Value (live valuation &#x2014; uses 1 credit)</label>
         </div>
-        <div id="construction-cost-result" style="margin-top:10px;"></div>
+
+        <div id="altus-cost-block">
+          <div class="form-grid">
+            <div class="field">
+              <label>Building Type (Altus Group 2026 Cost Guide)</label>
+              <select id="s-cost-type" onchange="updateConstructionCostEstimate()">
+                <option value="">&#x2014; Select if a close match exists &#x2014;</option>
+              </select>
+              <div id="s-cost-region-note"></div>
+            </div>
+          </div>
+          <div id="construction-cost-result" style="margin-top:10px;"></div>
+        </div>
+
+        <div id="e2value-cost-block" style="display:none;">
+          <div class="form-grid">
+            <div class="field">
+              <label>Structure Type (e2Value)</label>
+              <select id="s-e2value-structuretype">
+                <option value="">&#x2014; Select &#x2014;</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Postal Code <span style="font-size:10px;color:var(--slate);font-weight:400">(required by e2Value, e.g. K2P 1L7)</span></label>
+              <input type="text" id="s-e2value-postal" placeholder="e.g. K2P 1L7">
+            </div>
+          </div>
+          <button type="button" class="btn-secondary-action" id="btn-e2value-estimate" onclick="getE2ValueEstimateForForm()" style="margin-top:4px;">Get e2Value Estimate</button>
+          <div id="e2value-cost-result" style="margin-top:10px;"></div>
+        </div>
       </div>
     </div>
 
@@ -1159,6 +1183,18 @@
         </div>
       </div>
 
+      <!-- e2Value Live Valuation Results -->
+      <div class="result-section" id="res-e2value-section" style="display:none;">
+        <div class="result-section-header">
+          <div class="result-section-icon">&#x1F4B0;</div>
+          <div class="result-section-title">Construction Cost Estimate</div>
+          <div style="margin-left:auto;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;font-family:'IBM Plex Mono',monospace;letter-spacing:.05em;">E2VALUE LIVE</div>
+        </div>
+        <div class="result-section-body" id="res-e2value-body">
+          <!-- Populated dynamically by renderE2ValueSection() from the cached fetch result — never re-fetches on report render -->
+        </div>
+      </div>
+
       <!-- Photo Evidence Grid -->
       <div class="result-section" id="res-photo-section" style="display:none;">
         <div class="result-section-header"><div class="result-section-icon">&#x1F4F8;</div><div class="result-section-title">Submitted Photographs</div></div>
@@ -1283,6 +1319,7 @@
 
   (async function() {
     loadConstructionCostData(); // fire independently of auth/mode — populates the cost dropdown
+    populateE2ValueStructureTypeDropdown();
     if (isPublicMode) {
       activatePublicMode();
       return;
@@ -1376,6 +1413,7 @@
 
       // Construction cost estimate selection
       if (fd.costEstimateRowId) restoreCostRowSelection(fd.costEstimateRowId);
+      restoreCostSourceSelection(fd);
 
       // Hazard checkboxes — re-select any that were checked
       if (fd.hazards && fd.hazards.length) {
@@ -1748,6 +1786,8 @@
     var body = document.getElementById('res-cost-body');
     if (!section || !body) return;
 
+    if (data.costEstimateSource === 'e2value') { section.style.display = 'none'; return; } // e2Value is the chosen source for this property — its own section renders instead
+
     if (!data.costEstimateRowId) {
       _dbg('[CostEstimate] No building type selected — section left hidden.');
       return; // no selection made — leave the whole section hidden, nothing to show
@@ -1793,6 +1833,190 @@
     body.innerHTML = html;
     section.style.display = 'block';
     _dbg('[CostEstimate] Rendered into report:', row.building_type, row.sub_type || '');
+  }
+
+  // ── E2VALUE LIVE VALUATION ──
+  // Alternate, paid replacement-cost source to the free Altus benchmark above. Selecting
+  // it dims the Altus block instead of removing it, so switching back keeps whatever the
+  // user had picked there. The fetch itself is button-triggered only (never on
+  // input/keystroke like Altus) and its result is cached in _e2ValueLastResult / saved
+  // into form data, so reopening a draft or re-rendering a report NEVER re-calls e2Value
+  // and burns a second credit — it only redisplays what was already fetched.
+  var _e2ValueLastResult = null;
+
+  // Must stay in sync with STRUCTURE_TYPES in netlify/functions/e2value-estimate.js
+  // (e2Value's Pronto Commercial Lite tSTRUCTURETYPE enum).
+  var E2VALUE_STRUCTURE_TYPES = [
+    'Apartment','Auditorium','Auto, mini-lube','Auto, sales','Auto, service center',
+    'Auto, service repair','Bakery','Bank, branch','Bar/Tavern','Beauty Salon/Barber Shop',
+    'Bowling alley','Cannabis, bakery','Cannabis, cultivation/extraction','Cannabis, retail',
+    'Car wash, automatic','Car wash, self service','Church','Cold storage facility',
+    'College, dormitory','Community Center','Concession stand','Condominium',
+    'Convenience market','Country club','Courthouse','Day care center',
+    'Dispensary/urgent care','Dressing and shower facility','Fire station, paid',
+    'Fire station, volunteer','Fraternal building','Funeral home','Garage, parking',
+    'Garage, underground parking','Government building','Greenhouse',
+    'Handball/racquetball club','Hangar, aircraft','Health club','Hemp drying facility',
+    'Home improvement center','Hospital, convalescent','Hospital, general',
+    'Hospital, veterinary','Hotel','Indoor tennis club','Jail','Laboratory','Laundromat',
+    'Library, public','Manufacturing, heavy','Manufacturing, light','Medical office',
+    'Mini-storage, steel','Motel','Multi-family residence','Multiple residence, elderly',
+    'Office','Pavilion, open','Police station','Post office, branch','Post office, main',
+    'Prison','Restaurant','Restaurant, fast food','Restroom building','Rink, hockey',
+    'School, elementary','School, gymnasium','School, secondary','School, vocational',
+    'Shopping center, strip','Social club','Store, department','Store, discount',
+    'Store, retail','Supermarket','Surgical center','Swimming pool, enclosed',
+    'Terminal, airport','Terminal, bus','Theater, movie','Warehouse',
+    'Warehouse, self storage'
+  ];
+
+  function populateE2ValueStructureTypeDropdown() {
+    var sel = document.getElementById('s-e2value-structuretype');
+    if (!sel) return;
+    E2VALUE_STRUCTURE_TYPES.forEach(function(t) {
+      var opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      sel.appendChild(opt);
+    });
+  }
+
+  // Only one cost source can be active at a time — dims (not removes) whichever
+  // block isn't selected, so switching back and forth never loses either one's inputs.
+  function onCostSourceChange() {
+    var isE2Value = document.getElementById('s-cost-source-e2value').checked;
+    var altusBlock = document.getElementById('altus-cost-block');
+    var e2valueBlock = document.getElementById('e2value-cost-block');
+
+    altusBlock.style.display = 'block';
+    e2valueBlock.style.display = 'block';
+    altusBlock.style.opacity = isE2Value ? '0.4' : '1';
+    e2valueBlock.style.opacity = isE2Value ? '1' : '0.4';
+    altusBlock.querySelectorAll('select, input, button').forEach(function(el) { el.disabled = isE2Value; });
+    e2valueBlock.querySelectorAll('select, input, button').forEach(function(el) { el.disabled = !isE2Value; });
+  }
+
+  // Applies a saved draft's cost-source choice, e2Value input fields, and any cached
+  // result — called from both restore paths alongside restoreCostRowSelection().
+  function restoreCostSourceSelection(fd) {
+    var source = fd.costEstimateSource || 'altus';
+    var radio = document.getElementById(source === 'e2value' ? 's-cost-source-e2value' : 's-cost-source-altus');
+    if (radio) radio.checked = true;
+    onCostSourceChange();
+
+    if (fd.e2ValueStructureType) {
+      var typeSel = document.getElementById('s-e2value-structuretype');
+      if (typeSel) typeSel.value = fd.e2ValueStructureType;
+    }
+    if (fd.e2ValuePostalCode) {
+      var postalEl = document.getElementById('s-e2value-postal');
+      if (postalEl) postalEl.value = fd.e2ValuePostalCode;
+    }
+    if (fd.e2ValueResult) {
+      _e2ValueLastResult = fd.e2ValueResult;
+      var resultEl = document.getElementById('e2value-cost-result');
+      if (resultEl) resultEl.innerHTML = renderE2ValueResultHtml(fd.e2ValueResult);
+    }
+  }
+
+  // Shared by the live input-time result (#e2value-cost-result) and the report
+  // section (#res-e2value-body) — same underlying cached data, same markup.
+  function renderE2ValueResultHtml(result) {
+    if (!result || result.status !== 'success') {
+      return _riMsg('The last e2Value call did not return a usable estimate' + (result && result.errorMessage ? ': ' + result.errorMessage : '.'), 'warn');
+    }
+    var cd = result.costDetails || {};
+    var med = cd.med || {};
+    var low = cd.low || {};
+    var high = cd.high || {};
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
+      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost (Mid)</td><td style="padding:4px 0;font-weight:700;">$' + (med.totalReplacementCost != null ? Math.round(med.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + '</td></tr>' +
+      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Range (Low &#x2013; High)</td><td style="padding:4px 0;">$' + (low.totalReplacementCost != null ? Math.round(low.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + ' &#x2014; $' + (high.totalReplacementCost != null ? Math.round(high.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + '</td></tr>' +
+      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied (Mid)</td><td style="padding:4px 0;">$' + (med.costPerSqft != null ? med.costPerSqft : '&#x2014;') + ' / sq ft</td></tr>';
+    if (result.constructionQuality || result.constructionType || result.exterior || result.roofCovering) {
+      html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction (e2Value inferred)</td><td style="padding:4px 0;">' +
+        [result.constructionQuality, result.constructionType, result.exterior, result.roofCovering].filter(Boolean).join(', ') + '</td></tr>';
+    }
+    html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">e2Value Pronto Commercial Lite</td></tr>' +
+      '</table>' +
+      '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Live valuation from e2Value &#x2014; this call consumed one credit. Re-running it (rather than reopening this saved draft) will consume another.</div>';
+    return html;
+  }
+
+  // Button-triggered only — never auto-run on input, unlike the free Altus benchmark,
+  // since every call consumes a paid e2Value credit.
+  function getE2ValueEstimateForForm() {
+    var structureType = (document.getElementById('s-e2value-structuretype') || {}).value;
+    var totalSquareFootage = parseInt((document.getElementById('s-area') || {}).value, 10);
+    var address1 = ((document.getElementById('s-address') || {}).value || '').trim();
+    var city = ((document.getElementById('s-city') || {}).value || '').trim();
+    var postalCode = ((document.getElementById('s-e2value-postal') || {}).value || '').trim().toUpperCase();
+    var resultEl = document.getElementById('e2value-cost-result');
+    var btn = document.getElementById('btn-e2value-estimate');
+
+    var errors = [];
+    if (!structureType) errors.push('Select a Structure Type.');
+    if (!totalSquareFootage || totalSquareFootage <= 0) errors.push('Enter a Building Area (sq ft) above.');
+    if (!address1) errors.push('Enter a Street Address above.');
+    if (!/^[A-Z][0-9][A-Z] [0-9][A-Z][0-9]$/.test(postalCode)) errors.push('Enter a valid Canadian Postal Code, e.g. K2P 1L7.');
+    if (errors.length) {
+      resultEl.innerHTML = _riMsg(errors.join(' '), 'warn');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Requesting estimate\u2026';
+    resultEl.innerHTML = '<div style="font-size:12px;color:var(--slate);">Contacting e2Value\u2026</div>';
+
+    fetch('/.netlify/functions/e2value-estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        structureType: structureType,
+        totalSquareFootage: totalSquareFootage,
+        address1: address1,
+        city: city,
+        postalCode: postalCode,
+        returnPropertyId: true,
+        propertyId: (_e2ValueLastResult && _e2ValueLastResult.propertyId) || undefined
+      })
+    })
+      .then(function(response) {
+        return response.json().then(function(data) { return { ok: response.ok, data: data }; });
+      })
+      .then(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Get e2Value Estimate';
+        if (!result.ok || result.data.status !== 'success') {
+          _dbg('[e2Value] Request failed:', result.data.error || result.data.errorMessage);
+          resultEl.innerHTML = _riMsg('e2Value estimate failed: ' + (result.data.error || result.data.errorMessage || 'unknown error') + '.', 'warn');
+          return;
+        }
+        _e2ValueLastResult = result.data;
+        resultEl.innerHTML = renderE2ValueResultHtml(result.data);
+        _dbg('[e2Value] Estimate received, mid total:', result.data.costDetails && result.data.costDetails.med && result.data.costDetails.med.totalReplacementCost);
+      })
+      .catch(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Get e2Value Estimate';
+        resultEl.innerHTML = _riMsg('Network error contacting e2Value: ' + err.message, 'warn');
+      });
+  }
+
+  // Renders the cached e2Value result into the report's own results-section card
+  // (mirrors renderConstructionCostSection above) — never re-fetches.
+  function renderE2ValueSection(data) {
+    var section = document.getElementById('res-e2value-section');
+    var body = document.getElementById('res-e2value-body');
+    if (!section || !body) return;
+
+    if (data.costEstimateSource !== 'e2value' || !data.e2ValueResult) {
+      section.style.display = 'none';
+      return;
+    }
+    body.innerHTML = renderE2ValueResultHtml(data.e2ValueResult);
+    section.style.display = 'block';
+    _dbg('[e2Value] Rendered into report from cached result.');
   }
 
   function toggleUpgrade(key) {
@@ -2099,6 +2323,10 @@
       area:       document.getElementById('s-area').value,
       construction: document.getElementById('s-construction').value,
       costEstimateRowId: (document.getElementById('s-cost-type') ? document.getElementById('s-cost-type').value : ''),
+      costEstimateSource: (document.querySelector('input[name="s-cost-source"]:checked') ? document.querySelector('input[name="s-cost-source"]:checked').value : 'altus'),
+      e2ValueStructureType: (document.getElementById('s-e2value-structuretype') ? document.getElementById('s-e2value-structuretype').value : ''),
+      e2ValuePostalCode: (document.getElementById('s-e2value-postal') ? document.getElementById('s-e2value-postal').value : ''),
+      e2ValueResult: _e2ValueLastResult, // cached parsed response from getE2ValueEstimateForForm() — never re-fetched on save/restore
       infraredTesting: infraredTesting,
       fireProtection: document.getElementById('s-fire-protection').value,
       context:    document.getElementById('s-context').value.trim(),
@@ -3563,6 +3791,7 @@
               }
             }
             if (fd.costEstimateRowId) restoreCostRowSelection(fd.costEstimateRowId);
+            restoreCostSourceSelection(fd);
             if (fd.hazards && fd.hazards.length) {
               document.querySelectorAll('#hazard-checks .check-item').forEach(function(el) {
                 var key = (el.dataset && el.dataset.hazard) ? el.dataset.hazard : el.textContent.trim();
@@ -4448,6 +4677,7 @@
         setTimeout(function() { renderNatCatSection(lastResult.formData); }, 900);
         setTimeout(function() { renderFireHydrantProximity(lastResult.formData); }, 700);
         setTimeout(function() { renderConstructionCostSection(lastResult.formData); }, 600);
+        setTimeout(function() { renderE2ValueSection(lastResult.formData); }, 600);
       }
 
     } catch(e) {
@@ -5756,6 +5986,7 @@
       setTimeout(function() { renderNatCatSection(lastResult.formData); }, 500);
       setTimeout(function() { renderFireHydrantProximity(lastResult.formData); }, 500);
       setTimeout(function() { renderConstructionCostSection(lastResult.formData); }, 500);
+      setTimeout(function() { renderE2ValueSection(lastResult.formData); }, 500);
     }
   }
 
