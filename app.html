@@ -1,4 +1,4 @@
-<!-- BUILD:20260403-1018 -->
+<!-- BUILD:20260926-0910 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1867,13 +1867,34 @@
         <div class="card-title">Construction Cost Estimate</div>
         <div style="font-size:11px;color:var(--slate);margin-bottom:12px;">Optional — select a matching building type to estimate replacement cost from the declared area above. <strong>Note:</strong> this estimate reflects the cost to rebuild the <em>entire building</em>. For a multi-tenant property, the figure shown must be pro-rated to each tenant's individual occupied area (e.g. tenant area ÷ total building area × estimated cost) rather than applied in full to any single unit.</div>
         <div class="field">
-          <label>Building Type (Altus Group 2026 Cost Guide)</label>
-          <select id="cope-cost-type" onchange="updateCopeConstructionCostEstimate()">
-            <option value="">&#x2014; Select if a close match exists &#x2014;</option>
+          <label>Cost Estimate Source</label>
+          <select id="cope-cost-source" onchange="onCopeCostSourceChange()">
+            <option value="altus">Altus Group Cost Guide (static benchmark)</option>
+            <option value="e2value">e2Value (live valuation &#x2014; uses 1 credit)</option>
           </select>
-          <div id="cope-cost-region-note"></div>
         </div>
-        <div id="cope-construction-cost-result" style="margin-top:10px;"></div>
+        <div id="cope-altus-cost-block">
+          <div class="field">
+            <label>Building Type (Altus Group 2026 Cost Guide)</label>
+            <select id="cope-cost-type" onchange="updateCopeConstructionCostEstimate()">
+              <option value="">&#x2014; Select if a close match exists &#x2014;</option>
+            </select>
+            <div id="cope-cost-region-note"></div>
+          </div>
+          <div id="cope-construction-cost-result" style="margin-top:10px;"></div>
+        </div>
+        <div id="cope-e2value-cost-block" style="display:none;">
+          <div class="field">
+            <label>Structure Type (e2Value)</label>
+            <select id="cope-e2value-structuretype">
+              <option value="">&#x2014; Select &#x2014;</option>
+            </select>
+          </div>
+          <div style="font-size:11px;color:var(--slate);margin:4px 0 8px;">Uses the Street Address, City, Postal Code, and Total Building Area entered above &#x2014; enter those first. Postal Code must be in Canadian "A1A 1A1" format; e2Value's commercial API does not currently accept US zip codes.</div>
+          <button type="button" class="btn-secondary" id="btn-cope-e2value-estimate" onclick="getCopeE2ValueEstimate()">Get e2Value Estimate</button>
+          <div id="cope-e2value-cost-result" style="margin-top:10px;"></div>
+          <input type="hidden" id="cope-e2value-result-json" value="">
+        </div>
       </div>
       <div class="card">
         <div class="card-title">Construction Class</div>
@@ -10381,6 +10402,13 @@
       // Supabase) — the generic restore above can silently fail if it runs
       // before those <option>s exist, so handle it explicitly here.
       if (fields['cope-cost-type']) restoreCopeCostRowSelection(fields['cope-cost-type']);
+      // cope-cost-source, cope-e2value-structuretype, and the hidden cope-e2value-result-json
+      // are already restored by the generic loop above (they're plain select/input elements),
+      // but setting .value programmatically doesn't fire onchange or re-render anything —
+      // apply the dim/enable state and redisplay the cached result explicitly, same as the
+      // cost-type handling just above. This never re-calls e2Value.
+      onCopeCostSourceChange();
+      renderCopeE2ValueResultFromCache();
       // ── Restore pill selections (radio-btn / check-btn) ──
       const pills = fd.pills || fd.pill_selections || {};
       Object.entries(pills).forEach(([key, vals]) => {
@@ -13561,6 +13589,166 @@
     resultEl.innerHTML = html;
   }
 
+  // ── E2VALUE LIVE VALUATION (alternate to the Altus benchmark above) ──
+  // Selecting it in the Cost Estimate Source dropdown dims the Altus block instead of
+  // removing it, so switching back keeps whatever building type had been picked there.
+  // The fetch is button-triggered only (never on input, unlike Altus) since every call
+  // consumes a paid e2Value credit. The result is cached into the hidden
+  // #cope-e2value-result-json input, which collectFormData() picks up automatically like
+  // any other field — so reopening a saved inspection replays the cached numbers and
+  // never re-calls e2Value.
+
+  // Must stay in sync with STRUCTURE_TYPES in netlify/functions/e2value-estimate.js
+  // (e2Value's Pronto Commercial Lite tSTRUCTURETYPE enum).
+  var COPE_E2VALUE_STRUCTURE_TYPES = [
+    'Apartment','Auditorium','Auto, mini-lube','Auto, sales','Auto, service center',
+    'Auto, service repair','Bakery','Bank, branch','Bar/Tavern','Beauty Salon/Barber Shop',
+    'Bowling alley','Cannabis, bakery','Cannabis, cultivation/extraction','Cannabis, retail',
+    'Car wash, automatic','Car wash, self service','Church','Cold storage facility',
+    'College, dormitory','Community Center','Concession stand','Condominium',
+    'Convenience market','Country club','Courthouse','Day care center',
+    'Dispensary/urgent care','Dressing and shower facility','Fire station, paid',
+    'Fire station, volunteer','Fraternal building','Funeral home','Garage, parking',
+    'Garage, underground parking','Government building','Greenhouse',
+    'Handball/racquetball club','Hangar, aircraft','Health club','Hemp drying facility',
+    'Home improvement center','Hospital, convalescent','Hospital, general',
+    'Hospital, veterinary','Hotel','Indoor tennis club','Jail','Laboratory','Laundromat',
+    'Library, public','Manufacturing, heavy','Manufacturing, light','Medical office',
+    'Mini-storage, steel','Motel','Multi-family residence','Multiple residence, elderly',
+    'Office','Pavilion, open','Police station','Post office, branch','Post office, main',
+    'Prison','Restaurant','Restaurant, fast food','Restroom building','Rink, hockey',
+    'School, elementary','School, gymnasium','School, secondary','School, vocational',
+    'Shopping center, strip','Social club','Store, department','Store, discount',
+    'Store, retail','Supermarket','Surgical center','Swimming pool, enclosed',
+    'Terminal, airport','Terminal, bus','Theater, movie','Warehouse',
+    'Warehouse, self storage'
+  ];
+
+  function populateCopeE2ValueStructureTypeDropdown() {
+    var sel = document.getElementById('cope-e2value-structuretype');
+    if (!sel) return;
+    COPE_E2VALUE_STRUCTURE_TYPES.forEach(function(t) {
+      var opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      sel.appendChild(opt);
+    });
+  }
+
+  // Only one cost source is active at a time — dims (not removes) whichever block
+  // isn't selected, so switching back and forth never loses either one's inputs.
+  function onCopeCostSourceChange() {
+    var sourceSel = document.getElementById('cope-cost-source');
+    var isE2Value = sourceSel && sourceSel.value === 'e2value';
+    var altusBlock = document.getElementById('cope-altus-cost-block');
+    var e2valueBlock = document.getElementById('cope-e2value-cost-block');
+    if (!altusBlock || !e2valueBlock) return;
+
+    altusBlock.style.display = 'block';
+    e2valueBlock.style.display = 'block';
+    altusBlock.style.opacity = isE2Value ? '0.4' : '1';
+    e2valueBlock.style.opacity = isE2Value ? '1' : '0.4';
+    altusBlock.querySelectorAll('select, input, button').forEach(function(el) { el.disabled = isE2Value; });
+    e2valueBlock.querySelectorAll('select, input, button').forEach(function(el) { el.disabled = !isE2Value; });
+  }
+
+  // Shared by the live result div (#cope-e2value-cost-result) and the Formal Report
+  // embedding — same underlying cached data, same markup.
+  function renderCopeE2ValueResultHtml(result) {
+    if (!result || result.status !== 'success') {
+      return _copeCostMsg('The last e2Value call did not return a usable estimate' + (result && result.errorMessage ? ': ' + result.errorMessage : '.'));
+    }
+    var cd = result.costDetails || {};
+    var med = cd.med || {};
+    var low = cd.low || {};
+    var high = cd.high || {};
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
+      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost (Mid)</td><td style="padding:4px 0;font-weight:700;">$' + (med.totalReplacementCost != null ? Math.round(med.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + '</td></tr>' +
+      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Range (Low &#x2013; High)</td><td style="padding:4px 0;">$' + (low.totalReplacementCost != null ? Math.round(low.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + ' &#x2014; $' + (high.totalReplacementCost != null ? Math.round(high.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + '</td></tr>' +
+      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied (Mid)</td><td style="padding:4px 0;">$' + (med.costPerSqft != null ? med.costPerSqft : '&#x2014;') + ' / sq ft</td></tr>';
+    if (result.constructionQuality || result.constructionType || result.exterior || result.roofCovering) {
+      html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction (e2Value inferred)</td><td style="padding:4px 0;">' +
+        [result.constructionQuality, result.constructionType, result.exterior, result.roofCovering].filter(Boolean).join(', ') + '</td></tr>';
+    }
+    html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">e2Value Pronto Commercial Lite</td></tr>' +
+      '</table>' +
+      '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Live valuation from e2Value &#x2014; this call consumed one credit. Re-running it (rather than reopening this saved inspection) will consume another.</div>';
+    return html;
+  }
+
+  // Redisplays whatever e2Value returned last time, from the hidden cache field —
+  // called after restoring a saved inspection. Never calls e2Value itself.
+  function renderCopeE2ValueResultFromCache() {
+    var cacheEl = document.getElementById('cope-e2value-result-json');
+    var resultEl = document.getElementById('cope-e2value-cost-result');
+    if (!cacheEl || !resultEl || !cacheEl.value) return;
+    try {
+      resultEl.innerHTML = renderCopeE2ValueResultHtml(JSON.parse(cacheEl.value));
+    } catch(e) { /* cached value unreadable — leave the result area as-is */ }
+  }
+
+  // Button-triggered only — never auto-run on input, unlike the free Altus benchmark,
+  // since every call consumes a paid e2Value credit.
+  function getCopeE2ValueEstimate() {
+    var structureType = (document.getElementById('cope-e2value-structuretype') || {}).value;
+    var totalSquareFootage = parseInt((document.getElementById('total-area') || {}).value, 10);
+    var address1 = ((document.getElementById('street-address') || {}).value || '').trim();
+    var city = ((document.getElementById('city') || {}).value || '').trim();
+    var postalCode = ((document.getElementById('postal-code') || {}).value || '').trim().toUpperCase();
+    var resultEl = document.getElementById('cope-e2value-cost-result');
+    var cacheEl = document.getElementById('cope-e2value-result-json');
+    var btn = document.getElementById('btn-cope-e2value-estimate');
+
+    var errors = [];
+    if (!structureType) errors.push('Select a Structure Type.');
+    if (!totalSquareFootage || totalSquareFootage <= 0) errors.push('Enter a Total Building Area above.');
+    if (!address1) errors.push('Enter a Street Address above.');
+    if (!/^[A-Z][0-9][A-Z] [0-9][A-Z][0-9]$/.test(postalCode)) errors.push('Enter a valid Canadian Postal Code above, e.g. K2P 1L7.');
+    if (errors.length) {
+      resultEl.innerHTML = _copeCostMsg(errors.join(' '));
+      return;
+    }
+
+    var cachedResult = null;
+    try { cachedResult = cacheEl.value ? JSON.parse(cacheEl.value) : null; } catch(e) { cachedResult = null; }
+
+    btn.disabled = true;
+    btn.textContent = 'Requesting estimate…';
+    resultEl.innerHTML = '<div style="font-size:12px;color:var(--slate);">Contacting e2Value…</div>';
+
+    fetch('/.netlify/functions/e2value-estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        structureType: structureType,
+        totalSquareFootage: totalSquareFootage,
+        address1: address1,
+        city: city,
+        postalCode: postalCode,
+        returnPropertyId: true,
+        propertyId: (cachedResult && cachedResult.propertyId) || undefined
+      })
+    })
+      .then(function(response) {
+        return response.json().then(function(data) { return { ok: response.ok, data: data }; });
+      })
+      .then(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Get e2Value Estimate';
+        if (!result.ok || result.data.status !== 'success') {
+          resultEl.innerHTML = _copeCostMsg('e2Value estimate failed: ' + (result.data.error || result.data.errorMessage || 'unknown error') + '.');
+          return;
+        }
+        cacheEl.value = JSON.stringify(result.data);
+        resultEl.innerHTML = renderCopeE2ValueResultHtml(result.data);
+      })
+      .catch(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Get e2Value Estimate';
+        resultEl.innerHTML = _copeCostMsg('Network error contacting e2Value: ' + err.message);
+      });
+  }
+
   function toggleBasementUse() {
     var area = parseFloat(document.getElementById('basement-area').value) || 0;
     var type = document.getElementById('basement-type') ? document.getElementById('basement-type').value : '';
@@ -13636,6 +13824,7 @@
   // If the user is already logged in (came from dashboard), skip login overlay
   (async function restoreSession() {
     loadCopeConstructionCostData(); // fire independently of auth — populates the cost dropdown
+    populateCopeE2ValueStructureTypeDropdown();
     try {
       const { data: { session } } = await _supabase.auth.getSession();
       if (!session) {
@@ -15670,6 +15859,19 @@ function generateFormalReport() {
       ${field2('Basement / Below-Grade Area (sq ft)', val('basement-area'))}
       ${field2('Basement Type', val('basement-type'))}
       ${(() => {
+        const sourceSel = document.getElementById('cope-cost-source');
+        if (sourceSel && sourceSel.value === 'e2value') {
+          const cacheEl = document.getElementById('cope-e2value-result-json');
+          let cached = null;
+          try { cached = cacheEl && cacheEl.value ? JSON.parse(cacheEl.value) : null; } catch(e) { cached = null; }
+          if (!cached || cached.status !== 'success') return field2('Estimated Replacement Cost', 'e2Value estimate not yet requested');
+          const cd = cached.costDetails || {};
+          const med = cd.med || {}; const low = cd.low || {}; const high = cd.high || {};
+          const mid = med.totalReplacementCost != null ? Math.round(med.totalReplacementCost).toLocaleString('en-CA') : '—';
+          const lowStr = low.totalReplacementCost != null ? Math.round(low.totalReplacementCost).toLocaleString('en-CA') : '—';
+          const highStr = high.totalReplacementCost != null ? Math.round(high.totalReplacementCost).toLocaleString('en-CA') : '—';
+          return field2('Estimated Replacement Cost', '$' + mid + ' ($' + lowStr + ' – $' + highStr + ' range, e2Value Pronto Commercial Lite)');
+        }
         const sel = document.getElementById('cope-cost-type');
         const rowId = sel ? sel.value : '';
         if (!rowId) return '';
