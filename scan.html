@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 361 — 2026-09-26 — Added e2Value live valuation as an alternate Construction Cost Estimate source alongside the existing Altus benchmark: a radio toggle dims whichever source isn't selected; e2Value fields (structure type, postal code) and a manual "Get e2Value Estimate" button call the new netlify/functions/e2value-estimate.js (never auto-fetches, since each call is a paid credit); the parsed result is cached and saved into form data so reopening a draft or re-rendering a report replays it instead of re-calling e2Value; a matching results-section card (res-e2value-section) mirrors the Altus one in the report, and only the chosen source's section renders. Requires E2VALUE_USERNAME/E2VALUE_PASSWORD Netlify env vars. Carries forward Deploy 360's _draftInspId fix. -->
+<!-- SanketRisk SCAN ONE — Deploy 362 — 2026-09-30 — e2Value requests now send Construction Type: maps the existing ISO-class selection (#s-construction) to e2Value's tConstructionType enum instead of leaving e2Value to guess construction from occupancy/address alone (this had produced a wrong wood-frame guess for a masonry building). The result panel now shows "Construction Type Sent" and warns in orange when none was selected. Carries forward Deploy 361 (e2Value cost-source panel) and Deploy 360 (_draftInspId fix). -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1919,6 +1919,22 @@
     }
   }
 
+  // Maps SanketRisk's own ISO 6-class construction selection (#s-construction) onto
+  // e2Value's tConstructionType enum, so a call is never left to guess construction
+  // purely from occupancy code + address the way it did before this was added.
+  // NOTE: e2Value's Lite construction_type enum has no separate "combustible vs
+  // non-combustible floor/roof" distinction within masonry, so ISO Classes 2 (Joisted
+  // Masonry) and 4 (Masonry Non-Combustible) both map to the same "masonry bearing
+  // walls" value — a genuine limitation of e2Value's simplified enum, not a mapping bug.
+  var ISO_CLASS_TO_E2VALUE_CONSTRUCTION_TYPE = {
+    'Frame (Wood / Combustible)': 'framing, wood',
+    'Joisted Masonry': 'masonry bearing walls',
+    'Non-Combustible / Metal': 'metal frame',
+    'Masonry Non-Combustible': 'masonry bearing walls',
+    'Modified Fire Resistive': 'reinforced concrete frame',
+    'Fire Resistive (Concrete)': 'reinforced concrete frame'
+  };
+
   // Shared by the live input-time result (#e2value-cost-result) and the report
   // section (#res-e2value-body) — same underlying cached data, same markup.
   function renderE2ValueResultHtml(result) {
@@ -1933,13 +1949,18 @@
       '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost (Mid)</td><td style="padding:4px 0;font-weight:700;">$' + (med.totalReplacementCost != null ? Math.round(med.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + '</td></tr>' +
       '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Range (Low &#x2013; High)</td><td style="padding:4px 0;">$' + (low.totalReplacementCost != null ? Math.round(low.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + ' &#x2014; $' + (high.totalReplacementCost != null ? Math.round(high.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + '</td></tr>' +
       '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied (Mid)</td><td style="padding:4px 0;">$' + (med.costPerSqft != null ? med.costPerSqft : '&#x2014;') + ' / sq ft</td></tr>';
+    html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction Type Sent</td><td style="padding:4px 0;">' +
+      (result.sentConstructionType || '<span style="color:#b45309;">none &#x2014; e2Value inferred it from occupancy/address alone</span>') + '</td></tr>';
     if (result.constructionQuality || result.constructionType || result.exterior || result.roofCovering) {
-      html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction (e2Value inferred)</td><td style="padding:4px 0;">' +
+      html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction (per e2Value response)</td><td style="padding:4px 0;">' +
         [result.constructionQuality, result.constructionType, result.exterior, result.roofCovering].filter(Boolean).join(', ') + '</td></tr>';
     }
     html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">e2Value Pronto Commercial Lite</td></tr>' +
-      '</table>' +
-      '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Live valuation from e2Value &#x2014; this call consumed one credit. Re-running it (rather than reopening this saved draft) will consume another.</div>';
+      '</table>';
+    if (!result.sentConstructionType) {
+      html += '<div style="font-size:11px;color:#b45309;margin-bottom:6px;">&#x26A0; No Construction Type was selected above, so this estimate relies on e2Value\'s own guess from occupancy and address &#x2014; verify the "Construction (per e2Value response)" row against the actual building before relying on this figure. Select a Construction Type and re-run for a value that reflects what was actually inspected.</div>';
+    }
+    html += '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Live valuation from e2Value &#x2014; this call consumed one credit. Re-running it (rather than reopening this saved draft) will consume another.</div>';
     return html;
   }
 
@@ -1951,6 +1972,8 @@
     var address1 = ((document.getElementById('s-address') || {}).value || '').trim();
     var city = ((document.getElementById('s-city') || {}).value || '').trim();
     var postalCode = ((document.getElementById('s-e2value-postal') || {}).value || '').trim().toUpperCase();
+    var isoClassValue = (document.getElementById('s-construction') || {}).value;
+    var mappedConstructionType = ISO_CLASS_TO_E2VALUE_CONSTRUCTION_TYPE[isoClassValue] || null;
     var resultEl = document.getElementById('e2value-cost-result');
     var btn = document.getElementById('btn-e2value-estimate');
 
@@ -1977,6 +2000,7 @@
         address1: address1,
         city: city,
         postalCode: postalCode,
+        constructionType: mappedConstructionType || undefined,
         returnPropertyId: true,
         propertyId: (_e2ValueLastResult && _e2ValueLastResult.propertyId) || undefined
       })
@@ -1992,6 +2016,7 @@
           resultEl.innerHTML = _riMsg('e2Value estimate failed: ' + (result.data.error || result.data.errorMessage || 'unknown error') + '.', 'warn');
           return;
         }
+        result.data.sentConstructionType = mappedConstructionType; // for display only — not part of e2Value's own response
         _e2ValueLastResult = result.data;
         resultEl.innerHTML = renderE2ValueResultHtml(result.data);
         _dbg('[e2Value] Estimate received, mid total:', result.data.costDetails && result.data.costDetails.med && result.data.costDetails.med.totalReplacementCost);
