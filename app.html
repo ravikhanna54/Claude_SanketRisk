@@ -1,4 +1,4 @@
-<!-- BUILD:20260926-0910 -->
+<!-- BUILD:20260930-1027 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13652,6 +13652,21 @@
     e2valueBlock.querySelectorAll('select, input, button').forEach(function(el) { el.disabled = !isE2Value; });
   }
 
+  // Maps the ISO Construction Class radio selection (#iso-class) onto e2Value's
+  // tConstructionType enum, so a call is never left to guess construction purely from
+  // occupancy code + address. NOTE: e2Value's Lite construction_type enum has no
+  // separate combustible-vs-non-combustible-floor distinction within masonry, so
+  // Joisted Masonry and Masonry Non-Comb. both map to "masonry bearing walls" — a
+  // genuine limitation of e2Value's simplified enum, not a mapping bug.
+  var ISO_CLASS_TO_E2VALUE_CONSTRUCTION_TYPE = {
+    'Frame': 'framing, wood',
+    'Joisted Masonry': 'masonry bearing walls',
+    'Non-Combustible': 'metal frame',
+    'Masonry Non-Comb.': 'masonry bearing walls',
+    'Modified Fire Resistive': 'reinforced concrete frame',
+    'Fire Resistive': 'reinforced concrete frame'
+  };
+
   // Shared by the live result div (#cope-e2value-cost-result) and the Formal Report
   // embedding — same underlying cached data, same markup.
   function renderCopeE2ValueResultHtml(result) {
@@ -13666,13 +13681,18 @@
       '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost (Mid)</td><td style="padding:4px 0;font-weight:700;">$' + (med.totalReplacementCost != null ? Math.round(med.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + '</td></tr>' +
       '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Range (Low &#x2013; High)</td><td style="padding:4px 0;">$' + (low.totalReplacementCost != null ? Math.round(low.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + ' &#x2014; $' + (high.totalReplacementCost != null ? Math.round(high.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + '</td></tr>' +
       '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied (Mid)</td><td style="padding:4px 0;">$' + (med.costPerSqft != null ? med.costPerSqft : '&#x2014;') + ' / sq ft</td></tr>';
+    html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction Type Sent</td><td style="padding:4px 0;">' +
+      (result.sentConstructionType || '<span style="color:#b45309;">none &#x2014; e2Value inferred it from occupancy/address alone</span>') + '</td></tr>';
     if (result.constructionQuality || result.constructionType || result.exterior || result.roofCovering) {
-      html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction (e2Value inferred)</td><td style="padding:4px 0;">' +
+      html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction (per e2Value response)</td><td style="padding:4px 0;">' +
         [result.constructionQuality, result.constructionType, result.exterior, result.roofCovering].filter(Boolean).join(', ') + '</td></tr>';
     }
     html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">e2Value Pronto Commercial Lite</td></tr>' +
-      '</table>' +
-      '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Live valuation from e2Value &#x2014; this call consumed one credit. Re-running it (rather than reopening this saved inspection) will consume another.</div>';
+      '</table>';
+    if (!result.sentConstructionType) {
+      html += '<div style="font-size:11px;color:#b45309;margin-bottom:6px;">&#x26A0; No ISO Construction Class was selected, so this estimate relies on e2Value\'s own guess from occupancy and address &#x2014; verify the "Construction (per e2Value response)" row against the actual building before relying on this figure. Select an ISO Construction Class above and re-run for a value that reflects what was actually inspected.</div>';
+    }
+    html += '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Live valuation from e2Value &#x2014; this call consumed one credit. Re-running it (rather than reopening this saved inspection) will consume another.</div>';
     return html;
   }
 
@@ -13695,6 +13715,9 @@
     var address1 = ((document.getElementById('street-address') || {}).value || '').trim();
     var city = ((document.getElementById('city') || {}).value || '').trim();
     var postalCode = ((document.getElementById('postal-code') || {}).value || '').trim().toUpperCase();
+    var isoBtn = document.querySelector('#iso-class .radio-btn.selected');
+    var isoClassText = isoBtn ? isoBtn.textContent.trim() : '';
+    var mappedConstructionType = ISO_CLASS_TO_E2VALUE_CONSTRUCTION_TYPE[isoClassText] || null;
     var resultEl = document.getElementById('cope-e2value-cost-result');
     var cacheEl = document.getElementById('cope-e2value-result-json');
     var btn = document.getElementById('btn-cope-e2value-estimate');
@@ -13725,6 +13748,7 @@
         address1: address1,
         city: city,
         postalCode: postalCode,
+        constructionType: mappedConstructionType || undefined,
         returnPropertyId: true,
         propertyId: (cachedResult && cachedResult.propertyId) || undefined
       })
@@ -13735,6 +13759,9 @@
       .then(function(result) {
         btn.disabled = false;
         btn.textContent = 'Get e2Value Estimate';
+        if (result.ok && result.data && result.data.status === 'success') {
+          result.data.sentConstructionType = mappedConstructionType; // for display only — not part of e2Value's own response
+        }
         if (!result.ok || result.data.status !== 'success') {
           resultEl.innerHTML = _copeCostMsg('e2Value estimate failed: ' + (result.data.error || result.data.errorMessage || 'unknown error') + '.');
           return;
@@ -13891,7 +13918,7 @@
 <script>
 // ── NARRATIVE REPORT GENERATOR ──
 // Uses Anthropic API to generate a professional written narrative inspection report
-function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,insuredName,inspId,inspDate,city,province,occupancy,inspName,riskQuality,uwRec,execSummary,yearBuilt,stories,totalArea,constructClass,extWall,extFinish,structFrame,floorConstruction,roofType,roofCovering,roofDeck,roofYear,electrical,heating,constNotes,occupancyDesc,hazardNotes,sprinklerCoverage,sprinklerType,sprinklerCond,fireAlarm,extPresent,fusDistance,fusDeptType,fusGrade,security,protNotes,northExp,southExp,eastExp,westExp,expRating,floodZone,earthquake,expNotes,totalLosses,totalIncurred,primaryCause,lossComments,safetyText,recText) {
+function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,insuredName,inspId,inspDate,city,province,occupancy,inspName,riskQuality,uwRec,execSummary,yearBuilt,stories,totalArea,constructClass,extWall,extFinish,structFrame,floorConstruction,roofType,roofCovering,roofDeck,roofYear,electrical,heating,constNotes,occupancyDesc,hazardNotes,sprinklerCoverage,sprinklerType,sprinklerCond,fireAlarm,extPresent,fusDistance,fusDeptType,fusGrade,security,protNotes,northExp,southExp,eastExp,westExp,expRating,floodZone,earthquake,expNotes,totalLosses,totalIncurred,primaryCause,lossComments,safetyText,recText,e2ValueNarrative) {
   function fmt(v) { return (v && v !== '\u2014') ? v : null; }
   var loc = city && province ? city + ', ' + province : (city || province || 'the subject location');
   var recItems = d.rec_items || [];
@@ -13929,6 +13956,7 @@ function generateNarrativeText(d,g,ratings,pills,scoreC,scoreP,scoreS,scoreO,ins
   s2 += '. ';
   if (fmt(electrical)) s2 += 'Electrical service is provided via ' + String(electrical).toLowerCase() + ' panels. ';
   if (fmt(heating)) s2 += 'The heating system consists of ' + String(heating).toLowerCase() + '. ';
+  if (e2ValueNarrative) s2 += e2ValueNarrative;
   s2 += NL;
   var s3 = '**3. Occupancy & Operations**' + NL;
   if (fmt(occupancyDesc)) { s3 += occupancyDesc + NL; } else { s3 += 'The premises are occupied as ' + (fmt(occupancy)||'a commercial property') + '. No description of operations was recorded.' + NL; }
@@ -14341,6 +14369,28 @@ Write in formal insurance inspection language. Be specific with measurements, da
 </div>
 </body>
 </html>`;
+  // e2Value replacement-cost sentence — only when e2Value is the selected cost-estimate
+  // source and a cached result exists. Reads the same hidden cache the Formal Report
+  // uses, so this never re-calls e2Value (which would consume another credit).
+  var e2ValueNarrative = '';
+  var _nCostSourceEl = document.getElementById('cope-cost-source');
+  if (_nCostSourceEl && _nCostSourceEl.value === 'e2value') {
+    var _nCacheEl = document.getElementById('cope-e2value-result-json');
+    var _nCached = null;
+    try { _nCached = _nCacheEl && _nCacheEl.value ? JSON.parse(_nCacheEl.value) : null; } catch(e) { _nCached = null; }
+    if (_nCached && _nCached.status === 'success') {
+      var _nMed = (_nCached.costDetails || {}).med || {};
+      var _nLow = (_nCached.costDetails || {}).low || {};
+      var _nHigh = (_nCached.costDetails || {}).high || {};
+      if (_nMed.totalReplacementCost != null) {
+        e2ValueNarrative = 'An e2Value Pronto Commercial Lite valuation estimates the replacement cost of the building at approximately $' +
+          Math.round(_nMed.totalReplacementCost).toLocaleString() +
+          (_nLow.totalReplacementCost != null && _nHigh.totalReplacementCost != null
+            ? ' (range $' + Math.round(_nLow.totalReplacementCost).toLocaleString() + ' to $' + Math.round(_nHigh.totalReplacementCost).toLocaleString() + ')'
+            : '') + '. ';
+      }
+    }
+  }
   // ── Generate narrative instantly (template-based) ──
   try {
     var narrativeText = generateNarrativeText(d, g, ratings, pills, scoreC, scoreP, scoreS, scoreO,
@@ -14351,7 +14401,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
       sprinklerCoverage, sprinklerType, sprinklerCond, fireAlarm,
       extPresent, fusDistance, fusDeptType, fusGrade, security, protNotes,
       northExp, southExp, eastExp, westExp, expRating, floodZone, earthquake, expNotes,
-      totalLosses, totalIncurred, primaryCause, lossComments, safetyText, recText);
+      totalLosses, totalIncurred, primaryCause, lossComments, safetyText, recText, e2ValueNarrative);
     // ── Convert markdown to HTML ──
     function mdToHtml(text) {
       return text
