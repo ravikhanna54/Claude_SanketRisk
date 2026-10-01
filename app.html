@@ -1,4 +1,4 @@
-<!-- BUILD:20260930-1027 -->
+<!-- BUILD:20260930-2230 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10386,6 +10386,9 @@
       let fd = {};
       try { fd = JSON.parse(rec.form_data || '{}'); } catch(e) { fd = {}; }
       const fields = fd.fields || fd.form_fields || {};
+      // ── Reconstruct any additional-building cards BEFORE the generic loop below,
+      // since that loop can only set .value on elements that already exist in the DOM ──
+      const restoredBuildingNums = restoreAdditionalBuildingCards(fields);
       // ── Restore all input/select/textarea fields ──
       Object.entries(fields).forEach(([id, val]) => {
         const el = document.getElementById(id);
@@ -10409,6 +10412,15 @@
       // cost-type handling just above. This never re-calls e2Value.
       onCopeCostSourceChange();
       renderCopeE2ValueResultFromCache();
+      // Same reasoning per additional building: their e2Value Structure Type dropdown,
+      // Construction Type QA field, and hidden result cache were all just restored by
+      // the generic loop above (plain select/input elements), but the one-time
+      // construction prefill and cached-result redisplay need an explicit call, same as
+      // the main property just above. This never re-calls e2Value.
+      restoredBuildingNums.forEach(num => {
+        prefillBldgE2ValueConstruction(num);
+        renderBldgE2ValueResultFromCache(num);
+      });
       // ── Restore pill selections (radio-btn / check-btn) ──
       const pills = fd.pills || fd.pill_selections || {};
       Object.entries(pills).forEach(([key, vals]) => {
@@ -11355,7 +11367,7 @@
           </div>
           <div class="field">
             <label>ISO Construction Class</label>
-            <select id="${b}-construction-class">
+            <select id="${b}-construction-class" onchange="prefillBldgE2ValueConstruction(${num})">
               <option value="">— Select —</option>
               <option>Class 1 — Frame</option>
               <option>Class 2 — Joisted Masonry</option>
@@ -11412,6 +11424,37 @@
           <label>Construction Notes</label>
           <textarea spellcheck="true" id="${b}-construction-notes" rows="3" placeholder="Construction quality, condition, renovations, notable features..."></textarea>
         </div>
+      </div>
+      <div class="divider"></div>
+      <!-- e2Value Live Valuation for this building -->
+      <div style="padding:0 16px;">
+        <div style="font-size:10px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-top:12px;">Construction Cost Estimate (e2Value)</div>
+        <div style="font-size:11px;color:var(--slate);margin-bottom:10px;">Optional, per-building live valuation &#x2014; separate from the main property's estimate. Uses this building's own Total Square Footage above. Uses the main property's Street Address and City unless a different address was entered above.</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Structure Type (e2Value)</label>
+            <select id="${b}-e2value-structuretype"><option value="">&#x2014; Select &#x2014;</option></select>
+          </div>
+          <div class="field">
+            <label>Postal Code <span style="font-size:10px;color:var(--slate);font-weight:400">(required by e2Value, e.g. K2P 1L7)</span></label>
+            <input type="text" id="${b}-e2value-postal" placeholder="e.g. K2P 1L7">
+          </div>
+          <div class="field">
+            <label>Construction Type (sent to e2Value) <span style="font-size:10px;color:var(--slate);font-weight:400">(QA check &#x2014; confirm before requesting)</span></label>
+            <select id="${b}-e2value-construction">
+              <option value="">&#x2014; Select or leave for e2Value to infer &#x2014;</option>
+              <option>Class 1 — Frame</option>
+              <option>Class 2 — Joisted Masonry</option>
+              <option>Class 3 — Non-Combustible</option>
+              <option>Class 4 — Masonry Non-Combustible</option>
+              <option>Class 5 — Modified Fire Resistive</option>
+              <option>Class 6 — Fire Resistive</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" class="btn-secondary" id="${b}-btn-e2value-estimate" onclick="getBldgE2ValueEstimate(${num})">Get e2Value Estimate</button>
+        <div id="${b}-e2value-cost-result" style="margin-top:10px;"></div>
+        <input type="hidden" id="${b}-e2value-result-json" value="">
       </div>
       <div class="divider"></div>
       <!-- O — Occupancy -->
@@ -11525,17 +11568,174 @@
       </div>
     </div>`;
   }
-  function addBuilding() {
-    buildingCount++;
+  // Shared by addBuilding() (user clicks "Add Another Building") and
+  // restoreAdditionalBuildingCards() (reopening a saved inspection) — creates the DOM
+  // card for building `num` and populates its e2Value Structure Type dropdown and
+  // one-time postal-code default. Does NOT touch buildingCount or scroll/toast, since
+  // restore needs neither.
+  function createBuildingCard(num) {
     const container = document.getElementById('additional-buildings-container');
     const div = document.createElement('div');
-    div.id = `building-wrapper-${buildingCount}`;
-    div.innerHTML = buildingCOPEHTML(buildingCount);
+    div.id = `building-wrapper-${num}`;
+    div.innerHTML = buildingCOPEHTML(num);
     container.appendChild(div);
+    populateBldgE2ValueStructureTypeDropdown(num);
+    // One-time default: prefill this building's e2Value postal code from the main
+    // property's, since most additional buildings share the same site/postal code.
+    // Harmless for restored buildings too — the generic fields-restore loop that runs
+    // right after this always overwrites it with whatever was actually saved.
+    const postalEl = document.getElementById(`bldg${num}-e2value-postal`);
+    const mainPostalEl = document.getElementById('postal-code');
+    if (postalEl && !postalEl.value && mainPostalEl && mainPostalEl.value) postalEl.value = mainPostalEl.value;
+    return div;
+  }
+
+  function addBuilding() {
+    buildingCount++;
+    const div = createBuildingCard(buildingCount);
     // Scroll to new building
     div.scrollIntoView({ behavior: 'smooth', block: 'start' });
     showToast(`✓ Building ${buildingCount} added`);
   }
+
+  // Reconstructs every additional-building card from saved form data — fixes a
+  // pre-existing gap where reopening a saved inspection never recreated Building 2, 3,
+  // etc., so their saved fields (construction, occupancy, everything) had no DOM element
+  // to land on and appeared to vanish. Must run BEFORE the generic fields-restore loop,
+  // since that loop can only set .value on elements that already exist. Detects building
+  // numbers from the `bldg<N>-name` keys actually present in saved data — not just 1..max
+  // — since removeBuilding() never renumbers or backfills, so a session could have saved
+  // buildings 1 and 3 with no 2. Returns the sorted list of numbers it created, so the
+  // caller can run post-restore steps (prefill, cached-result render) after the generic
+  // loop has populated their real values.
+  function restoreAdditionalBuildingCards(fields) {
+    const nums = new Set();
+    Object.keys(fields).forEach(id => {
+      const m = id.match(/^bldg(\d+)-name$/);
+      if (m) nums.add(parseInt(m[1], 10));
+    });
+    const sorted = Array.from(nums).sort((a, b) => a - b);
+    sorted.forEach(num => {
+      createBuildingCard(num);
+      buildingCount = Math.max(buildingCount, num);
+    });
+    return sorted;
+  }
+
+  // Maps a building's ISO Construction Class dropdown (e.g. "Class 2 — Joisted Masonry")
+  // onto e2Value's tConstructionType enum — same underlying values as the main
+  // property's mapping, just keyed to this dropdown's "Class N — Label" text. NOTE:
+  // e2Value's Lite construction_type enum has no combustible-vs-non-combustible-floor
+  // distinction within masonry, so Classes 2 and 4 both map to "masonry bearing walls" —
+  // a genuine limitation of e2Value's simplified enum, not a mapping bug.
+  var BUILDING_ISO_CLASS_TO_E2VALUE_CONSTRUCTION_TYPE = {
+    'Class 1 — Frame': 'framing, wood',
+    'Class 2 — Joisted Masonry': 'masonry bearing walls',
+    'Class 3 — Non-Combustible': 'metal frame',
+    'Class 4 — Masonry Non-Combustible': 'masonry bearing walls',
+    'Class 5 — Modified Fire Resistive': 'reinforced concrete frame',
+    'Class 6 — Fire Resistive': 'reinforced concrete frame'
+  };
+
+  function populateBldgE2ValueStructureTypeDropdown(num) {
+    const sel = document.getElementById(`bldg${num}-e2value-structuretype`);
+    if (!sel || sel.options.length > 1) return; // already populated
+    COPE_E2VALUE_STRUCTURE_TYPES.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      sel.appendChild(opt);
+    });
+  }
+
+  // One-time default, same QA philosophy as the main property's panel: prefills the
+  // e2Value Construction Type from this building's own ISO Construction Class whenever
+  // that class changes, but only while the e2Value field is still blank — never
+  // overwrites a value already confirmed in the QA field itself.
+  function prefillBldgE2ValueConstruction(num) {
+    const mainEl = document.getElementById(`bldg${num}-construction-class`);
+    const panelEl = document.getElementById(`bldg${num}-e2value-construction`);
+    if (mainEl && panelEl && !panelEl.value && mainEl.value) panelEl.value = mainEl.value;
+  }
+
+  // Redisplays a building's last e2Value result from its hidden cache field — called
+  // after restoring a saved inspection. Never calls e2Value itself.
+  function renderBldgE2ValueResultFromCache(num) {
+    const cacheEl = document.getElementById(`bldg${num}-e2value-result-json`);
+    const resultEl = document.getElementById(`bldg${num}-e2value-cost-result`);
+    if (!cacheEl || !resultEl || !cacheEl.value) return;
+    try { resultEl.innerHTML = renderCopeE2ValueResultHtml(JSON.parse(cacheEl.value)); } catch(e) { /* cached value unreadable */ }
+  }
+
+  // Button-triggered only, same as the main property's — every call is a paid e2Value
+  // credit. Reuses renderCopeE2ValueResultHtml() for display since the result shape is
+  // identical regardless of which building it's for.
+  function getBldgE2ValueEstimate(num) {
+    const b = `bldg${num}`;
+    const structureType = (document.getElementById(`${b}-e2value-structuretype`) || {}).value;
+    const totalSquareFootage = parseInt((document.getElementById(`${b}-sq-footage`) || {}).value, 10);
+    const ownAddress = ((document.getElementById(`${b}-address`) || {}).value || '').trim();
+    const address1 = ownAddress || ((document.getElementById('street-address') || {}).value || '').trim();
+    const city = ((document.getElementById('city') || {}).value || '').trim();
+    const postalCode = ((document.getElementById(`${b}-e2value-postal`) || {}).value || '').trim().toUpperCase();
+    const isoClassValue = (document.getElementById(`${b}-e2value-construction`) || {}).value;
+    const mappedConstructionType = BUILDING_ISO_CLASS_TO_E2VALUE_CONSTRUCTION_TYPE[isoClassValue] || null;
+    const resultEl = document.getElementById(`${b}-e2value-cost-result`);
+    const cacheEl = document.getElementById(`${b}-e2value-result-json`);
+    const btn = document.getElementById(`${b}-btn-e2value-estimate`);
+
+    const errors = [];
+    if (!structureType) errors.push('Select a Structure Type.');
+    if (!totalSquareFootage || totalSquareFootage <= 0) errors.push("Enter this building's Total Square Footage above.");
+    if (!address1) errors.push('Enter a Street Address (on this building or the main property).');
+    if (!/^[A-Z][0-9][A-Z] [0-9][A-Z][0-9]$/.test(postalCode)) errors.push('Enter a valid Canadian Postal Code, e.g. K2P 1L7.');
+    if (errors.length) {
+      resultEl.innerHTML = _copeCostMsg(errors.join(' '));
+      return;
+    }
+
+    let cachedResult = null;
+    try { cachedResult = cacheEl.value ? JSON.parse(cacheEl.value) : null; } catch(e) { cachedResult = null; }
+
+    btn.disabled = true;
+    btn.textContent = 'Requesting estimate…';
+    resultEl.innerHTML = '<div style="font-size:12px;color:var(--slate);">Contacting e2Value…</div>';
+
+    fetch('/.netlify/functions/e2value-estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        structureType: structureType,
+        totalSquareFootage: totalSquareFootage,
+        address1: address1,
+        city: city,
+        postalCode: postalCode,
+        constructionType: mappedConstructionType || undefined,
+        returnPropertyId: true,
+        propertyId: (cachedResult && cachedResult.propertyId) || undefined
+      })
+    })
+      .then(response => response.json().then(data => ({ ok: response.ok, data: data })))
+      .then(result => {
+        btn.disabled = false;
+        btn.textContent = 'Get e2Value Estimate';
+        if (result.ok && result.data && result.data.status === 'success') {
+          result.data.sentConstructionType = mappedConstructionType; // for display only
+        }
+        if (!result.ok || result.data.status !== 'success') {
+          resultEl.innerHTML = _copeCostMsg('e2Value estimate failed: ' + (result.data.error || result.data.errorMessage || 'unknown error') + '.');
+          return;
+        }
+        cacheEl.value = JSON.stringify(result.data);
+        resultEl.innerHTML = renderCopeE2ValueResultHtml(result.data);
+      })
+      .catch(err => {
+        btn.disabled = false;
+        btn.textContent = 'Get e2Value Estimate';
+        resultEl.innerHTML = _copeCostMsg('Network error contacting e2Value: ' + err.message);
+      });
+  }
+
   function removeBuilding(num) {
     if (!confirm(`Remove Building ${num} and all its data?`)) return;
     const el = document.getElementById(`building-wrapper-${num}`);
@@ -14391,6 +14591,30 @@ Write in formal insurance inspection language. Be specific with measurements, da
       }
     }
   }
+  // Additional Buildings — e2Value sentences, appended after the main property's.
+  // Same rule as the Formal Report: only when that supplement is active, and only for
+  // buildings that actually have a cached (requested) estimate.
+  if (typeof activeSupplements !== 'undefined' && activeSupplements.has && activeSupplements.has('addbuilding')) {
+    var _nBldgWrappers = document.querySelectorAll('#additional-buildings-container [id^="building-wrapper-"]');
+    _nBldgWrappers.forEach(function(w) {
+      var num = w.id.replace('building-wrapper-', '');
+      var nameEl = document.getElementById('bldg' + num + '-name');
+      var name = (nameEl && nameEl.value.trim()) || ('Building ' + num);
+      var cacheEl = document.getElementById('bldg' + num + '-e2value-result-json');
+      var cached = null;
+      try { cached = cacheEl && cacheEl.value ? JSON.parse(cacheEl.value) : null; } catch(e) { cached = null; }
+      if (!cached || cached.status !== 'success') return;
+      var med = (cached.costDetails || {}).med || {};
+      var low = (cached.costDetails || {}).low || {};
+      var high = (cached.costDetails || {}).high || {};
+      if (med.totalReplacementCost == null) return;
+      e2ValueNarrative += 'An e2Value Pronto Commercial Lite valuation estimates the replacement cost of ' + name + ' at approximately $' +
+        Math.round(med.totalReplacementCost).toLocaleString() +
+        (low.totalReplacementCost != null && high.totalReplacementCost != null
+          ? ' (range $' + Math.round(low.totalReplacementCost).toLocaleString() + ' to $' + Math.round(high.totalReplacementCost).toLocaleString() + ')'
+          : '') + '. ';
+    });
+  }
   // ── Generate narrative instantly (template-based) ──
   try {
     var narrativeText = generateNarrativeText(d, g, ratings, pills, scoreC, scoreP, scoreS, scoreO,
@@ -15935,6 +16159,33 @@ function generateFormalReport() {
         return field2('Estimated Replacement Cost', '$' + low + ' – $' + high + ' (' + label + ', ' + row.source + ' ' + row.year + ')');
       })()}
     </div>
+    ${(() => {
+      // Additional Buildings — e2Value Estimates. Only when that supplement is active
+      // and at least one building actually has a requested (cached) estimate — a
+      // building with the panel untouched contributes nothing here, same as the main
+      // property's estimate contributing nothing when never requested.
+      if (!activeSupplements.has('addbuilding')) return '';
+      const wrappers = document.querySelectorAll('#additional-buildings-container [id^="building-wrapper-"]');
+      if (!wrappers.length) return '';
+      let rows = '';
+      wrappers.forEach(w => {
+        const num = w.id.replace('building-wrapper-', '');
+        const nameEl = document.getElementById(`bldg${num}-name`);
+        const name = (nameEl && nameEl.value.trim()) || `Building ${num}`;
+        const cacheEl = document.getElementById(`bldg${num}-e2value-result-json`);
+        let cached = null;
+        try { cached = cacheEl && cacheEl.value ? JSON.parse(cacheEl.value) : null; } catch(e) { cached = null; }
+        if (!cached || cached.status !== 'success') return;
+        const cd = cached.costDetails || {};
+        const med = cd.med || {}; const low = cd.low || {}; const high = cd.high || {};
+        const mid = med.totalReplacementCost != null ? Math.round(med.totalReplacementCost).toLocaleString('en-CA') : '—';
+        const lowStr = low.totalReplacementCost != null ? Math.round(low.totalReplacementCost).toLocaleString('en-CA') : '—';
+        const highStr = high.totalReplacementCost != null ? Math.round(high.totalReplacementCost).toLocaleString('en-CA') : '—';
+        rows += field2(`${name} — Estimated Replacement Cost`, `$${mid} ($${lowStr} – $${highStr} range, e2Value Pronto Commercial Lite)`);
+      });
+      if (!rows) return '';
+      return `<div class="sub-heading" style="margin-top:16px;">Additional Buildings — e2Value Estimates</div><div class="field-grid-3">${rows}</div>`;
+    })()}
     <div class="field-block field-full">
       <div class="field-label">Basement Use Breakdown</div>
       <div class="pct-items">${pctTable('bsmt-use-pct-rows')}</div>
