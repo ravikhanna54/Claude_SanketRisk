@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SanketRisk SCAN ONE — Deploy 362 — 2026-09-30 — e2Value requests now send Construction Type: maps the existing ISO-class selection (#s-construction) to e2Value's tConstructionType enum instead of leaving e2Value to guess construction from occupancy/address alone (this had produced a wrong wood-frame guess for a masonry building). The result panel now shows "Construction Type Sent" and warns in orange when none was selected. Carries forward Deploy 361 (e2Value cost-source panel) and Deploy 360 (_draftInspId fix). -->
+<!-- SanketRisk SCAN ONE — Deploy 363 — 2026-09-30 — Construction Type for e2Value is now its own field inside the e2Value panel (#s-e2value-construction) instead of being read silently from the main Construction Type field — a QA check so whoever clicks "Get e2Value Estimate" sees and confirms exactly what's being sent. Prefills once from the main field if left blank there, but never overwrites a value already set in the panel. Carries forward Deploy 362 (construction-type mapping), 361 (e2Value cost-source panel), and 360 (_draftInspId fix). -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -534,6 +534,18 @@
             <div class="field">
               <label>Postal Code <span style="font-size:10px;color:var(--slate);font-weight:400">(required by e2Value, e.g. K2P 1L7)</span></label>
               <input type="text" id="s-e2value-postal" placeholder="e.g. K2P 1L7">
+            </div>
+            <div class="field">
+              <label>Construction Type (sent to e2Value) <span style="font-size:10px;color:var(--slate);font-weight:400">(QA check &#x2014; confirm before requesting)</span></label>
+              <select id="s-e2value-construction">
+                <option value="">&#x2014; Select or leave for e2Value to infer &#x2014;</option>
+                <option>Frame (Wood / Combustible)</option>
+                <option>Joisted Masonry</option>
+                <option>Non-Combustible / Metal</option>
+                <option>Masonry Non-Combustible</option>
+                <option>Modified Fire Resistive</option>
+                <option>Fire Resistive (Concrete)</option>
+              </select>
             </div>
           </div>
           <button type="button" class="btn-secondary-action" id="btn-e2value-estimate" onclick="getE2ValueEstimateForForm()" style="margin-top:4px;">Get e2Value Estimate</button>
@@ -1894,6 +1906,18 @@
     e2valueBlock.style.opacity = isE2Value ? '1' : '0.4';
     altusBlock.querySelectorAll('select, input, button').forEach(function(el) { el.disabled = isE2Value; });
     e2valueBlock.querySelectorAll('select, input, button').forEach(function(el) { el.disabled = !isE2Value; });
+
+    // One-time default: if the panel's own Construction Type is still blank, prefill it
+    // from the main Construction Type field above — but never overwrite a value the
+    // user already set here deliberately, since this field exists specifically so they
+    // can confirm/correct it before the call, not have it silently re-synced.
+    if (isE2Value) {
+      var mainConstructionEl = document.getElementById('s-construction');
+      var panelConstructionEl = document.getElementById('s-e2value-construction');
+      if (mainConstructionEl && panelConstructionEl && !panelConstructionEl.value && mainConstructionEl.value) {
+        panelConstructionEl.value = mainConstructionEl.value;
+      }
+    }
   }
 
   // Applies a saved draft's cost-source choice, e2Value input fields, and any cached
@@ -1911,6 +1935,10 @@
     if (fd.e2ValuePostalCode) {
       var postalEl = document.getElementById('s-e2value-postal');
       if (postalEl) postalEl.value = fd.e2ValuePostalCode;
+    }
+    if (fd.e2ValueConstructionType) {
+      var constructionEl = document.getElementById('s-e2value-construction');
+      if (constructionEl) constructionEl.value = fd.e2ValueConstructionType;
     }
     if (fd.e2ValueResult) {
       _e2ValueLastResult = fd.e2ValueResult;
@@ -1958,7 +1986,7 @@
     html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">e2Value Pronto Commercial Lite</td></tr>' +
       '</table>';
     if (!result.sentConstructionType) {
-      html += '<div style="font-size:11px;color:#b45309;margin-bottom:6px;">&#x26A0; No Construction Type was selected above, so this estimate relies on e2Value\'s own guess from occupancy and address &#x2014; verify the "Construction (per e2Value response)" row against the actual building before relying on this figure. Select a Construction Type and re-run for a value that reflects what was actually inspected.</div>';
+      html += '<div style="font-size:11px;color:#b45309;margin-bottom:6px;">&#x26A0; No Construction Type was selected in this panel, so this estimate relies on e2Value\'s own guess from occupancy and address &#x2014; verify the "Construction (per e2Value response)" row against the actual building before relying on this figure. Select a Construction Type above and re-run for a value that reflects what was actually inspected.</div>';
     }
     html += '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Live valuation from e2Value &#x2014; this call consumed one credit. Re-running it (rather than reopening this saved draft) will consume another.</div>';
     return html;
@@ -1972,7 +2000,7 @@
     var address1 = ((document.getElementById('s-address') || {}).value || '').trim();
     var city = ((document.getElementById('s-city') || {}).value || '').trim();
     var postalCode = ((document.getElementById('s-e2value-postal') || {}).value || '').trim().toUpperCase();
-    var isoClassValue = (document.getElementById('s-construction') || {}).value;
+    var isoClassValue = (document.getElementById('s-e2value-construction') || {}).value;
     var mappedConstructionType = ISO_CLASS_TO_E2VALUE_CONSTRUCTION_TYPE[isoClassValue] || null;
     var resultEl = document.getElementById('e2value-cost-result');
     var btn = document.getElementById('btn-e2value-estimate');
@@ -2351,6 +2379,7 @@
       costEstimateSource: (document.querySelector('input[name="s-cost-source"]:checked') ? document.querySelector('input[name="s-cost-source"]:checked').value : 'altus'),
       e2ValueStructureType: (document.getElementById('s-e2value-structuretype') ? document.getElementById('s-e2value-structuretype').value : ''),
       e2ValuePostalCode: (document.getElementById('s-e2value-postal') ? document.getElementById('s-e2value-postal').value : ''),
+      e2ValueConstructionType: (document.getElementById('s-e2value-construction') ? document.getElementById('s-e2value-construction').value : ''),
       e2ValueResult: _e2ValueLastResult, // cached parsed response from getE2ValueEstimateForForm() — never re-fetched on save/restore
       infraredTesting: infraredTesting,
       fireProtection: document.getElementById('s-fire-protection').value,
