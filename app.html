@@ -1894,6 +1894,12 @@
           <button type="button" class="btn-secondary" id="btn-cope-e2value-estimate" onclick="getCopeE2ValueEstimate()">Get e2Value Estimate</button>
           <div id="cope-e2value-cost-result" style="margin-top:10px;"></div>
           <input type="hidden" id="cope-e2value-result-json" value="">
+          <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);">
+            <button type="button" class="btn-secondary" id="btn-cope-e2value-pdf" onclick="getCopeE2ValuePdf()">Get e2Value PDF Report</button>
+            <div style="font-size:11px;color:var(--slate);margin-top:4px;">Downloads e2Value's own valuation report for the estimate above (may use a credit) and inserts it into the Formal Report after the Underwriter Summary. Save the inspection first.</div>
+            <div id="cope-e2value-pdf-status" style="margin-top:8px;font-size:12px;"></div>
+            <input type="hidden" id="cope-e2value-pdf-path" value="">
+          </div>
         </div>
       </div>
       <div class="card">
@@ -1912,7 +1918,7 @@
         <div style="margin-top:16px;"><div style="margin-bottom:0;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">ISO Construction Class Breakdown</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">For mixed construction buildings. Percentages should total 100%.</div><div id="iso-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Class 1 — Frame</option><option>Class 2 — Joisted Masonry</option><option>Class 3 — Non-Combustible</option><option>Class 4 — Masonry Non-Combustible</option><option>Class 5 — Modified Fire Resistive</option><option>Class 6 — Fire Resistive</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('iso-pct-rows','isoclass')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add ISO Construction Class Breakdown</button></div></div>
         <div class="divider"></div>
         <div class="form-grid">
-          <div class="field form-full"><div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Exterior Wall Construction</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100% across all wall types.</div><div id="wall-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Wood Frame</option><option>Brick / Masonry</option><option>Concrete Block (CMU)</option><option>Tilt-Up Concrete</option><option>Precast Concrete</option><option>Steel / Metal Panel</option><option>EIFS / Stucco</option><option>Glass Curtainwall</option><option>Mixed / Other</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('wall-pct-rows','wall')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Exterior Wall Construction</button></div></div>
+          <div class="field form-full"><div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Exterior Wall Construction</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100% across all wall types.</div><div id="wall-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Wood Frame</option><option>Brick / Masonry</option><option>Hollow Concrete Block (HCB)</option><option>Tilt-Up Concrete</option><option>Precast Concrete</option><option>Steel / Metal Panel</option><option>EIFS / Stucco</option><option>Glass Curtainwall</option><option>Mixed / Other</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('wall-pct-rows','wall')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Exterior Wall Construction</button></div></div>
           <div class="field form-full"><div style="margin-bottom:0;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Exterior Wall Finish</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100% across all exterior wall finish types.</div><div id="ext-finish-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Brick — Standard</option><option>Brick — Face / Decorative</option><option>Stone — Natural</option><option>Stone — Simulated / Manufactured</option><option>Stucco / EIFS</option><option>Glass Curtainwall</option><option>Architectural Precast Concrete</option><option>Exposed Concrete</option><option>Metal Cladding / Composite Panel</option><option>Vinyl Siding</option><option>Wood Siding</option><option>Fibre Cement Board</option><option>GFRC Panel</option><option>Other</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('ext-finish-pct-rows','extfinish')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Exterior Wall Finish</button></div></div>
           <div class="field form-full"><div style="margin-bottom:0;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Structural Frame</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100%.</div><div id="frame-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Wood Frame</option><option>Steel Frame</option><option>Reinforced Concrete</option><option>Load-Bearing Masonry</option><option>Pre-Engineered Metal</option><option>Hybrid / Mixed</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('frame-pct-rows','frame')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Structural Frame</button></div></div>
           <div class="field form-full"><div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--gold);">Floor Construction</div><div style="font-size:11px;color:var(--slate);margin-bottom:8px;">Percentages should total 100% across all floor levels.</div><div id="floor-pct-rows"><div class="pct-row" style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:center;margin-bottom:8px;"><select style="font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;"><option value="">— Select —</option><option>Concrete Slab on Grade</option><option>Concrete — Elevated / Suspended</option><option>Precast Concrete Plank</option><option>Steel Deck with Concrete Topping</option><option>Wood Frame / Joist</option><option>Raised Access Floor</option><option>Other</option></select><div style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" max="100" placeholder="%" style="font-family:inherit;font-size:13px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;width:64px;"><span style="font-size:12px;color:var(--slate);">%</span></div><button onclick="removePctRow(this)" style="background:none;border:none;color:#C53030;font-size:18px;cursor:pointer;padding:2px 4px;" title="Remove">&#x2715;</button></div></div><button onclick="addPctRowTo('floor-pct-rows','floor')" style="font-size:11px;background:none;border:1px dashed var(--border);color:var(--slate);padding:4px 12px;border-radius:6px;cursor:pointer;margin-top:2px;">&#xff0b; Add Floor Construction</button></div></div>
@@ -10394,7 +10400,8 @@
         const el = document.getElementById(id);
         if (!el || el.tagName === 'BUTTON') return;
         try {
-          el.value = val;
+          // Exterior wall options renamed over time — map old saved labels onto current ones
+          el.value = (/-wall-construction$/.test(el.id) && LEGACY_WALL_OPTION_ALIASES[val]) ? LEGACY_WALL_OPTION_ALIASES[val] : val;
           if (el.id === 'inspection-id') {
             const badge = document.getElementById('inspection-id-badge');
             if (badge) badge.textContent = val;
@@ -10412,6 +10419,7 @@
       // cost-type handling just above. This never re-calls e2Value.
       onCopeCostSourceChange();
       renderCopeE2ValueResultFromCache();
+      loadCopeE2ValuePdfFromStorage();
       // Same reasoning per additional building: their e2Value Structure Type dropdown,
       // Construction Type QA field, and hidden result cache were all just restored by
       // the generic loop above (plain select/input elements), but the one-time
@@ -10531,7 +10539,7 @@
           if (!pctRowEls[i]) return;
           var sel = pctRowEls[i].querySelector('select');
           var inp = pctRowEls[i].querySelector('input[type="number"]');
-          if (sel && r.val) sel.value = r.val;
+          if (sel && r.val) sel.value = (cid === 'wall-pct-rows' && LEGACY_WALL_OPTION_ALIASES[r.val]) ? LEGACY_WALL_OPTION_ALIASES[r.val] : r.val;
           if (inp && r.pct) inp.value = r.pct;
         });
       });
@@ -11383,7 +11391,7 @@
               <option value="">— Select —</option>
               <option>Wood Frame</option>
               <option>Brick / Masonry</option>
-              <option>Concrete Block (CMU)</option>
+              <option>Hollow Concrete Block (HCB)</option>
               <option>Tilt-Up Concrete</option>
               <option>Steel / Metal Panel</option>
               <option>Curtain Wall / Glass</option>
@@ -11679,7 +11687,15 @@
     const city = ((document.getElementById('city') || {}).value || '').trim();
     const postalCode = ((document.getElementById(`${b}-e2value-postal`) || {}).value || '').trim().toUpperCase();
     const isoClassValue = (document.getElementById(`${b}-e2value-construction`) || {}).value;
-    const mappedConstructionType = BUILDING_ISO_CLASS_TO_E2VALUE_CONSTRUCTION_TYPE[isoClassValue] || null;
+    const mapped = mapE2ValueComponents(
+      BUILDING_ISO_CLASS_TO_E2VALUE_CONSTRUCTION_TYPE[isoClassValue],
+      /^Class [24] /.test(isoClassValue || ''),
+      (document.getElementById(`${b}-wall-construction`) || {}).value,
+      null,
+      (document.getElementById(`${b}-roof-material`) || {}).value);
+    const mappedConstructionType = mapped.constructionType;
+    const mappedExterior = mapped.exterior;
+    const mappedRoofCovering = mapped.roofCovering;
     const resultEl = document.getElementById(`${b}-e2value-cost-result`);
     const cacheEl = document.getElementById(`${b}-e2value-result-json`);
     const btn = document.getElementById(`${b}-btn-e2value-estimate`);
@@ -11711,6 +11727,8 @@
         city: city,
         postalCode: postalCode,
         constructionType: mappedConstructionType || undefined,
+        exterior: mappedExterior || undefined,
+        roofCovering: mappedRoofCovering || undefined,
         returnPropertyId: true,
         propertyId: (cachedResult && cachedResult.propertyId) || undefined
       })
@@ -11721,6 +11739,8 @@
         btn.textContent = 'Get e2Value Estimate';
         if (result.ok && result.data && result.data.status === 'success') {
           result.data.sentConstructionType = mappedConstructionType; // for display only
+          result.data.sentExterior = mappedExterior; // for display only
+          result.data.sentRoofCovering = mappedRoofCovering; // for display only
         }
         if (!result.ok || result.data.status !== 'success') {
           resultEl.innerHTML = _copeCostMsg('e2Value estimate failed: ' + (result.data.error || result.data.errorMessage || 'unknown error') + '.');
@@ -13561,9 +13581,12 @@
       showToast('⚠ Return failed: ' + e.message, 'warn');
     }
   }
+    // Saved inspections from before an exterior-wall option was renamed still hold the
+  // old label — restore maps it onto the current option so the dropdown isn't left blank.
+  var LEGACY_WALL_OPTION_ALIASES = { 'Concrete Block (CMU)': 'Hollow Concrete Block (HCB)' };
     // ── PERCENTAGE ROW HELPERS (wall, roof, heating, AC) ──
   var PCT_OPTIONS = {
-    wall:  ['Wood Frame','Brick / Masonry','Concrete Block (CMU)','Tilt-Up Concrete','Precast Concrete','Steel / Metal Panel','EIFS / Stucco','Glass Curtainwall','Mixed / Other'],
+    wall:  ['Wood Frame','Brick / Masonry','Hollow Concrete Block (HCB)','Tilt-Up Concrete','Precast Concrete','Steel / Metal Panel','EIFS / Stucco','Glass Curtainwall','Mixed / Other'],
     roof:  ['EPDM / Single-Ply Membrane','TPO','Built-Up (BUR / Tar & Gravel)','Metal / Standing Seam','Asphalt Shingle','Tile (Clay / Concrete)','Slate','Modified Bitumen','Insulated Metal Panel','Other'],
     heat:  ['Gas Forced Air (Furnace)','Boiler — Hot Water','Boiler — Steam','Rooftop Unit (RTU) — Gas','Electric Baseboard','Radiant In-Floor','Heat Pump','District / Central Plant','Wood / Pellet','None','Other'],
     ac:    ['Central Air — Split System','Rooftop Unit (RTU)','Chilled Water System','Variable Refrigerant Flow (VRF)','Window / Packaged Terminal (PTAC)','Evaporative Cooling','Heat Pump','District / Central Plant','None','Other'],
@@ -13867,6 +13890,94 @@
     'Fire Resistive': 'reinforced concrete frame'
   };
 
+  // ── SANKETRISK → E2VALUE COMPONENT MAPPINGS (reviewed with Ravi 2026-10-02) ──
+  // Values must match pronto.xsd (Pronto Commercial Lite) exactly, lowercase included —
+  // e2Value's responses come back title-cased, requests must not. e2value-estimate.js
+  // validates every value against the schema before calling e2Value. Anything unmapped
+  // is left unsent, so e2Value falls back to its default for the structure type.
+
+  // Wall construction refines construction_type ONLY when the ISO class is masonry
+  // (Class 2 / Class 4). For Class 3 the steel frame is the bearing element, so brick or
+  // HCB infill stays 'metal frame' — the ISO mapping is used unchanged.
+  var WALL_TO_E2VALUE_CONSTRUCTION_REFINEMENT = {
+    'Hollow Concrete Block (HCB)': 'masonry, block',
+    'Brick / Masonry': 'masonry, brick'
+  };
+
+  // Exterior Wall Finish (main property only) → exterior.
+  var FINISH_TO_E2VALUE_EXTERIOR = {
+    'Brick — Standard': 'brick veneer, standard',
+    'Brick — Face / Decorative': 'brick veneer, face brick',
+    'Stone — Natural': 'stone veneer, limestone',
+    'Stone — Simulated / Manufactured': 'panels, stone',
+    'Stucco / EIFS': 'stucco',
+    'Glass Curtainwall': 'panels, glass and aluminum',
+    'Architectural Precast Concrete': 'precast concrete panel',
+    'Exposed Concrete': 'concrete wall, cast in place',
+    'Metal Cladding / Composite Panel': 'metal siding, baked enamel',
+    'Vinyl Siding': 'siding, vinyl',
+    'Wood Siding': 'siding, lap board',
+    'Fibre Cement Board': 'siding, cement fiber',
+    'GFRC Panel': 'precast concrete panel'
+  };
+
+  // Fallback when no mapped finish is entered — always used for Additional Buildings,
+  // which have wall construction but no finish field.
+  var WALL_TO_E2VALUE_EXTERIOR = {
+    'Hollow Concrete Block (HCB)': 'concrete block',
+    'Brick / Masonry': 'brick wall, cavity',
+    'Tilt-Up Concrete': 'tilt-up, concrete wall',
+    'Precast Concrete': 'precast concrete panel',
+    'EIFS / Stucco': 'stucco',
+    'Glass Curtainwall': 'panels, glass and aluminum',
+    'Curtain Wall / Glass': 'panels, glass and aluminum',
+    'Steel / Metal Panel': 'metal siding, baked enamel',
+    'Wood Frame': 'siding, lap board'
+  };
+
+  // Roof covering — main property list and Additional Building list combined.
+  var ROOF_TO_E2VALUE_ROOF_COVERING = {
+    'Built-Up (BUR / Tar & Gravel)': 'built-up tar and gravel',
+    'Built-Up (Tar & Gravel)': 'built-up tar and gravel',
+    'EPDM / Single-Ply Membrane': 'rubber',
+    'TPO': 'plastic, elastomeric membrane',
+    'EPDM / TPO / PVC Membrane': 'plastic, elastomeric membrane',
+    'Modified Bitumen': 'Dibiten',
+    'Metal / Standing Seam': 'metal, standing seam',
+    'Metal Standing Seam': 'metal, standing seam',
+    'Insulated Metal Panel': 'metal other than standing seam',
+    'Asphalt Shingle': 'shingles, asphalt',
+    'Asphalt Shingles': 'shingles, asphalt',
+    'Tile (Clay / Concrete)': 'tile, concrete, flat',
+    'Clay / Concrete Tile': 'tile, concrete, flat',
+    'Slate': 'tile, slate'
+  };
+
+  // The row with the highest % in a percentage-row group (first row on a tie).
+  function getDominantPctValue(containerId) {
+    var best = null, bestPct = -1;
+    var rows = document.querySelectorAll('#' + containerId + ' .pct-row');
+    for (var i = 0; i < rows.length; i++) {
+      var sel = rows[i].querySelector('select');
+      var inp = rows[i].querySelector('input[type="number"]');
+      if (!sel || !sel.value) continue;
+      var pct = parseFloat(inp && inp.value) || 0;
+      if (pct > bestPct) { best = sel.value; bestPct = pct; }
+    }
+    return best;
+  }
+
+  // isMasonryClass: ISO Class 2 or 4. Returns { constructionType, exterior, roofCovering }.
+  function mapE2ValueComponents(isoConstructionType, isMasonryClass, wall, finish, roof) {
+    var ct = isoConstructionType || null;
+    if (isMasonryClass && WALL_TO_E2VALUE_CONSTRUCTION_REFINEMENT[wall]) ct = WALL_TO_E2VALUE_CONSTRUCTION_REFINEMENT[wall];
+    return {
+      constructionType: ct,
+      exterior: FINISH_TO_E2VALUE_EXTERIOR[finish] || WALL_TO_E2VALUE_EXTERIOR[wall] || null,
+      roofCovering: ROOF_TO_E2VALUE_ROOF_COVERING[roof] || null
+    };
+  }
+
   // Shared by the live result div (#cope-e2value-cost-result) and the Formal Report
   // embedding — same underlying cached data, same markup.
   function renderCopeE2ValueResultHtml(result) {
@@ -13883,6 +13994,10 @@
       '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied (Mid)</td><td style="padding:4px 0;">$' + (med.costPerSqft != null ? med.costPerSqft : '&#x2014;') + ' / sq ft</td></tr>';
     html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction Type Sent</td><td style="padding:4px 0;">' +
       (result.sentConstructionType || '<span style="color:#b45309;">none &#x2014; e2Value inferred it from occupancy/address alone</span>') + '</td></tr>';
+    html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Exterior Sent</td><td style="padding:4px 0;">' +
+      (result.sentExterior || '<span style="color:#b45309;">none &#x2014; e2Value used its default for this structure type</span>') + '</td></tr>';
+    html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Roof Covering Sent</td><td style="padding:4px 0;">' +
+      (result.sentRoofCovering || '<span style="color:#b45309;">none &#x2014; e2Value used its default for this structure type</span>') + '</td></tr>';
     if (result.constructionQuality || result.constructionType || result.exterior || result.roofCovering) {
       html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction (per e2Value response)</td><td style="padding:4px 0;">' +
         [result.constructionQuality, result.constructionType, result.exterior, result.roofCovering].filter(Boolean).join(', ') + '</td></tr>';
@@ -13917,7 +14032,15 @@
     var postalCode = ((document.getElementById('postal-code') || {}).value || '').trim().toUpperCase();
     var isoBtn = document.querySelector('#iso-class .radio-btn.selected');
     var isoClassText = isoBtn ? isoBtn.textContent.trim() : '';
-    var mappedConstructionType = ISO_CLASS_TO_E2VALUE_CONSTRUCTION_TYPE[isoClassText] || null;
+    var mapped = mapE2ValueComponents(
+      ISO_CLASS_TO_E2VALUE_CONSTRUCTION_TYPE[isoClassText],
+      isoClassText === 'Joisted Masonry' || isoClassText === 'Masonry Non-Comb.',
+      getDominantPctValue('wall-pct-rows'),
+      getDominantPctValue('ext-finish-pct-rows'),
+      getDominantPctValue('roof-pct-rows'));
+    var mappedConstructionType = mapped.constructionType;
+    var mappedExterior = mapped.exterior;
+    var mappedRoofCovering = mapped.roofCovering;
     var resultEl = document.getElementById('cope-e2value-cost-result');
     var cacheEl = document.getElementById('cope-e2value-result-json');
     var btn = document.getElementById('btn-cope-e2value-estimate');
@@ -13949,6 +14072,8 @@
         city: city,
         postalCode: postalCode,
         constructionType: mappedConstructionType || undefined,
+        exterior: mappedExterior || undefined,
+        roofCovering: mappedRoofCovering || undefined,
         returnPropertyId: true,
         propertyId: (cachedResult && cachedResult.propertyId) || undefined
       })
@@ -13961,6 +14086,8 @@
         btn.textContent = 'Get e2Value Estimate';
         if (result.ok && result.data && result.data.status === 'success') {
           result.data.sentConstructionType = mappedConstructionType; // for display only — not part of e2Value's own response
+          result.data.sentExterior = mappedExterior; // for display only
+          result.data.sentRoofCovering = mappedRoofCovering; // for display only
         }
         if (!result.ok || result.data.status !== 'success') {
           resultEl.innerHTML = _copeCostMsg('e2Value estimate failed: ' + (result.data.error || result.data.errorMessage || 'unknown error') + '.');
@@ -13974,6 +14101,196 @@
         btn.textContent = 'Get e2Value Estimate';
         resultEl.innerHTML = _copeCostMsg('Network error contacting e2Value: ' + err.message);
       });
+  }
+
+  // ── E2VALUE PDF REPORT ──
+  // Fetches e2Value's own PDF for the cached estimate's PropertyID (via the
+  // e2value-pdf Netlify function, which holds the credentials), stores it in the
+  // Supabase 'reports' bucket under this inspection, and keeps the storage path in
+  // the hidden #cope-e2value-pdf-path field so it saves/restores with the form.
+  // Pages are pre-rendered to JPEG images in memory (_e2vPdfCache) so the Formal
+  // Report can embed them synchronously — which also puts them in the stored PDF.
+  var _e2vPdfCache = { path: null, pages: [], loading: false };
+
+  function _e2vPdfStatus(html) {
+    var el = document.getElementById('cope-e2value-pdf-status');
+    if (el) el.innerHTML = html;
+  }
+
+  // PropertyID: the parsed field if e2value-estimate.js found it, otherwise any
+  // property-id-looking tag or attribute in the raw XML that was cached with it.
+  function _e2vFindPropertyId(cached) {
+    if (!cached) return null;
+    if (cached.propertyId && /^[0-9]+$/.test(String(cached.propertyId).trim())) return String(cached.propertyId).trim();
+    var raw = cached.raw || '';
+    var m = raw.match(/<([A-Za-z_]*property_?id)[^>]*>\s*([0-9]+)\s*<\/\1>/i) ||
+            raw.match(/property_?id\s*=\s*"([0-9]+)"/i);
+    if (!m) return null;
+    return m[2] || m[1];
+  }
+
+  function _e2vEnsurePdfJs() {
+    if (typeof pdfjsLib !== 'undefined') return Promise.resolve();
+    return new Promise(function(resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = function() {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolve();
+      };
+      s.onerror = function() { reject(new Error('failed to load pdf.js')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  // Renders every page of the PDF bytes to a JPEG data URL, one page at a time.
+  function _e2vRenderPdfPages(bytes) {
+    return _e2vEnsurePdfJs().then(function() {
+      return pdfjsLib.getDocument({ data: bytes }).promise;
+    }).then(function(pdfDoc) {
+      var pages = [];
+      function renderPage(n) {
+        if (n > pdfDoc.numPages) return Promise.resolve(pages);
+        return pdfDoc.getPage(n).then(function(page) {
+          var viewport = page.getViewport({ scale: 1.6 });
+          var canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          return page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise.then(function() {
+            pages.push(canvas.toDataURL('image/jpeg', 0.85));
+            return renderPage(n + 1);
+          });
+        });
+      }
+      return renderPage(1);
+    });
+  }
+
+  function _e2vShowLoaded(path, pageCount) {
+    _e2vPdfStatus('<span style="color:#2f855a;">&#x2713; e2Value PDF attached (' + pageCount + ' page' + (pageCount === 1 ? '' : 's') +
+      ') &#x2014; it will appear in the Formal Report after the Underwriter Summary.</span>' +
+      ' <a href="#" onclick="openCopeE2ValuePdf();return false;" style="margin-left:6px;">View PDF</a>');
+  }
+
+  function openCopeE2ValuePdf() {
+    var path = (document.getElementById('cope-e2value-pdf-path') || {}).value;
+    if (!path) return;
+    _supabase.storage.from('reports').createSignedUrl(path, 600).then(function(res) {
+      if (res.error) throw res.error;
+      window.open(res.data.signedUrl, '_blank');
+    }).catch(function(e) { showToast && showToast('⚠ Could not open e2Value PDF: ' + e.message); });
+  }
+
+  function getCopeE2ValuePdf() {
+    var cacheEl = document.getElementById('cope-e2value-result-json');
+    var pathEl = document.getElementById('cope-e2value-pdf-path');
+    var btn = document.getElementById('btn-cope-e2value-pdf');
+    var cached = null;
+    try { cached = cacheEl && cacheEl.value ? JSON.parse(cacheEl.value) : null; } catch(e) { cached = null; }
+
+    if (!cached || cached.status !== 'success') {
+      _e2vPdfStatus('<span style="color:#b45309;">Run "Get e2Value Estimate" first &#x2014; the PDF is generated from that estimate.</span>');
+      return;
+    }
+    var propertyId = _e2vFindPropertyId(cached);
+    if (!propertyId) {
+      _e2vPdfStatus('<span style="color:#b45309;">e2Value did not return a PropertyID with the cached estimate, so no PDF can be requested. Re-running the estimate (ReturnPropertyID=Y is sent) may fix this; if not, e2Value support will need to confirm the PropertyID tag.</span>');
+      return;
+    }
+    if (!currentInspectionId) {
+      _e2vPdfStatus('<span style="color:#b45309;">Save the inspection first &#x2014; the PDF is stored against the inspection.</span>');
+      return;
+    }
+    if (pathEl && pathEl.value && !confirm('An e2Value PDF is already attached. Replace it? This may use another credit.')) return;
+    if (pathEl && !pathEl.value && !confirm('Request the e2Value PDF report for PropertyID ' + propertyId + '? This may use one credit.')) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Requesting PDF…';
+    _e2vPdfStatus('<span style="color:var(--slate);">Contacting e2Value…</span>');
+
+    var bytes = null, storagePath = null;
+    fetch('/.netlify/functions/e2value-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ propertyId: propertyId })
+    })
+      .then(function(response) {
+        return response.json().then(function(data) { return { ok: response.ok, data: data }; });
+      })
+      .then(function(result) {
+        if (!result.ok || !result.data || result.data.status !== 'success' || !result.data.pdfBase64) {
+          var d = result.data || {};
+          throw new Error((d.error || 'e2Value did not return a PDF') + (d.rawPreview ? ' — e2Value said: ' + d.rawPreview : ''));
+        }
+        var bin = atob(result.data.pdfBase64);
+        bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        storagePath = currentInspectionId + '/e2value-' + propertyId + '-' + Date.now() + '.pdf';
+        _e2vPdfStatus('<span style="color:var(--slate);">Saving PDF…</span>');
+        return _supabase.storage.from('reports')
+          .upload(storagePath, new Blob([bytes], { type: 'application/pdf' }), { contentType: 'application/pdf', upsert: true });
+      })
+      .then(function(upRes) {
+        if (upRes.error) throw upRes.error;
+        if (pathEl) pathEl.value = storagePath;
+        _e2vPdfStatus('<span style="color:var(--slate);">Preparing pages for the report…</span>');
+        return _e2vRenderPdfPages(bytes.slice(0));
+      })
+      .then(function(pages) {
+        _e2vPdfCache = { path: storagePath, pages: pages, loading: false };
+        btn.disabled = false;
+        btn.textContent = 'Get e2Value PDF Report';
+        _e2vShowLoaded(storagePath, pages.length);
+        showToast && showToast('✓ e2Value PDF attached — save the inspection to keep it');
+      })
+      .catch(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Get e2Value PDF Report';
+        _e2vPdfStatus('<span style="color:#c53030;">e2Value PDF failed: ' + String(err && err.message || err).replace(/</g, '&lt;') + '</span>');
+      });
+  }
+
+  // Called after restoring a saved inspection — downloads the stored PDF (never
+  // calls e2Value) and re-renders its pages for the report.
+  function loadCopeE2ValuePdfFromStorage() {
+    var path = (document.getElementById('cope-e2value-pdf-path') || {}).value;
+    if (!path) { _e2vPdfCache = { path: null, pages: [], loading: false }; _e2vPdfStatus(''); return; }
+    if (_e2vPdfCache.path === path && _e2vPdfCache.pages.length) { _e2vShowLoaded(path, _e2vPdfCache.pages.length); return; }
+    _e2vPdfCache = { path: path, pages: [], loading: true };
+    _e2vPdfStatus('<span style="color:var(--slate);">Loading attached e2Value PDF…</span>');
+    _supabase.storage.from('reports').download(path)
+      .then(function(res) {
+        if (res.error) throw res.error;
+        return res.data.arrayBuffer();
+      })
+      .then(function(buf) { return _e2vRenderPdfPages(new Uint8Array(buf)); })
+      .then(function(pages) {
+        if (_e2vPdfCache.path !== path) return; // a different inspection was opened meanwhile
+        _e2vPdfCache = { path: path, pages: pages, loading: false };
+        _e2vShowLoaded(path, pages.length);
+      })
+      .catch(function(e) {
+        if (_e2vPdfCache.path === path) _e2vPdfCache.loading = false;
+        _e2vPdfStatus('<span style="color:#c53030;">Could not load the attached e2Value PDF: ' + String(e && e.message || e).replace(/</g, '&lt;') + '</span>');
+      });
+  }
+
+  // Formal Report section — only when e2Value is the selected cost source and the
+  // attached PDF's pages are ready. Returns '' otherwise.
+  function buildE2ValuePdfReportSection(secHeaderFn) {
+    var sourceSel = document.getElementById('cope-cost-source');
+    var path = (document.getElementById('cope-e2value-pdf-path') || {}).value;
+    if (!path || !sourceSel || sourceSel.value !== 'e2value') return '';
+    var head = '<div class="report-section" id="sec-e2value-pdf" style="page-break-before:always;">' +
+      secHeaderFn('&#x1F4B2;', 'e2Value Replacement Cost Valuation', 'VALUATION') + '<div class="sec-body">';
+    if (_e2vPdfCache.path !== path || !_e2vPdfCache.pages.length) {
+      return head + '<div class="notice notice-info">The e2Value PDF report is attached to this inspection but was still loading when this report was generated. Close this tab and generate the report again in a few seconds.</div></div></div>';
+    }
+    return head + _e2vPdfCache.pages.map(function(src, i) {
+      return '<div style="' + (i > 0 ? 'page-break-before:always;' : '') + 'margin-bottom:10px;">' +
+        '<img src="' + src + '" alt="e2Value report page ' + (i + 1) + '" style="width:100%;display:block;border:1px solid #ddd8d0;"></div>';
+    }).join('') +
+      '<div style="font-size:8pt;color:#8a8472;margin-top:4px;">Source: e2Value valuation report, reproduced as issued.</div></div></div>';
   }
 
   function toggleBasementUse() {
@@ -15389,6 +15706,7 @@ function generateFormalReport() {
     .map(s => '<div class="report-section">' + buildSuppSection(s) + '</div>')
     .join('');
   // ── Build HTML ──
+  const e2vPdfSectionHtml = buildE2ValuePdfReportSection(secHeader);
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16819,6 +17137,7 @@ function generateFormalReport() {
     ${(function(){ var n = document.getElementById('qa-notes'); var notes = n ? n.value : currentQANotes; return notes ? fieldFull('QA Notes / Comments', notes) : ''; })()}
   </div>
 </div>
+${e2vPdfSectionHtml}
 ${activeSuppHTML}
 <!-- ══ PHOTOS ══ -->
 <div class="report-section" id="sec-photos">
