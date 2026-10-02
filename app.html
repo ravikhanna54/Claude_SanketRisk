@@ -1490,6 +1490,16 @@
     <div class="nav-item" data-section="natcat" onclick="showSection('natcat', this)">
       <div class="nav-dot"></div> Natural Catastrophe
     </div>
+    <div class="sidebar-section-label">Special Occupancy Supplements</div>
+    <div class="nav-item" data-section="supp-manager" onclick="showSection('supp-manager', this)">
+      <div class="nav-dot"></div> Manage Supplements
+    </div>
+    <div id="supp-nav-items"></div>
+    <div class="sidebar-section-label">Liability Modules</div>
+    <div class="nav-item" data-section="gl-manager" onclick="showSection('gl-manager', this)">
+      <div class="nav-dot"></div> Manage GL Modules
+    </div>
+    <div id="gl-nav-items"></div>
     <div class="sidebar-section-label">Additional Modules</div>
     <div class="nav-item" data-section="loss" onclick="showSection('loss', this)">
       <div class="nav-dot"></div> Loss History
@@ -1506,16 +1516,6 @@
     <div class="nav-item" data-section="summary" onclick="showSection('summary', this)">
       <div class="nav-dot"></div> Underwriter Summary
     </div>
-    <div class="sidebar-section-label">Liability Modules</div>
-    <div class="nav-item" data-section="gl-manager" onclick="showSection('gl-manager', this)">
-      <div class="nav-dot"></div> Manage GL Modules
-    </div>
-    <div id="gl-nav-items"></div>
-    <div class="sidebar-section-label">Special Occupancy Supplements</div>
-    <div class="nav-item" data-section="supp-manager" onclick="showSection('supp-manager', this)">
-      <div class="nav-dot"></div> Manage Supplements
-    </div>
-    <div id="supp-nav-items"></div>
   </nav>
   <!-- MAIN -->
   <main class="main-content">
@@ -1896,7 +1896,7 @@
           <input type="hidden" id="cope-e2value-result-json" value="">
           <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);">
             <button type="button" class="btn-secondary" id="btn-cope-e2value-pdf" onclick="getCopeE2ValuePdf()">Get e2Value PDF Report</button>
-            <div style="font-size:11px;color:var(--slate);margin-top:4px;">Downloads e2Value's own valuation report for the estimate above (may use a credit) and inserts it into the Formal Report after the Underwriter Summary. Save the inspection first.</div>
+            <div style="font-size:11px;color:var(--slate);margin-top:4px;">Downloads e2Value's own valuation report for the estimate above (may use a credit) and adds it at the end of the Underwriter Summary in both the Formal and Narrative Reports. Save the inspection first.</div>
             <div id="cope-e2value-pdf-status" style="margin-top:8px;font-size:12px;"></div>
             <input type="hidden" id="cope-e2value-pdf-path" value="">
           </div>
@@ -8752,7 +8752,7 @@
     });
   }
   // ── PROGRESS ──
-  const sectionOrder = ['intro','insured','construction','occupancy','protection','exposure','natcat','loss','safety','recommendations','photos','summary','supp-manager','supp-restaurant','supp-woodworking','supp-warehouse','supp-autoservice','supp-sprinkler','supp-apartments','supp-addbuilding','gl-manager','gl-premises','gl-products','gl-fleet'];
+  const sectionOrder = ['intro','insured','construction','occupancy','protection','exposure','natcat','supp-manager','supp-restaurant','supp-woodworking','supp-warehouse','supp-autoservice','supp-sprinkler','supp-apartments','supp-addbuilding','gl-manager','gl-premises','gl-products','gl-fleet','loss','safety','recommendations','photos','summary'];
   function updateProgress() {
     const current = document.querySelector('.nav-item.active');
     if (!current) return;
@@ -14168,7 +14168,7 @@
 
   function _e2vShowLoaded(path, pageCount) {
     _e2vPdfStatus('<span style="color:#2f855a;">&#x2713; e2Value PDF attached (' + pageCount + ' page' + (pageCount === 1 ? '' : 's') +
-      ') &#x2014; it will appear in the Formal Report after the Underwriter Summary.</span>' +
+      ') &#x2014; it will appear at the end of the Underwriter Summary in the Formal and Narrative Reports.</span>' +
       ' <a href="#" onclick="openCopeE2ValuePdf();return false;" style="margin-left:6px;">View PDF</a>');
   }
 
@@ -14277,11 +14277,12 @@
 
   // Formal Report section — only when e2Value is the selected cost source and the
   // attached PDF's pages are ready. Returns '' otherwise.
-  function buildE2ValuePdfReportSection(secHeaderFn) {
+  // sectionClass: 'report-section' (Formal) or 'section' (Narrative).
+  function buildE2ValuePdfReportSection(secHeaderFn, sectionClass) {
     var sourceSel = document.getElementById('cope-cost-source');
     var path = (document.getElementById('cope-e2value-pdf-path') || {}).value;
     if (!path || !sourceSel || sourceSel.value !== 'e2value') return '';
-    var head = '<div class="report-section" id="sec-e2value-pdf" style="page-break-before:always;">' +
+    var head = '<div class="' + (sectionClass || 'report-section') + '" id="sec-e2value-pdf" style="page-break-before:always;page-break-inside:auto;break-inside:auto;">' +
       secHeaderFn('&#x1F4B2;', 'e2Value Replacement Cost Valuation', 'VALUATION') + '<div class="sec-body">';
     if (_e2vPdfCache.path !== path || !_e2vPdfCache.pages.length) {
       return head + '<div class="notice notice-info">The e2Value PDF report is attached to this inspection but was still loading when this report was generated. Close this tab and generate the report again in a few seconds.</div></div></div>';
@@ -15048,6 +15049,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
   <div class="section narrative-content">
     ${narrativeHTML}
   </div>
+  ${buildE2ValuePdfReportSection(function(icon, title) { return '<h3>' + title + '</h3>'; }, 'section')}
   ${nMapAerial ? `
   <div class="section" style="break-inside:avoid;">
     <h3>Site Location</h3>
