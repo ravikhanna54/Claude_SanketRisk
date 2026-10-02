@@ -1,4 +1,4 @@
-// SanketRisk — Deploy pending — 2026-09-26 — New Netlify function: e2Value Pronto Commercial Lite
+// SanketRisk — Updated 2026-10-02 (enum validation for construction_type / exterior / roof_covering from pronto.xsd) — New Netlify function: e2Value Pronto Commercial Lite
 // replacement-cost integration. Builds the request XML, posts it as a URL-encoded form field
 // (per e2Value support: Content-Type application/x-www-form-urlencoded, field name "xml"),
 // and parses their XML response into a normalized JSON shape for scan.html/app.html to consume.
@@ -51,6 +51,12 @@ const STRUCTURE_TYPES = [
 // the occupancy code and address — so these are only validated if the caller supplies one
 // (e.g. passing through a value SanketRisk already captured during a COPE inspection).
 const CONSTRUCTION_QUALITY = ['Basic','Average','Above Average','Expensive','Very Expensive','Exceptional'];
+
+// Exact enum values from e2Value's pronto.xsd (Pronto Commercial Lite, p3c). Case-sensitive —
+// validated here so a misspelt value is rejected before it reaches e2Value.
+const CONSTRUCTION_TYPES = ["A - frame", "fireproof structural steel frame", "foam form concrete", "framing, steel", "framing, wood", "framing, wood with elevated slab", "hoop arch", "masonry bearing walls", "masonry, block", "masonry, brick", "masonry, stone", "metal frame", "metal frame (slant)", "milled timbers", "pole frame", "post and beam", "prefabricated", "quonset", "reinforced concrete frame", "stucco on masonry", "veneer, brick", "veneer, brick with wood frame", "veneer, stone", "wood frame, modular"];
+const EXTERIORS = ["brick veneer, face brick", "brick veneer, glazed", "brick veneer, jumbo", "brick veneer, large", "brick veneer, norman", "brick veneer, roman", "brick veneer, standard", "brick wall, cavity", "brick wall, reinforced", "concrete block", "concrete block, glazed", "concrete block, slumpstone", "concrete block, split face", "concrete wall, cast in place", "log  (<11\"diameter)", "log  (>11\"diameter)", "metal siding, aluminum, simulated wood", "metal siding, baked enamel", "metal siding, corrugated aluminum", "metal siding, corrugated aluminum, painted", "metal siding, corrugated composition", "metal siding, corrugated fiberglass", "metal siding, corrugated galvanized iron", "metal siding, porcelain", "None", "panels, brick", "panels, cement fiber", "panels, concrete block", "panels, fiberglass", "panels, glass and aluminum", "panels, glass and metal", "panels, polycarbonate", "panels, rubble", "panels, sandwich", "panels, stone", "panels, stucco", "polyethylene film (greenhouse)", "precast concrete panel", "precast concrete panel, granite finish", "siding, barn board", "siding, board and batten", "siding, cedar beveled", "siding, cedar shingles", "siding, cement fiber", "siding, glasweld", "siding, hardboard", "siding, lap board", "siding, plywood", "siding, redwood beveled", "siding, spaced board", "siding, tongue and grove", "siding, vinyl", "stone veneer, arizona stone", "stone veneer, granite", "stone veneer, lava stone", "stone veneer, limestone", "stone veneer, rubble", "stone veneer, sandstone", "stucco", "tilt-up, concrete wall", "tilt-up, concrete wall, with pilasters"];
+const ROOF_COVERINGS = ["acrylic", "asphalt with solar panels", "bituthene, self-seal", "built-up composition, high rise, 3 ply", "built-up composition, low rise, 3 ply", "built-up tar and gravel", "copper clad stainless steel", "copper, standing seam", "corrugated aluminum", "corrugated composition", "corrugated fiberglass", "corrugated galvanized iron", "Dibiten", "earth covered", "glass panels", "metal other than standing seam", "metal, standing seam", "plastic, elastomeric membrane", "plastic, elastomeric membrane, loose, trocal", "plastic, elastomeric membrane, neoprene", "polycarbonate panels", "polyethylene film", "rubber", "shakes, cedar", "shakes, wood", "shingles, aluminum tab", "shingles, architectural", "shingles, asbestos replacement", "shingles, asphalt", "shingles, cedar", "shingles, composition", "shingles, composition asphalt", "shingles, dimensional asphalt", "shingles, fiberglass tabs", "shingles, Minera", "shingles, porcelain enamel", "shingles, wood", "silicone, 3 ply, rolled", "solar shingles", "steel", "steel with solar panels", "tile with solar panels", "tile, barrel", "tile, clay, flat bed", "tile, clay, glazed, interlock", "tile, clay, Spanish", "tile, concrete, flat", "tile, concrete, interlock", "tile, concrete, premium", "tile, Ludowici", "tile, slate", "tile, slate, graduated", "tile, slate, patterned", "tile, slate, red", "tile, slate, synthetic", "urethane foam, silicone cover"];
 
 // Canadian postal code, per e2Value's tPOSTALCODE pattern. Their province enum (tProvince) and
 // this postal-code pattern are Canada-only in the current schema — flag for review if this
@@ -190,6 +196,15 @@ function validate(input) {
   }
   if (input.constructionQuality && CONSTRUCTION_QUALITY.indexOf(input.constructionQuality) === -1) {
     errors.push('constructionQuality, if provided, must be one of e2Value\'s recognized values.');
+  }
+  if (input.constructionType && CONSTRUCTION_TYPES.indexOf(input.constructionType) === -1) {
+    errors.push('constructionType "' + input.constructionType + '" is not one of e2Value\'s tCONSTRUCTIONTYPE values.');
+  }
+  if (input.exterior && EXTERIORS.indexOf(input.exterior) === -1) {
+    errors.push('exterior "' + input.exterior + '" is not one of e2Value\'s tEXTERIOR values.');
+  }
+  if (input.roofCovering && ROOF_COVERINGS.indexOf(input.roofCovering) === -1) {
+    errors.push('roofCovering "' + input.roofCovering + '" is not one of e2Value\'s tROOFCOVERING values.');
   }
   return errors;
 }
