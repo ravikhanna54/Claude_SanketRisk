@@ -1895,7 +1895,7 @@
           <div id="cope-e2value-cost-result" style="margin-top:10px;"></div>
           <input type="hidden" id="cope-e2value-result-json" value="">
           <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);">
-            <button type="button" class="btn-secondary" id="btn-cope-e2value-pdf" onclick="getCopeE2ValuePdf()">Get e2Value PDF Report</button>
+            <button type="button" class="btn-secondary" id="cope-btn-e2value-pdf" onclick="getCopeE2ValuePdf()">Get e2Value PDF Report</button>
             <div style="font-size:11px;color:var(--slate);margin-top:4px;">Downloads e2Value's own valuation report for the estimate above (may use a credit) and adds it at the end of the Underwriter Summary in both the Formal and Narrative Reports. Save the inspection first.</div>
             <div id="cope-e2value-pdf-status" style="margin-top:8px;font-size:12px;"></div>
             <input type="hidden" id="cope-e2value-pdf-path" value="">
@@ -10428,6 +10428,7 @@
       restoredBuildingNums.forEach(num => {
         prefillBldgE2ValueConstruction(num);
         renderBldgE2ValueResultFromCache(num);
+        loadE2ValuePdfFromStorage('bldg' + num);
       });
       // ── Restore pill selections (radio-btn / check-btn) ──
       const pills = fd.pills || fd.pill_selections || {};
@@ -11463,6 +11464,12 @@
         <button type="button" class="btn-secondary" id="${b}-btn-e2value-estimate" onclick="getBldgE2ValueEstimate(${num})">Get e2Value Estimate</button>
         <div id="${b}-e2value-cost-result" style="margin-top:10px;"></div>
         <input type="hidden" id="${b}-e2value-result-json" value="">
+        <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);">
+          <button type="button" class="btn-secondary" id="${b}-btn-e2value-pdf" onclick="getE2ValuePdf('${b}')">Get e2Value PDF Report</button>
+          <div style="font-size:11px;color:var(--slate);margin-top:4px;">Downloads e2Value's own valuation report for this building's estimate (may use a credit). It prints after the Main Building's e2Value PDF at the end of the Underwriter Summary. Save the inspection first.</div>
+          <div id="${b}-e2value-pdf-status" style="margin-top:8px;font-size:12px;"></div>
+          <input type="hidden" id="${b}-e2value-pdf-path" value="">
+        </div>
       </div>
       <div class="divider"></div>
       <!-- O — Occupancy -->
@@ -14103,17 +14110,32 @@
       });
   }
 
-  // ── E2VALUE PDF REPORT ──
-  // Fetches e2Value's own PDF for the cached estimate's PropertyID (via the
-  // e2value-pdf Netlify function, which holds the credentials), stores it in the
-  // Supabase 'reports' bucket under this inspection, and keeps the storage path in
-  // the hidden #cope-e2value-pdf-path field so it saves/restores with the form.
-  // Pages are pre-rendered to JPEG images in memory (_e2vPdfCache) so the Formal
-  // Report can embed them synchronously — which also puts them in the stored PDF.
-  var _e2vPdfCache = { path: null, pages: [], loading: false };
+  // ── E2VALUE PDF REPORT (main building + additional buildings) ──
+  // Fetches e2Value's own PDF for a cached estimate's PropertyID (via the e2value-pdf
+  // Netlify function, which holds the credentials), stores it in the Supabase 'reports'
+  // bucket under this inspection, and keeps the storage path in a hidden
+  // <prefix>-e2value-pdf-path field so it saves/restores with the form.
+  // prefix: 'cope' for the main building, 'bldg<N>' for Additional Building N — the same
+  // prefixes the estimate fields already use (<prefix>-e2value-result-json).
+  // Pages are pre-rendered to JPEG images in memory (_e2vPdfCaches[prefix]) so the Formal
+  // and Narrative Reports can embed them synchronously — which also puts them in the
+  // stored PDF.
+  var _e2vPdfCaches = {};
 
-  function _e2vPdfStatus(html) {
-    var el = document.getElementById('cope-e2value-pdf-status');
+  function _e2vCache(prefix) {
+    if (!_e2vPdfCaches[prefix]) _e2vPdfCaches[prefix] = { path: null, pages: [], loading: false };
+    return _e2vPdfCaches[prefix];
+  }
+
+  function _e2vBuildingLabel(prefix) {
+    if (prefix === 'cope') return 'Main Building';
+    var num = prefix.replace('bldg', '');
+    var nameEl = document.getElementById(prefix + '-name');
+    return (nameEl && nameEl.value.trim()) || ('Building ' + num);
+  }
+
+  function _e2vPdfStatus(prefix, html) {
+    var el = document.getElementById(prefix + '-e2value-pdf-status');
     if (el) el.innerHTML = html;
   }
 
@@ -14166,14 +14188,14 @@
     });
   }
 
-  function _e2vShowLoaded(path, pageCount) {
-    _e2vPdfStatus('<span style="color:#2f855a;">&#x2713; e2Value PDF attached (' + pageCount + ' page' + (pageCount === 1 ? '' : 's') +
+  function _e2vShowLoaded(prefix, pageCount) {
+    _e2vPdfStatus(prefix, '<span style="color:#2f855a;">&#x2713; e2Value PDF attached (' + pageCount + ' page' + (pageCount === 1 ? '' : 's') +
       ') &#x2014; it will appear at the end of the Underwriter Summary in the Formal and Narrative Reports.</span>' +
-      ' <a href="#" onclick="openCopeE2ValuePdf();return false;" style="margin-left:6px;">View PDF</a>');
+      ' <a href="#" onclick="openE2ValuePdf(\'' + prefix + '\');return false;" style="margin-left:6px;">View PDF</a>');
   }
 
-  function openCopeE2ValuePdf() {
-    var path = (document.getElementById('cope-e2value-pdf-path') || {}).value;
+  function openE2ValuePdf(prefix) {
+    var path = (document.getElementById(prefix + '-e2value-pdf-path') || {}).value;
     if (!path) return;
     _supabase.storage.from('reports').createSignedUrl(path, 600).then(function(res) {
       if (res.error) throw res.error;
@@ -14181,32 +14203,33 @@
     }).catch(function(e) { showToast && showToast('⚠ Could not open e2Value PDF: ' + e.message); });
   }
 
-  function getCopeE2ValuePdf() {
-    var cacheEl = document.getElementById('cope-e2value-result-json');
-    var pathEl = document.getElementById('cope-e2value-pdf-path');
-    var btn = document.getElementById('btn-cope-e2value-pdf');
+  function getE2ValuePdf(prefix) {
+    var cacheEl = document.getElementById(prefix + '-e2value-result-json');
+    var pathEl = document.getElementById(prefix + '-e2value-pdf-path');
+    var btn = document.getElementById(prefix + '-btn-e2value-pdf');
+    var label = _e2vBuildingLabel(prefix);
     var cached = null;
     try { cached = cacheEl && cacheEl.value ? JSON.parse(cacheEl.value) : null; } catch(e) { cached = null; }
 
     if (!cached || cached.status !== 'success') {
-      _e2vPdfStatus('<span style="color:#b45309;">Run "Get e2Value Estimate" first &#x2014; the PDF is generated from that estimate.</span>');
+      _e2vPdfStatus(prefix, '<span style="color:#b45309;">Run "Get e2Value Estimate" for this building first &#x2014; the PDF is generated from that estimate.</span>');
       return;
     }
     var propertyId = _e2vFindPropertyId(cached);
     if (!propertyId) {
-      _e2vPdfStatus('<span style="color:#b45309;">e2Value did not return a PropertyID with the cached estimate, so no PDF can be requested. Re-running the estimate (ReturnPropertyID=Y is sent) may fix this; if not, e2Value support will need to confirm the PropertyID tag.</span>');
+      _e2vPdfStatus(prefix, '<span style="color:#b45309;">e2Value did not return a PropertyID with the cached estimate, so no PDF can be requested. Re-running the estimate may fix this; if not, e2Value support will need to confirm the PropertyID tag.</span>');
       return;
     }
     if (!currentInspectionId) {
-      _e2vPdfStatus('<span style="color:#b45309;">Save the inspection first &#x2014; the PDF is stored against the inspection.</span>');
+      _e2vPdfStatus(prefix, '<span style="color:#b45309;">Save the inspection first &#x2014; the PDF is stored against the inspection.</span>');
       return;
     }
-    if (pathEl && pathEl.value && !confirm('An e2Value PDF is already attached. Replace it? This may use another credit.')) return;
-    if (pathEl && !pathEl.value && !confirm('Request the e2Value PDF report for PropertyID ' + propertyId + '? This may use one credit.')) return;
+    if (pathEl && pathEl.value && !confirm('An e2Value PDF is already attached for ' + label + '. Replace it? This may use another credit.')) return;
+    if (pathEl && !pathEl.value && !confirm('Request the e2Value PDF report for ' + label + ' (PropertyID ' + propertyId + ')? This may use one credit.')) return;
 
     btn.disabled = true;
     btn.textContent = 'Requesting PDF…';
-    _e2vPdfStatus('<span style="color:var(--slate);">Contacting e2Value…</span>');
+    _e2vPdfStatus(prefix, '<span style="color:var(--slate);">Contacting e2Value…</span>');
 
     var bytes = null, storagePath = null;
     fetch('/.netlify/functions/e2value-pdf', {
@@ -14225,39 +14248,40 @@
         var bin = atob(result.data.pdfBase64);
         bytes = new Uint8Array(bin.length);
         for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        storagePath = currentInspectionId + '/e2value-' + propertyId + '-' + Date.now() + '.pdf';
-        _e2vPdfStatus('<span style="color:var(--slate);">Saving PDF…</span>');
+        storagePath = currentInspectionId + '/e2value-' + prefix + '-' + propertyId + '-' + Date.now() + '.pdf';
+        _e2vPdfStatus(prefix, '<span style="color:var(--slate);">Saving PDF…</span>');
         return _supabase.storage.from('reports')
           .upload(storagePath, new Blob([bytes], { type: 'application/pdf' }), { contentType: 'application/pdf', upsert: true });
       })
       .then(function(upRes) {
         if (upRes.error) throw upRes.error;
         if (pathEl) pathEl.value = storagePath;
-        _e2vPdfStatus('<span style="color:var(--slate);">Preparing pages for the report…</span>');
+        _e2vPdfStatus(prefix, '<span style="color:var(--slate);">Preparing pages for the report…</span>');
         return _e2vRenderPdfPages(bytes.slice(0));
       })
       .then(function(pages) {
-        _e2vPdfCache = { path: storagePath, pages: pages, loading: false };
+        _e2vPdfCaches[prefix] = { path: storagePath, pages: pages, loading: false };
         btn.disabled = false;
         btn.textContent = 'Get e2Value PDF Report';
-        _e2vShowLoaded(storagePath, pages.length);
-        showToast && showToast('✓ e2Value PDF attached — save the inspection to keep it');
+        _e2vShowLoaded(prefix, pages.length);
+        showToast && showToast('✓ e2Value PDF attached for ' + label + ' — save the inspection to keep it');
       })
       .catch(function(err) {
         btn.disabled = false;
         btn.textContent = 'Get e2Value PDF Report';
-        _e2vPdfStatus('<span style="color:#c53030;">e2Value PDF failed: ' + String(err && err.message || err).replace(/</g, '&lt;') + '</span>');
+        _e2vPdfStatus(prefix, '<span style="color:#c53030;">e2Value PDF failed: ' + String(err && err.message || err).replace(/</g, '&lt;') + '</span>');
       });
   }
 
   // Called after restoring a saved inspection — downloads the stored PDF (never
-  // calls e2Value) and re-renders its pages for the report.
-  function loadCopeE2ValuePdfFromStorage() {
-    var path = (document.getElementById('cope-e2value-pdf-path') || {}).value;
-    if (!path) { _e2vPdfCache = { path: null, pages: [], loading: false }; _e2vPdfStatus(''); return; }
-    if (_e2vPdfCache.path === path && _e2vPdfCache.pages.length) { _e2vShowLoaded(path, _e2vPdfCache.pages.length); return; }
-    _e2vPdfCache = { path: path, pages: [], loading: true };
-    _e2vPdfStatus('<span style="color:var(--slate);">Loading attached e2Value PDF…</span>');
+  // calls e2Value) and re-renders its pages for the reports.
+  function loadE2ValuePdfFromStorage(prefix) {
+    var path = (document.getElementById(prefix + '-e2value-pdf-path') || {}).value;
+    if (!path) { _e2vPdfCaches[prefix] = { path: null, pages: [], loading: false }; _e2vPdfStatus(prefix, ''); return; }
+    var c = _e2vCache(prefix);
+    if (c.path === path && c.pages.length) { _e2vShowLoaded(prefix, c.pages.length); return; }
+    _e2vPdfCaches[prefix] = { path: path, pages: [], loading: true };
+    _e2vPdfStatus(prefix, '<span style="color:var(--slate);">Loading attached e2Value PDF…</span>');
     _supabase.storage.from('reports').download(path)
       .then(function(res) {
         if (res.error) throw res.error;
@@ -14265,33 +14289,61 @@
       })
       .then(function(buf) { return _e2vRenderPdfPages(new Uint8Array(buf)); })
       .then(function(pages) {
-        if (_e2vPdfCache.path !== path) return; // a different inspection was opened meanwhile
-        _e2vPdfCache = { path: path, pages: pages, loading: false };
-        _e2vShowLoaded(path, pages.length);
+        if (_e2vCache(prefix).path !== path) return; // a different inspection was opened meanwhile
+        _e2vPdfCaches[prefix] = { path: path, pages: pages, loading: false };
+        _e2vShowLoaded(prefix, pages.length);
       })
       .catch(function(e) {
-        if (_e2vPdfCache.path === path) _e2vPdfCache.loading = false;
-        _e2vPdfStatus('<span style="color:#c53030;">Could not load the attached e2Value PDF: ' + String(e && e.message || e).replace(/</g, '&lt;') + '</span>');
+        if (_e2vCache(prefix).path === path) _e2vCache(prefix).loading = false;
+        _e2vPdfStatus(prefix, '<span style="color:#c53030;">Could not load the attached e2Value PDF: ' + String(e && e.message || e).replace(/</g, '&lt;') + '</span>');
       });
   }
 
-  // Formal Report section — only when e2Value is the selected cost source and the
-  // attached PDF's pages are ready. Returns '' otherwise.
-  // sectionClass: 'report-section' (Formal) or 'section' (Narrative).
-  function buildE2ValuePdfReportSection(secHeaderFn, sectionClass) {
-    var sourceSel = document.getElementById('cope-cost-source');
-    var path = (document.getElementById('cope-e2value-pdf-path') || {}).value;
-    if (!path || !sourceSel || sourceSel.value !== 'e2value') return '';
-    var head = '<div class="' + (sectionClass || 'report-section') + '" id="sec-e2value-pdf" style="page-break-before:always;page-break-inside:auto;break-inside:auto;">' +
-      secHeaderFn('&#x1F4B2;', 'e2Value Replacement Cost Valuation', 'VALUATION') + '<div class="sec-body">';
-    if (_e2vPdfCache.path !== path || !_e2vPdfCache.pages.length) {
+  // Main-building wrappers — names used by the existing button and restore code.
+  function getCopeE2ValuePdf() { getE2ValuePdf('cope'); }
+  function loadCopeE2ValuePdfFromStorage() { loadE2ValuePdfFromStorage('cope'); }
+  function openCopeE2ValuePdf() { openE2ValuePdf('cope'); }
+
+  // One building's PDF section, or '' when it has no attached PDF.
+  function _e2vPdfSectionFor(prefix, title, secHeaderFn, sectionClass) {
+    var path = (document.getElementById(prefix + '-e2value-pdf-path') || {}).value;
+    if (!path) return '';
+    var c = _e2vCache(prefix);
+    var head = '<div class="' + (sectionClass || 'report-section') + '" id="sec-e2value-pdf-' + prefix + '" style="page-break-before:always;page-break-inside:auto;break-inside:auto;">' +
+      secHeaderFn('&#x1F4B2;', title, 'VALUATION') + '<div class="sec-body">';
+    if (c.path !== path || !c.pages.length) {
       return head + '<div class="notice notice-info">The e2Value PDF report is attached to this inspection but was still loading when this report was generated. Close this tab and generate the report again in a few seconds.</div></div></div>';
     }
-    return head + _e2vPdfCache.pages.map(function(src, i) {
+    return head + c.pages.map(function(src, i) {
       return '<div style="' + (i > 0 ? 'page-break-before:always;' : '') + 'margin-bottom:10px;">' +
         '<img src="' + src + '" alt="e2Value report page ' + (i + 1) + '" style="width:100%;display:block;border:1px solid #ddd8d0;"></div>';
     }).join('') +
       '<div style="font-size:8pt;color:#8a8472;margin-top:4px;">Source: e2Value valuation report, reproduced as issued.</div></div></div>';
+  }
+
+  // Formal and Narrative Reports — main building's PDF first (only when e2Value is the
+  // selected cost source), then each Additional Building's in card order (only when the
+  // Additional Buildings supplement is active — same rules as the e2Value figures).
+  // sectionClass: 'report-section' (Formal) or 'section' (Narrative).
+  function buildE2ValuePdfReportSection(secHeaderFn, sectionClass) {
+    var bldgPrefixes = [];
+    if (typeof activeSupplements !== 'undefined' && activeSupplements.has && activeSupplements.has('addbuilding')) {
+      var wrappers = document.querySelectorAll('#additional-buildings-container [id^="building-wrapper-"]');
+      for (var i = 0; i < wrappers.length; i++) {
+        var p = 'bldg' + wrappers[i].id.replace('building-wrapper-', '');
+        if ((document.getElementById(p + '-e2value-pdf-path') || {}).value) bldgPrefixes.push(p);
+      }
+    }
+    var sourceSel = document.getElementById('cope-cost-source');
+    var includeMain = sourceSel && sourceSel.value === 'e2value';
+    var baseTitle = 'e2Value Replacement Cost Valuation';
+    var html = includeMain
+      ? _e2vPdfSectionFor('cope', bldgPrefixes.length ? baseTitle + ' — Main Building' : baseTitle, secHeaderFn, sectionClass)
+      : '';
+    bldgPrefixes.forEach(function(p) {
+      html += _e2vPdfSectionFor(p, baseTitle + ' — ' + _e2vBuildingLabel(p), secHeaderFn, sectionClass);
+    });
+    return html;
   }
 
   function toggleBasementUse() {
