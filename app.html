@@ -14346,6 +14346,182 @@
     return html;
   }
 
+  // ── SUPPLEMENTS IN REPORTS (Additional Buildings, GL / Liability modules) ──
+  // Reads a form section straight from the page and returns its filled-in content as
+  // blocks: { h: heading } or { l: label, v: value, full: bool }. Generic, so every
+  // field in the Additional Building cards and the GL modules prints without a
+  // hand-written report template per field. Empty fields are left out.
+  // opts.skip(el) → true to leave a field/heading out (e.g. a building's e2Value panel,
+  // which already prints in the Underwriter Summary).
+  function _rptEsc(v) {
+    return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function _rptLabelText(labelEl) {
+    if (!labelEl) return '';
+    var t = '';
+    for (var i = 0; i < labelEl.childNodes.length; i++) {
+      if (labelEl.childNodes[i].nodeType === 3) t += labelEl.childNodes[i].nodeValue;
+    }
+    t = t.replace(/\*/g, '').replace(/\s+/g, ' ').trim();
+    return t || labelEl.textContent.replace(/\*/g, '').replace(/\s+/g, ' ').trim();
+  }
+
+  function _rptFieldValue(fieldEl) {
+    var parts = [];
+    var pctRows = fieldEl.querySelectorAll('.pct-row');
+    for (var i = 0; i < pctRows.length; i++) {
+      var ps = pctRows[i].querySelector('select');
+      var pi = pctRows[i].querySelector('input[type="number"]');
+      if (ps && ps.value) parts.push(ps.value + (pi && pi.value ? ' (' + pi.value + '%)' : ''));
+    }
+    var picks = fieldEl.querySelectorAll('.radio-btn.selected, .check-btn.selected');
+    var pickTexts = [];
+    for (var j = 0; j < picks.length; j++) pickTexts.push(picks[j].textContent.replace(/\s+/g, ' ').trim());
+    if (pickTexts.length) parts.push(pickTexts.join(', '));
+    var ctrls = fieldEl.querySelectorAll('select, textarea, input');
+    for (var k = 0; k < ctrls.length; k++) {
+      var c = ctrls[k];
+      if (c.closest('.pct-row')) continue;
+      var type = (c.getAttribute('type') || '').toLowerCase();
+      if (c.tagName === 'INPUT' && /^(hidden|button|submit|file|checkbox|radio)$/.test(type)) continue;
+      if (c.tagName === 'SELECT') {
+        if (c.value && c.selectedIndex >= 0) parts.push(c.options[c.selectedIndex].text.trim());
+      } else if (c.value && String(c.value).trim()) {
+        parts.push(String(c.value).trim());
+      }
+    }
+    return parts.join(' / ');
+  }
+
+  function extractReportBlocks(root, opts) {
+    opts = opts || {};
+    var out = [];
+    if (!root) return out;
+    var nodes = root.querySelectorAll('.card-title, div[style*="text-transform:uppercase"], .field, .rating-row');
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (n.closest('.section-header')) continue;
+      if (opts.skip && opts.skip(n)) continue;
+      if (n.classList.contains('field')) {
+        if (n.parentElement && n.parentElement.closest('.field')) continue;
+        var v = _rptFieldValue(n);
+        if (!v) continue;
+        var isFull = n.classList.contains('form-full') || !!n.querySelector('textarea');
+        out.push({ l: _rptLabelText(n.querySelector('label')) || 'Note', v: v, full: isFull });
+      } else if (n.classList.contains('rating-row')) {
+        var sel = n.querySelector('.rating-btn.sel');
+        var lab = n.querySelector('.rating-label');
+        if (sel && lab) out.push({ l: lab.textContent.trim(), v: sel.textContent.trim() + ' / 5', full: false });
+      } else {
+        if (n.closest('.field') || n.querySelector('input, select, textarea, .field')) continue;
+        if (opts.skipCardTitles && n.classList.contains('card-title')) continue;
+        var h = n.textContent.replace(/\s+/g, ' ').trim();
+        if (h) out.push({ h: h });
+      }
+    }
+    // Drop headings with nothing filled in under them.
+    return out.filter(function(b, idx) {
+      if (!b.h) return true;
+      for (var j = idx + 1; j < out.length; j++) { if (out[j].h) return false; return true; }
+      return false;
+    });
+  }
+
+  // Formal Report rendering — uses the report's own field2/fieldFull/sub-heading styles.
+  function renderReportBlocksFormal(blocks, field2Fn, fieldFullFn) {
+    var html = '', grid = '';
+    function flush() { if (grid) { html += '<div class="field-grid">' + grid + '</div>'; grid = ''; } }
+    blocks.forEach(function(b) {
+      if (b.h) { flush(); html += '<div class="sub-heading">' + _rptEsc(b.h) + '</div>'; }
+      else if (b.full) { flush(); html += fieldFullFn(_rptEsc(b.l), _rptEsc(b.v)); }
+      else grid += field2Fn(_rptEsc(b.l), _rptEsc(b.v));
+    });
+    flush();
+    return html;
+  }
+
+  // Narrative Report rendering — a simple two-column table under each heading.
+  function renderReportBlocksNarrative(blocks) {
+    var html = '', rows = '';
+    function flush() {
+      if (rows) { html += '<table style="width:100%;border-collapse:collapse;margin:6px 0 14px;font-size:10pt;">' + rows + '</table>'; rows = ''; }
+    }
+    blocks.forEach(function(b) {
+      if (b.h) { flush(); html += '<div style="font-weight:600;color:#0d1b2a;font-size:10.5pt;margin-top:10px;">' + _rptEsc(b.h) + '</div>'; }
+      else rows += '<tr><td style="padding:4px 10px 4px 0;color:#4a6580;width:40%;vertical-align:top;border-bottom:1px solid #eee8de;">' + _rptEsc(b.l) +
+        '</td><td style="padding:4px 0;vertical-align:top;border-bottom:1px solid #eee8de;white-space:pre-wrap;">' + _rptEsc(b.v) + '</td></tr>';
+    });
+    flush();
+    return html;
+  }
+
+  var _RPT_BLDG_SKIP = function(el) {
+    if (el.querySelector && el.querySelector('[id*="-e2value-"]')) return true;
+    return !el.classList.contains('field') && /e2Value/i.test(el.textContent || '');
+  };
+
+  // Each active Additional Building: { title, blocks }.
+  function collectAdditionalBuildingsForReport() {
+    if (typeof activeSupplements === 'undefined' || !activeSupplements.has('addbuilding')) return [];
+    var list = [];
+    var wrappers = document.querySelectorAll('#additional-buildings-container [id^="building-wrapper-"]');
+    for (var i = 0; i < wrappers.length; i++) {
+      var num = wrappers[i].id.replace('building-wrapper-', '');
+      var nameEl = document.getElementById('bldg' + num + '-name');
+      var name = nameEl && nameEl.value.trim();
+      list.push({
+        title: 'Building ' + num + (name ? ' — ' + name : ''),
+        blocks: extractReportBlocks(wrappers[i], { skip: _RPT_BLDG_SKIP, skipCardTitles: true })
+      });
+    }
+    return list;
+  }
+
+  // Each active GL module, in menu order: { id, title, tag, blocks }.
+  function collectGLModulesForReport() {
+    if (typeof activeGL === 'undefined') return [];
+    return ['premises', 'products', 'fleet'].filter(function(id) { return activeGL.has(id); }).map(function(id) {
+      var panel = document.getElementById('section-gl-' + id);
+      var t = panel && panel.querySelector('.section-title');
+      var tag = panel && panel.querySelector('.section-tag');
+      return {
+        id: id,
+        title: (t && t.textContent.trim()) || ('GL — ' + id),
+        tag: (tag && tag.textContent.trim()) || 'GL',
+        blocks: extractReportBlocks(panel)
+      };
+    });
+  }
+
+  // Narrative Report: every active supplement and GL module as data tables, placed
+  // after the narrative (which ends with the Underwriter Conclusions).
+  function buildNarrativeSupplementsHtml() {
+    var html = '';
+    function section(title, body) {
+      return '<div class="section" style="page-break-before:always;page-break-inside:auto;break-inside:auto;"><h3>' + _rptEsc(title) + '</h3>' +
+        (body || '<p style="color:#8a8472;font-size:10pt;">No details recorded.</p>') + '</div>';
+    }
+    var occ = ['restaurant', 'woodworking', 'warehouse', 'autoservice', 'sprinkler', 'apartments'];
+    occ.forEach(function(id) {
+      if (typeof activeSupplements === 'undefined' || !activeSupplements.has(id)) return;
+      var panel = document.getElementById('section-supp-' + id);
+      var t = panel && panel.querySelector('.section-title');
+      html += section('Supplement: ' + ((t && t.textContent.trim()) || id), renderReportBlocksNarrative(extractReportBlocks(panel)));
+    });
+    var bldgs = collectAdditionalBuildingsForReport();
+    if (bldgs.length) {
+      html += section('Supplement: Additional Buildings', bldgs.map(function(b) {
+        return '<div style="font-family:\'Playfair Display\',serif;font-size:11.5pt;color:#0d1b2a;margin-top:16px;">' + _rptEsc(b.title) + '</div>' +
+          (renderReportBlocksNarrative(b.blocks) || '<p style="color:#8a8472;font-size:10pt;">No details recorded.</p>');
+      }).join(''));
+    }
+    collectGLModulesForReport().forEach(function(m) {
+      html += section('Liability: ' + m.title, renderReportBlocksNarrative(m.blocks));
+    });
+    return html;
+  }
+
   function toggleBasementUse() {
     var area = parseFloat(document.getElementById('basement-area').value) || 0;
     var type = document.getElementById('basement-type') ? document.getElementById('basement-type').value : '';
@@ -15101,6 +15277,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
   <div class="section narrative-content">
     ${narrativeHTML}
   </div>
+  ${buildNarrativeSupplementsHtml()}
   ${buildE2ValuePdfReportSection(function(icon, title) { return '<h3>' + title + '</h3>'; }, 'section')}
   ${nMapAerial ? `
   <div class="section" style="break-inside:avoid;">
@@ -15437,6 +15614,7 @@ function generateFormalReport() {
     'autoservice': 'Auto Service / Repair',
     'sprinkler': 'Sprinkler Grading',
     'apartments': 'Apartments / Condominiums',
+    'addbuilding': 'Additional Buildings',
   };
   if ((d.active_supplements || []).length) {
     (d.active_supplements || []).forEach(s => {
@@ -15444,6 +15622,12 @@ function generateFormalReport() {
       tocSections.push({ num: tocNum++, title: 'Supplement: ' + name, id: 'sec-supp-' + s });
     });
   }
+  ['premises', 'products', 'fleet'].forEach(function(id) {
+    if (activeGL.indexOf(id) === -1) return;
+    var p = document.getElementById('section-gl-' + id);
+    var t = p && p.querySelector('.section-title');
+    tocSections.push({ num: tocNum++, title: 'Liability: ' + ((t && t.textContent.trim()) || id), id: 'sec-gl-' + id });
+  });
   tocSections.push({ num: tocNum++, title: 'Photo Documentation', id: 'sec-photos' });
   // ── Build supplement sections for active supplements ──
   function buildSuppSection(suppId) {
@@ -15757,8 +15941,21 @@ function generateFormalReport() {
   };
   const activeSuppHTML = (d.active_supplements || [])
     .filter(s => suppSectionNames[s])
-    .map(s => '<div class="report-section">' + buildSuppSection(s) + '</div>')
+    .map(s => '<div class="report-section" id="sec-supp-' + s + '">' + buildSuppSection(s) + '</div>')
     .join('');
+  // Additional Buildings and GL / Liability modules — read from the page generically.
+  const _rptBldgs = collectAdditionalBuildingsForReport();
+  const addBuildingHTML = _rptBldgs.length
+    ? '<div class="report-section" id="sec-supp-addbuilding">' + secHeader('🏗️', 'Additional Buildings Supplement', 'SUPP — BUILDINGS') +
+      '<div class="sec-body">' + _rptBldgs.map(b =>
+        '<div class="sub-heading" style="font-size:11pt;">' + _rptEsc(b.title) + '</div>' +
+        (renderReportBlocksFormal(b.blocks, field2, fieldFull) || '<p style="color:#aaa;font-size:9pt;">No details recorded.</p>')
+      ).join('') + '</div></div>'
+    : '';
+  const glHTML = collectGLModulesForReport().map(m =>
+    '<div class="report-section" id="sec-gl-' + m.id + '">' + secHeader('⚖️', m.title, m.tag) +
+    '<div class="sec-body">' + (renderReportBlocksFormal(m.blocks, field2, fieldFull) || '<p style="color:#aaa;font-size:9pt;">No details recorded.</p>') + '</div></div>'
+  ).join('');
   // ── Build HTML ──
   const e2vPdfSectionHtml = buildE2ValuePdfReportSection(secHeader);
   const html = `<!DOCTYPE html>
@@ -17191,8 +17388,10 @@ function generateFormalReport() {
     ${(function(){ var n = document.getElementById('qa-notes'); var notes = n ? n.value : currentQANotes; return notes ? fieldFull('QA Notes / Comments', notes) : ''; })()}
   </div>
 </div>
-${e2vPdfSectionHtml}
 ${activeSuppHTML}
+${addBuildingHTML}
+${glHTML}
+${e2vPdfSectionHtml}
 <!-- ══ PHOTOS ══ -->
 <div class="report-section" id="sec-photos">
   ${secHeader('📷', 'Photo Documentation', 'MODULE')}
