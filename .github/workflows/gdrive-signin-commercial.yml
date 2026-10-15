@@ -1,0 +1,22 @@
+name: Google Drive sign-in
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  signin:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+      GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign in (watch this step's log for the code)
+        run: python -u backup/gdrive.py authorize
+      - name: Save encrypted token
+        run: |
+          rm -rf /tmp/st && mkdir /tmp/st && cp state/gdrive.gpg /tmp/st/ && cd /tmp/st && git init -q && git checkout -q -b backup-state && git add . \
+            && git -c user.name=backup -c user.email=backup@users.noreply.github.com commit -qm "token" \
+            && git push -f -q "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" backup-state
