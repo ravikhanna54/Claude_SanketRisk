@@ -57,7 +57,9 @@ class Auth:
         gpg(["-d", "-o", str(plain), str(enc)])
         self.refresh = json.loads(plain.read_text())["refresh_token"]; plain.unlink()
         self.token, self.at = None, 0
+        import threading; self.lock = threading.Lock()
     def headers(self):
+      with self.lock:
         if not self.token or time.time() - self.at > 2400:
             t = requests.post("https://oauth2.googleapis.com/token", data={"client_id": CID, "client_secret": SECRET, "refresh_token": self.refresh, "grant_type": "refresh_token"})
             j = t.json()
@@ -133,35 +135,64 @@ def storage_objects(base, H):
         for x in walk(b["name"]): yield x
 
 def mirror():
-    """Copy stored files that are not yet in Drive. Existing copies are never changed or deleted."""
+    """Copy stored files that are not yet in Drive. Existing copies are never changed or deleted.
+    Reports/PDF bucket first, big photo-archive bucket last; several files copied at once; failed files retried."""
+    import threading
+    from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
     base = os.environ["SUPABASE_URL"].rstrip("/"); key = os.environ["SUPABASE_SERVICE_KEY"]
     H = {"apikey": key}
     if key.startswith("eyJ"): H["Authorization"] = "Bearer " + key
     auth = Auth(); top = find_or_make_folder(auth, FOLDER); fid = find_or_make_folder(auth, FILES_FOLDER, top)
-    have = {it["name"]: it for it in list_children(auth, fid)}
-    print("Already in Drive:", len(have), "files")
+    have = {it["name"] for it in list_children(auth, fid)}
+    objs = list(storage_objects(base, H))
+    objs.sort(key=lambda o: 0 if "report" in o[0].lower() else (2 if o[0] == "scan-uploads" else 1))   # stable: keeps order inside a bucket
+    todo = [o for o in objs if o[0] + "~" + o[1].replace("/", "~") not in have]
+    tot = sum((o[2] or 0) for o in objs)
+    print("Storage has %d files (%.2f GB). Already in Drive: %d. To copy now: %d" % (len(objs), tot / 1e9, len(have), len(todo)), flush=True)
     deadline = time.time() + MIRROR_MINUTES * 60
-    copied = skipped = failed = 0; copied_bytes = 0; stopped_early = False
-    for bucket, path, size in storage_objects(base, H):
-        name = bucket + "~" + path.replace("/", "~")          # '~' stands in for folder slashes
-        if name in have:
-            skipped += 1; continue
-        if time.time() > deadline:
-            stopped_early = True; break
-        try:
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                with requests.get(f"{base}/storage/v1/object/{bucket}/{path}", headers=H, stream=True, timeout=120) as d:
-                    d.raise_for_status()
-                    for blk in d.iter_content(1024 * 1024): tmp.write(blk)
-            upload_file(auth, fid, name, tmp.name); copied += 1; copied_bytes += os.path.getsize(tmp.name)
-        except Exception as e:
-            failed += 1; print("FAILED", name, e)
-        finally:
-            try: os.unlink(tmp.name)
-            except Exception: pass
-    print(json.dumps({"copied": copied, "copied_bytes": copied_bytes, "already_there": skipped, "failed": failed, "stopped_early": stopped_early}))
+    lock = threading.Lock(); stat = {"copied": 0, "bytes": 0, "failed": 0}; failures = []
+
+    def one(bucket, path):
+        name = bucket + "~" + path.replace("/", "~")
+        last = None
+        for attempt in range(4):
+            tmp_name = None
+            try:
+                with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                    tmp_name = tmp.name
+                    with requests.get(f"{base}/storage/v1/object/{bucket}/{path}", headers=H, stream=True, timeout=120) as d:
+                        d.raise_for_status()
+                        for blk in d.iter_content(1024 * 1024): tmp.write(blk)
+                n = os.path.getsize(tmp_name)
+                upload_file(auth, fid, name, tmp_name)
+                with lock: stat["copied"] += 1; stat["bytes"] += n
+                return
+            except Exception as e:
+                last = e; time.sleep(3 * (attempt + 1))
+            finally:
+                if tmp_name:
+                    try: os.unlink(tmp_name)
+                    except Exception: pass
+        with lock: stat["failed"] += 1; failures.append("%s: %s" % (name, str(last)[:150]))
+
+    stopped_early = False; pending = set()
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        for i, (bucket, path, size) in enumerate(todo):
+            if time.time() > deadline:
+                stopped_early = True; break
+            pending.add(ex.submit(one, bucket, path))
+            if len(pending) >= 32:
+                done, pending = wait(pending, return_when=FIRST_COMPLETED)
+            if i and i % 500 == 0:
+                print("progress: %d copied, %d failed" % (stat["copied"], stat["failed"]), flush=True)
+        wait(pending)
+    for f in failures[:20]: print("FAILED", f)
+    print(json.dumps({"copied": stat["copied"], "copied_bytes": stat["bytes"], "failed": stat["failed"],
+                      "remaining_after_run": len(todo) - stat["copied"] - stat["failed"] if stopped_early else stat["failed"], "stopped_early": stopped_early}))
     if stopped_early: print("Time budget reached - the rest will be copied on the next nightly run.")
-    if failed: raise SystemExit("%d stored files could not be copied - see log above" % failed)
+    if stat["failed"]: print("Files that failed will be tried again on the next nightly run.")
+    if stat["failed"] > max(5, stat["copied"] // 100):
+        raise SystemExit("%d stored files could not be copied - see log above" % stat["failed"])
 
 if __name__ == "__main__":
     cmd = sys.argv[1]
