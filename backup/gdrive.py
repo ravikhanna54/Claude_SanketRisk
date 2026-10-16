@@ -30,7 +30,7 @@ def save_token(refresh):
     plain.unlink()
 
 def authorize():
-    r = requests.post("https://oauth2.googleapis.com/device/code", data={"client_id": CID, "scope": SCOPE}); r.raise_for_status()
+    r = requests.post("https://oauth2.googleapis.com/device/code", data={"client_id": CID, "scope": SCOPE}, timeout=60); r.raise_for_status()
     d = r.json()
     print("\n=================================================")
     print("ON YOUR TABLET open:  " + d.get("verification_url", "https://www.google.com/device"))
@@ -42,7 +42,7 @@ def authorize():
     while time.time() < end:
         time.sleep(interval)
         t = requests.post("https://oauth2.googleapis.com/token", data={"client_id": CID, "client_secret": SECRET, "device_code": d["device_code"],
-                          "grant_type": "urn:ietf:params:oauth:grant-type:device_code"})
+                          "grant_type": "urn:ietf:params:oauth:grant-type:device_code"}, timeout=120)
         j = t.json()
         if "refresh_token" in j:
             save_token(j["refresh_token"]); print("Signed in. Token saved (encrypted)."); return
@@ -61,7 +61,7 @@ class Auth:
     def headers(self):
       with self.lock:
         if not self.token or time.time() - self.at > 2400:
-            t = requests.post("https://oauth2.googleapis.com/token", data={"client_id": CID, "client_secret": SECRET, "refresh_token": self.refresh, "grant_type": "refresh_token"})
+            t = requests.post("https://oauth2.googleapis.com/token", data={"client_id": CID, "client_secret": SECRET, "refresh_token": self.refresh, "grant_type": "refresh_token"}, timeout=120)
             j = t.json()
             if "access_token" not in j:
                 raise SystemExit("Google sign-in expired or was revoked - run the 'Google Drive sign-in' workflow again. " + json.dumps(j))
@@ -71,12 +71,12 @@ class Auth:
 def find_or_make_folder(auth, name, parent=None):
     q = f"name = '{name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
     if parent: q += f" and '{parent}' in parents"
-    r = requests.get(API + "/files", headers=auth.headers(), params={"q": q, "fields": "files(id,name)", "spaces": "drive"}); r.raise_for_status()
+    r = requests.get(API + "/files", headers=auth.headers(), params={"q": q, "fields": "files(id,name)", "spaces": "drive"}, timeout=120); r.raise_for_status()
     files = r.json().get("files", [])
     if files: return files[0]["id"]
     body = {"name": name, "mimeType": "application/vnd.google-apps.folder"}
     if parent: body["parents"] = [parent]
-    r = requests.post(API + "/files", headers=auth.headers(), json=body); r.raise_for_status()
+    r = requests.post(API + "/files", headers=auth.headers(), json=body, timeout=120); r.raise_for_status()
     return r.json()["id"]
 
 def list_children(auth, fid):
@@ -84,7 +84,7 @@ def list_children(auth, fid):
     while True:
         params = {"q": f"'{fid}' in parents and trashed = false", "fields": "nextPageToken,files(id,name,size)", "pageSize": 1000}
         if page: params["pageToken"] = page
-        r = requests.get(API + "/files", headers=auth.headers(), params=params); r.raise_for_status(); j = r.json()
+        r = requests.get(API + "/files", headers=auth.headers(), params=params, timeout=120); r.raise_for_status(); j = r.json()
         out += j.get("files", []); page = j.get("nextPageToken")
         if not page: return out
 
@@ -92,14 +92,14 @@ def upload_file(auth, fid, name, path):
     p = pathlib.Path(path); size = p.stat().st_size
     s = requests.post("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
                       headers={**auth.headers(), "X-Upload-Content-Type": "application/octet-stream", "X-Upload-Content-Length": str(size)},
-                      json={"name": name, "parents": [fid]}); s.raise_for_status()
+                      json={"name": name, "parents": [fid]}, timeout=120); s.raise_for_status()
     url = s.headers["Location"]; chunk = 256 * 1024 * 16
     with open(p, "rb") as f:
         pos = 0
         while pos < size or size == 0:
             data = f.read(chunk)
             rng = f"bytes {pos}-{pos+len(data)-1}/{size}" if size else "bytes */0"
-            r = requests.put(url, data=data, headers={"Content-Length": str(len(data)), "Content-Range": rng})
+            r = requests.put(url, data=data, headers={"Content-Length": str(len(data)), "Content-Range": rng}, timeout=120)
             if r.status_code not in (200, 201, 308): raise RuntimeError("Upload failed: %s %s" % (r.status_code, r.text[:300]))
             pos += len(data)
             if size == 0: break
@@ -113,7 +113,7 @@ def upload(path):
     for it in list_children(auth, fid):
         m = re.match(PREFIX + r"-(\d{4}-\d{2}-\d{2})", it["name"])
         if m and datetime.date.fromisoformat(m.group(1)) < cutoff:
-            requests.delete(API + "/files/" + it["id"], headers=auth.headers()); print("Deleted old copy", it["name"])
+            requests.delete(API + "/files/" + it["id"], headers=auth.headers(), timeout=120); print("Deleted old copy", it["name"])
 
 def storage_objects(base, H):
     r = requests.get(f"{base}/storage/v1/bucket", headers=H, timeout=60); r.raise_for_status()
