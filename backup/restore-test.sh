@@ -2,7 +2,7 @@
 # Restore test: decrypt the newest backup and load it into a throw-away Postgres, then report what came back.
 # Usage: backup/restore-test.sh <encrypted .gpg file>      Env: BACKUP_PASSPHRASE, RESTORE_DB_URL
 set -u
-FILE="$1"
+FILE="$(realpath "$1")"
 DB="${RESTORE_DB_URL:-postgresql://postgres:test@localhost:5432/postgres}"
 SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/null}"
 W=$(mktemp -d); cd "$W"
