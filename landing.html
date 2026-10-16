@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sanket Risk — Property Risk Intelligence for Commercial and Residential</title>
+<meta name="description" content="Sanket Risk Consultants: inspection, valuation and survey platforms for commercial property (SanketRisk ONE) and residential property (SanketRisk Home).">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#161a17;--ink2:#1f2521;--paper:#f6f3ee;--com:#c9a84c;--com-deep:#0a1628;--home:#c17a56;--home-deep:#2d3b2e}
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--ink);color:#fff;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden}
+header{padding:22px 48px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;letter-spacing:.01em}
+.brand span{color:#d8c9a8;font-style:italic;font-weight:500}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.4)}
+.intro{text-align:center;max-width:760px;margin:36px auto 52px;padding:0 24px}
+.intro h1{font-family:'Playfair Display',serif;font-size:clamp(34px,5.4vw,62px);font-weight:600;line-height:1.08;margin-bottom:18px}
+.intro h1 em{font-style:italic;color:#d8c9a8}
+.intro p{font-size:16px;line-height:1.75;color:rgba(255,255,255,.55);font-weight:300}
+.split{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;max-width:1240px;width:100%;margin:0 auto;padding:0 48px 56px;column-gap:24px}
+.card{border-radius:18px;padding:40px 38px;display:flex;flex-direction:column;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.08);transition:transform .3s,box-shadow .3s}
+.card:hover{transform:translateY(-6px);box-shadow:0 28px 70px rgba(0,0,0,.5)}
+.card::before{content:'';position:absolute;top:-120px;right:-120px;width:340px;height:340px;border-radius:50%;opacity:.12}
+.com{background:linear-gradient(160deg,#0f2038,#0a1628)}
+.com::before{background:var(--com)}
+.home{background:linear-gradient(160deg,#37493a,#2d3b2e)}
+.home::before{background:var(--home)}
+.icon{font-size:38px;margin-bottom:18px}
+.kicker{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px}
+.com .kicker{color:var(--com)}.home .kicker{color:#d99b7a}
+.card h2{font-family:'Playfair Display',serif;font-size:34px;font-weight:700;line-height:1.1;margin-bottom:12px}
+.card .lead{font-size:15px;line-height:1.7;color:rgba(255,255,255,.62);font-weight:300;margin-bottom:22px}
+.card ul{list-style:none;margin-bottom:30px;display:flex;flex-direction:column;gap:10px;flex:1}
+.card li{font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.75);display:flex;gap:10px}
+.card li::before{content:'\2192';flex-shrink:0;font-weight:600}
+.com li::before{color:var(--com)}.home li::before{color:#d99b7a}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn{padding:13px 26px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;font-family:inherit;transition:all .2s;display:inline-flex;align-items:center;gap:8px}
+.com .btn.p{background:var(--com);color:var(--com-deep)}.com .btn.p:hover{background:#e2c97e}
+.home .btn.p{background:var(--home);color:#fff}.home .btn.p:hover{background:#d99b7a}
+.btn.o{border:1.5px solid rgba(255,255,255,.25);color:rgba(255,255,255,.8)}
+.btn.o:hover{border-color:#fff;color:#fff}
+.off{opacity:.45;pointer-events:none}
+.shared{max-width:1240px;margin:0 auto;padding:0 48px 64px;width:100%}
+.shared-box{border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:30px 34px;background:rgba(255,255,255,.03);display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.shared h3{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;margin-bottom:6px;color:#d8c9a8}
+.shared p{font-size:13px;line-height:1.65;color:rgba(255,255,255,.5);font-weight:300}
+footer{padding:26px 48px;border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(255,255,255,.3)}
+@media(max-width:900px){header{padding:18px 20px}.split{grid-template-columns:1fr;row-gap:20px;padding:0 20px 40px}.shared{padding:0 20px 48px}.shared-box{grid-template-columns:1fr}.card{padding:30px 24px}footer{padding:22px 20px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Sanket <span>Risk</span></div>
+  <div class="tag">Property Risk Intelligence</div>
+</header>
+
+<div class="intro">
+  <h1>Risk intelligence for <em>every</em> property.</h1>
+  <p>Inspection, valuation and survey platforms built by risk professionals. Choose the suite that fits the property you work with.</p>
+</div>
+
+<main class="split">
+  <section class="card com">
+    <div class="icon">&#127970;</div>
+    <div class="kicker">Commercial Property</div>
+    <h2>SanketRisk ONE</h2>
+    <p class="lead">A unified suite for loss control consultants, inspection firms and underwriters working with commercial property.</p>
+    <ul>
+      <li>COPE-based inspections, hazard panels and risk grading</li>
+      <li>QA review pipeline with formal and narrative reports</li>
+      <li>SCAN ONE AI assessment from photographs</li>
+      <li>Valuation, LiDAR and more across the ONE suite</li>
+    </ul>
+    <div class="btns">
+      <a class="btn p" id="com-explore" href="#">Explore Commercial &rarr;</a>
+      <a class="btn o" id="com-signin" href="#">Sign In</a>
+    </div>
+  </section>
+
+  <section class="card home">
+    <div class="icon">&#127968;</div>
+    <div class="kicker">Residential Property</div>
+    <h2>SanketRisk Home</h2>
+    <p class="lead">A residential inspection platform for inspection firms, insurers and home professionals, with twelve report types.</p>
+    <ul>
+      <li>Twelve report types, from exterior-only to full inspections</li>
+      <li>SanketHome Valuation and LiDAR survey reports with plans</li>
+      <li>Request portal, AI pre-review and QA approval</li>
+      <li>Home Buyers Inspection coming soon</li>
+    </ul>
+    <div class="btns">
+      <a class="btn p" id="home-explore" href="#">Explore Home &rarr;</a>
+      <a class="btn o" id="home-signin" href="#">Sign In</a>
+    </div>
+  </section>
+</main>
+
+<section class="shared">
+  <div class="shared-box">
+    <div><h3>One standard</h3><p>Both suites follow the same approach: structured data, a quality-reviewed workflow and clear, consistent reports.</p></div>
+    <div><h3>Shared technology</h3><p>Valuation, LiDAR survey and AI review capabilities are developed once and extended across commercial and residential work.</p></div>
+    <div><h3>Built by practitioners</h3><p>Designed by people who have inspected, reviewed and underwritten property risk, not just built software for it.</p></div>
+  </div>
+</section>
+
+<footer>
+  <span>&copy; 2026 Sanket Risk Consultants. All rights reserved.</span>
+  <span>Canada &amp; United States</span>
+</footer>
+
+<script>
+  // ---- Set these two addresses (no trailing slash). Everything else on the page works from them. ----
+  var COMMERCIAL_SITE = 'https://sanketrisk.netlify.app';
+  var HOME_SITE       = '';    // e.g. 'https://your-home-site.netlify.app'
+  // --------------------------------------------------------------------------------------------------
+  function wire(id, base, path) {
+    var a = document.getElementById(id);
+    if (base) { a.href = base + path; } else { a.classList.add('off'); a.removeAttribute('href'); a.title = 'Link not set yet'; }
+  }
+  wire('com-explore', COMMERCIAL_SITE, '/marketing');
+  wire('com-signin',  COMMERCIAL_SITE, '/');
+  wire('home-explore', HOME_SITE, '/marketing-home');
+  wire('home-signin',  HOME_SITE, '/login.html');
+</script>
+</body>
+</html>
