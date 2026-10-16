@@ -286,6 +286,7 @@
     <a href="#workflow">Workflow</a>
     <a href="faq.html">FAQ</a>
     <a href="#contact">Contact</a>
+    <a href="#" class="home-link" style="display:none;color:#e2c97e">Home Inspections &rarr;</a>
     <a href="https://sanketrisk.netlify.app" target="_blank" class="btn-nav-cta">Access Platform &rarr;</a>
   </div>
 </nav>
@@ -862,6 +863,10 @@
   </div>
 </section>
 
+<div class="home-link" style="display:none;background:#0f2038;border-top:1px solid rgba(201,168,76,.25);border-bottom:1px solid rgba(201,168,76,.25);padding:22px 24px;text-align:center;color:rgba(255,255,255,.75);font-size:14px">
+  Looking for <b style="color:#e2c97e">residential</b> inspections, valuation or LiDAR? Visit <a href="#" class="home-link-a" style="color:#e2c97e;font-weight:600">SanketRisk Home &rarr;</a>
+</div>
+
 <footer>
   <div>
     <div class="footer-logo">Sanket<span>Risk</span><span class="footer-one">_ONE</span></div>
@@ -874,6 +879,7 @@
     <a href="#suite">Products</a>
     <a href="#features">Features</a>
     <a href="#contact">Contact</a>
+    <a href="#" class="home-link" style="display:none">SanketRisk Home (Residential)</a>
   </div>
 </footer>
 
@@ -907,6 +913,14 @@
     } catch(e){console.warn('Contact store:',e)}
     document.getElementById('form-fields').style.display='none';
     document.getElementById('form-success').style.display='block';
+  }
+</script>
+<script>
+  // Set to the SanketRisk Home site address (no trailing slash) to reveal the Home links.
+  var HOME_SITE = '';
+  if (HOME_SITE) {
+    document.querySelectorAll('.home-link').forEach(function(e){ e.style.display = (e.tagName==='DIV' ? 'block' : ''); });
+    document.querySelectorAll('a.home-link,a.home-link-a').forEach(function(a){ a.href = HOME_SITE + '/marketing-home'; });
   }
 </script>
 </body>
