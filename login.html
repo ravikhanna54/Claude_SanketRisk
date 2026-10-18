@@ -159,7 +159,7 @@
     const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: { autoRefreshToken: true, persistSession: true, storageKey: 'src-auth' }
+      auth: { autoRefreshToken: true, persistSession: true }
     });
     (async () => {
       const { data: { session } } = await _supabase.auth.getSession();
