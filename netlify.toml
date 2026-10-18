@@ -2,6 +2,7 @@
   from = "/"
   to = "/marketing.html"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/sign-in"
