@@ -1,5 +1,15 @@
 [[redirects]]
   from = "/"
+  to = "/marketing.html"
+  status = 200
+
+[[redirects]]
+  from = "/sign-in"
+  to = "/login.html"
+  status = 200
+
+[[redirects]]
+  from = "/signin"
   to = "/login.html"
   status = 200
 
@@ -53,6 +63,11 @@
   to = "/marketing.html"
   status = 200
 
+[[redirects]]
+  from = "/scan-report"
+  to = "/scan-report.html"
+  status = 200
+
 [[headers]]
   for = "/*.html"
   [headers.values]
@@ -65,7 +80,8 @@
   [headers.values]
     Cache-Control = "no-store"
 
-    [[redirects]]
-  from = "/scan-report"
-  to = "/scan-report.html"
-  status = 200
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
