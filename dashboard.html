@@ -386,9 +386,7 @@
     const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // ── EMAIL CONFIG — update these when your Resend domain is verified ──
-    const RESEND_API_KEY   = 're_JeyjNXkX_BhQRjCmmh6R1oHFyaZ5dzimu';
-    const RESEND_FROM      = 'SanketRisk ONE <onboarding@resend.dev>';  // change to e.g. reports@sanketrisk.com after domain verification
+    // ── EMAIL TEMPLATES (sending is done server-side by the send-report-email function) ──
     const EMAIL_SUBJECT_TPL = 'SanketRisk SCAN ONE — Property Risk Assessment: {insured}';
     const EMAIL_BODY_TPL    = 'Dear {name},\n\nPlease find attached the SanketRisk SCAN ONE Property Risk Assessment Report for {insured}, located at {address}.\n\nThis report has been prepared based on the photographs and property information submitted for AI-assisted analysis. Please review the findings and recommendations at your earliest convenience.\n\nShould you have any questions regarding the assessment, please do not hesitate to contact us.\n\nKind regards,\nSanket Risk Consultants\n\n---\nThis report is AI-generated and is intended as a preliminary assessment only. It does not replace a full physical inspection by a qualified professional.';
     const EMAIL_SUBJECT_TPL_INSP = 'SanketRisk — Property Inspection Report: {insured}';
@@ -1551,9 +1549,11 @@
 
       try {
         // Send via Netlify function — PDF fetched server-side from Supabase Storage
+        var sess = (await _supabase.auth.getSession()).data.session;
+        if (!sess) throw new Error('Session expired — please sign in again.');
         var res = await fetch('/.netlify/functions/send-report-email', {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.access_token },
           body:    JSON.stringify({
             to:            to,
             subject:       subject,
