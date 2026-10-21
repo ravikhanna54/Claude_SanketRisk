@@ -1153,16 +1153,37 @@
     }
 
     // ── SCAN ONE SUBMISSIONS ──
-    var _scanAllRows = [];  // full fetched set, cached for client-side search
+    var _scanPage = 1;
+    var SCAN_PAGE_SIZE = 15;
+    var _scanTotal = 0;
+    var _scanQuery = '';
+    var _scanSearchTimer = null;
 
-    async function loadScanSubmissions() {
+    // Loads ONE page (15 rows) from Supabase instead of every submission at once.
+    async function loadScanSubmissions(page, keepSearch) {
       const wrap = document.getElementById('scan-table-wrap');
+      if (!keepSearch) {
+        var searchEl = document.getElementById('scan-search');
+        if (searchEl) searchEl.value = '';
+        _scanQuery = '';
+      }
+      _scanPage = Math.max(1, parseInt(page, 10) || 1);
       wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Loading submissions…</div></div>';
       try {
-        const { data: rows, error } = await _supabase
+        var from = (_scanPage - 1) * SCAN_PAGE_SIZE;
+        var to = from + SCAN_PAGE_SIZE - 1;
+        var qb = _supabase
           .from('scan_submissions')
-          .select('id, file_number, inspection_id, insured_name, address, city, province, occupancy, photo_count, submitted_at, status, qa_status, scan_result, form_data, report_pdf_path')
-          .order('submitted_at', { ascending: false });
+          .select('id, file_number, inspection_id, insured_name, address, city, province, occupancy, photo_count, submitted_at, status, qa_status, scan_result, form_data, report_pdf_path', { count: 'exact' });
+        var term = (_scanQuery || '').replace(/[%*,()\\]/g, ' ').trim();
+        if (term) {
+          var pat = '%' + term + '%';
+          qb = qb.or(['insured_name','address','city','province','occupancy','file_number','inspection_id']
+            .map(function(c) { return c + '.ilike.' + pat; }).join(','));
+        }
+        const { data: rows, error, count } = await qb
+          .order('submitted_at', { ascending: false })
+          .range(from, to);
 
         if (error) {
           if (error.code === '42P01') {
@@ -1170,28 +1191,59 @@
           } else { throw error; }
           return;
         }
-        _scanAllRows = rows || [];
-        var searchEl = document.getElementById('scan-search');
-        if (searchEl) searchEl.value = '';
-        renderScanTable(_scanAllRows);
+        _scanTotal = count || 0;
+        // Landed past the last page (e.g. after deleting the only row on it): step back.
+        if ((!rows || !rows.length) && _scanTotal > 0 && _scanPage > 1) {
+          return loadScanSubmissions(Math.ceil(_scanTotal / SCAN_PAGE_SIZE), true);
+        }
+        renderScanTable(rows || []);
       } catch(e) {
         wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error: ' + e.message + '</div></div>';
       }
     }
 
     function filterScanSubmissions() {
-      var q = (document.getElementById('scan-search').value || '').toLowerCase();
-      var filtered = !q ? _scanAllRows : _scanAllRows.filter(function(r) {
-        return [r.insured_name, r.address, r.city, r.province, r.occupancy, r.file_number, r.inspection_id]
-          .some(function(v) { return v && String(v).toLowerCase().indexOf(q) !== -1; });
-      });
-      renderScanTable(filtered);
+      clearTimeout(_scanSearchTimer);
+      _scanSearchTimer = setTimeout(function() {
+        _scanQuery = (document.getElementById('scan-search').value || '').trim();
+        loadScanSubmissions(1, true);
+      }, 350);
+    }
+
+    function goToScanPage(p) { loadScanSubmissions(p, true); }
+
+    function scanPaginationHtml() {
+      var totalPages = Math.max(1, Math.ceil(_scanTotal / SCAN_PAGE_SIZE));
+      var start = _scanTotal ? (_scanPage - 1) * SCAN_PAGE_SIZE + 1 : 0;
+      var end = Math.min(_scanTotal, _scanPage * SCAN_PAGE_SIZE);
+      var countLine = start + '–' + end + ' of ' + _scanTotal + ' submission' + (_scanTotal === 1 ? '' : 's') +
+        (_scanQuery ? ' (matching your search)' : '');
+      var pageBtns = '';
+      for (var p = 1; p <= totalPages; p++) {
+        var nearEdge = p === 1 || p === totalPages;
+        var nearCurrent = Math.abs(p - _scanPage) <= 2;
+        if (!nearEdge && !nearCurrent) {
+          if (p === 2 || p === totalPages - 1) pageBtns += '<span style="padding:0 4px;color:var(--slate-light);">…</span>';
+          continue;
+        }
+        var active = p === _scanPage;
+        pageBtns += '<button onclick="goToScanPage(' + p + ')" style="min-width:26px;padding:4px 7px;margin:0 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;cursor:pointer;' +
+          (active ? 'background:var(--navy);color:#fff;border-color:var(--navy);' : 'background:#fff;color:var(--navy);') + '">' + p + '</button>';
+      }
+      return '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--slate-light);">' +
+        '<div>' + countLine + '</div>' +
+        '<div style="display:flex;align-items:center;">' +
+          '<button onclick="goToScanPage(' + (_scanPage - 1) + ')" ' + (_scanPage <= 1 ? 'disabled' : '') + ' style="padding:4px 8px;margin-right:4px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;' + (_scanPage <= 1 ? 'opacity:0.4;' : '') + '">‹ Prev</button>' +
+          pageBtns +
+          '<button onclick="goToScanPage(' + (_scanPage + 1) + ')" ' + (_scanPage >= totalPages ? 'disabled' : '') + ' style="padding:4px 8px;margin-left:4px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;' + (_scanPage >= totalPages ? 'opacity:0.4;' : '') + '">Next ›</button>' +
+        '</div>' +
+      '</div>';
     }
 
     function renderScanTable(rows) {
       const wrap = document.getElementById('scan-table-wrap');
       if (!rows || !rows.length) {
-          wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No submissions ' + (_scanAllRows.length ? 'match your search' : 'yet') + '</div></div>';
+          wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No submissions ' + (_scanQuery ? 'match your search' : 'yet') + '</div></div>';
           return;
       }
       try {
@@ -1281,9 +1333,7 @@
         container.appendChild(table);
 
         var footer = document.createElement('div');
-        footer.style.cssText = 'font-size:11px;color:var(--slate-light);padding:10px 14px';
-        footer.textContent = rows.length + ' submission' + (rows.length !== 1 ? 's' : '') +
-          (rows.length !== _scanAllRows.length ? ' (filtered from ' + _scanAllRows.length + ' total)' : ' received');
+        footer.innerHTML = scanPaginationHtml();
 
         wrap.innerHTML = '';
         wrap.appendChild(container);
@@ -1310,7 +1360,7 @@
         const { error } = await _supabase.from('scan_submissions').delete().eq('id', id);
         if (error) throw error;
         showToast('✓ Submission deleted');
-        loadScanSubmissions();
+        loadScanSubmissions(_scanPage, true);
       } catch(e) { showToast('⚠ Delete failed: ' + e.message); }
     }
 
