@@ -513,7 +513,7 @@
       hasAnalyticsAccess = !!profiles?.[0]?.analytics_access;
       document.getElementById('nav-name').textContent = currentUserName;
       const pill = document.getElementById('nav-role-pill');
-      pill.textContent = currentUserRole;
+      pill.textContent = (currentUserRole !== 'admin' && hasAnalyticsAccess) ? 'executive' : currentUserRole;
       pill.className = 'role-pill ' + currentUserRole;
       const isAdmin = currentUserRole === 'admin';
       // canViewAll grants the same VIEWING scope as admin (see everything,
