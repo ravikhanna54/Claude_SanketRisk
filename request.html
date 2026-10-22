@@ -309,6 +309,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{autoRefreshToken:false,persistSession:false}});
   let selectedUrgency = '';
   let codeVerified = false;
+  let verifiedCode = '';
 
   async function verifyCode() {
     const code = document.getElementById('access-code-input').value.trim();
@@ -316,9 +317,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     errEl.style.display = 'none';
     if (!code) { errEl.textContent = 'Please enter the access code.'; errEl.style.display='block'; return; }
     try {
-      const { data, error } = await _supabase.from('platform_settings').select('value').eq('key','portal_access_code').single();
-      if (error || !data) throw new Error('Could not verify code');
-      if (code !== data.value) { errEl.textContent = 'Incorrect access code. Please check with your representative.'; errEl.style.display='block'; return; }
+      // The code is checked inside the database; it is never sent to the browser.
+      const { data, error } = await _supabase.rpc('check_portal_code', { p_code: code });
+      if (error) throw new Error('Could not verify code');
+      if (data !== true) { errEl.textContent = 'Incorrect access code. Please check with your representative.'; errEl.style.display='block'; return; }
+      verifiedCode = code;
       codeVerified = true;
       document.getElementById('access-code-wrap').style.display = 'none';
       document.getElementById('form-fields').style.display = 'block';
@@ -371,6 +374,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     const ref = generateRef();
     const payload = {
       request_ref: ref, submitted_at: new Date().toISOString(), status: 'Pending',
+      access_code: verifiedCode,
       requestor_name: document.getElementById('requestor-name').value.trim(),
       requestor_company: document.getElementById('requestor-company').value.trim(),
       requestor_email: document.getElementById('requestor-email').value.trim(),
@@ -416,7 +420,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     document.getElementById('success-wrap').style.display='none';
     document.getElementById('submit-btn').disabled=false;
     document.getElementById('submit-btn').textContent='Submit Inspection Request →';
-    selectedUrgency=''; codeVerified=false;
+    selectedUrgency=''; codeVerified=false; verifiedCode='';
     document.getElementById('access-code-wrap').style.display='block';
     document.getElementById('form-fields').style.display='none';
     document.getElementById('access-code-input').value='';
