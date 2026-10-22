@@ -143,6 +143,7 @@
     <div class="form-title">Welcome back</div>
     <div class="form-sub">Sign in to your SanketRisk ONE account</div>
     <div class="error-box" id="error-box"></div>
+    <div id="pw-step" style="width:100%">
     <div class="field">
       <label>Email address</label>
       <input type="email" id="email" placeholder="inspector@sanketrisk.com" autocomplete="email">
@@ -153,6 +154,16 @@
         onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="sign-in-btn" id="sign-in-btn" onclick="doLogin()">Sign In →</button>
+    </div>
+    <div id="mfa-step" style="display:none;width:100%">
+      <div class="field">
+        <label>6-digit code from your authenticator app</label>
+        <input type="text" id="mfa-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="123456"
+          autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyMfa()">
+      </div>
+      <button class="sign-in-btn" id="mfa-btn" onclick="verifyMfa()">Verify &amp; Continue →</button>
+      <div style="margin-top:16px;text-align:center;font-size:12.5px"><a href="#" onclick="cancelMfa();return false" style="color:var(--text-light)">Use a different account</a></div>
+    </div>
     <div class="form-footer">Authorised users only — Sanket Risk Consultants</div>
   </div>
   <script>
@@ -161,9 +172,44 @@
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { autoRefreshToken: true, persistSession: true }
     });
+    // Two-step sign-in: if the account has an authenticator app set up, a code is required.
+    let _mfaFactorId = null;
+    async function needsMfa() {
+      const { data } = await _supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      return !!(data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2');
+    }
+    async function showMfaStep() {
+      const { data, error } = await _supabase.auth.mfa.listFactors();
+      const f = data && data.totp && data.totp[0];
+      if (error || !f) { showError('Could not start two-step sign-in. Please try again.'); await _supabase.auth.signOut(); reset(); return; }
+      _mfaFactorId = f.id;
+      document.getElementById('pw-step').style.display = 'none';
+      document.getElementById('mfa-step').style.display = 'block';
+      document.querySelector('.form-title').textContent = 'Two-step verification';
+      document.querySelector('.form-sub').textContent = 'Open your authenticator app and enter the current code';
+      document.getElementById('error-box').style.display = 'none';
+      document.getElementById('mfa-code').focus();
+    }
+    async function verifyMfa() {
+      const code = document.getElementById('mfa-code').value.replace(/\s/g, '');
+      const btn = document.getElementById('mfa-btn');
+      if (!/^\d{6}$/.test(code)) { showError('Enter the 6-digit code from your app.'); return; }
+      btn.disabled = true; btn.textContent = 'Verifying…';
+      const { error } = await _supabase.auth.mfa.challengeAndVerify({ factorId: _mfaFactorId, code });
+      if (error) {
+        showError('That code was not accepted. Check the code and try again.');
+        btn.disabled = false; btn.textContent = 'Verify & Continue →';
+        document.getElementById('mfa-code').value = ''; document.getElementById('mfa-code').focus();
+        return;
+      }
+      window.location.replace('/dashboard.html');
+    }
+    async function cancelMfa() { await _supabase.auth.signOut(); window.location.reload(); }
     (async () => {
       const { data: { session } } = await _supabase.auth.getSession();
-      if (session) window.location.replace('/dashboard.html');
+      if (!session) return;
+      if (await needsMfa()) { await showMfaStep(); return; }
+      window.location.replace('/dashboard.html');
     })();
     async function doLogin() {
       const email = document.getElementById('email').value.trim();
@@ -177,6 +223,7 @@
       try {
         const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
         if (error) { showError(error.message || 'Sign in failed.'); reset(); return; }
+        if (await needsMfa()) { await showMfaStep(); return; }
         window.location.replace('/dashboard.html');
       } catch(e) {
         showError('Connection error. Please try again.');
