@@ -1460,8 +1460,21 @@
       try {
         const { data, error } = await _supabase.from('platform_settings').select('value').eq('key', 'portal_access_code').single();
         input.disabled = false;
-        input.value = (error || !data) ? 'Sanket2026' : data.value;
-      } catch(e) { input.disabled = false; input.value = 'Sanket2026'; }
+        if (error || !data) {
+          // Never show a made-up default. Only admin can read the real code.
+          input.value = '';
+          var saveBtn = document.querySelector('button[onclick="saveAccessCode()"]');
+          if (currentUserRole !== 'admin') {
+            input.placeholder = 'Visible to admin only';
+            input.disabled = true;
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.5'; }
+          } else {
+            input.placeholder = 'No code found. Type a new code and save';
+          }
+        } else {
+          input.value = data.value;
+        }
+      } catch(e) { input.disabled = false; input.value = ''; input.placeholder = 'Could not load the code'; }
     }
 
     async function saveAccessCode() {
