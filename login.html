@@ -173,7 +173,7 @@
       auth: { autoRefreshToken: true, persistSession: true }
     });
     // Two-step sign-in: if the account has an authenticator app set up, a code is required.
-    let _mfaFactorId = null;
+    let _mfaFactorIds = [];
     async function needsMfa() {
       const { data } = await _supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       return !!(data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2');
@@ -182,7 +182,7 @@
       const { data, error } = await _supabase.auth.mfa.listFactors();
       const f = data && data.totp && data.totp[0];
       if (error || !f) { showError('Could not start two-step sign-in. Please try again.'); await _supabase.auth.signOut(); reset(); return; }
-      _mfaFactorId = f.id;
+      _mfaFactorIds = data.totp.map(function(x) { return x.id; });
       document.getElementById('pw-step').style.display = 'none';
       document.getElementById('mfa-step').style.display = 'block';
       document.querySelector('.form-title').textContent = 'Two-step verification';
@@ -195,7 +195,14 @@
       const btn = document.getElementById('mfa-btn');
       if (!/^\d{6}$/.test(code)) { showError('Enter the 6-digit code from your app.'); return; }
       btn.disabled = true; btn.textContent = 'Verifying…';
-      const { error } = await _supabase.auth.mfa.challengeAndVerify({ factorId: _mfaFactorId, code });
+      // An account can have more than one authenticator app set up (each has its own secret),
+      // so try the code against each of them until one accepts it.
+      let error = { message: 'no factor' };
+      for (const id of _mfaFactorIds) {
+        const r = await _supabase.auth.mfa.challengeAndVerify({ factorId: id, code });
+        error = r.error;
+        if (!error) break;
+      }
       if (error) {
         showError('That code was not accepted. Check the code and try again.');
         btn.disabled = false; btn.textContent = 'Verify & Continue →';
