@@ -4381,6 +4381,7 @@
     document.getElementById('btn-analyse-text').textContent = 'Sending photos to AI…';
 
     // POST to Lambda — connection may drop before Lambda finishes, that is expected
+    var _sendStart = Date.now();
     try {
       // Use text/plain to avoid CORS preflight (simple request)
       var response = await fetch(EDGE_URL, {
@@ -4402,8 +4403,20 @@
           return data.result;
         }
         if (data.error) throw new Error(data.error);
+      } else if ([400, 401, 403].indexOf(response.status) !== -1) {
+        // The Lambda refused this request: stop now and show why, instead of waiting 14 minutes
+        var _refusal = '';
+        try { _refusal = (await response.text()).substring(0, 200); } catch(e) {}
+        var _fatal = new Error('The analysis service refused the request (HTTP ' + response.status + '): ' + _refusal);
+        _fatal.fatal = true;
+        throw _fatal;
       }
     } catch(fetchErr) {
+      if (fetchErr && fetchErr.fatal) throw fetchErr;
+      // A call that fails within a few seconds never reached the Lambda (blocked or offline): say so
+      if (fetchErr instanceof TypeError && (Date.now() - _sendStart) < 20000) {
+        throw new Error('Could not reach the analysis service (' + fetchErr.message + '). The request was blocked before it started. Please tell support.');
+      }
       // Connection drop / timeout is expected for long jobs — fall through to polling
       // Only hard-fail if it's clearly a network-unreachable error
       console.log('Fetch ended:', fetchErr.message);
