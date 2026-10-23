@@ -1536,11 +1536,22 @@
             <input type="text" value="NEW" id="inspection-id" oninput="document.getElementById('inspection-id-badge').textContent=this.value">
           </div>
           <!-- Hidden — carries requestor email + originating request id through from Convert, for dashboard "Email Report" -->
-          <input type="hidden" id="requestor-email">
           <input type="hidden" id="source-request-id">
-          <input type="hidden" id="requestor-name">
-          <input type="hidden" id="requestor-company">
           <input type="hidden" id="report-type-requested">
+          <!-- Requestor: filled automatically when an inspection is created from a request; also editable.
+               The dashboard "Email Report" button sends the finished report to this email address. -->
+          <div class="field">
+            <label>Requestor Name</label>
+            <input type="text" id="requestor-name" placeholder="Who requested this inspection">
+          </div>
+          <div class="field">
+            <label>Requestor Email <span style="font-weight:400;color:#718096">(report is emailed here)</span></label>
+            <input type="email" id="requestor-email" placeholder="name@company.com">
+          </div>
+          <div class="field">
+            <label>Requestor Company</label>
+            <input type="text" id="requestor-company" placeholder="Insurer, broker or company">
+          </div>
           <div class="field">
             <label>Account Number</label>
             <input type="text" id="account-number" placeholder="e.g. ACC-2026-0001" oninput="const b=document.getElementById('account-badge');b.textContent=this.value;b.style.display=this.value?'block':'none';">
@@ -8927,6 +8938,32 @@
       storage: window.localStorage
     }
   });
+
+  // ── SanketRisk: attach the signed-in user's token to every call to our server functions ──
+  (function () {
+    var _origFetch = window.fetch.bind(window);
+    async function _tok() {
+      try { var r = await _supabase.auth.getSession(); return r.data && r.data.session ? r.data.session.access_token : ''; }
+      catch (e) { return ''; }
+    }
+    window.fetch = async function (input, init) {
+      var url = typeof input === 'string' ? input : (input && input.url) || '';
+      if (url.indexOf('/.netlify/functions/') !== -1) {
+        var t = await _tok();
+        if (t) {
+          init = init || {};
+          var h = new Headers(init.headers || (typeof input !== 'string' && input.headers) || {});
+          if (!h.has('Authorization')) h.set('Authorization', 'Bearer ' + t);
+          init.headers = h;
+        }
+      }
+      return _origFetch(input, init);
+    };
+    // Image URLs (maps-proxy) cannot carry a header, so they carry the token in the address.
+    _supabase.auth.onAuthStateChange(function (_e, s) { window.__sbTok = s ? s.access_token : ''; });
+    _tok().then(function (t) { window.__sbTok = t; });
+    window._mapTok = function () { return '&t=' + encodeURIComponent(window.__sbTok || ''); };
+  })();
   let allInspections = [];
   let currentInspectionId = null; // DB row UUID of loaded record
   // ── CONNECTION CHECK ──
@@ -11869,14 +11906,16 @@
         .single();
       input.disabled = false;
       if (error || !data) {
-        // No code set yet — show the default
-        input.value = 'Sanket2026';
+        // Never show a made-up default; the real code is only readable by admin
+        input.value = '';
+        input.placeholder = 'No code found. Type a new code and save';
       } else {
         input.value = data.value;
       }
     } catch(e) {
       input.disabled = false;
-      input.value = 'Sanket2026';
+      input.value = '';
+      input.placeholder = 'Could not load the code';
       console.warn('Could not load access code:', e.message);
     }
   }
@@ -14477,9 +14516,9 @@ async function generateNarrativeReport() {
   // Site location static maps (printable)
   const nMapQ = (typeof buildMapQuery === 'function') ? buildMapQuery() : '';
   const nHasKey = (typeof GOOGLE_MAPS_API_KEY !== 'undefined') && GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY.indexOf('PASTE_') !== 0;
-  const nMapAerial = (nHasKey && nMapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(nMapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=' + encodeURIComponent('color:red|' + nMapQ) : '';
-  const nMapRoad = (nHasKey && nMapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(nMapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=' + encodeURIComponent('color:red|' + nMapQ) : '';
-  const nMapStreet = (nHasKey && nMapQ) ? '/.netlify/functions/maps-proxy?location=' + encodeURIComponent(nMapQ) + '&size=640x420&fov=90' : '';
+  const nMapAerial = (nHasKey && nMapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(nMapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=' + encodeURIComponent('color:red|' + nMapQ) + _mapTok() : '';
+  const nMapRoad = (nHasKey && nMapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(nMapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=' + encodeURIComponent('color:red|' + nMapQ) + _mapTok() : '';
+  const nMapStreet = (nHasKey && nMapQ) ? '/.netlify/functions/maps-proxy?location=' + encodeURIComponent(nMapQ) + '&size=640x420&fov=90' + _mapTok() : '';
   const occupancy     = d.occupancy_class|| g('occupancy-class') || '—';
   const inspName      = d.inspector_name || g('inspector-name')  || '—';
   const riskQuality   = g('risk-quality') || (pills['risk_quality_rating'] || []).join(', ')  || '—';
@@ -14961,9 +15000,9 @@ function generateFormalReport() {
   // Site location static maps (printable)
   var mapQ = (typeof buildMapQuery === 'function') ? buildMapQuery() : '';
   var hasMapKey = (typeof GOOGLE_MAPS_API_KEY !== 'undefined') && GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY.indexOf('PASTE_') !== 0;
-  var mapAerialUrl = (hasMapKey && mapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(mapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=' + encodeURIComponent('color:red|' + mapQ) : '';
-  var mapRoadUrl = (hasMapKey && mapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(mapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=' + encodeURIComponent('color:red|' + mapQ) : '';
-  var mapStreetUrl = (hasMapKey && mapQ) ? '/.netlify/functions/maps-proxy?location=' + encodeURIComponent(mapQ) + '&size=640x420&fov=90' : '';
+  var mapAerialUrl = (hasMapKey && mapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(mapQ) + '&zoom=19&size=640x420&scale=2&maptype=hybrid&markers=' + encodeURIComponent('color:red|' + mapQ) + _mapTok() : '';
+  var mapRoadUrl = (hasMapKey && mapQ) ? '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(mapQ) + '&zoom=15&size=640x420&scale=2&maptype=roadmap&markers=' + encodeURIComponent('color:red|' + mapQ) + _mapTok() : '';
+  var mapStreetUrl = (hasMapKey && mapQ) ? '/.netlify/functions/maps-proxy?location=' + encodeURIComponent(mapQ) + '&size=640x420&fov=90' + _mapTok() : '';
   // Nat-Cat demerit breakdown (stored by the grade calculator)
   var ncDem = {};
   try { ncDem = JSON.parse(f['nc-demerits-json'] || '{}') || {}; } catch(e) { ncDem = {}; }
