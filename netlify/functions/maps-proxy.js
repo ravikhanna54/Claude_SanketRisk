@@ -14,7 +14,9 @@
 //   - Static Map: pass `center` (matches Google's own Maps Static API
 //     parameter name) — this is the original, unchanged behavior.
 
+const { requireAuth } = require('./guard');
 exports.handler = async function(event) {
+  if (event.httpMethod !== 'OPTIONS') { const _g = await requireAuth(event); if (!_g.ok) return _g.response; }
   const headers = {
     'Access-Control-Allow-Origin':  '*',
     'Access-Control-Allow-Headers': 'Content-Type',
