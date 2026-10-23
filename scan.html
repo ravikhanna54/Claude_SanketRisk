@@ -1313,6 +1313,32 @@
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  // ── SanketRisk: attach the signed-in user's token to every call to our server functions ──
+  (function () {
+    var _origFetch = window.fetch.bind(window);
+    async function _tok() {
+      try { var r = await _supabase.auth.getSession(); return r.data && r.data.session ? r.data.session.access_token : ''; }
+      catch (e) { return ''; }
+    }
+    window.fetch = async function (input, init) {
+      var url = typeof input === 'string' ? input : (input && input.url) || '';
+      if (url.indexOf('/.netlify/functions/') !== -1) {
+        var t = await _tok();
+        if (t) {
+          init = init || {};
+          var h = new Headers(init.headers || (typeof input !== 'string' && input.headers) || {});
+          if (!h.has('Authorization')) h.set('Authorization', 'Bearer ' + t);
+          init.headers = h;
+        }
+      }
+      return _origFetch(input, init);
+    };
+    // Image URLs (maps-proxy) cannot carry a header, so they carry the token in the address.
+    _supabase.auth.onAuthStateChange(function (_e, s) { window.__sbTok = s ? s.access_token : ''; });
+    _tok().then(function (t) { window.__sbTok = t; });
+    window._mapTok = function () { return '&t=' + encodeURIComponent(window.__sbTok || ''); };
+  })();
+
   let uploadedPhotos = []; // Array of {file, dataUrl}
   var _storagePreviewLoaded = false; // prevent duplicate loads into preview grid
   var _selectedCoverDataUrl = null;  // user-selected cover photo — persists across renders
@@ -5324,7 +5350,7 @@
     mapSat.src = '/.netlify/functions/maps-proxy' +
       '?center=' + locationEnc +
       '&zoom=17&size=640x400&maptype=hybrid&scale=2' +
-      '&markers=' + encodeURIComponent('color:red|label:P|' + locationStr);
+      '&markers=' + encodeURIComponent('color:red|label:P|' + locationStr) + _mapTok();
     mapSat.onerror = function() {
       mapSat.style.display = 'none';
     };
@@ -5342,7 +5368,7 @@
         '?size=640x400&scale=2' +
         '&location=' + locationEnc +
         '&fov=90&pitch=5' +
-        '&source=outdoor';
+        '&source=outdoor' + _mapTok();
       mapStreetView.onerror = function() {
         // Street View not available for this location
         mapStreetView.style.display = 'none';
