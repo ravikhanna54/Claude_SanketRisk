@@ -1040,9 +1040,11 @@
       renderArchiveTable(archiveRowsCache);
 
       try {
+        // The conversion service only accepts signed-in staff, so send the login token
+        const _cs = (await _supabase.auth.getSession()).data.session;
         const resp = await fetch(ARCHIVE_CONVERT_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (_cs ? _cs.access_token : '') },
           body: JSON.stringify({ archived_file_id: id })
         });
         if (!resp.ok) {
