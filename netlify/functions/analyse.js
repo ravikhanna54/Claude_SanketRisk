@@ -1,6 +1,8 @@
 const LAMBDA = 'https://zxvw3d7fxhstl6ye5tdsru3pna0lbomh.lambda-url.ap-southeast-2.on.aws/'
 
+const { requireAuth } = require('./guard');
 exports.handler = async (event) => {
+  if (event.httpMethod !== 'OPTIONS') { const _g = await requireAuth(event); if (!_g.ok) return _g.response; }
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
