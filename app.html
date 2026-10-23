@@ -8948,7 +8948,7 @@
     }
     window.fetch = async function (input, init) {
       var url = typeof input === 'string' ? input : (input && input.url) || '';
-      if (url.indexOf('/.netlify/functions/') !== -1) {
+      if (url.indexOf('/.netlify/functions/') !== -1 || url.indexOf('.lambda-url.') !== -1) {
         var t = await _tok();
         if (t) {
           init = init || {};
@@ -13494,6 +13494,7 @@
     var sevOrder = { 'Critical': 0, 'Warning': 1, 'Suggestion': 2 };
     var sevColor = { 'Critical': '#C53030', 'Warning': '#C05621', 'Suggestion': '#2b6cb0' };
     var sorted = (findings || []).slice().sort(function(a, b) { return (sevOrder[a.severity] ?? 3) - (sevOrder[b.severity] ?? 3); });
+    var E = function(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
     var html = '<div style="border:1px solid var(--border);border-radius:8px;padding:14px 16px;background:#fafbfc;' + (prepend ? 'margin-bottom:16px;' : '') + '">' +
       '<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em;">🤖 AI Review Findings' + (prepend ? ' (Independent pass — for reviewer consideration, not a decision)' : '') + '</div>';
     if (!sorted.length) {
@@ -13502,8 +13503,8 @@
       sorted.forEach(function(f) {
         var color = sevColor[f.severity] || '#666';
         html += '<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);font-size:12.5px;">' +
-          '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;background:' + color + ';margin-right:6px;">' + (f.severity || 'Note') + '</span>' +
-          '<strong>' + (f.section || '') + (f.field ? ' — ' + f.field : '') + ':</strong> ' + (f.finding || '') +
+          '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;background:' + color + ';margin-right:6px;">' + E(f.severity || 'Note') + '</span>' +
+          '<strong>' + E(f.section || '') + (f.field ? ' — ' + E(f.field) : '') + ':</strong> ' + E(f.finding || '') +
           '</div>';
       });
     }
