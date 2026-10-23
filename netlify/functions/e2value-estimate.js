@@ -209,7 +209,9 @@ function validate(input) {
   return errors;
 }
 
+const { requireAuth } = require('./guard');
 exports.handler = async function (event) {
+  if (event.httpMethod !== 'OPTIONS') { const _g = await requireAuth(event); if (!_g.ok) return _g.response; }
   const jsonHeaders = { 'Content-Type': 'application/json' };
 
   if (event.httpMethod !== 'POST') {
