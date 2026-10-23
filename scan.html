@@ -1322,7 +1322,7 @@
     }
     window.fetch = async function (input, init) {
       var url = typeof input === 'string' ? input : (input && input.url) || '';
-      if (url.indexOf('/.netlify/functions/') !== -1) {
+      if (url.indexOf('/.netlify/functions/') !== -1 || url.indexOf('.lambda-url.') !== -1) {
         var t = await _tok();
         if (t) {
           init = init || {};
