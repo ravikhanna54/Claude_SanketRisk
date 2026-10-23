@@ -70,7 +70,9 @@ const PROVINCE_TABLE_MAP = Object.assign({}, CANADA_TABLE_MAP, US_TABLE_MAP);
 const ALL_TABLES = Object.values(CANADA_TABLE_MAP).filter(function(v, i, a) { return a.indexOf(v) === i; })
   .concat(Object.keys(US_STATES).map(function(name) { return 'building_footprints_us_' + US_STATES[name]; }));
 
+const { requireAuth } = require('./guard');
 exports.handler = async function (event) {
+  if (event.httpMethod !== 'OPTIONS') { const _g = await requireAuth(event); if (!_g.ok) return _g.response; }
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' };
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
