@@ -18,7 +18,9 @@ async function fetchPublicFile(path, timeoutMs) {
   } catch(e) { clearTimeout(timer); console.log(`Fetch error ${path}: ${e.message}`); return null; }
 }
 
+const { requireAuth } = require('./guard');
 exports.handler = async (event, context) => {
+  if (event.httpMethod !== 'OPTIONS') { const _g = await requireAuth(event); if (!_g.ok) return _g.response; }
   // Tell Netlify not to close the connection early
   context.callbackWaitsForEmptyEventLoop = false;
 
