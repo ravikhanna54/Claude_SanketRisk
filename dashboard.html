@@ -1546,9 +1546,16 @@
 
       // Record info strip
       var fileNo = r.inspection_id || r.file_number || '—';
+      var _eh = function(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+      var reqName = (fd && fd.fields && fd.fields['requestor-name']) || '';
+      var reqComp = (fd && fd.fields && fd.fields['requestor-company']) || '';
       document.getElementById('email-modal-record').innerHTML =
-        '<strong>' + (r.insured_name || '—') + '</strong> &nbsp;·&nbsp; ' + fileNo +
-        ' &nbsp;·&nbsp; ' + [r.city, province].filter(Boolean).join(', ');
+        '<strong>' + _eh(r.insured_name || '—') + '</strong> &nbsp;·&nbsp; ' + _eh(fileNo) +
+        ' &nbsp;·&nbsp; ' + _eh([r.city, province].filter(Boolean).join(', ')) +
+        ((reqName || clientEmail)
+          ? '<br><span style="font-size:11.5px;color:#4a5568">Requested by: ' + _eh(reqName || '—') +
+            (reqComp ? ' (' + _eh(reqComp) + ')' : '') + (clientEmail ? ' &lt;' + _eh(clientEmail) + '&gt;' : '') + '</span>'
+          : '<br><span style="font-size:11.5px;color:#c53030">No requestor email on this record. Enter the recipient below.</span>');
 
       // Reset status
       var st = document.getElementById('email-status');
