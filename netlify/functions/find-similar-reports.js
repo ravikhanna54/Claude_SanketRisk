@@ -82,7 +82,9 @@ async function fetchMetadata(client, sourceTable, ids) {
   return out;
 }
 
+const { requireAuth } = require('./guard');
 exports.handler = async function (event) {
+  if (event.httpMethod !== 'OPTIONS') { const _g = await requireAuth(event); if (!_g.ok) return _g.response; }
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' };
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
