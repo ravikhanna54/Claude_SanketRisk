@@ -37,7 +37,9 @@ function _haversineMeters(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
+const { requireAuth } = require('./guard');
 exports.handler = async function(event) {
+  if (event.httpMethod !== 'OPTIONS') { const _g = await requireAuth(event); if (!_g.ok) return _g.response; }
   var headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
