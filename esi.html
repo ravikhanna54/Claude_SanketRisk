@@ -2955,10 +2955,12 @@
     // keeps running server-side regardless of whether this fetch completes,
     // and the poll below is the real source of truth for the outcome.
     _dbg('[OCR] Calling Lambda:', KB_OCR_LAMBDA_URL);
+    // The OCR service only accepts signed-in admins/reviewers, so send the login token
+    var _ocrSess = (await _supabase.auth.getSession()).data.session;
     fetch(KB_OCR_LAMBDA_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' }, // avoids a CORS preflight, matching Scan One's Lambda calls
-      body: JSON.stringify({ document_id: id, file_path: filePath, bucket: 'kb-documents' })
+      headers: { 'Content-Type': 'text/plain', 'Authorization': 'Bearer ' + (_ocrSess ? _ocrSess.access_token : '') },
+      body: JSON.stringify({ document_id: id })
     }).then(function(res) {
       _dbg('[OCR] Lambda HTTP response status:', res.status);
       return res.text();
