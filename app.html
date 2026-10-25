@@ -13539,7 +13539,7 @@
       // completes successfully regardless. Poll the database directly for
       // the actual result rather than treating a dropped connection as a
       // definitive failure (same pattern already proven for archive-convert).
-      resultsEl.innerHTML = '<div style="font-size:12px;color:var(--slate);padding:10px;">Connection dropped waiting for a response — checking whether the review actually completed…</div>';
+      resultsEl.innerHTML = '<div style="font-size:12px;color:var(--slate);padding:10px;">Waiting for the pre-review results — this can take up to a minute…</div>';
       pollAIPreReviewResult(requestStartedAt, 10);
     }
   }
