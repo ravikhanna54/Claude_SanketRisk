@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SanketRisk ONE — Report (view only)</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --navy: #1b2a4a; --gold: #c9a84c; --text: #1a202c; --text-light: #718096; --bg: #e9ecf3; }
+  html, body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .bar { position: sticky; top: 0; z-index: 10; background: var(--navy); color: #fff; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+  .bar .t { font-size: 14px; font-weight: 600; } .bar .t span { color: var(--gold); }
+  .bar .n { font-size: 12px; color: #b8c2d8; }
+  .pages { max-width: 920px; margin: 0 auto; padding: 18px 12px 60px; }
+  canvas { display: block; width: 100%; height: auto; background: #fff; margin: 0 auto 14px; box-shadow: 0 2px 12px rgba(0,0,0,.15); border-radius: 2px; }
+  .state { text-align: center; padding: 60px 16px; color: var(--text-light); font-size: 14px; }
+  .state.err { color: #c53030; }
+  .wm { position: fixed; inset: 0; pointer-events: none; z-index: 5; opacity: .11; }
+  @media print { html, body { display: none !important; } }
+</style>
+</head>
+<body>
+<div class="bar"><div class="t"><span>S</span> SanketRisk ONE — Inspection Report</div><div class="n">View only</div></div>
+<div class="pages" id="pages"><div class="state" id="state">Loading report…</div></div>
+<div class="wm" id="wm"></div>
+
+<script>
+  const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: true, persistSession: true } });
+  window.print = function () {};
+  document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  document.addEventListener('dragstart', function (e) { e.preventDefault(); });
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && ['p', 's', 'u'].indexOf((e.key || '').toLowerCase()) !== -1) e.preventDefault();
+  });
+
+  function fail(msg) { var s = document.getElementById('state'); if (!s) { s = document.createElement('div'); s.id = 'state'; document.getElementById('pages').prepend(s); } s.className = 'state err'; s.textContent = msg; }
+
+  // A faint repeating label with who is viewing and when, so a photographed screen can be traced
+  function watermark(label) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="360" height="220"><text x="20" y="130" font-family="Segoe UI,Arial" font-size="15" fill="#1b2a4a" transform="rotate(-24 180 110)">' +
+      label.replace(/[&<>"']/g, '') + '</text></svg>';
+    document.getElementById('wm').style.backgroundImage = 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
+  }
+
+  (async function () {
+    try {
+      const { data: { session } } = await _supabase.auth.getSession();
+      if (!session) { window.location.replace('/login.html'); return; }
+      const aal = await _supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal.data && aal.data.nextLevel === 'aal2' && aal.data.currentLevel !== 'aal2') { window.location.replace('/login.html'); return; }
+
+      var path = new URLSearchParams(location.search).get('p') || '';
+      if (!/^[A-Za-z0-9._\/-]{1,200}$/.test(path) || path.indexOf('..') !== -1 || path.charAt(0) === '/') { fail('That report link is not valid.'); return; }
+
+      watermark((session.user.email || 'SanketRisk user') + '  ·  ' + new Date().toISOString().slice(0, 16).replace('T', ' '));
+
+      const signed = await _supabase.storage.from('reports').createSignedUrl(path, 120);
+      if (signed.error) throw signed.error;
+      const resp = await fetch(signed.data.signedUrl);
+      if (!resp.ok) throw new Error('The report could not be loaded (' + resp.status + ').');
+      const buf = await resp.arrayBuffer();
+
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const holder = document.getElementById('pages');
+      holder.innerHTML = '';
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const width = Math.min(holder.clientWidth - 24 || 880, 900);
+      for (let n = 1; n <= pdf.numPages; n++) {
+        const page = await pdf.getPage(n);
+        const base = page.getViewport({ scale: 1 });
+        const vp = page.getViewport({ scale: (width / base.width) * ratio });
+        const c = document.createElement('canvas');
+        c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+        holder.appendChild(c);
+        await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+      }
+    } catch (e) { fail('Could not open the report: ' + (e && e.message ? e.message : e)); }
+  })();
+</script>
+</body>
+</html>

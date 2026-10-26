@@ -810,6 +810,8 @@
     z-index: 5;
   }
   .photo-preview-wrap:has(img.loaded) .photo-remove-btn { display: block; }
+  /* Inspectors are view-only: nothing prints from the form */
+  @media print { body.view-only { display: none !important; } }
   /* Print styles for photos */
   @media print {
     .photo-grid-wrap { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 14px !important; }
@@ -8772,7 +8774,24 @@
   // ══════════════════════════════════════════
   let currentUser = null;
   let currentUserRole = 'inspector';
+  let currentUserExec = false; // executive accounts (analytics_access) are not inspectors
   let currentUserEmail = '';
+  // ── VIEW-ONLY for inspectors: they can read reports but not print or download them ──
+  function isViewOnly() { return currentUserRole === 'inspector' && !currentUserExec; }
+  function viewOnlyNotice() { showToast('View only — printing and downloading reports is available to administrators and reviewers.', 'warn'); }
+  var _viewOnlyPrintGuard = '<style>@media print{html,body{display:none!important}}body{-webkit-user-select:none;user-select:none}.btn-print{display:none!important}</style>' +
+    '<script>window.print=function(){};document.addEventListener("contextmenu",function(e){e.preventDefault()});<\/script>';
+  // Applied only to what an inspector SEES; the copy stored for the record is never changed.
+  function viewOnlyHtml(h) { return isViewOnly() ? String(h).replace('</head>', _viewOnlyPrintGuard + '</head>') : h; }
+  function applyViewOnlyUi() {
+    document.body.classList.toggle('view-only', isViewOnly());
+    if (!isViewOnly()) return;
+    document.querySelectorAll('[onclick*="exportPDF"]').forEach(function(el) { el.style.display = 'none'; });
+  }
+  (function() {
+    var _origPrint = window.print.bind(window);
+    window.print = function() { if (isViewOnly()) { viewOnlyNotice(); return; } _origPrint(); };
+  })();
   let authToken = null;
   async function doLogin() {
     const email = document.getElementById('login-email').value.trim();
@@ -8809,9 +8828,10 @@
       // Fetch profile for role
       const { data: profiles } = await _supabase
         .from('profiles')
-        .select('role, full_name')
+        .select('role, full_name, analytics_access')
         .eq('id', currentUser.id);
       currentUserRole = profiles?.[0]?.role || 'inspector';
+      currentUserExec = ['true', 't', 'yes', '1'].includes(String(profiles?.[0]?.analytics_access).toLowerCase());
       const fullName = profiles?.[0]?.full_name || email.split('@')[0];
       // Auto-create profile if missing
       if (!profiles?.length) {
@@ -8830,6 +8850,7 @@
     }
   }
   function onLoginSuccess(name) {
+    applyViewOnlyUi();
     // Login screen is /login.html — no overlay to hide
     // Show user badge
     const badge = document.getElementById('user-badge');
@@ -9524,6 +9545,7 @@
   // Simple, reliable: shows all core sections + only active supplements.
   // Uses window.print() directly — no iframe complexity.
   function exportPDF() {
+    if (isViewOnly()) { viewOnlyNotice(); return; }
     // ── Use collectFormData() to read ALL field values reliably ──
     const data = collectFormData();
     const val = (v) => (v && v.trim && v.trim()) ? v.trim() : '—';
@@ -14181,9 +14203,10 @@
       // Fetch profile
       const { data: profiles } = await _supabase
         .from('profiles')
-        .select('role, full_name')
+        .select('role, full_name, analytics_access')
         .eq('id', currentUser.id);
       currentUserRole = profiles?.[0]?.role || 'inspector';
+      currentUserExec = ['true', 't', 'yes', '1'].includes(String(profiles?.[0]?.analytics_access).toLowerCase());
       const fullName  = profiles?.[0]?.full_name || currentUserEmail.split('@')[0];
       HEADERS['Authorization'] = 'Bearer ' + authToken;
       onLoginSuccess(fullName);
@@ -14889,7 +14912,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
 </body>
 </html>`;
     w.document.open();
-    w.document.write(reportPage);
+    w.document.write(viewOnlyHtml(reportPage));
     w.document.close();
     generateAndStoreReportPdf(reportPage, 'narrative');
 
@@ -14945,7 +14968,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
     }
   } catch(err) {
     w.document.open();
-    w.document.write('<html><body style="font-family:sans-serif;padding:40px;"><h2>Error generating narrative</h2><p>' + err.message + '</p></body></html>');
+    w.document.write('<html><body style="font-family:sans-serif;padding:40px;"><h2>Error generating narrative</h2><p>' + String(err.message).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }) + '</p></body></html>');
     w.document.close();
     console.error('Narrative error:', err);
   }
@@ -16959,8 +16982,8 @@ ${activeSuppHTML}
 </body>
 </html>`;
   var w = window.open('', '_blank');
-  if (!w) { document.open(); document.write(html); document.close(); return; }
-  w.document.write(html);
+  if (!w) { document.open(); document.write(viewOnlyHtml(html)); document.close(); return; }
+  w.document.write(viewOnlyHtml(html));
   w.document.close();
   generateAndStoreReportPdf(html, 'formal');
 

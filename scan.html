@@ -311,7 +311,12 @@
       print-color-adjust: exact;
     }
   }
-  </style>
+  
+  /* Inspectors are view-only: no printing or downloading of reports */
+  @media print { body.view-only { display: none !important; } }
+  body.view-only [onclick*="printScanReport"], body.view-only [onclick*="downloadPdfLocal"],
+  body.view-only [onclick*="downloadStoredPDF"], body.view-only #btn-download-pdf { display: none !important; }
+</style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
@@ -1339,6 +1344,28 @@
     window._mapTok = function () { return '&t=' + encodeURIComponent(window.__sbTok || ''); };
   })();
 
+  // ── View-only for inspectors: they can read reports but not print or download them ──
+  window.__viewOnly = true; // fail closed: view-only until the role is confirmed
+  document.body.classList.add('view-only');
+  (function () {
+    var _origPrint = window.print.bind(window);
+    window.print = function () {
+      if (window.__viewOnly) { try { showToast('View only \u2014 printing and downloading reports is available to administrators and reviewers.'); } catch (e) {} return; }
+      _origPrint();
+    };
+    (async function () {
+      try {
+        var s = (await _supabase.auth.getSession()).data.session;
+        if (!s) return;
+        var r = await _supabase.from('profiles').select('role, analytics_access').eq('id', s.user.id).maybeSingle();
+        var p = r && r.data;
+        var exec = !!p && ['true', 't', 'yes', '1'].includes(String(p.analytics_access).toLowerCase());
+        window.__viewOnly = !p || (p.role === 'inspector' && !exec) || ['pending', 'none'].indexOf(p.role) !== -1;
+        document.body.classList.toggle('view-only', window.__viewOnly);
+      } catch (e) {}
+    })();
+  })();
+
   let uploadedPhotos = []; // Array of {file, dataUrl}
   var _storagePreviewLoaded = false; // prevent duplicate loads into preview grid
   var _selectedCoverDataUrl = null;  // user-selected cover photo — persists across renders
@@ -1539,6 +1566,7 @@
 
   // Download the stored PDF from Supabase — called from report_only bar
   async function downloadStoredPDF() {
+    if (window.__viewOnly) { window.print(); return; }
     var btn = document.getElementById('btn-download-pdf');
     var pdfPath = window._reportPdfPath || (_draftInspId ? _draftInspId + '.pdf' : null);
 
@@ -6222,6 +6250,7 @@
   // Generates the full PDF (cover + report body + satellite map + photos)
   // and downloads it directly to the device — no Supabase upload needed.
   async function downloadPdfLocal() {
+    if (window.__viewOnly) { window.print(); return; }
     var btn = document.querySelector('.report-actions button[onclick="downloadPdfLocal()"]');
     var origText = btn ? btn.innerHTML : '';
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Generating PDF\u2026'; }
