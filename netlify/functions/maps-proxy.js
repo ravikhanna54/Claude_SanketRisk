@@ -34,6 +34,20 @@ exports.handler = async function(event) {
     }
 
     const q = event.queryStringParameters || {};
+
+    // Address lookup (used by the Site Plan tool): returns {lat,lng,address}
+    if (q.geocode) {
+      const addr = String(q.geocode).slice(0, 200);
+      const gres = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(addr) + '&key=' + GOOGLE_MAPS_API_KEY);
+      const gj = await gres.json();
+      const r = gj && gj.results && gj.results[0];
+      if (!r) {
+        return { statusCode: 404, headers: { ...headers, 'Cache-Control': 'no-store', 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Address not found' }) };
+      }
+      return { statusCode: 200, headers: { ...headers, 'Cache-Control': 'no-store', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: r.geometry.location.lat, lng: r.geometry.location.lng, address: r.formatted_address }) };
+    }
+
     const size = q.size || '640x420';
     var url;
 
