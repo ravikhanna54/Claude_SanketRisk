@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SanketRisk ONE — Site Plan</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --navy:#1b2a4a; --gold:#c9a84c; --text:#1a202c; --light:#718096; --bg:#eef1f6; --line:#d5dbe6; }
+  html, body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); }
+  .bar { background:var(--navy); color:#fff; height:50px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
+  .bar .t { font-size:14px; font-weight:600; } .bar .t span { color:var(--gold); }
+  .bar a { color:#b8c2d8; font-size:12px; text-decoration:none; }
+  .wrap { max-width:1000px; margin:0 auto; padding:12px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
+  input[type=text], select { height:40px; border:1px solid var(--line); border-radius:8px; padding:0 10px; font-size:14px; background:#fff; }
+  input[type=text] { flex:1; min-width:200px; }
+  button { height:40px; min-width:40px; padding:0 12px; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:13px; font-weight:600; color:var(--navy); cursor:pointer; }
+  button.on { background:var(--navy); color:#fff; border-color:var(--navy); }
+  button.pri { background:var(--gold); border-color:var(--gold); color:#1b2a4a; }
+  button.danger { color:#c53030; }
+  button:disabled { opacity:.4; cursor:default; }
+  .sep { width:1px; height:28px; background:var(--line); margin:0 2px; }
+  .stage { position:relative; background:#cfd6e3; border:1px solid var(--line); border-radius:8px; overflow:hidden; line-height:0; }
+  canvas { width:100%; height:auto; touch-action:none; display:block; }
+  .hint { font-size:12.5px; color:var(--light); margin:8px 2px; line-height:1.5; min-height:19px; }
+  .status { font-size:12.5px; color:var(--navy); font-weight:600; }
+  .pan { position:absolute; z-index:3; background:rgba(27,42,74,.72); color:#fff; border:none; width:38px; height:38px; min-width:0; padding:0; font-size:16px; border-radius:19px; }
+  .pan.u{top:8px;left:50%;margin-left:-19px}.pan.d{bottom:8px;left:50%;margin-left:-19px}.pan.l{left:8px;top:50%;margin-top:-19px}.pan.r{right:8px;top:50%;margin-top:-19px}
+</style>
+</head>
+<body>
+<div class="bar"><div class="t"><span>S</span> SanketRisk ONE — Site Plan</div><a href="/dashboard.html">← Dashboard</a></div>
+<div class="wrap">
+  <div class="row">
+    <input type="text" id="addr" placeholder="Property address, or lat,lng">
+    <button class="pri" id="btn-load">Load map</button>
+    <select id="mtype"><option value="hybrid">Satellite</option><option value="roadmap">Street map</option></select>
+    <button id="zout" title="Zoom out">−</button><button id="zin" title="Zoom in">+</button>
+    <span class="status" id="status">No map loaded</span>
+  </div>
+  <div class="row" id="tools">
+    <button data-tool="select" class="on">Select</button>
+    <button data-tool="dist">📏 Distance</button>
+    <button data-tool="poly">⬠ Building</button>
+    <button data-tool="line">╱ Line</button>
+    <button data-tool="arrow">➜ Arrow</button>
+    <button data-tool="text">T Text</button>
+    <button data-tool="sym">◉ Symbol</button>
+    <select id="symsel">
+      <option value="hyd">Hydrant</option><option value="sr">Sprinkler riser</option>
+      <option value="fdc">FD connection</option><option value="ent">Entrance</option><option value="north">North arrow</option>
+    </select>
+    <span class="sep"></span>
+    <input type="color" id="color" value="#ff2d2d" style="height:40px;width:44px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:2px">
+    <button id="btn-finish" style="display:none">Finish building</button>
+    <button id="btn-edit" disabled>Edit label</button>
+    <button id="btn-del" class="danger" disabled>Delete</button>
+    <button id="btn-undo">Undo</button>
+    <button id="btn-clear" class="danger">Clear all</button>
+    <span class="sep"></span>
+    <button data-tool="calib" title="Draw over a known length to set the scale">Calibrate</button>
+    <button id="btn-save" class="pri">Save image</button>
+  </div>
+  <div class="stage" id="stage">
+    <button class="pan u" data-pan="0,-1">▲</button><button class="pan d" data-pan="0,1">▼</button>
+    <button class="pan l" data-pan="-1,0">◀</button><button class="pan r" data-pan="1,0">▶</button>
+    <canvas id="cv" width="1280" height="1280"></canvas>
+  </div>
+  <div class="hint" id="hint">Enter the property address and tap Load map.</div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: true, persistSession: true } });
+
+  const N = 1280;                       // working size in image pixels (640 @ scale 2)
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const $ = id => document.getElementById(id);
+  let token = null, img = null;
+  let view = { lat: 0, lng: 0, zoom: 19, k: 1, calibrated: false, ok: false };
+  let items = [], sel = -1, tool = 'select', pend = null, polyPts = [], drag = null, undoStack = [];
+
+  const HINTS = {
+    select: 'Tap an item to select it. Drag to move it; drag the round handles to change its ends.',
+    dist: 'Tap the start point, then the end point. The distance is measured from the map scale and labelled automatically.',
+    poly: 'Tap each corner of the building, then tap “Finish building”.',
+    line: 'Tap the start, then the end.',
+    arrow: 'Tap the start, then the arrow tip.',
+    text: 'Tap where the text should go.',
+    sym: 'Choose a symbol in the list, then tap where to place it.',
+    calib: 'Draw a line over something of known length (for example a measured wall) and enter its length.'
+  };
+
+  // ---------- scale ----------
+  function mpp() { return 156543.03392 * Math.cos(view.lat * Math.PI / 180) / Math.pow(2, view.zoom) / 2 * view.k; }
+  function distM(a, b) { return Math.hypot(a.x - b.x, a.y - b.y) * mpp(); }
+  function fmt(m) { return (m < 10 ? m.toFixed(1) : Math.round(m)) + ' m (' + Math.round(m * 3.28084) + ' ft)'; }
+
+  // ---------- loading ----------
+  function setStatus(t) { $('status').textContent = t; }
+  async function authedFetch(url) {
+    return fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  }
+  async function geocode(text) {
+    const m = text.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
+    if (m) return { lat: +m[1], lng: +m[3], address: text.trim() };
+    const r = await authedFetch('/.netlify/functions/maps-proxy?geocode=' + encodeURIComponent(text));
+    if (!r.ok) throw new Error('Address lookup failed (' + r.status + '). You can type coordinates as lat,lng instead.');
+    return r.json();
+  }
+  async function loadMap(keepItems) {
+    if (!view.ok) return;
+    setStatus('Loading map…');
+    const url = '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(view.lat.toFixed(7) + ',' + view.lng.toFixed(7)) +
+      '&zoom=' + view.zoom + '&size=640x640&scale=2&maptype=' + $('mtype').value;
+    const r = await authedFetch(url);
+    if (!r.ok) { setStatus('Map failed (' + r.status + ')'); return; }
+    const blob = await r.blob();
+    const im = new Image();
+    await new Promise((res, rej) => { im.onload = res; im.onerror = rej; im.src = URL.createObjectURL(blob); });
+    img = im;
+    refreshStatus(); draw();
+  }
+  function refreshStatus() {
+    setStatus('Zoom ' + view.zoom + ' · ' + (view.calibrated ? 'calibrated' : 'auto') + ' scale: 100 px ≈ ' + (mpp() * 100).toFixed(1) + ' m');
+  }
+  $('btn-load').onclick = async () => {
+    const t = $('addr').value.trim(); if (!t) return;
+    try {
+      setStatus('Finding address…');
+      const g = await geocode(t);
+      view.lat = g.lat; view.lng = g.lng; view.zoom = 19; view.k = 1; view.calibrated = false; view.ok = true;
+      items = []; sel = -1; undoStack = [];
+      await loadMap();
+      $('hint').textContent = HINTS[tool];
+    } catch (e) { setStatus('Could not load'); $('hint').textContent = e.message; }
+  };
+  $('addr').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-load').click(); });
+  $('mtype').onchange = () => loadMap();
+  function rescaleItems(f, cx, cy) {
+    items.forEach(it => mapPts(it, p => ({ x: cx + (p.x - cx) * f, y: cy + (p.y - cy) * f })));
+  }
+  function zoomBy(d) {
+    if (!view.ok) return;
+    const nz = Math.max(15, Math.min(21, view.zoom + d)); if (nz === view.zoom) return;
+    rescaleItems(Math.pow(2, nz - view.zoom), N / 2, N / 2);
+    view.zoom = nz; loadMap();
+  }
+  $('zin').onclick = () => zoomBy(1); $('zout').onclick = () => zoomBy(-1);
+  document.querySelectorAll('.pan').forEach(b => b.onclick = () => {
+    if (!view.ok) return;
+    const [dx, dy] = b.dataset.pan.split(',').map(Number), shift = N * 0.35;
+    const metres = shift * mpp();
+    view.lat -= dy * metres / 111320;
+    view.lng += dx * metres / (111320 * Math.cos(view.lat * Math.PI / 180));
+    items.forEach(it => mapPts(it, p => ({ x: p.x - dx * shift, y: p.y - dy * shift })));
+    loadMap();
+  });
+
+  // ---------- items ----------
+  function mapPts(it, f) {
+    if (it.pts) it.pts = it.pts.map(f); if (it.p) it.p = f(it.p);
+  }
+  function snapshot() { undoStack.push(JSON.stringify(items)); if (undoStack.length > 60) undoStack.shift(); }
+  function add(it) { snapshot(); items.push(it); sel = items.length - 1; updateButtons(); draw(); }
+  function updateButtons() {
+    const it = items[sel];
+    $('btn-del').disabled = !it;
+    $('btn-edit').disabled = !(it && (it.t === 'dist' || it.t === 'text'));
+    $('btn-finish').style.display = (tool === 'poly' && polyPts.length >= 3) ? '' : 'none';
+  }
+  function labelOf(it) { return it.label != null ? it.label : fmt(distM(it.pts[0], it.pts[1])); }
+
+  // ---------- drawing ----------
+  const SYM = { hyd: ['#e53e3e', 'H'], sr: ['#2b6cb0', 'SR'], fdc: ['#d69e2e', 'FD'], ent: ['#2f855a', 'E'] };
+  function halo(text, x, y, size, color) {
+    ctx.font = '700 ' + size + 'px Segoe UI, Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = size / 4; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineJoin = 'round'; ctx.strokeText(text, x, y);
+    ctx.fillStyle = color; ctx.fillText(text, x, y);
+  }
+  function arrowHead(a, b, w, color) {
+    const ang = Math.atan2(b.y - a.y, b.x - a.x), L = 26;
+    ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(b.x, b.y);
+    ctx.lineTo(b.x - L * Math.cos(ang - .4), b.y - L * Math.sin(ang - .4));
+    ctx.lineTo(b.x - L * Math.cos(ang + .4), b.y - L * Math.sin(ang + .4)); ctx.closePath(); ctx.fill();
+  }
+  function drawItem(c, it, isSel) {
+    const col = it.color || '#ff2d2d';
+    ctx.lineWidth = 5; ctx.strokeStyle = col; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (it.t === 'poly') {
+      ctx.beginPath(); it.pts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath();
+      ctx.fillStyle = hexA(col, .22); ctx.fill(); ctx.stroke();
+    } else if (it.t === 'line' || it.t === 'arrow' || it.t === 'dist' || it.t === 'calib') {
+      const [a, b] = it.pts;
+      if (it.t === 'dist') { ctx.setLineDash([]); }
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      if (it.t === 'arrow') arrowHead(a, b, 5, col);
+      if (it.t === 'dist') {
+        const ang = Math.atan2(b.y - a.y, b.x - a.x), nx = -Math.sin(ang) * 14, ny = Math.cos(ang) * 14;
+        [a, b].forEach(p => { ctx.beginPath(); ctx.moveTo(p.x - nx, p.y - ny); ctx.lineTo(p.x + nx, p.y + ny); ctx.stroke(); });
+        let mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        const off = 26; halo(labelOf(it), mx - Math.sin(ang) * off, my + Math.cos(ang) * off * (Math.cos(ang) >= 0 ? 1 : 1), 30, col);
+      }
+    } else if (it.t === 'text') {
+      halo(it.text, it.p.x, it.p.y, it.size || 34, col);
+    } else if (it.t === 'sym') {
+      const x = it.p.x, y = it.p.y;
+      if (it.k === 'north') {
+        ctx.fillStyle = '#fff'; ctx.strokeStyle = '#111'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(x, y, 34, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(x, y - 26); ctx.lineTo(x + 12, y + 10); ctx.lineTo(x, y + 3); ctx.lineTo(x - 12, y + 10); ctx.closePath(); ctx.fill();
+        halo('N', x, y + 20, 18, '#111');
+      } else {
+        const [c1, t] = SYM[it.k];
+        ctx.fillStyle = c1; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
+        ctx.beginPath(); if (it.k === 'sr') ctx.rect(x - 22, y - 22, 44, 44); else if (it.k === 'ent') { ctx.moveTo(x, y - 26); ctx.lineTo(x + 25, y + 20); ctx.lineTo(x - 25, y + 20); ctx.closePath(); } else ctx.arc(x, y, 24, 0, 7);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.font = '800 ' + (t.length > 1 ? 18 : 24) + 'px Segoe UI, Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t, x, y + (it.k === 'ent' ? 8 : 1));
+      }
+    }
+    if (isSel) {
+      ctx.fillStyle = '#fff'; ctx.strokeStyle = '#1b2a4a'; ctx.lineWidth = 4;
+      handles(it).forEach(h => { ctx.beginPath(); ctx.arc(h.x, h.y, 13, 0, 7); ctx.fill(); ctx.stroke(); });
+    }
+  }
+  function handles(it) { return it.pts ? it.pts : []; }
+  function hexA(h, a) { const n = parseInt(h.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; }
+
+  function draw(forExport) {
+    ctx.clearRect(0, 0, N, N);
+    if (img) ctx.drawImage(img, 0, 0, N, N); else { ctx.fillStyle = '#cfd6e3'; ctx.fillRect(0, 0, N, N); }
+    items.forEach((it, i) => drawItem(ctx, it, !forExport && i === sel));
+    if (!forExport) {
+      if (pend && pend.cur) { drawItem(ctx, { t: pend.t === 'calib' ? 'line' : pend.t, pts: [pend.a, pend.cur], color: $('color').value }, false); }
+      if (polyPts.length) {
+        ctx.strokeStyle = $('color').value; ctx.lineWidth = 5; ctx.beginPath(); polyPts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.stroke();
+        polyPts.forEach(p => { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, 7); ctx.fill(); ctx.stroke(); });
+      }
+    }
+  }
+
+  // ---------- pointer handling ----------
+  function pos(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * N / r.width, y: (e.clientY - r.top) * N / r.height }; }
+  function segDist(p, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy; let t = l2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2 : 0; t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+  }
+  function inPoly(p, pts) { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { if ((pts[i].y > p.y) !== (pts[j].y > p.y) && p.x < (pts[j].x - pts[i].x) * (p.y - pts[i].y) / (pts[j].y - pts[i].y) + pts[i].x) c = !c; } return c; }
+  function hit(p) {
+    for (let i = items.length - 1; i >= 0; i--) {
+      const it = items[i], T = 22;
+      if (it.t === 'poly') { if (inPoly(p, it.pts)) return i; for (let k = 0; k < it.pts.length; k++) if (segDist(p, it.pts[k], it.pts[(k + 1) % it.pts.length]) < T) return i; }
+      else if (it.pts) { if (segDist(p, it.pts[0], it.pts[1]) < T) return i; if (it.t === 'dist') { const m = { x: (it.pts[0].x + it.pts[1].x) / 2, y: (it.pts[0].y + it.pts[1].y) / 2 }; if (Math.hypot(p.x - m.x, p.y - m.y) < 110) return i; } }
+      else if (it.t === 'text') { const w = (it.text.length * (it.size || 34) * .3) + 20; if (Math.abs(p.x - it.p.x) < w && Math.abs(p.y - it.p.y) < (it.size || 34)) return i; }
+      else if (it.t === 'sym') { if (Math.hypot(p.x - it.p.x, p.y - it.p.y) < 40) return i; }
+    }
+    return -1;
+  }
+  cv.addEventListener('pointerdown', e => {
+    if (!view.ok) return; cv.setPointerCapture(e.pointerId); const p = pos(e), col = $('color').value;
+    if (tool === 'select') {
+      if (sel >= 0 && items[sel].pts) { const hs = handles(items[sel]); for (let i = 0; i < hs.length; i++) if (Math.hypot(p.x - hs[i].x, p.y - hs[i].y) < 36) { snapshot(); drag = { mode: 'pt', i }; return; } }
+      const h = hit(p); sel = h; updateButtons();
+      if (h >= 0) { snapshot(); drag = { mode: 'move', last: p }; }
+      draw(); return;
+    }
+    if (tool === 'dist' || tool === 'line' || tool === 'arrow' || tool === 'calib') {
+      if (!pend) pend = { t: tool, a: p, cur: null, down: p };
+      else { finishTwo(p); return; }
+      return;
+    }
+    if (tool === 'poly') { polyPts.push(p); updateButtons(); draw(); return; }
+    if (tool === 'text') { const t = prompt('Text'); if (t && t.trim()) add({ t: 'text', p, text: t.trim().slice(0, 80), color: col, size: 34 }); return; }
+    if (tool === 'sym') { add({ t: 'sym', k: $('symsel').value, p }); return; }
+  });
+  cv.addEventListener('pointermove', e => {
+    const p = pos(e);
+    if (drag && sel >= 0) {
+      const it = items[sel];
+      if (drag.mode === 'pt') it.pts[drag.i] = p;
+      else { const dx = p.x - drag.last.x, dy = p.y - drag.last.y; mapPts(it, q => ({ x: q.x + dx, y: q.y + dy })); drag.last = p; }
+      draw(); return;
+    }
+    if (pend) { pend.cur = p; draw(); }
+  });
+  cv.addEventListener('pointerup', e => {
+    const p = pos(e);
+    if (drag) { drag = null; draw(); return; }
+    if (pend && pend.cur && Math.hypot(p.x - pend.a.x, p.y - pend.a.y) > 30) finishTwo(p);
+  });
+  function finishTwo(b) {
+    const a = pend.a, t = pend.t; pend = null;
+    if (Math.hypot(b.x - a.x, b.y - a.y) < 8) { draw(); return; }
+    if (t === 'calib') {
+      const v = prompt('Real length of this line (e.g. 25 m or 80 ft):'); if (!v) { draw(); return; }
+      const m = v.trim().match(/^(\d+(\.\d+)?)\s*(m|ft|feet|f)?$/i); if (!m) { alert('Please enter a number with m or ft.'); draw(); return; }
+      let metres = +m[1]; if (m[3] && /^f/i.test(m[3])) metres *= 0.3048;
+      const px = Math.hypot(b.x - a.x, b.y - a.y); view.k = (metres / px) / (mpp() / view.k); view.calibrated = true;
+      refreshStatus(); setTool('select'); draw(); return;
+    }
+    add({ t, pts: [a, b], color: $('color').value });
+  }
+  $('btn-finish').onclick = () => { if (polyPts.length >= 3) { add({ t: 'poly', pts: polyPts.slice(), color: $('color').value }); polyPts = []; updateButtons(); setTool('select'); } };
+
+  // ---------- toolbar ----------
+  function setTool(t) {
+    tool = t; pend = null; polyPts = []; drag = null;
+    document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+    $('hint').textContent = HINTS[t] || ''; updateButtons(); draw();
+  }
+  document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => setTool(b.dataset.tool));
+  $('btn-del').onclick = () => { if (sel >= 0) { snapshot(); items.splice(sel, 1); sel = -1; updateButtons(); draw(); } };
+  $('btn-undo').onclick = () => { if (polyPts.length) { polyPts.pop(); updateButtons(); draw(); return; } const s = undoStack.pop(); if (s) { items = JSON.parse(s); sel = -1; updateButtons(); draw(); } };
+  $('btn-clear').onclick = () => { if (items.length && confirm('Remove everything drawn on this map?')) { snapshot(); items = []; sel = -1; updateButtons(); draw(); } };
+  $('btn-edit').onclick = () => {
+    const it = items[sel]; if (!it) return;
+    if (it.t === 'text') { const v = prompt('Text', it.text); if (v && v.trim()) { snapshot(); it.text = v.trim().slice(0, 80); } }
+    else if (it.t === 'dist') { const v = prompt('Label (leave empty to use the measured distance):', labelOf(it)); if (v !== null) { snapshot(); it.label = v.trim() ? v.trim().slice(0, 60) : null; } }
+    draw();
+  };
+  $('color').oninput = () => { if (sel >= 0 && tool === 'select') { snapshot(); items[sel].color = $('color').value; draw(); } };
+
+  // ---------- export ----------
+  function exportCanvas() {
+    const prev = sel; sel = -1; draw(true);
+    const out = document.createElement('canvas'); out.width = N; out.height = N; const o = out.getContext('2d');
+    o.drawImage(cv, 0, 0);
+    // scale bar
+    const m = mpp(), nice = [5, 10, 20, 25, 50, 100, 200]; let L = nice[0]; for (const n of nice) if (n / m < 400) L = n;
+    const w = L / m, x = 30, y = N - 70;
+    o.fillStyle = 'rgba(255,255,255,.88)'; o.fillRect(x - 12, y - 34, w + 24, 62);
+    o.strokeStyle = '#111'; o.lineWidth = 5; o.beginPath(); o.moveTo(x, y - 8); o.lineTo(x, y + 8); o.moveTo(x, y); o.lineTo(x + w, y); o.moveTo(x + w, y - 8); o.lineTo(x + w, y + 8); o.stroke();
+    o.fillStyle = '#111'; o.font = '700 22px Segoe UI, Arial'; o.textAlign = 'left'; o.textBaseline = 'alphabetic'; o.fillText(L + ' m (' + Math.round(L * 3.28084) + ' ft)', x, y - 14);
+    // legend of symbols used
+    const used = [...new Set(items.filter(i => i.t === 'sym' && i.k !== 'north').map(i => i.k))];
+    const names = { hyd: 'Hydrant', sr: 'Sprinkler riser', fdc: 'FD connection', ent: 'Entrance' };
+    if (used.length) {
+      const lw = 250, lh = 36 + used.length * 34, lx = N - lw - 20, ly = N - lh - 20;
+      o.fillStyle = 'rgba(255,255,255,.9)'; o.fillRect(lx, ly, lw, lh);
+      o.fillStyle = '#111'; o.font = '700 20px Segoe UI, Arial'; o.fillText('Legend', lx + 14, ly + 26);
+      used.forEach((k, i) => { o.fillStyle = SYM[k][0]; o.beginPath(); o.arc(lx + 28, ly + 54 + i * 34, 11, 0, 7); o.fill(); o.fillStyle = '#111'; o.font = '600 18px Segoe UI, Arial'; o.fillText(names[k], lx + 52, ly + 61 + i * 34); });
+    }
+    sel = prev; draw();
+    return out;
+  }
+  $('btn-save').onclick = () => {
+    if (!view.ok) return;
+    exportCanvas().toBlob(b => {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'site-plan.png'; document.body.appendChild(a); a.click(); a.remove();
+    }, 'image/png');
+  };
+  window.__sp = { items: () => items, view: () => view, mpp, exportCanvas };
+
+  // ---------- start ----------
+  (async function () {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) { window.location.replace('/login.html'); return; }
+    const aal = await _supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal.data && aal.data.nextLevel === 'aal2' && aal.data.currentLevel !== 'aal2') { window.location.replace('/login.html'); return; }
+    token = session.access_token;
+    _supabase.auth.onAuthStateChange((_e, s) => { if (s) token = s.access_token; });
+    const pre = new URLSearchParams(location.search).get('addr');
+    if (pre) { $('addr').value = pre.slice(0, 200); $('btn-load').click(); }
+    draw();
+  })();
+</script>
+</body>
+</html>
