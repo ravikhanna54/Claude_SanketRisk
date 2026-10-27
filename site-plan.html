@@ -44,6 +44,7 @@
   <div class="row">
     <input type="text" id="addr" placeholder="Property address, or lat,lng">
     <button class="pri" id="btn-load">Load map</button>
+    <button id="btn-blank" title="Draw on a plain grid when there is no map for the location">⬜ Blank plan</button>
     <select id="mtype">
       <option value="satellite">Satellite (clean)</option>
       <option value="hybrid">Satellite + street names</option>
@@ -87,7 +88,7 @@
   </div>
   <div class="symbar" id="symbar"></div>
   <div class="stage" id="stage"><canvas id="cv" width="1280" height="1280"></canvas></div>
-  <div class="hint" id="hint">Enter the property address and tap Load map.</div>
+  <div class="hint" id="hint">Enter the property address and tap Load map, or choose Blank plan to draw on a plain grid.</div>
 </div>
 
 <dialog id="infoDlg">
@@ -128,7 +129,7 @@
   };
 
   // ---------- scale ----------
-  function mpp() { return 156543.03392 * Math.cos(view.lat * Math.PI / 180) / Math.pow(2, view.zoom) / 2 * view.k; }
+  function mpp() { if (view.blank) return view.bm / Math.pow(2, view.zoom - 19) * view.k; return 156543.03392 * Math.cos(view.lat * Math.PI / 180) / Math.pow(2, view.zoom) / 2 * view.k; }
   function distM(a, b) { return Math.hypot(a.x - b.x, a.y - b.y) * mpp(); }
   function fmt(m) { return (m < 10 ? m.toFixed(1) : Math.round(m)) + ' m (' + Math.round(m * 3.28084) + ' ft)'; }
 
@@ -144,6 +145,7 @@
   }
   async function loadMap() {
     if (!view.ok) return;
+    if (view.blank) { img = null; imgOff = { x: 0, y: 0 }; refreshStatus(); draw(); return; }
     const seq = ++loadSeq; setStatus('Loading map…');
     const mt = $('mtype').value, labelsOff = mt === 'roadmap-off';
     const url = '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(view.lat.toFixed(7) + ',' + view.lng.toFixed(7)) +
@@ -158,7 +160,7 @@
     img = im; imgOff = { x: 0, y: 0 };
     refreshStatus(); draw();
   }
-  function refreshStatus() { setStatus('Zoom ' + view.zoom + ' · ' + (view.calibrated ? 'calibrated' : 'auto') + ' scale: 100 px ≈ ' + (mpp() * 100).toFixed(1) + ' m'); }
+  function refreshStatus() { if (view.blank) { setStatus('Blank plan · ' + (view.calibrated ? 'calibrated' : 'set') + ' scale: 100 px ≈ ' + (mpp() * 100).toFixed(1) + ' m'); return; } setStatus('Zoom ' + view.zoom + ' · ' + (view.calibrated ? 'calibrated' : 'auto') + ' scale: 100 px ≈ ' + (mpp() * 100).toFixed(1) + ' m'); }
   function todayStr() { return new Date().toLocaleDateString('en-CA'); }
 
   $('btn-load').onclick = async () => {
@@ -166,7 +168,7 @@
     try {
       setStatus('Finding address…');
       const g = await geocode(t);
-      view.lat = g.lat; view.lng = g.lng; view.zoom = 19; view.k = 1; view.calibrated = false; view.ok = true; view.address = g.address || t;
+      view.blank = false; view.gx = 0; view.gy = 0; view.lat = g.lat; view.lng = g.lng; view.zoom = 19; view.k = 1; view.calibrated = false; view.ok = true; view.address = g.address || t;
       items = []; sel = -1; undoStack = []; legendDismissed = false; off = { x: 0, y: 0 };
       await loadMap();
       if (prefill.insured || prefill.by || prefill.ref) placeInfo({ title: 'Site Plan', insured: prefill.insured || '', address: prefill.address || view.address, date: prefill.date || todayStr(), by: prefill.by || '', ref: prefill.ref || '' });
@@ -174,7 +176,18 @@
     } catch (e) { setStatus('Could not load'); $('hint').textContent = e.message; }
   };
   $('addr').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-load').click(); });
-  $('mtype').onchange = () => loadMap();
+  $('mtype').onchange = () => { if (view.blank) { $('hint').textContent = 'This is a blank plan. Enter an address and tap Load map to use a map instead.'; return; } loadMap(); };
+
+  $('btn-blank').onclick = () => {
+    const v = prompt('Blank plan: how wide is the area you will draw, in metres? (for example 120)', '100');
+    if (v === null) return;
+    const w = parseFloat(v); if (!(w >= 5 && w <= 5000)) { alert('Please enter a width between 5 and 5000 metres.'); return; }
+    view = { lat: 0, lng: 0, zoom: 19, k: 1, calibrated: false, ok: true, address: $('addr').value.trim(), blank: true, bm: w / N, gx: 0, gy: 0 };
+    items = []; sel = -1; undoStack = []; legendDismissed = false; off = { x: 0, y: 0 }; img = null; imgOff = { x: 0, y: 0 };
+    refreshStatus(); draw();
+    if (prefill.insured || prefill.by || prefill.ref) placeInfo({ title: 'Site Plan', insured: prefill.insured || '', address: prefill.address || view.address, date: prefill.date || todayStr(), by: prefill.by || '', ref: prefill.ref || '' });
+    $('hint').textContent = 'Blank plan ready. Draw buildings with the Building tool and measure with Distance. Use Calibrate if you know a real length.';
+  };
 
   // map-anchored items move/scale with the map; info + legend stay fixed on the page
   const isPage = it => it.t === 'info' || it.t === 'legend';
@@ -186,6 +199,7 @@
     const nz = Math.max(15, Math.min(21, view.zoom + d)); if (nz === view.zoom) return;
     const f = Math.pow(2, nz - view.zoom);
     anchored(p => ({ x: N / 2 + (p.x - N / 2) * f, y: N / 2 + (p.y - N / 2) * f }));
+    if (view.blank) { view.gx = (view.gx || 0) * f; view.gy = (view.gy || 0) * f; }
     view.zoom = nz; refreshStatus(); loadMap();
   }
   $('zin').onclick = () => zoomBy(1); $('zout').onclick = () => zoomBy(-1);
@@ -194,6 +208,7 @@
   function finishPan() {
     const dx = off.x, dy = off.y; panDrag = null;
     if (!view.ok || (Math.abs(dx) < 2 && Math.abs(dy) < 2)) { off = { x: 0, y: 0 }; draw(); return; }
+    if (view.blank) { view.gx = (view.gx || 0) + dx; view.gy = (view.gy || 0) + dy; anchored(p => ({ x: p.x + dx, y: p.y + dy })); off = { x: 0, y: 0 }; draw(); return; }
     const m = mpp();
     view.lat += dy * m / 111320;
     view.lng -= dx * m / (111320 * Math.cos(view.lat * Math.PI / 180));
@@ -356,14 +371,23 @@
   }
   function scaleBar() {
     const m = mpp(), nice = [5, 10, 20, 25, 50, 100, 200]; let L = nice[0]; for (const n of nice) if (n / m < 360) L = n;
-    const w = L / m, x = 34, y = N - 112;
+    const w = L / m, x = 34, y = view.blank ? N - 50 : N - 112;
     ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(x - 12, y - 36, w + 24, 62);
     ctx.strokeStyle = '#111'; ctx.lineWidth = 5; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.moveTo(x + w, y - 8); ctx.lineTo(x + w, y + 8); ctx.stroke();
     ctx.fillStyle = '#111'; ctx.font = '700 22px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(L + ' m (' + Math.round(L * 3.28084) + ' ft)', x, y - 14);
   }
   function draw(forExport) {
     ctx.clearRect(0, 0, N, N);
-    ctx.fillStyle = '#cfd6e3'; ctx.fillRect(0, 0, N, N);
+    if (view.blank) {
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, N, N);
+      const m = mpp(), steps = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000]; let g = steps[0]; for (const st of steps) { g = st; if (st / m >= 60) break; }
+      const px = g / m, ox = (((view.gx || 0) + off.x) % px + px) % px, oy = (((view.gy || 0) + off.y) % px + px) % px;
+      ctx.strokeStyle = '#dfe4ee'; ctx.lineWidth = 2; ctx.beginPath();
+      for (let x = ox; x < N; x += px) { ctx.moveTo(x, 0); ctx.lineTo(x, N); }
+      for (let y = oy; y < N; y += px) { ctx.moveTo(0, y); ctx.lineTo(N, y); }
+      ctx.stroke();
+      ctx.fillStyle = '#9aa5b8'; ctx.font = '600 18px Arial'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText('Grid: ' + g + ' m', N - 14, N - 12);
+    } else { ctx.fillStyle = '#cfd6e3'; ctx.fillRect(0, 0, N, N); }
     if (img) ctx.drawImage(img, off.x + imgOff.x, off.y + imgOff.y, N, N);
     ctx.save(); ctx.translate(off.x, off.y);
     items.forEach((it, i) => { if (!isPage(it)) drawItem(it, !forExport && i === sel); });
