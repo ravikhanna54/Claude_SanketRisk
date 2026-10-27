@@ -71,7 +71,9 @@ exports.handler = async function(event) {
       const center   = q.center   || '';
       const zoom     = q.zoom     || '18';
       const scale    = q.scale   || '2';
-      const maptype  = q.maptype || 'hybrid';
+      const maptype  = ['roadmap','satellite','hybrid','terrain'].indexOf(q.maptype) >= 0 ? q.maptype : 'hybrid';
+      // labels=off hides street / business names (roadmap only; satellite has no labels anyway)
+      const labelsOff = q.labels === 'off';
       const markers  = q.markers || '';
 
       if (!center) {
@@ -85,6 +87,7 @@ exports.handler = async function(event) {
         + '&scale=' + encodeURIComponent(scale)
         + '&maptype=' + encodeURIComponent(maptype)
         + (markers ? '&markers=' + encodeURIComponent(markers) : '')
+        + (labelsOff ? '&style=' + encodeURIComponent('feature:all|element:labels|visibility:off') : '')
         + '&key=' + GOOGLE_MAPS_API_KEY;
     }
 
