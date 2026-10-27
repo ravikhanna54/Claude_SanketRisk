@@ -14,8 +14,8 @@
   .bar a { color:#b8c2d8; font-size:12px; text-decoration:none; }
   .wrap { max-width:1000px; margin:0 auto; padding:12px; }
   .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
-  input[type=text], select { height:40px; border:1px solid var(--line); border-radius:8px; padding:0 10px; font-size:14px; background:#fff; }
-  input[type=text] { flex:1; min-width:200px; }
+  input[type=text], input[type=number], input[type=date], select { height:40px; border:1px solid var(--line); border-radius:8px; padding:0 10px; font-size:14px; background:#fff; }
+  #addr { flex:1; min-width:200px; }
   button { height:40px; min-width:40px; padding:0 12px; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:13px; font-weight:600; color:var(--navy); cursor:pointer; }
   button.on { background:var(--navy); color:#fff; border-color:var(--navy); }
   button.pri { background:var(--gold); border-color:var(--gold); color:#1b2a4a; }
@@ -23,11 +23,19 @@
   button:disabled { opacity:.4; cursor:default; }
   .sep { width:1px; height:28px; background:var(--line); margin:0 2px; }
   .stage { position:relative; background:#cfd6e3; border:1px solid var(--line); border-radius:8px; overflow:hidden; line-height:0; }
-  canvas { width:100%; height:auto; touch-action:none; display:block; }
+  canvas#cv { width:100%; height:auto; touch-action:none; display:block; }
   .hint { font-size:12.5px; color:var(--light); margin:8px 2px; line-height:1.5; min-height:19px; }
   .status { font-size:12.5px; color:var(--navy); font-weight:600; }
-  .pan { position:absolute; z-index:3; background:rgba(27,42,74,.72); color:#fff; border:none; width:38px; height:38px; min-width:0; padding:0; font-size:16px; border-radius:19px; }
-  .pan.u{top:8px;left:50%;margin-left:-19px}.pan.d{bottom:8px;left:50%;margin-left:-19px}.pan.l{left:8px;top:50%;margin-top:-19px}.pan.r{right:8px;top:50%;margin-top:-19px}
+  .symbar { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .symbar button { height:62px; width:74px; padding:2px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; font-size:9.5px; font-weight:600; line-height:1.1; }
+  .symbar canvas { width:40px; height:40px; }
+  .lbl { font-size:12px; color:var(--light); font-weight:600; }
+  dialog { border:none; border-radius:12px; padding:18px; width:min(440px,92vw); box-shadow:0 10px 40px rgba(0,0,0,.35); }
+  dialog::backdrop { background:rgba(0,0,0,.45); }
+  dialog h3 { font-size:15px; color:var(--navy); margin-bottom:12px; }
+  dialog label { display:block; font-size:12px; color:var(--light); font-weight:600; margin:8px 0 3px; }
+  dialog input { width:100%; }
+  dialog .btns { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
 </style>
 </head>
 <body>
@@ -36,61 +44,86 @@
   <div class="row">
     <input type="text" id="addr" placeholder="Property address, or lat,lng">
     <button class="pri" id="btn-load">Load map</button>
-    <select id="mtype"><option value="hybrid">Satellite</option><option value="roadmap">Street map</option></select>
+    <select id="mtype">
+      <option value="satellite">Satellite (clean)</option>
+      <option value="hybrid">Satellite + street names</option>
+      <option value="roadmap-off">Street map (no labels)</option>
+      <option value="roadmap">Street map</option>
+    </select>
     <button id="zout" title="Zoom out">−</button><button id="zin" title="Zoom in">+</button>
     <span class="status" id="status">No map loaded</span>
   </div>
   <div class="row" id="tools">
     <button data-tool="select" class="on">Select</button>
+    <button data-tool="pan">✋ Move map</button>
     <button data-tool="dist">📏 Distance</button>
     <button data-tool="poly">⬠ Building</button>
     <button data-tool="line">╱ Line</button>
     <button data-tool="arrow">➜ Arrow</button>
     <button data-tool="text">T Text</button>
-    <button data-tool="sym">◉ Symbol</button>
-    <select id="symsel">
-      <option value="hyd">Hydrant</option><option value="sr">Sprinkler riser</option>
-      <option value="fdc">FD connection</option><option value="ent">Entrance</option><option value="north">North arrow</option>
-    </select>
     <span class="sep"></span>
-    <input type="color" id="color" value="#ff2d2d" style="height:40px;width:44px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:2px">
+    <button id="btn-info">🗒 Info box</button>
+    <button id="btn-legend">Legend</button>
+    <span class="sep"></span>
+    <button data-tool="calib" title="Draw over a known length to set the scale">Calibrate</button>
+    <button id="btn-save" class="pri">Save image</button>
+  </div>
+  <div class="row">
+    <span class="lbl">Text</span>
+    <select id="fontsel">
+      <option value="Arial">Arial</option><option value="Verdana">Verdana</option><option value="Trebuchet MS">Trebuchet</option>
+      <option value="Georgia">Georgia</option><option value="Times New Roman">Times New Roman</option>
+      <option value="Courier New">Courier New</option><option value="Impact">Impact</option>
+    </select>
+    <input type="number" id="sizein" value="30" min="14" max="90" step="2" style="width:74px" title="Text size">
+    <button id="btn-bold" style="font-weight:800">B</button>
+    <input type="color" id="color" value="#ff2d2d" style="height:40px;width:44px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:2px" title="Colour">
+    <span class="sep"></span>
     <button id="btn-finish" style="display:none">Finish building</button>
     <button id="btn-edit" disabled>Edit label</button>
     <button id="btn-del" class="danger" disabled>Delete</button>
     <button id="btn-undo">Undo</button>
     <button id="btn-clear" class="danger">Clear all</button>
-    <span class="sep"></span>
-    <button data-tool="calib" title="Draw over a known length to set the scale">Calibrate</button>
-    <button id="btn-save" class="pri">Save image</button>
   </div>
-  <div class="stage" id="stage">
-    <button class="pan u" data-pan="0,-1">▲</button><button class="pan d" data-pan="0,1">▼</button>
-    <button class="pan l" data-pan="-1,0">◀</button><button class="pan r" data-pan="1,0">▶</button>
-    <canvas id="cv" width="1280" height="1280"></canvas>
-  </div>
+  <div class="symbar" id="symbar"></div>
+  <div class="stage" id="stage"><canvas id="cv" width="1280" height="1280"></canvas></div>
   <div class="hint" id="hint">Enter the property address and tap Load map.</div>
 </div>
+
+<dialog id="infoDlg">
+  <h3>Plan information box</h3>
+  <label>Title</label><input type="text" id="f-title" maxlength="60">
+  <label>Insured</label><input type="text" id="f-insured" maxlength="100">
+  <label>Property address</label><input type="text" id="f-address" maxlength="140">
+  <label>Date</label><input type="date" id="f-date">
+  <label>Prepared by</label><input type="text" id="f-by" maxlength="80">
+  <label>Reference / file no.</label><input type="text" id="f-ref" maxlength="60">
+  <div class="btns"><button id="info-cancel">Cancel</button><button class="pri" id="info-ok">Place on plan</button></div>
+</dialog>
 
 <script>
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: true, persistSession: true } });
 
-  const N = 1280;                       // working size in image pixels (640 @ scale 2)
+  const N = 1280;
   const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
   const $ = id => document.getElementById(id);
-  let token = null, img = null;
-  let view = { lat: 0, lng: 0, zoom: 19, k: 1, calibrated: false, ok: false };
+  let token = null, img = null, imgOff = { x: 0, y: 0 }, loadSeq = 0;
+  let view = { lat: 0, lng: 0, zoom: 19, k: 1, calibrated: false, ok: false, address: '' };
   let items = [], sel = -1, tool = 'select', pend = null, polyPts = [], drag = null, undoStack = [];
+  let off = { x: 0, y: 0 }, panDrag = null, symKey = 'hyd', legendDismissed = false, bold = false;
+  const prefill = {};
 
   const HINTS = {
-    select: 'Tap an item to select it. Drag to move it; drag the round handles to change its ends.',
+    select: 'Tap an item to select it, then drag it, or drag its round handles. Drag the empty map to move the map.',
+    pan: 'Drag the map in any direction to centre it.',
     dist: 'Tap the start point, then the end point. The distance is measured from the map scale and labelled automatically.',
     poly: 'Tap each corner of the building, then tap “Finish building”.',
     line: 'Tap the start, then the end.',
     arrow: 'Tap the start, then the arrow tip.',
-    text: 'Tap where the text should go.',
-    sym: 'Choose a symbol in the list, then tap where to place it.',
+    text: 'Tap where the text should go. Choose the font, size and colour first (or select the text and change them).',
+    sym: 'Tap on the map to place the chosen symbol. Pick another symbol below to change it.',
     calib: 'Draw a line over something of known length (for example a measured wall) and enter its length.'
   };
 
@@ -101,9 +134,7 @@
 
   // ---------- loading ----------
   function setStatus(t) { $('status').textContent = t; }
-  async function authedFetch(url) {
-    return fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-  }
+  function authedFetch(url) { return fetch(url, { headers: { Authorization: 'Bearer ' + token } }); }
   async function geocode(text) {
     const m = text.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
     if (m) return { lat: +m[1], lng: +m[3], address: text.trim() };
@@ -111,135 +142,241 @@
     if (!r.ok) throw new Error('Address lookup failed (' + r.status + '). You can type coordinates as lat,lng instead.');
     return r.json();
   }
-  async function loadMap(keepItems) {
+  async function loadMap() {
     if (!view.ok) return;
-    setStatus('Loading map…');
+    const seq = ++loadSeq; setStatus('Loading map…');
+    const mt = $('mtype').value, labelsOff = mt === 'roadmap-off';
     const url = '/.netlify/functions/maps-proxy?center=' + encodeURIComponent(view.lat.toFixed(7) + ',' + view.lng.toFixed(7)) +
-      '&zoom=' + view.zoom + '&size=640x640&scale=2&maptype=' + $('mtype').value;
+      '&zoom=' + view.zoom + '&size=640x640&scale=2&maptype=' + (labelsOff ? 'roadmap' : mt) + (labelsOff ? '&labels=off' : '');
     const r = await authedFetch(url);
+    if (seq !== loadSeq) return;
     if (!r.ok) { setStatus('Map failed (' + r.status + ')'); return; }
     const blob = await r.blob();
     const im = new Image();
     await new Promise((res, rej) => { im.onload = res; im.onerror = rej; im.src = URL.createObjectURL(blob); });
-    img = im;
+    if (seq !== loadSeq) return;
+    img = im; imgOff = { x: 0, y: 0 };
     refreshStatus(); draw();
   }
-  function refreshStatus() {
-    setStatus('Zoom ' + view.zoom + ' · ' + (view.calibrated ? 'calibrated' : 'auto') + ' scale: 100 px ≈ ' + (mpp() * 100).toFixed(1) + ' m');
-  }
+  function refreshStatus() { setStatus('Zoom ' + view.zoom + ' · ' + (view.calibrated ? 'calibrated' : 'auto') + ' scale: 100 px ≈ ' + (mpp() * 100).toFixed(1) + ' m'); }
+  function todayStr() { return new Date().toLocaleDateString('en-CA'); }
+
   $('btn-load').onclick = async () => {
     const t = $('addr').value.trim(); if (!t) return;
     try {
       setStatus('Finding address…');
       const g = await geocode(t);
-      view.lat = g.lat; view.lng = g.lng; view.zoom = 19; view.k = 1; view.calibrated = false; view.ok = true;
-      items = []; sel = -1; undoStack = [];
+      view.lat = g.lat; view.lng = g.lng; view.zoom = 19; view.k = 1; view.calibrated = false; view.ok = true; view.address = g.address || t;
+      items = []; sel = -1; undoStack = []; legendDismissed = false; off = { x: 0, y: 0 };
       await loadMap();
+      if (prefill.insured || prefill.by || prefill.ref) placeInfo({ title: 'Site Plan', insured: prefill.insured || '', address: prefill.address || view.address, date: prefill.date || todayStr(), by: prefill.by || '', ref: prefill.ref || '' });
       $('hint').textContent = HINTS[tool];
     } catch (e) { setStatus('Could not load'); $('hint').textContent = e.message; }
   };
   $('addr').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-load').click(); });
   $('mtype').onchange = () => loadMap();
-  function rescaleItems(f, cx, cy) {
-    items.forEach(it => mapPts(it, p => ({ x: cx + (p.x - cx) * f, y: cy + (p.y - cy) * f })));
-  }
+
+  // map-anchored items move/scale with the map; info + legend stay fixed on the page
+  const isPage = it => it.t === 'info' || it.t === 'legend';
+  function shiftPt(it, f) { if (it.pts) it.pts = it.pts.map(f); if (it.p) it.p = f(it.p); }
+  function anchored(f) { items.forEach(it => { if (!isPage(it)) shiftPt(it, f); }); }
+  let zoomTimer = null;
   function zoomBy(d) {
     if (!view.ok) return;
     const nz = Math.max(15, Math.min(21, view.zoom + d)); if (nz === view.zoom) return;
-    rescaleItems(Math.pow(2, nz - view.zoom), N / 2, N / 2);
-    view.zoom = nz; loadMap();
+    const f = Math.pow(2, nz - view.zoom);
+    anchored(p => ({ x: N / 2 + (p.x - N / 2) * f, y: N / 2 + (p.y - N / 2) * f }));
+    view.zoom = nz; refreshStatus(); loadMap();
   }
   $('zin').onclick = () => zoomBy(1); $('zout').onclick = () => zoomBy(-1);
-  document.querySelectorAll('.pan').forEach(b => b.onclick = () => {
-    if (!view.ok) return;
-    const [dx, dy] = b.dataset.pan.split(',').map(Number), shift = N * 0.35;
-    const metres = shift * mpp();
-    view.lat -= dy * metres / 111320;
-    view.lng += dx * metres / (111320 * Math.cos(view.lat * Math.PI / 180));
-    items.forEach(it => mapPts(it, p => ({ x: p.x - dx * shift, y: p.y - dy * shift })));
-    loadMap();
-  });
+  cv.addEventListener('wheel', e => { e.preventDefault(); clearTimeout(zoomTimer); const d = e.deltaY < 0 ? 1 : -1; zoomTimer = setTimeout(() => zoomBy(d), 120); }, { passive: false });
+
+  function finishPan() {
+    const dx = off.x, dy = off.y; panDrag = null;
+    if (!view.ok || (Math.abs(dx) < 2 && Math.abs(dy) < 2)) { off = { x: 0, y: 0 }; draw(); return; }
+    const m = mpp();
+    view.lat += dy * m / 111320;
+    view.lng -= dx * m / (111320 * Math.cos(view.lat * Math.PI / 180));
+    anchored(p => ({ x: p.x + dx, y: p.y + dy }));
+    imgOff = { x: dx, y: dy }; off = { x: 0, y: 0 };
+    draw(); loadMap();
+  }
 
   // ---------- items ----------
-  function mapPts(it, f) {
-    if (it.pts) it.pts = it.pts.map(f); if (it.p) it.p = f(it.p);
-  }
   function snapshot() { undoStack.push(JSON.stringify(items)); if (undoStack.length > 60) undoStack.shift(); }
   function add(it) { snapshot(); items.push(it); sel = items.length - 1; updateButtons(); draw(); }
   function updateButtons() {
     const it = items[sel];
     $('btn-del').disabled = !it;
-    $('btn-edit').disabled = !(it && (it.t === 'dist' || it.t === 'text'));
+    $('btn-edit').disabled = !(it && (it.t === 'dist' || it.t === 'text' || it.t === 'info'));
     $('btn-finish').style.display = (tool === 'poly' && polyPts.length >= 3) ? '' : 'none';
   }
   function labelOf(it) { return it.label != null ? it.label : fmt(distM(it.pts[0], it.pts[1])); }
+  function curStyle() { return { font: $('fontsel').value, size: parseInt($('sizein').value, 10) || 30, bold: bold }; }
+  function fontStr(it, size, forceBold) { return ((forceBold || it.bold) ? '700 ' : '400 ') + (size || it.size || 30) + 'px "' + (it.font || 'Arial') + '", Arial, sans-serif'; }
+
+  // ---------- pictorial symbols ----------
+  const SYMS = {
+    hyd: { name: 'Hydrant', color: '#d32f2f' }, sr: { name: 'Sprinkler riser', color: '#1565c0' },
+    fdc: { name: 'FD connection', color: '#e65100' }, piv: { name: 'PIV valve', color: '#2e7d32' },
+    ent: { name: 'Entrance', color: '#00695c' }, ext: { name: 'Extinguisher', color: '#c62828' },
+    alm: { name: 'Alarm panel', color: '#6a1b9a' }, gas: { name: 'Gas shut-off', color: '#ef6c00' },
+    wat: { name: 'Water shut-off', color: '#0277bd' }, elc: { name: 'Electrical shut-off', color: '#b78700' },
+    north: { name: 'North arrow', color: '#111111' }
+  };
+  function glyph(c, k, col) {            // drawn in a -1..1 box
+    c.fillStyle = col; c.strokeStyle = col; c.lineCap = 'round'; c.lineJoin = 'round';
+    const R = (x, y, w, h) => c.fillRect(x, y, w, h);
+    if (k === 'hyd') {
+      c.beginPath(); c.arc(0, -0.42, 0.42, Math.PI, 0); c.fill();
+      R(-0.38, -0.42, 0.76, 0.98); R(-0.72, -0.12, 0.34, 0.34); R(0.38, -0.12, 0.34, 0.34);
+      R(-0.12, -0.98, 0.24, 0.22); R(-0.56, 0.56, 1.12, 0.28);
+    } else if (k === 'sr') {
+      R(-0.65, -0.92, 1.3, 0.2); R(-0.1, -0.72, 0.2, 1.0);
+      c.beginPath(); c.arc(0, 0.38, 0.17, 0, 7); c.fill(); R(-0.42, 0.52, 0.84, 0.12);
+      c.lineWidth = 0.13; [-0.5, 0, 0.5].forEach(x => { c.beginPath(); c.moveTo(x * 0.5, 0.72); c.lineTo(x, 0.96); c.stroke(); });
+    } else if (k === 'fdc') {
+      c.beginPath(); c.arc(-0.42, -0.4, 0.32, 0, 7); c.fill(); c.beginPath(); c.arc(0.42, -0.4, 0.32, 0, 7); c.fill();
+      c.lineWidth = 0.2; c.beginPath(); c.moveTo(-0.42, -0.1); c.lineTo(0, 0.4); c.lineTo(0.42, -0.1); c.moveTo(0, 0.4); c.lineTo(0, 0.95); c.stroke();
+    } else if (k === 'piv') {
+      c.beginPath(); c.arc(0, -0.4, 0.5, 0, 7); c.fill(); R(-0.16, -0.1, 0.32, 1.0); R(-0.5, 0.78, 1.0, 0.16);
+      c.fillStyle = '#fff'; R(-0.34, -0.47, 0.68, 0.14);
+    } else if (k === 'ent') {
+      c.lineWidth = 0.16; c.strokeRect(-0.05, -0.85, 0.8, 1.7); c.fillRect(-0.05, -0.85, 0.8, 1.7);
+      c.fillStyle = '#fff'; c.beginPath(); c.arc(0.5, 0.05, 0.07, 0, 7); c.fill();
+      c.strokeStyle = col; c.lineWidth = 0.18; c.beginPath(); c.moveTo(-0.95, 0); c.lineTo(-0.25, 0); c.stroke();
+      c.beginPath(); c.moveTo(-0.15, 0); c.lineTo(-0.5, -0.3); c.lineTo(-0.5, 0.3); c.closePath(); c.fill();
+    } else if (k === 'ext') {
+      c.beginPath(); c.roundRect ? c.roundRect(-0.32, -0.25, 0.64, 1.1, 0.2) : c.rect(-0.32, -0.25, 0.64, 1.1); c.fill();
+      R(-0.12, -0.55, 0.24, 0.32); R(-0.12, -0.72, 0.52, 0.16);
+      c.lineWidth = 0.1; c.beginPath(); c.moveTo(0.4, -0.64); c.quadraticCurveTo(0.7, -0.2, 0.52, 0.2); c.stroke();
+    } else if (k === 'alm') {
+      c.beginPath(); c.arc(0, -0.1, 0.55, Math.PI, 0); c.lineTo(0.75, 0.48); c.lineTo(-0.75, 0.48); c.closePath(); c.fill();
+      c.beginPath(); c.arc(0, 0.7, 0.16, 0, 7); c.fill(); R(-0.07, -0.85, 0.14, 0.2);
+    } else if (k === 'gas') {
+      c.beginPath(); c.moveTo(0, -0.95); c.bezierCurveTo(0.2, -0.4, 0.8, -0.1, 0.7, 0.35); c.bezierCurveTo(0.6, 0.8, 0.2, 0.92, 0, 0.92);
+      c.bezierCurveTo(-0.5, 0.92, -0.8, 0.5, -0.6, 0); c.bezierCurveTo(-0.5, 0.2, -0.3, 0.25, -0.2, 0.1); c.bezierCurveTo(-0.3, -0.4, -0.1, -0.7, 0, -0.95); c.fill();
+    } else if (k === 'wat') {
+      c.beginPath(); c.moveTo(0, -0.95); c.bezierCurveTo(0.8, 0, 0.72, 0.88, 0, 0.88); c.bezierCurveTo(-0.72, 0.88, -0.8, 0, 0, -0.95); c.fill();
+    } else if (k === 'elc') {
+      c.beginPath(); c.moveTo(0.25, -0.95); c.lineTo(-0.55, 0.15); c.lineTo(-0.08, 0.15); c.lineTo(-0.28, 0.95); c.lineTo(0.55, -0.22); c.lineTo(0.08, -0.22); c.closePath(); c.fill();
+    }
+  }
+  function drawSym(c, k, x, y, r) {      // round white badge with a coloured ring and the icon inside
+    const s = SYMS[k];
+    c.save(); c.translate(x, y);
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(0, 0, r, 0, 7); c.fill();
+    c.lineWidth = Math.max(2, r * 0.14); c.strokeStyle = s.color; c.beginPath(); c.arc(0, 0, r, 0, 7); c.stroke();
+    if (k === 'north') {
+      c.fillStyle = '#111'; c.beginPath(); c.moveTo(0, -r * 0.8); c.lineTo(r * 0.36, r * 0.3); c.lineTo(0, r * 0.1); c.lineTo(-r * 0.36, r * 0.3); c.closePath(); c.fill();
+      c.font = '800 ' + Math.round(r * 0.5) + 'px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('N', 0, r * 0.58);
+    } else { const u = r * 0.62; c.scale(u, u); glyph(c, k, s.color); }
+    c.restore();
+  }
+  (function buildPalette() {
+    const bar = $('symbar');
+    Object.keys(SYMS).forEach(k => {
+      const b = document.createElement('button'); b.dataset.sym = k;
+      const cvs = document.createElement('canvas'); cvs.width = 80; cvs.height = 80;
+      drawSym(cvs.getContext('2d'), k, 40, 40, 36);
+      const sp = document.createElement('span'); sp.textContent = SYMS[k].name;
+      b.appendChild(cvs); b.appendChild(sp);
+      b.onclick = () => { symKey = k; setTool('sym'); };
+      bar.appendChild(b);
+    });
+  })();
+  function markPalette() { document.querySelectorAll('#symbar button').forEach(b => b.classList.toggle('on', tool === 'sym' && b.dataset.sym === symKey)); }
 
   // ---------- drawing ----------
-  const SYM = { hyd: ['#e53e3e', 'H'], sr: ['#2b6cb0', 'SR'], fdc: ['#d69e2e', 'FD'], ent: ['#2f855a', 'E'] };
-  function halo(text, x, y, size, color) {
-    ctx.font = '700 ' + size + 'px Segoe UI, Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  function halo(text, x, y, font, color) {
+    ctx.font = font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const size = parseInt(font.match(/(\d+)px/)[1], 10);
     ctx.lineWidth = size / 4; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineJoin = 'round'; ctx.strokeText(text, x, y);
     ctx.fillStyle = color; ctx.fillText(text, x, y);
   }
-  function arrowHead(a, b, w, color) {
+  function hexA(h, a) { const n = parseInt(h.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; }
+  function arrowHead(a, b, color) {
     const ang = Math.atan2(b.y - a.y, b.x - a.x), L = 26;
     ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(b.x, b.y);
     ctx.lineTo(b.x - L * Math.cos(ang - .4), b.y - L * Math.sin(ang - .4));
     ctx.lineTo(b.x - L * Math.cos(ang + .4), b.y - L * Math.sin(ang + .4)); ctx.closePath(); ctx.fill();
   }
-  function drawItem(c, it, isSel) {
+  function usedSyms() { return [...new Set(items.filter(i => i.t === 'sym' && i.k !== 'north').map(i => i.k))]; }
+  function panel(it, x, y, w, h) { ctx.fillStyle = 'rgba(255,255,255,.93)'; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#c9a84c'; ctx.fillRect(x, y, 8, h); ctx.strokeStyle = '#1b2a4a'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); it._bb = { x, y, w, h }; }
+
+  function drawItem(it, isSel) {
     const col = it.color || '#ff2d2d';
     ctx.lineWidth = 5; ctx.strokeStyle = col; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     if (it.t === 'poly') {
       ctx.beginPath(); it.pts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath();
       ctx.fillStyle = hexA(col, .22); ctx.fill(); ctx.stroke();
-    } else if (it.t === 'line' || it.t === 'arrow' || it.t === 'dist' || it.t === 'calib') {
+    } else if (it.t === 'line' || it.t === 'arrow' || it.t === 'dist') {
       const [a, b] = it.pts;
-      if (it.t === 'dist') { ctx.setLineDash([]); }
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-      if (it.t === 'arrow') arrowHead(a, b, 5, col);
+      if (it.t === 'arrow') arrowHead(a, b, col);
       if (it.t === 'dist') {
         const ang = Math.atan2(b.y - a.y, b.x - a.x), nx = -Math.sin(ang) * 14, ny = Math.cos(ang) * 14;
         [a, b].forEach(p => { ctx.beginPath(); ctx.moveTo(p.x - nx, p.y - ny); ctx.lineTo(p.x + nx, p.y + ny); ctx.stroke(); });
-        let mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-        const off = 26; halo(labelOf(it), mx - Math.sin(ang) * off, my + Math.cos(ang) * off * (Math.cos(ang) >= 0 ? 1 : 1), 30, col);
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, off2 = 16 + (it.size || 30) * 0.7;
+        halo(labelOf(it), mx - Math.sin(ang) * off2, my + Math.cos(ang) * off2, fontStr(it, it.size || 30), col);
       }
     } else if (it.t === 'text') {
-      halo(it.text, it.p.x, it.p.y, it.size || 34, col);
+      halo(it.text, it.p.x, it.p.y, fontStr(it, it.size || 34), col);
     } else if (it.t === 'sym') {
-      const x = it.p.x, y = it.p.y;
-      if (it.k === 'north') {
-        ctx.fillStyle = '#fff'; ctx.strokeStyle = '#111'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(x, y, 34, 0, 7); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(x, y - 26); ctx.lineTo(x + 12, y + 10); ctx.lineTo(x, y + 3); ctx.lineTo(x - 12, y + 10); ctx.closePath(); ctx.fill();
-        halo('N', x, y + 20, 18, '#111');
-      } else {
-        const [c1, t] = SYM[it.k];
-        ctx.fillStyle = c1; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
-        ctx.beginPath(); if (it.k === 'sr') ctx.rect(x - 22, y - 22, 44, 44); else if (it.k === 'ent') { ctx.moveTo(x, y - 26); ctx.lineTo(x + 25, y + 20); ctx.lineTo(x - 25, y + 20); ctx.closePath(); } else ctx.arc(x, y, 24, 0, 7);
-        ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#fff'; ctx.font = '800 ' + (t.length > 1 ? 18 : 24) + 'px Segoe UI, Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t, x, y + (it.k === 'ent' ? 8 : 1));
-      }
+      drawSym(ctx, it.k, it.p.x, it.p.y, 34);
+    } else if (it.t === 'info') {
+      const F = it.fields, sz = it.size || 22, rows = [];
+      if (F.insured) rows.push('Insured: ' + F.insured); if (F.address) rows.push('Property: ' + F.address);
+      if (F.date) rows.push('Date: ' + F.date); if (F.by) rows.push('Prepared by: ' + F.by); if (F.ref) rows.push('Ref: ' + F.ref);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      const tf = fontStr(it, sz + 6, true), rf = fontStr(it, sz, false);
+      ctx.font = tf; let w = F.title ? ctx.measureText(F.title).width : 0; ctx.font = rf; rows.forEach(r => { w = Math.max(w, ctx.measureText(r).width); });
+      const pad = 18, lh = sz * 1.4, h = pad * 2 + (F.title ? (sz + 6) * 1.4 : 0) + rows.length * lh;
+      panel(it, it.p.x, it.p.y, w + pad * 2 + 8, h);
+      let y = it.p.y + pad; ctx.fillStyle = '#1b2a4a';
+      if (F.title) { ctx.font = tf; ctx.fillText(F.title, it.p.x + pad + 8, y); y += (sz + 6) * 1.4; }
+      ctx.font = rf; ctx.fillStyle = '#111'; rows.forEach(r => { ctx.fillText(r, it.p.x + pad + 8, y); y += lh; });
+    } else if (it.t === 'legend') {
+      const used = usedSyms(); if (!used.length) { it._bb = null; return; }
+      const sz = it.size || 22; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.font = fontStr(it, sz + 2, true); let w = ctx.measureText('Legend').width; ctx.font = fontStr(it, sz, false);
+      used.forEach(k => { w = Math.max(w, 46 + ctx.measureText(SYMS[k].name).width); });
+      const rowH = 42, pad = 14, h = pad * 2 + 34 + used.length * rowH;
+      if (it.auto !== false) it.p = { x: N - (w + pad * 2 + 8) - 24, y: N - h - 64 };   // sits bottom-right until the user drags it
+      panel(it, it.p.x, it.p.y, w + pad * 2 + 8, h);
+      ctx.fillStyle = '#1b2a4a'; ctx.font = fontStr(it, sz + 2, true); ctx.fillText('Legend', it.p.x + pad + 8, it.p.y + pad + 12);
+      used.forEach((k, i) => { const cy = it.p.y + pad + 34 + i * rowH + rowH / 2; drawSym(ctx, k, it.p.x + pad + 8 + 20, cy, 19); ctx.fillStyle = '#111'; ctx.font = fontStr(it, sz, false); ctx.fillText(SYMS[k].name, it.p.x + pad + 8 + 52, cy); });
     }
     if (isSel) {
       ctx.fillStyle = '#fff'; ctx.strokeStyle = '#1b2a4a'; ctx.lineWidth = 4;
-      handles(it).forEach(h => { ctx.beginPath(); ctx.arc(h.x, h.y, 13, 0, 7); ctx.fill(); ctx.stroke(); });
+      if (it.pts) it.pts.forEach(h => { ctx.beginPath(); ctx.arc(h.x, h.y, 13, 0, 7); ctx.fill(); ctx.stroke(); });
+      else if (it._bb) { ctx.setLineDash([10, 6]); ctx.strokeRect(it._bb.x - 6, it._bb.y - 6, it._bb.w + 12, it._bb.h + 12); ctx.setLineDash([]); }
+      else if (it.p) { ctx.setLineDash([10, 6]); ctx.beginPath(); ctx.arc(it.p.x, it.p.y, 46, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
     }
   }
-  function handles(it) { return it.pts ? it.pts : []; }
-  function hexA(h, a) { const n = parseInt(h.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; }
-
+  function scaleBar() {
+    const m = mpp(), nice = [5, 10, 20, 25, 50, 100, 200]; let L = nice[0]; for (const n of nice) if (n / m < 360) L = n;
+    const w = L / m, x = 34, y = N - 112;
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(x - 12, y - 36, w + 24, 62);
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 5; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.moveTo(x + w, y - 8); ctx.lineTo(x + w, y + 8); ctx.stroke();
+    ctx.fillStyle = '#111'; ctx.font = '700 22px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(L + ' m (' + Math.round(L * 3.28084) + ' ft)', x, y - 14);
+  }
   function draw(forExport) {
     ctx.clearRect(0, 0, N, N);
-    if (img) ctx.drawImage(img, 0, 0, N, N); else { ctx.fillStyle = '#cfd6e3'; ctx.fillRect(0, 0, N, N); }
-    items.forEach((it, i) => drawItem(ctx, it, !forExport && i === sel));
+    ctx.fillStyle = '#cfd6e3'; ctx.fillRect(0, 0, N, N);
+    if (img) ctx.drawImage(img, off.x + imgOff.x, off.y + imgOff.y, N, N);
+    ctx.save(); ctx.translate(off.x, off.y);
+    items.forEach((it, i) => { if (!isPage(it)) drawItem(it, !forExport && i === sel); });
     if (!forExport) {
-      if (pend && pend.cur) { drawItem(ctx, { t: pend.t === 'calib' ? 'line' : pend.t, pts: [pend.a, pend.cur], color: $('color').value }, false); }
+      if (pend && pend.cur) drawItem({ t: pend.t === 'calib' ? 'line' : pend.t, pts: [pend.a, pend.cur], color: $('color').value, ...curStyle() }, false);
       if (polyPts.length) {
         ctx.strokeStyle = $('color').value; ctx.lineWidth = 5; ctx.beginPath(); polyPts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.stroke();
         polyPts.forEach(p => { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, 7); ctx.fill(); ctx.stroke(); });
       }
     }
+    ctx.restore();
+    items.forEach((it, i) => { if (isPage(it)) drawItem(it, !forExport && i === sel); });
+    if (view.ok) scaleBar();
   }
 
   // ---------- pointer handling ----------
@@ -252,42 +389,45 @@
   function hit(p) {
     for (let i = items.length - 1; i >= 0; i--) {
       const it = items[i], T = 22;
-      if (it.t === 'poly') { if (inPoly(p, it.pts)) return i; for (let k = 0; k < it.pts.length; k++) if (segDist(p, it.pts[k], it.pts[(k + 1) % it.pts.length]) < T) return i; }
+      if (isPage(it)) { const b = it._bb; if (b && p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) return i; }
+      else if (it.t === 'poly') { if (inPoly(p, it.pts)) return i; for (let k = 0; k < it.pts.length; k++) if (segDist(p, it.pts[k], it.pts[(k + 1) % it.pts.length]) < T) return i; }
       else if (it.pts) { if (segDist(p, it.pts[0], it.pts[1]) < T) return i; if (it.t === 'dist') { const m = { x: (it.pts[0].x + it.pts[1].x) / 2, y: (it.pts[0].y + it.pts[1].y) / 2 }; if (Math.hypot(p.x - m.x, p.y - m.y) < 110) return i; } }
       else if (it.t === 'text') { const w = (it.text.length * (it.size || 34) * .3) + 20; if (Math.abs(p.x - it.p.x) < w && Math.abs(p.y - it.p.y) < (it.size || 34)) return i; }
-      else if (it.t === 'sym') { if (Math.hypot(p.x - it.p.x, p.y - it.p.y) < 40) return i; }
+      else if (it.t === 'sym') { if (Math.hypot(p.x - it.p.x, p.y - it.p.y) < 42) return i; }
     }
     return -1;
   }
   cv.addEventListener('pointerdown', e => {
-    if (!view.ok) return; cv.setPointerCapture(e.pointerId); const p = pos(e), col = $('color').value;
+    if (!view.ok) return; cv.setPointerCapture(e.pointerId); const p = pos(e);
+    if (tool === 'pan') { panDrag = { start: p }; return; }
     if (tool === 'select') {
-      if (sel >= 0 && items[sel].pts) { const hs = handles(items[sel]); for (let i = 0; i < hs.length; i++) if (Math.hypot(p.x - hs[i].x, p.y - hs[i].y) < 36) { snapshot(); drag = { mode: 'pt', i }; return; } }
-      const h = hit(p); sel = h; updateButtons();
-      if (h >= 0) { snapshot(); drag = { mode: 'move', last: p }; }
+      if (sel >= 0 && items[sel].pts) { const hs = items[sel].pts; for (let i = 0; i < hs.length; i++) if (Math.hypot(p.x - hs[i].x, p.y - hs[i].y) < 36) { snapshot(); drag = { mode: 'pt', i }; return; } }
+      const h = hit(p); sel = h; updateButtons(); syncControls();
+      if (h >= 0) { snapshot(); if (items[h].t === 'legend') items[h].auto = false; drag = { mode: 'move', last: p }; } else panDrag = { start: p };
       draw(); return;
     }
-    if (tool === 'dist' || tool === 'line' || tool === 'arrow' || tool === 'calib') {
-      if (!pend) pend = { t: tool, a: p, cur: null, down: p };
-      else { finishTwo(p); return; }
+    if (tool === 'dist' || tool === 'line' || tool === 'arrow' || tool === 'calib') { if (!pend) pend = { t: tool, a: p, cur: null }; else finishTwo(p); return; }
+    if (tool === 'poly') { polyPts.push(p); updateButtons(); draw(); return; }
+    if (tool === 'text') { const t = prompt('Text'); if (t && t.trim()) add({ t: 'text', p, text: t.trim().slice(0, 80), color: $('color').value, ...curStyle() }); return; }
+    if (tool === 'sym') {
+      add({ t: 'sym', k: symKey, p });
+      if (symKey !== 'north' && !legendDismissed && !items.some(i => i.t === 'legend')) { items.push({ t: 'legend', p: { x: 0, y: 0 }, font: 'Arial', size: 22 }); draw(); }
       return;
     }
-    if (tool === 'poly') { polyPts.push(p); updateButtons(); draw(); return; }
-    if (tool === 'text') { const t = prompt('Text'); if (t && t.trim()) add({ t: 'text', p, text: t.trim().slice(0, 80), color: col, size: 34 }); return; }
-    if (tool === 'sym') { add({ t: 'sym', k: $('symsel').value, p }); return; }
   });
   cv.addEventListener('pointermove', e => {
     const p = pos(e);
+    if (panDrag) { off = { x: p.x - panDrag.start.x, y: p.y - panDrag.start.y }; draw(); return; }
     if (drag && sel >= 0) {
       const it = items[sel];
-      if (drag.mode === 'pt') it.pts[drag.i] = p;
-      else { const dx = p.x - drag.last.x, dy = p.y - drag.last.y; mapPts(it, q => ({ x: q.x + dx, y: q.y + dy })); drag.last = p; }
+      if (drag.mode === 'pt') it.pts[drag.i] = p; else { const dx = p.x - drag.last.x, dy = p.y - drag.last.y; shiftPt(it, q => ({ x: q.x + dx, y: q.y + dy })); drag.last = p; }
       draw(); return;
     }
     if (pend) { pend.cur = p; draw(); }
   });
   cv.addEventListener('pointerup', e => {
     const p = pos(e);
+    if (panDrag) { finishPan(); return; }
     if (drag) { drag = null; draw(); return; }
     if (pend && pend.cur && Math.hypot(p.x - pend.a.x, p.y - pend.a.y) > 30) finishTwo(p);
   });
@@ -301,56 +441,70 @@
       const px = Math.hypot(b.x - a.x, b.y - a.y); view.k = (metres / px) / (mpp() / view.k); view.calibrated = true;
       refreshStatus(); setTool('select'); draw(); return;
     }
-    add({ t, pts: [a, b], color: $('color').value });
+    add({ t, pts: [a, b], color: $('color').value, ...curStyle() });
   }
   $('btn-finish').onclick = () => { if (polyPts.length >= 3) { add({ t: 'poly', pts: polyPts.slice(), color: $('color').value }); polyPts = []; updateButtons(); setTool('select'); } };
 
   // ---------- toolbar ----------
   function setTool(t) {
-    tool = t; pend = null; polyPts = []; drag = null;
+    tool = t; pend = null; polyPts = []; drag = null; panDrag = null;
     document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
-    $('hint').textContent = HINTS[t] || ''; updateButtons(); draw();
+    cv.style.cursor = t === 'pan' ? 'grab' : 'default';
+    $('hint').textContent = HINTS[t] || ''; markPalette(); updateButtons(); draw();
   }
   document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => setTool(b.dataset.tool));
-  $('btn-del').onclick = () => { if (sel >= 0) { snapshot(); items.splice(sel, 1); sel = -1; updateButtons(); draw(); } };
+  $('btn-del').onclick = () => { if (sel >= 0) { if (items[sel].t === 'legend') legendDismissed = true; snapshot(); items.splice(sel, 1); sel = -1; updateButtons(); draw(); } };
   $('btn-undo').onclick = () => { if (polyPts.length) { polyPts.pop(); updateButtons(); draw(); return; } const s = undoStack.pop(); if (s) { items = JSON.parse(s); sel = -1; updateButtons(); draw(); } };
-  $('btn-clear').onclick = () => { if (items.length && confirm('Remove everything drawn on this map?')) { snapshot(); items = []; sel = -1; updateButtons(); draw(); } };
+  $('btn-clear').onclick = () => { if (items.length && confirm('Remove everything drawn on this map?')) { snapshot(); items = []; sel = -1; legendDismissed = false; updateButtons(); draw(); } };
+  $('btn-legend').onclick = () => {
+    const i = items.findIndex(x => x.t === 'legend');
+    if (i >= 0) { snapshot(); items.splice(i, 1); legendDismissed = true; }
+    else { legendDismissed = false; snapshot(); items.push({ t: 'legend', p: { x: 0, y: 0 }, font: 'Arial', size: 22 }); }
+    draw();
+  };
   $('btn-edit').onclick = () => {
     const it = items[sel]; if (!it) return;
     if (it.t === 'text') { const v = prompt('Text', it.text); if (v && v.trim()) { snapshot(); it.text = v.trim().slice(0, 80); } }
     else if (it.t === 'dist') { const v = prompt('Label (leave empty to use the measured distance):', labelOf(it)); if (v !== null) { snapshot(); it.label = v.trim() ? v.trim().slice(0, 60) : null; } }
+    else if (it.t === 'info') { openInfo(it); return; }
     draw();
   };
-  $('color').oninput = () => { if (sel >= 0 && tool === 'select') { snapshot(); items[sel].color = $('color').value; draw(); } };
+  // text style controls: change the selected item, and set the default for new ones
+  function applyStyle() {
+    const it = items[sel]; if (!it || tool !== 'select' || it.t === 'poly' || it.t === 'sym') return;
+    snapshot(); const st = curStyle(); it.font = st.font; it.size = st.size; it.bold = st.bold; draw();
+  }
+  $('fontsel').onchange = applyStyle; $('sizein').onchange = applyStyle;
+  $('btn-bold').onclick = () => { bold = !bold; $('btn-bold').classList.toggle('on', bold); applyStyle(); };
+  $('color').oninput = () => { if (sel >= 0 && tool === 'select') { items[sel].color = $('color').value; draw(); } };
+  function syncControls() {
+    const it = items[sel]; if (!it) return;
+    if (it.font) $('fontsel').value = it.font; if (it.size) $('sizein').value = it.size;
+    bold = !!it.bold; $('btn-bold').classList.toggle('on', bold); if (it.color) $('color').value = it.color;
+  }
+
+  // ---------- info box ----------
+  let infoTarget = null;
+  function openInfo(it) {
+    infoTarget = it || null; const F = it ? it.fields : { title: 'Site Plan', insured: prefill.insured || '', address: prefill.address || view.address || '', date: prefill.date || todayStr(), by: prefill.by || '', ref: prefill.ref || '' };
+    $('f-title').value = F.title || ''; $('f-insured').value = F.insured || ''; $('f-address').value = F.address || ''; $('f-date').value = F.date || ''; $('f-by').value = F.by || ''; $('f-ref').value = F.ref || '';
+    $('info-ok').textContent = it ? 'Update' : 'Place on plan'; $('infoDlg').showModal();
+  }
+  function placeInfo(F) { add({ t: 'info', p: { x: 30, y: 30 }, fields: F, font: 'Arial', size: 22 }); }
+  $('btn-info').onclick = () => { const ex = items.find(i => i.t === 'info'); openInfo(ex || null); };
+  $('info-cancel').onclick = () => $('infoDlg').close();
+  $('info-ok').onclick = () => {
+    const F = { title: $('f-title').value.trim(), insured: $('f-insured').value.trim(), address: $('f-address').value.trim(), date: $('f-date').value, by: $('f-by').value.trim(), ref: $('f-ref').value.trim() };
+    if (infoTarget) { snapshot(); infoTarget.fields = F; draw(); } else placeInfo(F);
+    $('infoDlg').close();
+  };
 
   // ---------- export ----------
-  function exportCanvas() {
-    const prev = sel; sel = -1; draw(true);
-    const out = document.createElement('canvas'); out.width = N; out.height = N; const o = out.getContext('2d');
-    o.drawImage(cv, 0, 0);
-    // scale bar
-    const m = mpp(), nice = [5, 10, 20, 25, 50, 100, 200]; let L = nice[0]; for (const n of nice) if (n / m < 400) L = n;
-    const w = L / m, x = 30, y = N - 70;
-    o.fillStyle = 'rgba(255,255,255,.88)'; o.fillRect(x - 12, y - 34, w + 24, 62);
-    o.strokeStyle = '#111'; o.lineWidth = 5; o.beginPath(); o.moveTo(x, y - 8); o.lineTo(x, y + 8); o.moveTo(x, y); o.lineTo(x + w, y); o.moveTo(x + w, y - 8); o.lineTo(x + w, y + 8); o.stroke();
-    o.fillStyle = '#111'; o.font = '700 22px Segoe UI, Arial'; o.textAlign = 'left'; o.textBaseline = 'alphabetic'; o.fillText(L + ' m (' + Math.round(L * 3.28084) + ' ft)', x, y - 14);
-    // legend of symbols used
-    const used = [...new Set(items.filter(i => i.t === 'sym' && i.k !== 'north').map(i => i.k))];
-    const names = { hyd: 'Hydrant', sr: 'Sprinkler riser', fdc: 'FD connection', ent: 'Entrance' };
-    if (used.length) {
-      const lw = 250, lh = 36 + used.length * 34, lx = N - lw - 20, ly = N - lh - 20;
-      o.fillStyle = 'rgba(255,255,255,.9)'; o.fillRect(lx, ly, lw, lh);
-      o.fillStyle = '#111'; o.font = '700 20px Segoe UI, Arial'; o.fillText('Legend', lx + 14, ly + 26);
-      used.forEach((k, i) => { o.fillStyle = SYM[k][0]; o.beginPath(); o.arc(lx + 28, ly + 54 + i * 34, 11, 0, 7); o.fill(); o.fillStyle = '#111'; o.font = '600 18px Segoe UI, Arial'; o.fillText(names[k], lx + 52, ly + 61 + i * 34); });
-    }
-    sel = prev; draw();
-    return out;
-  }
+  function exportCanvas() { const prev = sel; sel = -1; draw(true); const out = document.createElement('canvas'); out.width = N; out.height = N; out.getContext('2d').drawImage(cv, 0, 0); sel = prev; draw(); return out; }
   $('btn-save').onclick = () => {
     if (!view.ok) return;
-    exportCanvas().toBlob(b => {
-      const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'site-plan.png'; document.body.appendChild(a); a.click(); a.remove();
-    }, 'image/png');
+    const info = items.find(i => i.t === 'info'), nm = ((info && info.fields.insured) || 'site-plan').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'site-plan';
+    exportCanvas().toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = nm + '-site-plan.png'; document.body.appendChild(a); a.click(); a.remove(); }, 'image/png');
   };
   window.__sp = { items: () => items, view: () => view, mpp, exportCanvas };
 
@@ -362,9 +516,11 @@
     if (aal.data && aal.data.nextLevel === 'aal2' && aal.data.currentLevel !== 'aal2') { window.location.replace('/login.html'); return; }
     token = session.access_token;
     _supabase.auth.onAuthStateChange((_e, s) => { if (s) token = s.access_token; });
-    const pre = new URLSearchParams(location.search).get('addr');
+    const q = new URLSearchParams(location.search);
+    ['insured', 'address', 'date', 'by', 'ref'].forEach(k => { const v = q.get(k); if (v) prefill[k] = v.slice(0, 140); });
+    const pre = q.get('addr') || prefill.address;
+    markPalette(); draw();
     if (pre) { $('addr').value = pre.slice(0, 200); $('btn-load').click(); }
-    draw();
   })();
 </script>
 </body>

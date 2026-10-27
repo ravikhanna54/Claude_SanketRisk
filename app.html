@@ -9264,6 +9264,11 @@
       var targetDoc = iframe.contentDocument;
       var bodyEl = targetDoc && targetDoc.body;
       if (!bodyEl) throw new Error('Could not access report content for PDF capture');
+      // The on-screen toolbar (Print / Close) is only hidden by @media print, so it would
+      // otherwise be baked into the stored PDF as dead buttons. Remove it before capture.
+      var _tbStyle = targetDoc.createElement('style');
+      _tbStyle.textContent = '.toolbar,.no-print{display:none!important}.report-wrap{padding-top:0!important}';
+      targetDoc.head.appendChild(_tbStyle);
 
       var canvas = await html2canvas(bodyEl, {
         scale: 1.5, useCORS: true, allowTaint: true, logging: false,
