@@ -67,7 +67,8 @@
     <button id="btn-legend">Legend</button>
     <span class="sep"></span>
     <button data-tool="calib" title="Draw over a known length to set the scale">Calibrate</button>
-    <button id="btn-save" class="pri">Save image</button>
+    <button id="btn-attach" class="pri" style="display:none">Attach to report</button>
+    <button id="btn-save">Save image</button>
   </div>
   <div class="row">
     <span class="lbl">Text</span>
@@ -532,6 +533,51 @@
   };
   window.__sp = { items: () => items, view: () => view, mpp, exportCanvas };
 
+  // ---------- attach to the inspection report ----------
+  const INSPECTION = (new URLSearchParams(location.search).get('inspection') || '');
+  const hasInsp = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(INSPECTION);
+  const SP_BUCKET = 'inspection-photos', SP_BASE = 'inspections/' + INSPECTION + '/';
+  if (hasInsp) $('btn-attach').style.display = '';
+  async function putFile(name, blob, ct) {
+    const st = _supabase.storage.from(SP_BUCKET);
+    let r = await st.upload(SP_BASE + name, blob, { upsert: true, contentType: ct });
+    if (r.error) { await st.remove([SP_BASE + name]); r = await st.upload(SP_BASE + name, blob, { upsert: true, contentType: ct }); }
+    return r;
+  }
+  $('btn-attach').onclick = async () => {
+    if (!view.ok || !hasInsp) return;
+    setStatus('Saving to the report…');
+    try {
+      const png = await new Promise(res => exportCanvas().toBlob(res, 'image/png'));
+      const r1 = await putFile('site-plan.png', png, 'image/png');
+      if (r1.error) throw r1.error;
+      // editable copy (so the plan can be reopened and changed); the report works even if this part is refused
+      const data = { v: 1, view, items, legendDismissed, mtype: $('mtype').value };
+      let editable = true;
+      try { const r2 = await putFile('site-plan.json', new Blob([JSON.stringify(data)], { type: 'application/json' }), 'application/json'); if (r2.error) editable = false; } catch (e) { editable = false; }
+      setStatus('✓ Attached to the report');
+      $('hint').textContent = 'Saved. Return to the inspection tab: the Site Plan will appear in the Formal and Narrative reports.' + (editable ? '' : ' (Note: the editable copy could not be stored, so reopening starts a fresh plan.)');
+    } catch (e) { setStatus('Could not attach'); $('hint').textContent = 'Could not save to the report: ' + (e && e.message ? e.message : e); }
+  };
+  async function restoreSaved() {
+    try {
+      const sgn = await _supabase.storage.from(SP_BUCKET).createSignedUrl(SP_BASE + 'site-plan.json', 60);
+      if (sgn.error || !sgn.data) return false;
+      const r = await fetch(sgn.data.signedUrl); if (!r.ok) return false;
+      const d = await r.json();
+      if (!d || d.v !== 1 || !Array.isArray(d.items) || !d.view || typeof d.view !== 'object') return false;
+      const v = d.view, num = x => Number.isFinite(+x) ? +x : 0;
+      view = { lat: num(v.lat), lng: num(v.lng), zoom: Math.max(15, Math.min(21, num(v.zoom) || 19)), k: num(v.k) || 1, calibrated: !!v.calibrated, ok: true,
+               address: String(v.address || '').slice(0, 200), blank: !!v.blank, bm: num(v.bm) || 0.1, gx: num(v.gx), gy: num(v.gy) };
+      items = d.items.filter(i => i && typeof i.t === 'string').slice(0, 500);
+      legendDismissed = !!d.legendDismissed; undoStack = []; sel = -1; off = { x: 0, y: 0 };
+      if (['satellite', 'hybrid', 'roadmap', 'roadmap-off'].indexOf(d.mtype) >= 0) $('mtype').value = d.mtype;
+      if (view.address) $('addr').value = view.address;
+      await loadMap(); updateButtons();
+      return true;
+    } catch (e) { return false; }
+  }
+
   // ---------- start ----------
   (async function () {
     const { data: { session } } = await _supabase.auth.getSession();
@@ -544,6 +590,7 @@
     ['insured', 'address', 'date', 'by', 'ref'].forEach(k => { const v = q.get(k); if (v) prefill[k] = v.slice(0, 140); });
     const pre = q.get('addr') || prefill.address;
     markPalette(); draw();
+    if (hasInsp && await restoreSaved()) { $('hint').textContent = 'Opened the plan you saved earlier. Change it and tap “Attach to report” to update the report.'; return; }
     if (pre) { $('addr').value = pre.slice(0, 200); $('btn-load').click(); }
   })();
 </script>

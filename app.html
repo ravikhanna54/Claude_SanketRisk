@@ -4720,6 +4720,17 @@
           <div class="card-title" style="margin-bottom:10px;">📎 Attached PDF Documents</div>
           <div id="pdf-list" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
+        <!-- Site Plan (optional) -->
+        <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
+          <div class="card-title" style="margin-bottom:8px;">🗺 Site Plan <span style="font-weight:400;font-size:11px;color:var(--slate);">(optional)</span></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <button onclick="openSitePlan()" style="padding:8px 16px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;" title="Draw a site plan on a map or a blank grid, with distances between buildings">🗺 Open Site Plan</button>
+            <label style="font-size:12px;color:var(--navy);font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="siteplan-include" checked> Include in Formal and Narrative reports</label>
+            <button id="siteplan-remove" onclick="removeSitePlan()" style="display:none;padding:6px 12px;background:none;border:1px solid #c53030;color:#c53030;border-radius:8px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;">✕ Remove</button>
+          </div>
+          <div id="siteplan-status" style="font-size:12px;color:var(--slate);margin-top:8px;">Save the inspection first, then open the Site Plan.</div>
+          <img id="siteplan-thumb" alt="Site plan" style="display:none;margin-top:10px;max-width:280px;width:100%;border:1px solid var(--border);border-radius:6px;">
+        </div>
         <input type="file" id="bulk-photo-input" accept="image/*" multiple style="display:none" onchange="bulkLoadPhotos(this)">
         <input type="file" id="pdf-upload-input" accept="application/pdf" multiple style="display:none" onchange="handlePDFUpload(this)">
         <input type="file" id="pdf-attach-input" accept="application/pdf" multiple style="display:none" onchange="handlePDFAttach(this)">
@@ -8453,6 +8464,48 @@
     }).join('');
   }
 
+  // ── Site Plan (optional): drawn in /site-plan.html, stored privately, embedded in the reports ──
+  var _sitePlanData = '';   // data URL of the attached plan image ('' = none)
+  var SITEPLAN_BUCKET = 'inspection-photos';
+  function _spPath(ext) { return 'inspections/' + currentInspectionId + '/site-plan.' + ext; }
+  function sitePlanOn() { var c = document.getElementById('siteplan-include'); return !!_sitePlanData && (!c || c.checked); }
+  async function refreshSitePlan() {
+    var st = document.getElementById('siteplan-status'), th = document.getElementById('siteplan-thumb'), rm = document.getElementById('siteplan-remove');
+    _sitePlanData = '';
+    if (th) th.style.display = 'none';
+    if (rm) rm.style.display = 'none';
+    if (!currentInspectionId) { if (st) st.textContent = 'Save the inspection first, then open the Site Plan.'; return; }
+    try {
+      var s = await _supabase.storage.from(SITEPLAN_BUCKET).createSignedUrl(_spPath('png'), 120);
+      if (s.error || !s.data) throw new Error('none');
+      var r = await fetch(s.data.signedUrl);
+      if (!r.ok) throw new Error('none');
+      var blob = await r.blob();
+      _sitePlanData = await new Promise(function(res) { var fr = new FileReader(); fr.onload = function() { res(fr.result); }; fr.onerror = function() { res(''); }; fr.readAsDataURL(blob); });
+    } catch (e) { _sitePlanData = ''; }
+    if (_sitePlanData) {
+      if (th) { th.src = _sitePlanData; th.style.display = 'block'; }
+      if (rm) rm.style.display = '';
+      if (st) st.textContent = '✓ Site plan attached. It will appear in the Formal and Narrative reports. Open the Site Plan again to change it.';
+    } else if (st) {
+      st.textContent = 'No site plan attached yet. Open the Site Plan, draw, then tap “Attach to report”.';
+    }
+  }
+  function openSitePlan() {
+    if (!currentInspectionId) { showToast('⚠ Save the inspection first, then open the Site Plan.', 'warn'); return; }
+    var g = function(id) { var e = document.getElementById(id); return e && e.value ? e.value : ''; };
+    var addr = [g('street-address'), g('city'), g('province')].filter(Boolean).join(', ');
+    var q = new URLSearchParams({ inspection: currentInspectionId, insured: g('insured-name') || g('legal-entity'), addr: addr, address: addr, date: g('inspection-date'), by: g('inspector-name'), ref: g('inspection-id') });
+    window.open('/site-plan.html?' + q.toString(), '_blank');
+  }
+  async function removeSitePlan() {
+    if (!currentInspectionId || !confirm('Remove the attached site plan from this inspection?')) return;
+    try { await _supabase.storage.from(SITEPLAN_BUCKET).remove([_spPath('png'), _spPath('json')]); } catch (e) {}
+    await refreshSitePlan();
+    showToast('Site plan removed.');
+  }
+  window.addEventListener('focus', function() { if (currentInspectionId) refreshSitePlan(); });
+
   function removePDF(idx) {
     if (!confirm('Remove this attached PDF?')) return;
     var path = attachedPDFs[idx].path;
@@ -9706,6 +9759,7 @@
       if (!saveError) {
         if (!currentInspectionId && result?.[0]?.id) {
           currentInspectionId = result[0].id;
+          try { refreshSitePlan(); } catch (e) {}
         }
         // Flush any pending photo uploads now that we have an inspection ID
         await flushPendingPhotoUploads();
@@ -10446,6 +10500,7 @@
       if (!rows?.length) { showToast('⚠ Record not found', 'warn'); return; }
       const rec = rows[0];
       currentInspectionId = rec.id;
+      try { refreshSitePlan(); } catch (e) {}
       // Parse form_data — handle both old (form_fields) and new (fields) key formats
       let fd = {};
       try { fd = JSON.parse(rec.form_data || '{}'); } catch(e) { fd = {}; }
@@ -14518,6 +14573,7 @@ function pctRowSummary(pctRows, key) {
 }
 
 async function generateNarrativeReport() {
+  try { await refreshSitePlan(); } catch (e) {}
   const d = collectFormData();
   const f = d.form_fields || {};
   const pills = d.pill_selections || {};
@@ -14894,6 +14950,11 @@ Write in formal insurance inspection language. Be specific with measurements, da
       </div>
     </div>
     <div style="font-size:8pt;color:#8a8472;margin-top:4px;">Location: ${nMapQ} · Imagery and map data © Google</div>
+  </div>` : ''}
+  ${sitePlanOn() ? `
+  <div class="section" style="page-break-inside:avoid;">
+    <h3>Site Plan</h3>
+    <img src="${_sitePlanData}" alt="Site plan" style="width:100%;max-width:640px;display:block;margin:12px auto 0;border:1px solid #ddd8d0;border-radius:6px;">
   </div>` : ''}
   ${allPhotos.length > 0 ? `
   <div class="section">
@@ -16965,6 +17026,11 @@ function generateFormalReport() {
   </div>
 </div>
 ${activeSuppHTML}
+<!-- ══ SITE PLAN (optional) ══ -->
+${sitePlanOn() ? `<div class="report-section" id="sec-siteplan">
+  ${secHeader('🗺', 'Site Plan', 'MODULE')}
+  <div class="sec-body"><img src="${_sitePlanData}" alt="Site plan" style="width:100%;max-width:680px;display:block;margin:6px auto;border:1px solid #ddd8d0;border-radius:4px;"></div>
+</div>` : ''}
 <!-- ══ PHOTOS ══ -->
 <div class="report-section" id="sec-photos">
   ${secHeader('📷', 'Photo Documentation', 'MODULE')}
