@@ -64,7 +64,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 </header>
 <div class="hero">
   <h1>Check Your Request Status</h1>
-  <p>Enter your reference number below to see the current status of your inspection request.</p>
+  <p>Enter your reference number and the email address used on the request form to see the current status of your inspection request.</p>
 </div>
 <div class="page-wrap">
   <div class="search-card">
@@ -73,6 +73,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <input type="text" id="ref-input" placeholder="e.g. SRC-260101-1234" autocomplete="off"
         onkeydown="if(event.key==='Enter') lookupStatus()">
       <button class="btn-search" onclick="lookupStatus()">Look Up →</button>
+    </div>
+    <label style="margin-top:14px;display:block">Email used on the request</label>
+    <div class="search-row">
+      <input type="email" id="email-input" placeholder="you@company.com" autocomplete="email"
+        onkeydown="if(event.key==='Enter') lookupStatus()">
     </div>
     <div class="error-notice" id="error-notice"></div>
   </div>
@@ -117,12 +122,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     const ref = document.getElementById('ref-input').value.trim().toUpperCase();
     const errEl = document.getElementById('error-notice');
     errEl.style.display = 'none';
+    const email = document.getElementById('email-input').value.trim();
     if (!ref) { errEl.textContent = 'Please enter a reference number.'; errEl.style.display='block'; return; }
+    if (!email) { errEl.textContent = 'Please enter the email address used on the request.'; errEl.style.display='block'; return; }
     try {
-      const { data, error } = await _supabase.from('inspection_requests')
-        .select('request_ref,status,insured_name,city,submitted_at,urgency,purpose,assigned_to')
-        .eq('request_ref', ref).single();
-      if (error || !data) { errEl.textContent = 'Reference number not found. Please check and try again.'; errEl.style.display='block'; return; }
+      // Looked up inside the database; only a matching reference + email returns anything
+      const { data: rows, error } = await _supabase.rpc('get_request_status', { p_ref: ref, p_email: email });
+      const data = Array.isArray(rows) ? rows[0] : rows;
+      if (error || !data) { errEl.textContent = 'No request found for that reference number and email. Please check both and try again.'; errEl.style.display='block'; return; }
       document.getElementById('result-ref').textContent = data.request_ref;
       const badge = document.getElementById('status-badge');
       badge.textContent = data.status || 'Pending';
