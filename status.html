@@ -99,6 +99,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 </div>
 <footer class="site-footer">&copy; Sanket Risk Consultants &nbsp;|&nbsp; <a href="https://sanketrisk.netlify.app" style="color:var(--gold);text-decoration:none;">Inspector Login</a></footer>
 <script>
+
+  // ── Display-safety helpers: escape data before it is written into the page as HTML ──
+  function sxEsc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  // for values placed inside a quoted JS string within an inline handler, e.g. onclick="f('...')"
+  function sxJs(v) { return String(v == null ? '' : v).replace(/[^\w .@\-\/:,]/g, function(c) { return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4); }); }
+  // for href / src values: only web, mail, phone, in-page or relative links; blocks javascript: and similar
+  function sxUrl(v) { var s = String(v == null ? '' : v).trim(); return (/^(https?:|mailto:|tel:|blob:|data:image\/(png|jpe?g|gif|webp);|#|\/(?!\/))/i.test(s) || /^[\w.\-\/]+(\?[^\s]*)?$/.test(s)) ? sxEsc(s) : ''; }
+
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{autoRefreshToken:false,persistSession:false}});
@@ -129,7 +137,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       const stepsEl = document.getElementById('timeline-steps');
       stepsEl.innerHTML = STEPS.map((s,i) => {
         const cls = i < currentStep ? 'done' : i === currentStep ? 'active' : '';
-        return '<div class="step"><div class="step-dot ' + cls + '">' + (cls==='done'?'✓': i+1) + '</div><div class="step-label ' + cls + '">' + s + '</div></div>';
+        return '<div class="step"><div class="step-dot ' + sxEsc(cls) + '">' + (cls==='done'?'✓': i+1) + '</div><div class="step-label ' + sxEsc(cls) + '">' + sxEsc(s) + '</div></div>';
       }).join('');
       document.getElementById('result-card').style.display = 'block';
       document.getElementById('result-card').scrollIntoView({behavior:'smooth',block:'nearest'});
