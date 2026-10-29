@@ -672,6 +672,14 @@
   <div id="dbg-content" style="padding:10px 14px;font-family:monospace;font-size:11px;line-height:1.6;overflow-y:auto;max-height:calc(60vh - 44px);white-space:pre-wrap;word-break:break-word;"></div>
 </div>
 <script>
+
+  // ── Display-safety helpers: escape data before it is written into the page as HTML ──
+  function sxEsc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  // for values placed inside a quoted JS string within an inline handler, e.g. onclick="f('...')"
+  function sxJs(v) { return String(v == null ? '' : v).replace(/[^\w .@\-\/:,]/g, function(c) { return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4); }); }
+  // for href / src values: only web, mail, phone, in-page or relative links; blocks javascript: and similar
+  function sxUrl(v) { var s = String(v == null ? '' : v).trim(); return (/^(https?:|mailto:|tel:|blob:|data:image\/(png|jpe?g|gif|webp);|#|\/(?!\/))/i.test(s) || /^[\w.\-\/]+(\?[^\s]*)?$/.test(s)) ? sxEsc(s) : ''; }
+
   function _toggleDebugPanel() {
     var p = document.getElementById('dbg-panel');
     if (p) p.style.display = (p.style.display === 'none' ? 'block' : 'none');
@@ -2707,18 +2715,18 @@
       }
       let html = '<table class="nfpa-table"><thead><tr><th>Category</th><th>Building Type</th><th>Low ($/sq ft)</th><th>High ($/sq ft)</th><th>Notes</th></tr></thead><tbody>';
       data.forEach(row => {
-        html += '<tr><td>' + row.category + '</td>' +
-          '<td>' + row.building_type + (row.sub_type ? ' — ' + row.sub_type : '') + '</td>' +
-          '<td>$' + row.cost_low + '</td>' +
-          '<td>$' + row.cost_high + '</td>' +
-          '<td style="font-size:11px;color:var(--slate-light);">' + (row.notes || '') + '</td></tr>';
+        html += '<tr><td>' + sxEsc(row.category) + '</td>' +
+          '<td>' + sxEsc(row.building_type) + (row.sub_type ? ' — ' + sxEsc(row.sub_type) : '') + '</td>' +
+          '<td>$' + sxEsc(row.cost_low) + '</td>' +
+          '<td>$' + sxEsc(row.cost_high) + '</td>' +
+          '<td style="font-size:11px;color:var(--slate-light);">' + (sxEsc(row.notes || '')) + '</td></tr>';
       });
       html += '</tbody></table>';
-      html += '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Source: ' + data[0].source + ' (' + data[0].year + '), ' + data[0].region + '. ' + data.length + ' building types currently loaded.</div>';
+      html += '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Source: ' + sxEsc(data[0].source) + ' (' + sxEsc(data[0].year) + '), ' + sxEsc(data[0].region) + '. ' + data.length + ' building types currently loaded.</div>';
       container.innerHTML = html;
       _kbCostTableLoaded = true;
     } catch(e) {
-      container.innerHTML = '<div class="callout callout-warn">Could not load cost data: ' + e.message + '</div>';
+      container.innerHTML = '<div class="callout callout-warn">Could not load cost data: ' + sxEsc(e.message) + '</div>';
     }
   }
   (async () => {
@@ -2773,7 +2781,7 @@
       allKbDocuments = data || [];
       filterKbDocuments();
     } catch(e) {
-      listEl.innerHTML = '<div class="callout callout-warn">Could not load documents: ' + e.message + '</div>';
+      listEl.innerHTML = '<div class="callout callout-warn">Could not load documents: ' + sxEsc(e.message) + '</div>';
     }
   }
 
@@ -2813,34 +2821,34 @@
       const statusColor = (d.extraction_status === 'ocr_failed') ? '#c53030' :
         (d.extraction_status === 'needs_ocr' || d.extraction_status === 'ocr_processing') ? '#b7791f' : '#276749';
       const tagsHtml = (d.tags || '').split(',').map(t => t.trim()).filter(Boolean)
-        .map(t => '<span style="background:#f0ece2;color:var(--slate);font-size:10px;padding:2px 8px;border-radius:10px;margin-right:4px;">' + t + '</span>').join('');
+        .map(t => '<span style="background:#f0ece2;color:var(--slate);font-size:10px;padding:2px 8px;border-radius:10px;margin-right:4px;">' + sxEsc(t) + '</span>').join('');
       const canRunOcr = currentUserRole === 'admin' || currentUserRole === 'reviewer';
       let ocrBtn = '';
       if (d.extraction_status === 'needs_ocr' && canRunOcr) {
-        ocrBtn = '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#7c3aed;" onclick="runOcrForDocument(\'' + d.id + '\',\'' + d.file_path + '\')" id="ocr-btn-' + d.id + '">🔍 Run OCR</button>';
+        ocrBtn = '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#7c3aed;" onclick="runOcrForDocument(\'' + sxJs(d.id) + '\',\'' + sxJs(d.file_path) + '\')" id="ocr-btn-' + sxEsc(d.id) + '">🔍 Run OCR</button>';
       } else if (d.extraction_status === 'ocr_failed' && canRunOcr) {
-        ocrBtn = '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#7c3aed;" onclick="runOcrForDocument(\'' + d.id + '\',\'' + d.file_path + '\')" id="ocr-btn-' + d.id + '">🔄 Retry OCR</button>';
+        ocrBtn = '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#7c3aed;" onclick="runOcrForDocument(\'' + sxJs(d.id) + '\',\'' + sxJs(d.file_path) + '\')" id="ocr-btn-' + sxEsc(d.id) + '">🔄 Retry OCR</button>';
       } else if (d.extraction_status === 'ocr_processing') {
-        ocrBtn = '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#a0aec0;" disabled id="ocr-btn-' + d.id + '">⏳ Running…</button>';
+        ocrBtn = '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#a0aec0;" disabled id="ocr-btn-' + sxEsc(d.id) + '">⏳ Running…</button>';
         // Resume polling automatically — covers the case where the page was
         // reloaded (or another user opened it) while a job was still running
         // on the Lambda side.
         if (!kbOcrPollTimers[d.id]) pollOcrStatus(d.id);
       }
       const deleteBtn = canDelete
-        ? '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#e2e8f0;color:#c53030;" onclick="deleteKbDocument(\'' + d.id + '\',\'' + d.file_path + '\')">🗑 Delete</button>'
+        ? '<button class="btn-post" style="padding:5px 12px;font-size:11px;background:#e2e8f0;color:#c53030;" onclick="deleteKbDocument(\'' + sxJs(d.id) + '\',\'' + sxJs(d.file_path) + '\')">🗑 Delete</button>'
         : '';
       return '<div class="bulletin-card">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">' +
         '<div style="flex:1;min-width:220px;">' +
-        '<div style="font-size:14px;font-weight:700;color:var(--navy);">' + icon + ' ' + (d.title || 'Untitled') + '</div>' +
-        '<div style="font-size:11px;color:var(--slate-light);margin-top:2px;">' + (d.category || 'Other') + ' · Uploaded by ' + (d.uploaded_by || 'Unknown') + ' · ' + (d.uploaded_at ? d.uploaded_at.substring(0,10) : '') + '</div>' +
-        (d.description ? '<div style="font-size:12px;color:var(--slate);margin-top:8px;">' + d.description + '</div>' : '') +
+        '<div style="font-size:14px;font-weight:700;color:var(--navy);">' + sxEsc(icon) + ' ' + (sxEsc(d.title || 'Untitled')) + '</div>' +
+        '<div style="font-size:11px;color:var(--slate-light);margin-top:2px;">' + (sxEsc(d.category || 'Other')) + ' · Uploaded by ' + (sxEsc(d.uploaded_by || 'Unknown')) + ' · ' + (d.uploaded_at ? sxEsc(d.uploaded_at.substring(0,10)) : '') + '</div>' +
+        (d.description ? '<div style="font-size:12px;color:var(--slate);margin-top:8px;">' + sxEsc(d.description) + '</div>' : '') +
         (tagsHtml ? '<div style="margin-top:8px;">' + tagsHtml + '</div>' : '') +
-        '<div style="font-size:11px;margin-top:8px;color:' + statusColor + ';font-weight:600;" id="kb-status-' + d.id + '">' + statusLabel + '</div>' +
+        '<div style="font-size:11px;margin-top:8px;color:' + sxEsc(statusColor) + ';font-weight:600;" id="kb-status-' + sxEsc(d.id) + '">' + sxEsc(statusLabel) + '</div>' +
         '</div>' +
         '<div style="display:flex;gap:6px;flex-shrink:0;">' +
-        '<button class="btn-post" style="padding:5px 12px;font-size:11px;" onclick="viewKbDocument(\'' + d.file_path + '\')">📄 View</button>' +
+        '<button class="btn-post" style="padding:5px 12px;font-size:11px;" onclick="viewKbDocument(\'' + sxJs(d.file_path) + '\')">📄 View</button>' +
         ocrBtn + deleteBtn +
         '</div>' +
         '</div></div>';
@@ -3073,7 +3081,7 @@
       renderBulletins(allBulletins);
     } catch(e) {
       document.getElementById('bulletin-list').innerHTML =
-        `<div class="bulletin-empty"><div class="bulletin-empty-icon">⚠️</div>Could not load bulletins: ${e.message}</div>`;
+        `<div class="bulletin-empty"><div class="bulletin-empty-icon">⚠️</div>Could not load bulletins: ${sxEsc(e.message)}</div>`;
     }
   }
 
@@ -3106,7 +3114,7 @@
       msg.innerHTML = `
         <div style="background:#f0f2f5;border:1px solid var(--border);border-radius:8px;padding:14px;text-align:left;max-width:500px;margin:10px auto 0;">
           <div style="font-size:11px;font-weight:700;color:var(--slate);margin-bottom:8px;font-family:'IBM Plex Mono',monospace;">Run this SQL in your Supabase Dashboard → SQL Editor:</div>
-          <pre style="font-size:10px;font-family:'IBM Plex Mono',monospace;white-space:pre-wrap;color:var(--navy);">${SQL_CREATE_TABLE}</pre>
+          <pre style="font-size:10px;font-family:'IBM Plex Mono',monospace;white-space:pre-wrap;color:var(--navy);">${sxEsc(SQL_CREATE_TABLE)}</pre>
           <button onclick="navigator.clipboard.writeText(SQL_CREATE_TABLE).then(()=>this.textContent='✓ Copied')"
             style="margin-top:8px;font-size:11px;padding:4px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:#fff;font-family:inherit;">
             📋 Copy SQL
@@ -3174,17 +3182,17 @@ create policy "Admins only can delete bulletins"
       const canPost   = isAdmin || currentUserRole === 'reviewer';
       const canDelete = isAdmin;
       const adminBtns = canPost ? `
-        <button class="btn-bulletin-action" onclick="openEditModal('${b.id}')">✏️ Edit</button>
-        ${canDelete ? `<button class="btn-bulletin-action danger" onclick="deleteBulletin('${b.id}', this)">🗑 Delete</button>` : ''}` : '';
+        <button class="btn-bulletin-action" onclick="openEditModal('${sxJs(b.id)}')">✏️ Edit</button>
+        ${canDelete ? `<button class="btn-bulletin-action danger" onclick="deleteBulletin('${sxJs(b.id)}', this)">🗑 Delete</button>` : ''}` : '';
 
       return `
-        <div class="bulletin-card" id="bulletin-${b.id}">
+        <div class="bulletin-card" id="bulletin-${sxEsc(b.id)}">
           <div class="bulletin-header">
-            <span class="bulletin-cat-pill ${catClass}">${catIcon} ${b.category}</span>
+            <span class="bulletin-cat-pill ${sxEsc(catClass)}">${sxEsc(catIcon)} ${sxEsc(b.category)}</span>
             <div class="bulletin-title-wrap">
               <div class="bulletin-title">${escHtml(b.title)}</div>
               <div class="bulletin-meta">
-                Effective: ${date} &nbsp;·&nbsp; Posted: ${posted}
+                Effective: ${sxEsc(date)} &nbsp;·&nbsp; Posted: ${sxEsc(posted)}
                 ${b.posted_by ? ' &nbsp;·&nbsp; By: ' + escHtml(b.posted_by) : ''}
               </div>
             </div>
@@ -3327,8 +3335,8 @@ create policy "Admins only can delete bulletins"
 
   // ── ESCAPE HTML ──
   function escHtml(str) {
-    if (!str) return '';
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    if (str == null || str === '') return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
 
   // ── SIDEBAR CONTENT ──
@@ -3491,11 +3499,11 @@ create policy "Admins only can delete bulletins"
       var color = catColors[b.category] || '#4a6580';
       var date = b.created_at ? new Date(b.created_at).toLocaleDateString('en-CA', { year:'numeric', month:'short', day:'numeric' }) : '';
       var id = b.id;
-      return '<div class="index-card" data-bid="' + b.id + '" style="border-left:3px solid ' + color + ';">' +
+      return '<div class="index-card" data-bid="' + sxEsc(b.id) + '" style="border-left:3px solid ' + sxEsc(color) + ';">' +
         '<div class="index-card-title">' + escHtml(b.title) + '</div>' +
-        '<div class="index-card-sub"><span style="color:' + color + ';font-weight:600;font-size:10px;">' + (b.category || '') + '</span>' +
+        '<div class="index-card-sub"><span style="color:' + sxEsc(color) + ';font-weight:600;font-size:10px;">' + (sxEsc(b.category || '')) + '</span>' +
         (b.ref_number ? ' &middot; Ref: ' + escHtml(b.ref_number) : '') +
-        (date ? ' &middot; ' + date : '') + '</div></div>';
+        (date ? ' &middot; ' + sxEsc(date) : '') + '</div></div>';
     }).join('');
     Array.from(container.querySelectorAll('[data-bid]')).forEach(function(el) {
       el.onclick = function() { goToBulletin(this.getAttribute('data-bid')); };
@@ -3577,14 +3585,14 @@ create policy "Admins only can delete bulletins"
       html += '<div style="padding:6px 14px;font-size:10px;font-weight:700;color:var(--slate);text-transform:uppercase;background:#f8f8f6;">ESI Sections</div>';
       staticResults.forEach(function(item) {
         var icon = item.tab === 'guide' ? '📋' : (item.tab === 'knowledge' ? '📚' : '🔬');
-        html += '<div class="search-result-item" data-tab="' + item.tab + '" data-id="' + item.id + '">' +
-          '<div class="search-result-title"><span class="search-result-tag">' + icon + '</span>' + escHtml(item.title) + '</div></div>';
+        html += '<div class="search-result-item" data-tab="' + sxEsc(item.tab) + '" data-id="' + sxEsc(item.id) + '">' +
+          '<div class="search-result-title"><span class="search-result-tag">' + sxEsc(icon) + '</span>' + escHtml(item.title) + '</div></div>';
       });
     }
     if (docResults.length) {
       html += '<div style="padding:6px 14px;font-size:10px;font-weight:700;color:var(--slate);text-transform:uppercase;background:#f8f8f6;border-top:1px solid #eee;">📁 Documents</div>';
       docResults.forEach(function(d) {
-        html += '<div class="search-result-item" data-docid="' + d.id + '">' +
+        html += '<div class="search-result-item" data-docid="' + sxEsc(d.id) + '">' +
           '<div class="search-result-title"><span class="search-result-tag">📁</span>' + escHtml(d.title || 'Untitled') + '</div>' +
           '<div class="search-result-sub">' + escHtml(d.category || '') + '</div></div>';
       });
@@ -3593,7 +3601,7 @@ create policy "Admins only can delete bulletins"
       html += '<div style="padding:6px 14px;font-size:10px;font-weight:700;color:var(--slate);text-transform:uppercase;background:#f8f8f6;border-top:1px solid #eee;">📣 Bulletins</div>';
       bulletinResults.forEach(function(b) {
         var bid = b.id;
-        html += '<div class="search-result-item" data-bid="' + bid + '">' +
+        html += '<div class="search-result-item" data-bid="' + sxEsc(bid) + '">' +
           '<div class="search-result-title"><span class="search-result-tag">📣</span>' + escHtml(b.title) + '</div>' +
           '<div class="search-result-sub">' + escHtml(b.category || '') + '</div></div>';
       });

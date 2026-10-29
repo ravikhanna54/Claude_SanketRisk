@@ -334,6 +334,16 @@
   <div id="dbg-content" style="padding:10px 14px;font-family:monospace;font-size:11px;line-height:1.6;overflow-y:auto;max-height:calc(60vh - 44px);white-space:pre-wrap;word-break:break-word;"></div>
 </div>
 <script>
+
+  // ── Display-safety helpers: escape data before it is written into the page as HTML ──
+  // _riMsg accepts {__html: '...'} for messages that deliberately contain markup
+  function sxEscV(v) { return (v && typeof v === 'object' && v.__html !== undefined) ? String(v.__html) : sxEsc(v); }
+  function sxEsc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  // for values placed inside a quoted JS string within an inline handler, e.g. onclick="f('...')"
+  function sxJs(v) { return String(v == null ? '' : v).replace(/[^\w .@\-\/:,]/g, function(c) { return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4); }); }
+  // for href / src values: only web, mail, phone, in-page or relative links; blocks javascript: and similar
+  function sxUrl(v) { var s = String(v == null ? '' : v).trim(); return (/^(https?:|mailto:|tel:|blob:|data:image\/(png|jpe?g|gif|webp);|#|\/(?!\/))/i.test(s) || /^[\w.\-\/]+(\?[^\s]*)?$/.test(s)) ? sxEsc(s) : ''; }
+
   function _toggleDebugPanel() {
     var p = document.getElementById('dbg-panel');
     if (p) p.style.display = (p.style.display === 'none' ? 'block' : 'none');
@@ -1754,9 +1764,9 @@
     var noteEl = document.getElementById('s-cost-region-note');
     if (noteEl) {
       if (matchedRegion) {
-        noteEl.innerHTML = '<div style="font-size:11px;color:var(--slate);margin:4px 0 8px;">Showing rates for <strong>' + matchedRegion + '</strong>, matched from City: "' + cityVal + '".</div>';
+        noteEl.innerHTML = '<div style="font-size:11px;color:var(--slate);margin:4px 0 8px;">Showing rates for <strong>' + sxEsc(matchedRegion) + '</strong>, matched from City: "' + sxEsc(cityVal) + '".</div>';
       } else if (cityVal) {
-        noteEl.innerHTML = '<div style="font-size:11px;color:#92400e;margin:4px 0 8px;">City "' + cityVal + '" isn\'t mapped to a specific cost region — showing all regions below (region shown in brackets). Pick the closest metro area\'s figure manually.</div>';
+        noteEl.innerHTML = '<div style="font-size:11px;color:#92400e;margin:4px 0 8px;">City "' + sxEsc(cityVal) + '" isn\'t mapped to a specific cost region — showing all regions below (region shown in brackets). Pick the closest metro area\'s figure manually.</div>';
       } else {
         noteEl.innerHTML = '<div style="font-size:11px;color:var(--slate);margin:4px 0 8px;">Enter a City above to filter this list to the matching region.</div>';
       }
@@ -1827,17 +1837,17 @@
       var low = Math.round(area * row.cost_low);
       var high = Math.round(area * row.cost_high);
       html = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
-        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost</td><td style="padding:4px 0;font-weight:700;">$' + low.toLocaleString('en-CA') + ' &#x2014; $' + high.toLocaleString('en-CA') + '</td></tr>' +
-        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied</td><td style="padding:4px 0;">$' + row.cost_low + ' &#x2013; $' + row.cost_high + ' / sq ft \u00D7 ' + area.toLocaleString('en-CA') + ' sq ft</td></tr>' +
-        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">' + row.source + ' (' + row.year + '), ' + row.region + '</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost</td><td style="padding:4px 0;font-weight:700;">$' + sxEsc(low.toLocaleString('en-CA')) + ' &#x2014; $' + sxEsc(high.toLocaleString('en-CA')) + '</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied</td><td style="padding:4px 0;">$' + sxEsc(row.cost_low) + ' &#x2013; $' + sxEsc(row.cost_high) + ' / sq ft \u00D7 ' + sxEsc(area.toLocaleString('en-CA')) + ' sq ft</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">' + sxEsc(row.source) + ' (' + sxEsc(row.year) + '), ' + sxEsc(row.region) + '</td></tr>' +
         '</table>';
       if (city && matchedRegion && row.region !== matchedRegion) {
-        html += _riMsg('You selected a <strong>' + row.region + '</strong> rate, but "' + city + '" matches the <strong>' + matchedRegion + '</strong> region. Double-check this is the rate you intended.', 'warn');
+        html += _riMsg({__html: 'You selected a <strong>' + sxEsc(row.region) + '</strong> rate, but "' + sxEsc(city) + '" matches the <strong>' + sxEsc(matchedRegion) + '</strong> region. Double-check this is the rate you intended.'}, 'warn');
       } else if (city && !matchedRegion) {
-        html += _riMsg('"' + city + '" isn\'t mapped to a specific Altus Group cost region — this is the <strong>' + row.region + '</strong> rate, chosen manually. Altus Group does not publish a distinct rural/remote figure, so treat this as a rough reference only, and consider a detailed CoreLogic or RSMeans valuation for an accurate estimate.', 'warn');
+        html += _riMsg({__html: '"' + sxEsc(city) + '" isn\'t mapped to a specific Altus Group cost region — this is the <strong>' + sxEsc(row.region) + '</strong> rate, chosen manually. Altus Group does not publish a distinct rural/remote figure, so treat this as a rough reference only, and consider a detailed CoreLogic or RSMeans valuation for an accurate estimate.'}, 'warn');
       }
       if (row.notes) {
-        html += '<div style="font-size:11px;color:var(--slate-light);margin-top:4px;">Note: ' + row.notes + '</div>';
+        html += '<div style="font-size:11px;color:var(--slate-light);margin-top:4px;">Note: ' + sxEsc(row.notes) + '</div>';
       }
     }
     html += '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Hard construction costs only — excludes land, soft costs, FF&E, and site development. For occupancies not listed here, or for a valuation suitable for insurance/replacement cost purposes, request a detailed CoreLogic or RSMeans valuation.</div>';
@@ -1873,7 +1883,7 @@
     var city = (data.city || '').trim();
     var matchedRegion = detectCostRegion(city);
 
-    var html = '<div style="font-size:12px;color:var(--slate);margin-bottom:8px;">' + row.category + ' \u2014 ' + row.building_type + (row.sub_type ? ' \u2014 ' + row.sub_type : '') + '</div>';
+    var html = '<div style="font-size:12px;color:var(--slate);margin-bottom:8px;">' + sxEsc(row.category) + ' \u2014 ' + sxEsc(row.building_type) + (row.sub_type ? ' \u2014 ' + sxEsc(row.sub_type) : '') + '</div>';
 
     if (!area || area <= 0) {
       html += _riMsg('No building area was declared — cannot calculate a cost range.', 'warn');
@@ -1881,17 +1891,17 @@
       var low = Math.round(area * row.cost_low);
       var high = Math.round(area * row.cost_high);
       html += '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
-        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost</td><td style="padding:4px 0;font-weight:700;font-size:15px;">$' + low.toLocaleString('en-CA') + ' &#x2014; $' + high.toLocaleString('en-CA') + '</td></tr>' +
-        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied</td><td style="padding:4px 0;">$' + row.cost_low + ' &#x2013; $' + row.cost_high + ' / sq ft \u00D7 ' + area.toLocaleString('en-CA') + ' sq ft</td></tr>' +
-        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">' + row.source + ' (' + row.year + '), ' + row.region + '</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost</td><td style="padding:4px 0;font-weight:700;font-size:15px;">$' + sxEsc(low.toLocaleString('en-CA')) + ' &#x2014; $' + sxEsc(high.toLocaleString('en-CA')) + '</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied</td><td style="padding:4px 0;">$' + sxEsc(row.cost_low) + ' &#x2013; $' + sxEsc(row.cost_high) + ' / sq ft \u00D7 ' + sxEsc(area.toLocaleString('en-CA')) + ' sq ft</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">' + sxEsc(row.source) + ' (' + sxEsc(row.year) + '), ' + sxEsc(row.region) + '</td></tr>' +
         '</table>';
       if (city && matchedRegion && row.region !== matchedRegion) {
-        html += _riMsg('You selected a <strong>' + row.region + '</strong> rate, but "' + city + '" matches the <strong>' + matchedRegion + '</strong> region. Double-check this is the rate you intended.', 'warn');
+        html += _riMsg({__html: 'You selected a <strong>' + sxEsc(row.region) + '</strong> rate, but "' + sxEsc(city) + '" matches the <strong>' + sxEsc(matchedRegion) + '</strong> region. Double-check this is the rate you intended.'}, 'warn');
       } else if (city && !matchedRegion) {
-        html += _riMsg('"' + city + '" isn\'t mapped to a specific Altus Group cost region — this is the <strong>' + row.region + '</strong> rate, chosen manually. Altus Group does not publish a distinct rural/remote figure, so treat this as a rough reference only, and consider a detailed CoreLogic or RSMeans valuation for an accurate estimate.', 'warn');
+        html += _riMsg({__html: '"' + sxEsc(city) + '" isn\'t mapped to a specific Altus Group cost region — this is the <strong>' + sxEsc(row.region) + '</strong> rate, chosen manually. Altus Group does not publish a distinct rural/remote figure, so treat this as a rough reference only, and consider a detailed CoreLogic or RSMeans valuation for an accurate estimate.'}, 'warn');
       }
       if (row.notes) {
-        html += '<div style="font-size:11px;color:var(--slate-light);margin-top:4px;">Note: ' + row.notes + '</div>';
+        html += '<div style="font-size:11px;color:var(--slate-light);margin-top:4px;">Note: ' + sxEsc(row.notes) + '</div>';
       }
     }
     html += '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Hard construction costs only — excludes land, soft costs, FF&E, and site development. For occupancies not covered by this benchmark, or for a valuation suitable for insurance/replacement cost purposes, request a detailed CoreLogic or RSMeans valuation.</div>';
@@ -2028,14 +2038,14 @@
     var low = cd.low || {};
     var high = cd.high || {};
     var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
-      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost (Mid)</td><td style="padding:4px 0;font-weight:700;">$' + (med.totalReplacementCost != null ? Math.round(med.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + '</td></tr>' +
-      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Range (Low &#x2013; High)</td><td style="padding:4px 0;">$' + (low.totalReplacementCost != null ? Math.round(low.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + ' &#x2014; $' + (high.totalReplacementCost != null ? Math.round(high.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + '</td></tr>' +
-      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied (Mid)</td><td style="padding:4px 0;">$' + (med.costPerSqft != null ? med.costPerSqft : '&#x2014;') + ' / sq ft</td></tr>';
+      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost (Mid)</td><td style="padding:4px 0;font-weight:700;">$' + (med.totalReplacementCost != null ? sxEsc(Math.round(med.totalReplacementCost).toLocaleString('en-CA')) : '&#x2014;') + '</td></tr>' +
+      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Range (Low &#x2013; High)</td><td style="padding:4px 0;">$' + (low.totalReplacementCost != null ? sxEsc(Math.round(low.totalReplacementCost).toLocaleString('en-CA')) : '&#x2014;') + ' &#x2014; $' + (high.totalReplacementCost != null ? sxEsc(Math.round(high.totalReplacementCost).toLocaleString('en-CA')) : '&#x2014;') + '</td></tr>' +
+      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied (Mid)</td><td style="padding:4px 0;">$' + (med.costPerSqft != null ? sxEsc(med.costPerSqft) : '&#x2014;') + ' / sq ft</td></tr>';
     html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction Type Sent</td><td style="padding:4px 0;">' +
-      (result.sentConstructionType || '<span style="color:#b45309;">none &#x2014; e2Value inferred it from occupancy/address alone</span>') + '</td></tr>';
+      (sxEsc(result.sentConstructionType) || '<span style="color:#b45309;">none &#x2014; e2Value inferred it from occupancy/address alone</span>') + '</td></tr>';
     if (result.constructionQuality || result.constructionType || result.exterior || result.roofCovering) {
       html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction (per e2Value response)</td><td style="padding:4px 0;">' +
-        [result.constructionQuality, result.constructionType, result.exterior, result.roofCovering].filter(Boolean).join(', ') + '</td></tr>';
+        sxEsc([result.constructionQuality, result.constructionType, result.exterior, result.roofCovering].filter(Boolean).join(', ')) + '</td></tr>';
     }
     html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">e2Value Pronto Commercial Lite</td></tr>' +
       '</table>';
@@ -2271,12 +2281,12 @@
     grid.innerHTML = uploadedPhotos.map(function(p, i) {
       if (!p) return '';  // skip null entries (removed photos)
       var preview = p.type === 'pdf'
-        ? '<div style="width:100%;height:100%;background:linear-gradient(135deg,#1a2e42,#0d1b2a);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><div style="font-size:24px">&#x1F4C4;</div><div style="font-size:8px;color:var(--gold);font-family:\'IBM Plex Mono\',monospace;font-weight:700">PDF</div><div style="font-size:7px;color:rgba(255,255,255,.5);text-align:center;padding:0 4px">' + p.file.name.substring(0,20) + '</div></div>'
-        : '<img src="' + p.dataUrl + '" alt="Photo ' + (i+1) + '">';
+        ? '<div style="width:100%;height:100%;background:linear-gradient(135deg,#1a2e42,#0d1b2a);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><div style="font-size:24px">&#x1F4C4;</div><div style="font-size:8px;color:var(--gold);font-family:\'IBM Plex Mono\',monospace;font-weight:700">PDF</div><div style="font-size:7px;color:rgba(255,255,255,.5);text-align:center;padding:0 4px">' + sxEsc(p.file.name.substring(0,20)) + '</div></div>'
+        : '<img src="' + sxUrl(p.dataUrl) + '" alt="Photo ' + (i+1) + '">';
       // Label — show PDF page info if extracted from PDF
       var label;
       if (p.fromPdf && p.pdfPage) {
-        label = 'Page ' + p.pdfPage + (p.pdfTotal ? ' / ' + p.pdfTotal : '') + ' <span style="background:#b8860b;color:#fff;font-size:7px;padding:1px 4px;border-radius:3px;font-weight:700;vertical-align:middle;">PDF</span>';
+        label = 'Page ' + sxEsc(p.pdfPage) + (p.pdfTotal ? ' / ' + sxEsc(p.pdfTotal) : '') + ' <span style="background:#b8860b;color:#fff;font-size:7px;padding:1px 4px;border-radius:3px;font-weight:700;vertical-align:middle;">PDF</span>';
       } else if (p.type === 'pdf') {
         label = 'PDF Doc ' + (i+1);
       } else {
@@ -2297,7 +2307,7 @@
         '<input type="checkbox" class="photo-chk" data-idx="' + i + '" checked style="width:13px;height:13px;cursor:pointer;" onchange="updateSelectedCount()"></label>' +
         coverBtnHtml +
         '</div><div class="photo-thumb-label">' + label + '</div>' +
-        '<textarea class="photo-thumb-desc" data-idx="' + i + '" placeholder="' + placeholder + '" rows="2" onchange="savePhotoDesc(' + i + ',this.value)" oninput="savePhotoDesc(' + i + ',this.value)">' + desc + '</textarea></div>';
+        '<textarea class="photo-thumb-desc" data-idx="' + i + '" placeholder="' + sxEsc(placeholder) + '" rows="2" onchange="savePhotoDesc(' + i + ',this.value)" oninput="savePhotoDesc(' + i + ',this.value)">' + sxEsc(desc) + '</textarea></div>';
     }).join('');
   }
 
@@ -2374,8 +2384,8 @@
       return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;font-size:13px;">' +
         '<span style="font-size:20px;">&#x1F4C4;</span>' +
         '<div style="flex:1;">' +
-          '<div style="font-weight:600;color:var(--navy);">' + d.name + '</div>' +
-          '<div style="font-size:11px;color:var(--slate);">' + sizeMB + ' MB &mdash; will be passed to AI as context</div>' +
+          '<div style="font-weight:600;color:var(--navy);">' + sxEsc(d.name) + '</div>' +
+          '<div style="font-size:11px;color:var(--slate);">' + sxEsc(sizeMB) + ' MB &mdash; will be passed to AI as context</div>' +
         '</div>' +
         '<button onclick="removeDoc(' + i + ')" style="background:none;border:none;color:var(--slate);cursor:pointer;font-size:16px;padding:0 4px;" title="Remove">&#x2715;</button>' +
       '</div>';
@@ -2490,12 +2500,12 @@
         profileBody.innerHTML = '<div style="font-size:13px;line-height:1.75;color:#2d3748;">' +
           profileText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') +
           '</div><div style="font-size:10px;color:#aaa;margin-top:8px;font-style:italic;">'
-          + 'Source: Public web search — ' + new Date().toLocaleDateString('en-CA') + '</div>';
+          + 'Source: Public web search — ' + sxEsc(new Date().toLocaleDateString('en-CA')) + '</div>';
         // Save into lastResult so it persists to DB and can be restored on recall
         if (lastResult) lastResult.insuredProfile = profileText;
       } else {
         profileBody.innerHTML = '<div style="font-size:12px;color:#888;font-style:italic;">No public information found for ' +
-          insuredName.replace(/&/g,'&amp;') + '.</div>';
+          sxEsc(insuredName.replace(/&/g,'&amp;')) + '.</div>';
         if (lastResult) lastResult.insuredProfile = '';
       }
     } catch(e) {
@@ -2584,12 +2594,12 @@
               _dbg('[Footprint] Using Google footprint:', Math.round(areaSqFtG), 'sq ft, source:', footprintSource, 'at', lat, lon);
               footprintHtml =
                 '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
-                _riRow('Mapped Footprint Area', '<strong>' + Math.round(areaSqFtG).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(areaM2).toLocaleString('en-CA') + ' m\u00B2)') +
+                _riRow('Mapped Footprint Area', '<strong>' + sxEsc(Math.round(areaSqFtG).toLocaleString('en-CA')) + ' sq ft</strong> (' + sxEsc(Math.round(areaM2).toLocaleString('en-CA')) + ' m\u00B2)') +
                 (declaredArea ? _riRow('Declared Building Area', declaredArea + (isNaN(parseFloat(declaredArea)) ? '' : ' sq ft')) : '') +
                 _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
                 _riRow('Data Source', footprintSource) +
                 '</table>' +
-                _compareFootprintArea(declaredArea, areaSqFtG);
+                sxEsc(_compareFootprintArea(declaredArea, areaSqFtG));
             } else {
               _dbg('[Footprint] Google geocode ok but no building outline — lat/lon set, will try OSM/Overpass next.');
             }
@@ -2631,12 +2641,12 @@
               _dbg('[Footprint] Using', provinceMatch, 'dataset footprint:', Math.round(bcAreaSqFt), 'sq ft —', bcJson.match_type);
               footprintHtml =
                 '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
-                _riRow('Mapped Footprint Area', '<strong>' + Math.round(bcAreaSqFt).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(bcJson.footprint_area_sq_m).toLocaleString('en-CA') + ' m\u00B2)') +
+                _riRow('Mapped Footprint Area', '<strong>' + sxEsc(Math.round(bcAreaSqFt).toLocaleString('en-CA')) + ' sq ft</strong> (' + sxEsc(Math.round(bcJson.footprint_area_sq_m).toLocaleString('en-CA')) + ' m\u00B2)') +
                 (declaredArea ? _riRow('Declared Building Area', declaredArea + (isNaN(parseFloat(declaredArea)) ? '' : ' sq ft')) : '') +
                 _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
                 _riRow('Data Source', footprintSource) +
                 '</table>' +
-                _compareFootprintArea(declaredArea, bcAreaSqFt);
+                sxEsc(_compareFootprintArea(declaredArea, bcAreaSqFt));
             } else {
               _dbg('[Footprint] No dataset match for', provinceMatch, '— falling through to Google outline / OSM.');
             }
@@ -2702,14 +2712,14 @@
                 footprintSource = 'OSM';
                 footprintHtml =
                   '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
-                  _riRow('Mapped Footprint Area', '<strong>' + Math.round(areaSqFt).toLocaleString('en-CA') + ' sq ft</strong> (' + Math.round(bestArea).toLocaleString('en-CA') + ' m\u00B2)') +
+                  _riRow('Mapped Footprint Area', '<strong>' + sxEsc(Math.round(areaSqFt).toLocaleString('en-CA')) + ' sq ft</strong> (' + sxEsc(Math.round(bestArea).toLocaleString('en-CA')) + ' m\u00B2)') +
                   (declaredArea ? _riRow('Declared Building Area', declaredArea + (isNaN(parseFloat(declaredArea)) ? '' : ' sq ft')) : '') +
                   (buildingType ? _riRow('Building Type (OSM tag)', buildingType) : '') +
                   (levels ? _riRow('Levels (OSM tag)', levels) : '') +
                   _riRow('Geocoded Location', lat.toFixed(5) + ', ' + lon.toFixed(5)) +
                   _riRow('Search Radius Used', radius + 'm') +
                   '</table>' +
-                  _compareFootprintArea(declaredArea, areaSqFt) +
+                  sxEsc(_compareFootprintArea(declaredArea, areaSqFt)) +
                   '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Google building outline not available for this address (Preview coverage limited for rural/industrial CA properties) \u2014 footprint from OpenStreetMap community data.</div>';
               }
             }
@@ -2739,8 +2749,8 @@
       }
 
       var finalHtml = footprintHtml +
-        '<div style="font-size:11px;margin-top:10px;"><a href="https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lon + '&zoom=18" target="_blank" style="color:#0891b2;">View location on OpenStreetMap &#x2197;</a> &nbsp;|&nbsp; <a href="https://www.google.com/maps/@' + lat + ',' + lon + ',19z" target="_blank" style="color:#0891b2;">View on Google Maps &#x2197;</a></div>' +
-        '<div style="font-size:10px;color:#94a3b8;margin-top:6px;">Footprint source: ' + (footprintSource || 'Not available') + '.</div>';
+        '<div style="font-size:11px;margin-top:10px;"><a href="https://www.openstreetmap.org/?mlat=' + sxEsc(lat) + '&mlon=' + sxEsc(lon) + '&zoom=18" target="_blank" style="color:#0891b2;">View location on OpenStreetMap &#x2197;</a> &nbsp;|&nbsp; <a href="https://www.google.com/maps/@' + sxEsc(lat) + ',' + sxEsc(lon) + ',19z" target="_blank" style="color:#0891b2;">View on Google Maps &#x2197;</a></div>' +
+        '<div style="font-size:10px;color:#94a3b8;margin-top:6px;">Footprint source: ' + (sxEsc(footprintSource || 'Not available')) + '.</div>';
 
       el.innerHTML = finalHtml;
 
@@ -2764,7 +2774,7 @@
       manualNoteEl.className = 'res-hydrant-note';
       manualNoteEl.innerHTML =
         '<strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">FIRE HYDRANT PROXIMITY</strong>' +
-        '<span style="font-size:12px;color:var(--navy);">' + data.hydrantInfo.trim() + ' (submitter-provided)</span>';
+        '<span style="font-size:12px;color:var(--navy);">' + sxEsc(data.hydrantInfo.trim()) + ' (submitter-provided)</span>';
       protEl.appendChild(manualNoteEl);
       _dbg('[Hydrant] Using submitter-provided hydrant info — skipping automated lookup.');
       return;
@@ -2845,7 +2855,7 @@
     noteEl.className = 'res-hydrant-note';
     noteEl.innerHTML =
       '<strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">FIRE HYDRANT PROXIMITY</strong>' +
-      '<span style="font-size:12px;color:var(--navy);">' + hydrantText + '</span>';
+      '<span style="font-size:12px;color:var(--navy);">' + sxEsc(hydrantText) + '</span>';
     protEl.appendChild(noteEl);
   }
 
@@ -2999,7 +3009,7 @@
       d = { location: seismicJson.resolved_address || usaAddr, province: province };
       designDataHtml =
         _riRow('Resolved Address (USGS)', seismicJson.resolved_address || usaAddr) +
-        _riRow('Seismic Hazard Tier', tier ? '<span style="font-weight:700;">' + tier + '</span> (SDC ' + (seismicJson.seismic_design_category || '\u2014') + ', \u00d7' + tierMult + ' demerit weight)' : 'Seismic Design Category not available') +
+        _riRow('Seismic Hazard Tier', tier ? '<span style="font-weight:700;">' + sxEsc(tier) + '</span> (SDC ' + (sxEsc(seismicJson.seismic_design_category || '\u2014')) + ', \u00d7' + sxEsc(tierMult) + ' demerit weight)' : 'Seismic Design Category not available') +
         _riRow('SDS / SD1 (g)', (seismicJson.sds !== undefined && seismicJson.sds !== null ? seismicJson.sds : '\u2014') + ' / ' + (seismicJson.sd1 !== undefined && seismicJson.sd1 !== null ? seismicJson.sd1 : '\u2014')) +
         _riRow('PGA (g)', seismicJson.pga !== undefined && seismicJson.pga !== null ? seismicJson.pga : (seismicJson.pgam !== undefined && seismicJson.pgam !== null ? seismicJson.pgam + ' (site-modified)' : '\u2014')) +
         (floodJson && floodJson.status === 'ok' ? _riRow('FEMA Flood Zone', (floodJson.flood_zone || 'Not available') + (floodJson.in_special_flood_hazard_area ? ' (Special Flood Hazard Area)' : '')) : '') +
@@ -3093,7 +3103,7 @@
 
       designDataHtml =
         _riRow('NBC Reference Location', (d.location || city) + ', ' + (d.province || province)) +
-        _riRow('Seismic Hazard Tier', tier ? '<span style="font-weight:700;">' + tier + '</span> (Smax ' + (isNaN(smax) ? '\u2014' : smax.toFixed(2)) + ', \u00d7' + tierMult + ' demerit weight)' : 'Smax not available') +
+        _riRow('Seismic Hazard Tier', tier ? '<span style="font-weight:700;">' + sxEsc(tier) + '</span> (Smax ' + (isNaN(smax) ? '\u2014' : sxEsc(smax.toFixed(2))) + ', \u00d7' + sxEsc(tierMult) + ' demerit weight)' : 'Smax not available') +
         _riRow('Wind Pressure 1/50 (kPa)', d.wind_q_1_50_kpa !== undefined && d.wind_q_1_50_kpa !== null ? d.wind_q_1_50_kpa : '\u2014') +
         _riRow('Snow Load Ss 1/50 (kPa)', d.snow_ss_1_50_kpa !== undefined && d.snow_ss_1_50_kpa !== null ? d.snow_ss_1_50_kpa : '\u2014') +
         _riRow('1-Day Rain 1/50 (mm)', d.rain_1day_1_50_mm !== undefined && d.rain_1day_1_50_mm !== null ? d.rain_1day_1_50_mm : '\u2014');
@@ -3179,16 +3189,16 @@
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">' +
         '<div style="background:#f8fafc;border-radius:8px;padding:14px;text-align:center;">' +
         '<div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Nat-Cat Score</div>' +
-        '<div style="font-size:32px;font-weight:700;color:' + grading.color + ';">' + score + '</div>' +
+        '<div style="font-size:32px;font-weight:700;color:' + sxEsc(grading.color) + ';">' + sxEsc(score) + '</div>' +
         '<div style="font-size:11px;color:#64748b;">out of 100</div>' +
         '</div>' +
         '<div style="background:#f8fafc;border-radius:8px;padding:14px;text-align:center;">' +
         '<div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Grade</div>' +
-        '<div style="font-size:32px;font-weight:700;color:' + grading.color + ';">' + grading.grade + '</div>' +
-        '<div style="font-size:11px;color:#64748b;">' + grading.label + '</div>' +
+        '<div style="font-size:32px;font-weight:700;color:' + sxEsc(grading.color) + ';">' + sxEsc(grading.grade) + '</div>' +
+        '<div style="font-size:11px;color:#64748b;">' + sxEsc(grading.label) + '</div>' +
         '</div>' +
         '</div>' +
-        '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:14px;">' + grading.desc + '</div>' +
+        '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:14px;">' + sxEsc(grading.desc) + '</div>' +
         '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
         designDataHtml +
         '</table>' +
@@ -3198,7 +3208,7 @@
         _riRow('Earthquake (tier-weighted)', eqDem + ' &mdash; raw ' + eqRaw + ' \u00d7 ' + tierMult) +
         _riRow('Wind / Storm', windDem - (obs.lowest_level_use ? 0 : 0)) +
         _riRow('Flood / Water (incl. supplemental)', floodDem) +
-        _riRow('<strong>Total Demerits</strong>', '<strong>' + totalDem + '</strong>') +
+        _riRow('<strong>Total Demerits</strong>', '<strong>' + sxEsc(totalDem) + '</strong>') +
         '</table>' +
         '</div>' +
         (supplementalNotes.length ? '<div style="margin-top:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;"><div style="font-size:11px;font-weight:700;color:#9a3412;margin-bottom:4px;">Additional Site Hazards Identified</div><div style="font-size:12px;color:#7c2d12;line-height:1.6;">' + supplementalNotes.join('<br>') + '</div></div>' : '') +
@@ -3224,7 +3234,7 @@
 
     try {
       // Show live status permanently in the section (visible regardless of toast timing)
-      el.innerHTML = '<div style="font-size:11px;color:#0891b2;padding:6px 0;">&#x23F3; Querying Corporations Canada for: <strong>' + insured + '</strong>&hellip;</div>';
+      el.innerHTML = '<div style="font-size:11px;color:#0891b2;padding:6px 0;">&#x23F3; Querying Corporations Canada for: <strong>' + sxEsc(insured) + '</strong>&hellip;</div>';
 
       var resp = await fetch('/.netlify/functions/registry-intel', {
         method:  'POST',
@@ -3235,7 +3245,7 @@
       var rawText = await resp.text();
 
       // Show raw response for permanent diagnosis — stays visible in the section
-      el.innerHTML += '<div style="font-size:10px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:4px 8px;margin-top:4px;word-break:break-all;">HTTP ' + resp.status + ' | ' + rawText.substring(0, 200) + '</div>';
+      el.innerHTML += '<div style="font-size:10px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:4px 8px;margin-top:4px;word-break:break-all;">HTTP ' + sxEsc(resp.status) + ' | ' + sxEsc(rawText.substring(0, 200)) + '</div>';
 
       if (!resp.ok) {
         el.innerHTML = _riMsg(
@@ -3261,7 +3271,7 @@
 
       if (!results.length) {
         el.innerHTML = _riMsg(
-          'No registration found for <strong>"' + insured + '"</strong> in Canadian registries. ' +
+          'No registration found for <strong>"' + sxEsc(insured) + '"</strong> in Canadian registries. ' +
           'The business may be registered under a different name, or may be a sole proprietorship not required to register federally.',
           'warn'
         ) + _riManualLink('corp', insured);
@@ -3278,9 +3288,9 @@
 
       var html =
         '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
-        _riRow('Registered Name',    '<strong>' + (co.name||'\u2014') + '</strong>') +
+        _riRow('Registered Name',    '<strong>' + (sxEsc(co.name||'\u2014')) + '</strong>') +
         _riRow('Company Number',     co.company_number||'\u2014') +
-        _riRow('Status',             '<span style="color:' + statusColor + ';font-weight:700;">' + (co.current_status||'\u2014') + '</span>') +
+        _riRow('Status',             '<span style="color:' + sxEsc(statusColor) + ';font-weight:700;">' + (sxEsc(co.current_status||'\u2014')) + '</span>') +
         _riRow('Jurisdiction',       jurDisplay) +
         _riRow('Incorporation Date', co.incorporation_date||'\u2014') +
         _riRow('Company Type',       co.company_type||'\u2014') +
@@ -3368,7 +3378,7 @@
         _riRow('Property Class',       prop.propertyClass || prop.actualUseDescription || sug.propertyClass || '\u2014') +
         _riRow('Land Value',           prop.landValue         ? '$' + Number(prop.landValue).toLocaleString('en-CA')         : '\u2014') +
         _riRow('Improvement Value',    prop.improvementValue  ? '$' + Number(prop.improvementValue).toLocaleString('en-CA')  : '\u2014') +
-        _riRow('Total Assessed Value', prop.totalAssessedValue ? '<strong>$' + Number(prop.totalAssessedValue).toLocaleString('en-CA') + '</strong>' : '\u2014') +
+        _riRow('Total Assessed Value', prop.totalAssessedValue ? '<strong>$' + sxEsc(Number(prop.totalAssessedValue).toLocaleString('en-CA')) + '</strong>' : '\u2014') +
         _riRow('Assessment Year',      prop.assessmentYear || new Date().getFullYear()) +
         _riRow('Lot Size',             prop.landSize || prop.lotArea ? (prop.landSize || prop.lotArea) + ' m\u00B2' : '\u2014') +
         _riRow('Legal Description',    prop.legalDescription || '\u2014') +
@@ -3391,9 +3401,9 @@
     wrap.style.cssText = 'margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid #e2e8f0;';
     wrap.innerHTML =
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">' +
-      '<span style="font-size:15px;">' + icon + '</span>' +
+      '<span style="font-size:15px;">' + sxEsc(icon) + '</span>' +
       '<strong style="font-size:13px;color:#1a2e42;">' + title + '</strong>' +
-      '<span style="font-size:10px;color:#94a3b8;margin-left:auto;font-family:\'IBM Plex Mono\',monospace;">' + source + ' &mdash; ' + new Date().toLocaleDateString('en-CA') + '</span>' +
+      '<span style="font-size:10px;color:#94a3b8;margin-left:auto;font-family:\'IBM Plex Mono\',monospace;">' + sxEsc(source) + ' &mdash; ' + sxEsc(new Date().toLocaleDateString('en-CA')) + '</span>' +
       '</div>' +
       '<div class="ri-content" style="font-size:12px;color:#718096;font-style:italic;">&#x23F3; Querying registry&hellip;</div>';
     body.appendChild(wrap);
@@ -3403,7 +3413,7 @@
   function _riRow(label, value) {
     return '<tr style="border-bottom:1px solid #f1f5f9;">' +
       '<td style="padding:6px 8px;color:#64748b;width:40%;font-weight:500;">' + label + '</td>' +
-      '<td style="padding:6px 8px;color:#1e293b;">' + value + '</td>' +
+      '<td style="padding:6px 8px;color:#1e293b;">' + sxEsc(value) + '</td>' +
       '</tr>';
   }
 
@@ -3411,8 +3421,8 @@
     var colors = { warn: '#92400e', error: '#991b1b', info: '#1e40af' };
     var bgs    = { warn: '#fffbeb', error: '#fef2f2', info: '#eff6ff' };
     var icons  = { warn: '&#x26A0;', error: '&#x274C;', info: '&#x2139;' };
-    return '<div style="font-size:12px;padding:10px 12px;border-radius:6px;background:' + (bgs[type]||bgs.info) + ';color:' + (colors[type]||colors.info) + ';">' +
-      (icons[type]||'') + ' ' + msg + '</div>';
+    return '<div style="font-size:12px;padding:10px 12px;border-radius:6px;background:' + (sxEsc(bgs[type]||bgs.info)) + ';color:' + (sxEsc(colors[type]||colors.info)) + ';">' +
+      (sxEsc(icons[type]||'')) + ' ' + sxEscV(msg) + '</div>';
   }
 
   // ── DYNAMIC PROMPT BUILDER — form-driven AI instructions ───────────────────
@@ -4030,7 +4040,7 @@
         loadBanner.style.cssText = 'background:linear-gradient(135deg,#065f73,#0891b2);color:#fff;padding:10px 24px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap;' + (isReportOnly ? '' : 'position:sticky;top:58px;z-index:101;');
         loadBanner.innerHTML =
           '<span>&#x1F4CB; Saved SCAN ONE Report' +
-          (sub.inspection_id ? ' &mdash; ' + sub.inspection_id : '') +
+          (sub.inspection_id ? ' &mdash; ' + sxEsc(sub.inspection_id) : '') +
           (savedResult ? ' &mdash; Report loaded.' : ' &mdash; No saved report yet &mdash; click Analyse with AI.') +
           '</span>' +
           (isReportOnly ? '' :
@@ -4048,7 +4058,7 @@
     } catch(e) {
       console.warn('view_report load error:', e.message);
       loadBanner.style.background = 'linear-gradient(135deg,#c53030,#e53e3e)';
-      loadBanner.innerHTML = '⚠️ Could not load saved report: ' + e.message +
+      loadBanner.innerHTML = '⚠️ Could not load saved report: ' + sxEsc(e.message) +
         ' <a href="/dashboard.html" style="color:rgba(255,255,255,.8);margin-left:auto;font-size:12px;text-decoration:none;">&#x2190; Back to Dashboard</a>';
     }
   })();
@@ -4775,7 +4785,7 @@
         showToast('\u26A0 Incomplete response: ' + _emptyFields.join(', ') + ' — try Re-analyse');
         var warnEl = document.createElement('div');
         warnEl.style.cssText = 'background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:12px;color:#92400e;';
-        warnEl.innerHTML = '<strong>&#x26A0; Incomplete AI Response</strong> — The following fields appear incomplete: <strong>' + _emptyFields.join(', ') + '</strong>. ' +
+        warnEl.innerHTML = '<strong>&#x26A0; Incomplete AI Response</strong> — The following fields appear incomplete: <strong>' + sxEsc(_emptyFields.join(', ')) + '</strong>. ' +
           'This usually means the AI response was cut off. Please click <strong>Analyse with AI</strong> again to get a complete report. ' +
           '<button onclick="runAnalysis()" style="margin-left:8px;background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:700;">Re-analyse Now</button>';
         var resultsEl = document.getElementById('results-wrap');
@@ -4822,7 +4832,7 @@
         '<div style="font-size:20px;flex-shrink:0">\u26A0\uFE0F</div>' +
         '<div>' +
           '<div style="font-weight:700;color:#c53030;font-size:13px;margin-bottom:4px">Analysis failed \u2014 your inputs have been preserved</div>' +
-          '<div style="font-size:12px;color:#744210;line-height:1.6">' + e.message + '</div>' +
+          '<div style="font-size:12px;color:#744210;line-height:1.6">' + sxEsc(e.message) + '</div>' +
           '<div style="margin-top:8px">' +
             '<button onclick="dismissErr()" ' +
               'style="font-size:11px;padding:4px 12px;background:#fff;border:1px solid #fc8181;border-radius:6px;cursor:pointer;color:#c53030">Dismiss</button>' +
@@ -4917,8 +4927,8 @@
         ['Company / Broker', data.submitterCompany || null],
       ].filter(function(f){ return f[1]; });
       strip.innerHTML = stripFields.map(function(f){
-        return '<div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;opacity:.7;margin-bottom:2px;">' + f[0] + '</div>' +
-               '<div style="font-weight:600;font-size:13px;">' + f[1] + '</div></div>';
+        return '<div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;opacity:.7;margin-bottom:2px;">' + sxEsc(f[0]) + '</div>' +
+               '<div style="font-weight:600;font-size:13px;">' + sxEsc(f[1]) + '</div></div>';
       }).join('');
       strip.style.display = 'grid';
     }
@@ -4958,8 +4968,8 @@
       html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">';
       rows.forEach(function(row) {
         html += '<div style="padding:8px 0;border-bottom:1px solid #e2e8f0;">' +
-          '<div style="font-size:11px;font-weight:600;color:#4a6580;text-transform:uppercase;letter-spacing:.05em;">' + row[0] + '</div>' +
-          '<div style="font-size:13px;font-weight:600;color:#0d1b2a;margin-top:2px;">' + row[1] + '</div>' +
+          '<div style="font-size:11px;font-weight:600;color:#4a6580;text-transform:uppercase;letter-spacing:.05em;">' + sxEsc(row[0]) + '</div>' +
+          '<div style="font-size:13px;font-weight:600;color:#0d1b2a;margin-top:2px;">' + sxEsc(row[1]) + '</div>' +
           '</div>';
       });
       html += '</div>';
@@ -5040,7 +5050,7 @@
     function boldUnitHeadings(html) {
       if (!html) return html;
       return html.replace(/\b(UNIT\s+[^:<]{1,80}):/gi, function(match, heading) {
-        return '<br><strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">' + heading + ':</strong>';
+        return '<br><strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">' + sxEsc(heading) + ':</strong>';
       });
     }
 
@@ -5117,7 +5127,7 @@
           // uppercasing (uppercasing "&amp;" directly would corrupt it into
           // the invalid entity "&AMP;"), then re-escape for safe HTML output.
           var headingDisplay = heading.replace(/&amp;/gi, '&').toUpperCase().replace(/&/g, '&amp;');
-          return '<br><strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">' + headingDisplay + colon + '</strong>';
+          return '<br><strong style="display:block;margin-top:10px;margin-bottom:3px;color:#1a2e42;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #e2e8f0;padding-bottom:2px;">' + sxEsc(headingDisplay) + sxEsc(colon) + '</strong>';
         });
       });
       return html;
@@ -5160,17 +5170,17 @@
                    : (rec.priority||'').toLowerCase() === 'medium' ? 'rec-med' : 'rec-low';
         var seqNo = yyyymm + '-' + String(idx + 1).padStart(3, '0');
         var code  = rec.code  ? ' [' + rec.code + ']' : '';
-        var title = rec.title ? '<strong>' + rec.title + '</strong><br>' : '';
+        var title = rec.title ? '<strong>' + sxEsc(rec.title) + '</strong><br>' : '';
         var body  = stripPhotoRefs(rec.text  || rec.description || '');
         return '<div class="rec-item">' +
           '<div style="min-width:90px;display:flex;flex-direction:column;gap:4px;align-items:flex-start;">' +
-            '<span class="rec-priority ' + cls + '">' + (rec.priority||'') + '</span>' +
-            '<span style="font-size:10px;font-family:monospace;color:#718096;white-space:nowrap;">' + seqNo + '</span>' +
+            '<span class="rec-priority ' + sxEsc(cls) + '">' + (sxEsc(rec.priority||'')) + '</span>' +
+            '<span style="font-size:10px;font-family:monospace;color:#718096;white-space:nowrap;">' + sxEsc(seqNo) + '</span>' +
           '</div>' +
           '<div style="flex:1;">' +
-            '<div style="font-size:10px;color:#a0aec0;font-family:monospace;margin-bottom:2px;">' + seqNo + code + '</div>' +
+            '<div style="font-size:10px;color:#a0aec0;font-family:monospace;margin-bottom:2px;">' + sxEsc(seqNo) + sxEsc(code) + '</div>' +
             title +
-            '<span>' + body + '</span>' +
+            '<span>' + sxEsc(body) + '</span>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -5334,8 +5344,8 @@
         hdr.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 14px;background:#f0f4f8;border:1px solid var(--border);border-radius:8px 8px 0 0;';
         var sizeMB = doc.file && doc.file.size ? (doc.file.size / 1024 / 1024).toFixed(1) + ' MB' : '';
         hdr.innerHTML = '<span style="font-size:20px;">&#x1F4C4;</span>' +
-          '<div><div style="font-size:13px;font-weight:700;color:var(--navy);">' + (doc.name || 'Document') + '</div>' +
-          (sizeMB ? '<div style="font-size:11px;color:var(--slate);">' + sizeMB + ' — passed to AI as context</div>' : '') + '</div>';
+          '<div><div style="font-size:13px;font-weight:700;color:var(--navy);">' + (sxEsc(doc.name || 'Document')) + '</div>' +
+          (sizeMB ? '<div style="font-size:11px;color:var(--slate);">' + sxEsc(sizeMB) + ' — passed to AI as context</div>' : '') + '</div>';
         docList.appendChild(hdr);
         // PDF page renderer
         if (doc.dataUrl && doc.dataUrl.length > 50) {
@@ -5422,8 +5432,8 @@
     var displayAddr = window._siteLocationStr || locationStr;
     var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(displayAddr);
     mapAddress.innerHTML =
-      '<span>\uD83D\uDCCD ' + displayAddr + '</span>' +
-      '<a href="' + mapsUrl + '" target="_blank" style="font-size:11px;color:#0891b2;text-decoration:none;white-space:nowrap;">&#x2197; Open in Google Maps</a>';
+      '<span>\uD83D\uDCCD ' + sxEsc(displayAddr) + '</span>' +
+      '<a href="' + sxUrl(mapsUrl) + '" target="_blank" style="font-size:11px;color:#0891b2;text-decoration:none;white-space:nowrap;">&#x2197; Open in Google Maps</a>';
 
     mapSection.style.display = 'block';
   }
@@ -5474,22 +5484,22 @@
         result.hydrants.forEach(function(h) {
           L.circleMarker([h.lat, h.lon], { radius: 7, color: '#c53030', fillColor: '#e53e3e', fillOpacity: 0.9, weight: 2 })
             .addTo(_hydrantMap)
-            .bindPopup('\uD83D\uDEBF Hydrant \u2014 ' + h.distance_m + 'm' + (h.diameter ? '<br>Diameter: ' + h.diameter : '') + (h.pressure ? '<br>Pressure: ' + h.pressure : ''));
+            .bindPopup('\uD83D\uDEBF Hydrant \u2014 ' + h.distance_m + 'm' + (h.diameter ? '<br>Diameter: ' + sxEsc(h.diameter) : '') + (h.pressure ? '<br>Pressure: ' + sxEsc(h.pressure) : ''));
         });
         setTimeout(function() { _hydrantMap.invalidateSize(); }, 100);
       }
 
       // ── List ──
       if (result.hydrants.length) {
-        listDiv.innerHTML = '<strong>' + result.hydrant_count + ' hydrant' + (result.hydrant_count !== 1 ? 's' : '') +
-          ' found within ' + result.search_radius_m + 'm — nearest ' + result.nearest_distance_m + 'm</strong>' +
+        listDiv.innerHTML = '<strong>' + sxEsc(result.hydrant_count) + ' hydrant' + (result.hydrant_count !== 1 ? 's' : '') +
+          ' found within ' + sxEsc(result.search_radius_m) + 'm — nearest ' + sxEsc(result.nearest_distance_m) + 'm</strong>' +
           '<ul style="margin:6px 0 0 18px;padding:0;">' +
           result.hydrants.slice(0, 8).map(function(h) {
-            return '<li>' + h.distance_m + 'm' + (h.diameter ? ' \u2014 ' + h.diameter + ' diameter' : '') + (h.type ? ' \u2014 ' + h.type : '') + '</li>';
+            return '<li>' + sxEsc(h.distance_m) + 'm' + (h.diameter ? ' \u2014 ' + sxEsc(h.diameter) + ' diameter' : '') + (h.type ? ' \u2014 ' + sxEsc(h.type) : '') + '</li>';
           }).join('') +
           '</ul>';
       } else {
-        listDiv.innerHTML = '<em>No hydrants found in OpenStreetMap data within ' + result.search_radius_m + 'm.</em>';
+        listDiv.innerHTML = '<em>No hydrants found in OpenStreetMap data within ' + sxEsc(result.search_radius_m) + 'm.</em>';
       }
       noteDiv.textContent = '\u26A0 ' + result.note;
 
@@ -6085,7 +6095,7 @@
         // File header
         var dHdr = document.createElement('div');
         dHdr.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0f4f8;border:1px solid var(--border);border-radius:8px 8px 0 0;';
-        dHdr.innerHTML = '<span style="font-size:18px;">&#x1F4C4;</span><span style="font-weight:600;color:var(--navy);font-size:12px;">' + fname + '</span>';
+        dHdr.innerHTML = '<span style="font-size:18px;">&#x1F4C4;</span><span style="font-weight:600;color:var(--navy);font-size:12px;">' + sxEsc(fname) + '</span>';
         sec.appendChild(dHdr);
         // PDF grid
         var dGrid = document.createElement('div');
@@ -6098,7 +6108,7 @@
           .then(function(buf) {
             extractPhotosFromPdfBuffer(buf, dGrid);
           }).catch(function(e) {
-            dGrid.innerHTML = '<div style="grid-column:1/-1;padding:8px;font-size:11px;color:#888;">Could not load: ' + e.message + '</div>';
+            dGrid.innerHTML = '<div style="grid-column:1/-1;padding:8px;font-size:11px;color:#888;">Could not load: ' + sxEsc(e.message) + '</div>';
           });
       });
       photoGrid.appendChild(sec);
@@ -6881,7 +6891,7 @@
 
     setTimeout(function() {
       msg.style.color = 'var(--green)';
-      msg.innerHTML = '\u2713 Email draft opened. If nothing opened, copy the link above and paste it manually into an email to <strong>' + email + '</strong>.';
+      msg.innerHTML = '\u2713 Email draft opened. If nothing opened, copy the link above and paste it manually into an email to <strong>' + sxEsc(email) + '</strong>.';
       msg.style.display = 'block';
       showToast('\u2713 Email draft prepared for ' + email);
     }, 800);

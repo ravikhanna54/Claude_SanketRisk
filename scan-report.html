@@ -397,6 +397,14 @@
 <div class="toast" id="toast"></div>
 
 <script>
+
+  // ── Display-safety helpers: escape data before it is written into the page as HTML ──
+  function sxEsc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  // for values placed inside a quoted JS string within an inline handler, e.g. onclick="f('...')"
+  function sxJs(v) { return String(v == null ? '' : v).replace(/[^\w .@\-\/:,]/g, function(c) { return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4); }); }
+  // for href / src values: only web, mail, phone, in-page or relative links; blocks javascript: and similar
+  function sxUrl(v) { var s = String(v == null ? '' : v).trim(); return (/^(https?:|mailto:|tel:|blob:|data:image\/(png|jpe?g|gif|webp);|#|\/(?!\/))/i.test(s) || /^[\w.\-\/]+(\?[^\s]*)?$/.test(s)) ? sxEsc(s) : ''; }
+
   const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -644,7 +652,7 @@
     overlay.innerHTML =
       '<div class="cover-insured">' + esc(insured) + '</div>' +
       '<div class="cover-address">' + esc([address, city, prov, postal].filter(Boolean).join(', ')) + '</div>' +
-      '<div class="cover-meta">' + esc(occ) + (yr ? ' &nbsp;&middot;&nbsp; Built ' + yr : '') + '</div>';
+      '<div class="cover-meta">' + esc(occ) + (yr ? ' &nbsp;&middot;&nbsp; Built ' + sxEsc(yr) : '') + '</div>';
     coverWrap.appendChild(overlay);
 
     document.getElementById('cover-date').textContent = date;
@@ -729,11 +737,11 @@
         var refs = Array.isArray(rec.photo_refs) ? rec.photo_refs : [];
         var photoHtml = refs.length > 0 ? buildRecPhotoStrip(refs, storagePaths) : '';
         return '<div class="rec-item">' +
-          '<div class="rec-left"><span class="rec-priority ' + cls + '">' + esc(rec.priority || '') + '</span><span class="rec-seq">' + seq + '</span></div>' +
-          '<div style="flex:1;"><div class="rec-code">' + seq + '</div>' +
+          '<div class="rec-left"><span class="rec-priority ' + sxEsc(cls) + '">' + esc(rec.priority || '') + '</span><span class="rec-seq">' + sxEsc(seq) + '</span></div>' +
+          '<div style="flex:1;"><div class="rec-code">' + sxEsc(seq) + '</div>' +
           (rec.title ? '<div class="rec-title">' + esc(rec.title) + '</div>' : '') +
           '<div class="rec-text">' + esc(rec.text || rec.description || '') + '</div>' +
-          photoHtml + '</div></div>';
+          sxEsc(photoHtml) + '</div></div>';
       }).join('');
     }
 
@@ -849,9 +857,9 @@
       var path = paths[valid[j] - 1];
       if (!path) continue;
       if (/\.pdf$/i.test(path)) {
-        html += '<div class="rec-photo-thumb"><div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:22px;background:#f0f2f5;">📄</div><div class="rec-photo-num">File ' + valid[j] + '</div></div>';
+        html += '<div class="rec-photo-thumb"><div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:22px;background:#f0f2f5;">📄</div><div class="rec-photo-num">File ' + sxEsc(valid[j]) + '</div></div>';
       } else {
-        html += '<div class="rec-photo-thumb"><img src="' + SUPABASE_URL + '/storage/v1/object/public/scan-uploads/' + path + '" alt="Photo ' + valid[j] + '" class="rec-photo-img" onerror="this.closest(\'.rec-photo-thumb\').style.display=\'none\'"><div class="rec-photo-num">Photo ' + valid[j] + '</div></div>';
+        html += '<div class="rec-photo-thumb"><img src="' + sxUrl(SUPABASE_URL) + '/storage/v1/object/public/scan-uploads/' + sxEsc(path) + '" alt="Photo ' + sxEsc(valid[j]) + '" class="rec-photo-img" onerror="this.closest(\'.rec-photo-thumb\').style.display=\'none\'"><div class="rec-photo-num">Photo ' + sxEsc(valid[j]) + '</div></div>';
       }
     }
     return html + '</div>';
@@ -880,7 +888,7 @@
   }
 
   function esc(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
 </script>
 

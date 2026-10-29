@@ -382,6 +382,14 @@
   <div class="toast" id="toast"></div>
 
   <script>
+
+  // ── Display-safety helpers: escape data before it is written into the page as HTML ──
+  function sxEsc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  // for values placed inside a quoted JS string within an inline handler, e.g. onclick="f('...')"
+  function sxJs(v) { return String(v == null ? '' : v).replace(/[^\w .@\-\/:,]/g, function(c) { return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4); }); }
+  // for href / src values: only web, mail, phone, in-page or relative links; blocks javascript: and similar
+  function sxUrl(v) { var s = String(v == null ? '' : v).trim(); return (/^(https?:|mailto:|tel:|blob:|data:image\/(png|jpe?g|gif|webp);|#|\/(?!\/))/i.test(s) || /^[\w.\-\/]+(\?[^\s]*)?$/.test(s)) ? sxEsc(s) : ''; }
+
     const SUPABASE_URL = 'https://lzsfmqbhrpsmnivxhggi.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_C5KWTHt84OMXif4javqeOQ_rjFK0t83';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -558,7 +566,7 @@
       }
       const { data: rows, error } = await query;
       if (error) {
-        document.getElementById('table-wrap').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error loading data</div><div class="empty-sub">' + error.message + '</div></div>';
+        document.getElementById('table-wrap').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error loading data</div><div class="empty-sub">' + sxEsc(error.message) + '</div></div>';
         return;
       }
       allInspections = rows || [];
@@ -596,10 +604,10 @@
       const list = document.getElementById('notif-list');
       if (!notifs.length) { list.innerHTML = '<div class="notif-empty">✅ No pending notifications — you\'re all caught up.</div>'; return; }
       list.innerHTML = notifs.slice(0, 6).map(n =>
-        '<div class="notif-card ' + n.type + '">' +
-        '<div class="notif-icon">' + n.icon + '</div>' +
-        '<div class="notif-body"><div class="notif-title">' + n.title + '</div><div class="notif-desc">' + n.desc + '</div></div>' +
-        '<div class="notif-time">' + n.time + '</div></div>'
+        '<div class="notif-card ' + sxEsc(n.type) + '">' +
+        '<div class="notif-icon">' + sxEsc(n.icon) + '</div>' +
+        '<div class="notif-body"><div class="notif-title">' + sxEsc(n.title) + '</div><div class="notif-desc">' + sxEsc(n.desc) + '</div></div>' +
+        '<div class="notif-time">' + sxEsc(n.time) + '</div></div>'
       ).join('');
     }
 
@@ -640,13 +648,13 @@
           if (isAdmin) {
             var inspectorOpts = '<option value="">— Assign —</option>' +
               allInspectors.map(function(iv) {
-                return '<option value="' + iv.name + '"' + (r.inspector_name === iv.name ? ' selected' : '') + '>' + iv.name + '</option>';
+                return '<option value="' + sxEsc(iv.name) + '"' + (r.inspector_name === iv.name ? ' selected' : '') + '>' + sxEsc(iv.name) + '</option>';
               }).join('');
-            adminCell = '<td onclick="event.stopPropagation()"><select onchange="assignInspectorToInspection(\'' + r.id + '\', this.value)" style="font-size:11px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);max-width:130px;">' + inspectorOpts + '</select></td>';
+            adminCell = '<td onclick="event.stopPropagation()"><select onchange="assignInspectorToInspection(\'' + sxJs(r.id) + '\', this.value)" style="font-size:11px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);max-width:130px;">' + inspectorOpts + '</select></td>';
           } else if (canViewAll) {
-            adminCell = '<td><span style="font-size:11px;color:var(--slate);">' + (r.inspector_name || '—') + '</span></td>';
+            adminCell = '<td><span style="font-size:11px;color:var(--slate);">' + (sxEsc(r.inspector_name || '—')) + '</span></td>';
           }
-          const deleteBtn = isAdmin ? '<button class="btn-open" style="color:#c53030;border-color:#c53030;margin-left:4px;" onclick="event.stopPropagation();deleteInspection(\'' + r.id + '\',\'' + (r.insured_name||'this inspection').replace(/'/g,'') + '\')">🗑</button>' : '';
+          const deleteBtn = isAdmin ? '<button class="btn-open" style="color:#c53030;border-color:#c53030;margin-left:4px;" onclick="event.stopPropagation();deleteInspection(\'' + sxJs(r.id) + '\',\'' + sxJs(r.insured_name||'this inspection') + '\')">🗑</button>' : '';
           // Reviewer column - only show for submitted/inreview/approved/returned
           var reviewerCell = '';
           if (isAdmin) {
@@ -654,34 +662,34 @@
             if (canAssign) {
               var reviewerOpts = '<option value="">— Assign —</option>' +
                 allReviewers.map(function(rv) {
-                  return '<option value="' + rv.name + '"' + (r.qa_reviewer === rv.name ? ' selected' : '') + '>' + rv.name + '</option>';
+                  return '<option value="' + sxEsc(rv.name) + '"' + (r.qa_reviewer === rv.name ? ' selected' : '') + '>' + sxEsc(rv.name) + '</option>';
                 }).join('');
-              reviewerCell = '<td onclick="event.stopPropagation()"><select onchange="assignReviewer(\'' + r.id + '\', this.value)" style="font-size:11px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);max-width:130px;">' + reviewerOpts + '</select></td>';
+              reviewerCell = '<td onclick="event.stopPropagation()"><select onchange="assignReviewer(\'' + sxJs(r.id) + '\', this.value)" style="font-size:11px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);max-width:130px;">' + reviewerOpts + '</select></td>';
             } else {
-              reviewerCell = '<td><span style="font-size:11px;color:var(--slate);">' + (r.qa_reviewer || '—') + '</span></td>';
+              reviewerCell = '<td><span style="font-size:11px;color:var(--slate);">' + (sxEsc(r.qa_reviewer || '—')) + '</span></td>';
             }
           } else if (canViewAll) {
-            reviewerCell = '<td><span style="font-size:11px;color:var(--slate);">' + (r.qa_reviewer || '—') + '</span></td>';
+            reviewerCell = '<td><span style="font-size:11px;color:var(--slate);">' + (sxEsc(r.qa_reviewer || '—')) + '</span></td>';
           }
           _inspRowData[r.id] = r;  // store for inline onclick access
           var canEmail = r.report_status && r.report_status !== 'draft' && r.report_status !== 'returned';
           var hasPdf = !!r.report_pdf_path;
           var viewBtn = hasPdf
-            ? '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;margin-left:4px;" onclick="event.stopPropagation();viewInspectionReport(\'' + r.id + '\')" title="View stored report PDF">📋 View Report</button>'
+            ? '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;margin-left:4px;" onclick="event.stopPropagation();viewInspectionReport(\'' + sxJs(r.id) + '\')" title="View stored report PDF">📋 View Report</button>'
             : '';
           var emailBtn = canEmail
-            ? '<button class="btn-open" style="background:#7c3aed;color:#fff;border-color:#7c3aed;margin-left:4px;" onclick="event.stopPropagation();openEmailModal(_inspRowData[\'' + r.id + '\'], \'inspection\')" title="Email report to requestor">📧 Email Report</button>'
+            ? '<button class="btn-open" style="background:#7c3aed;color:#fff;border-color:#7c3aed;margin-left:4px;" onclick="event.stopPropagation();openEmailModal(_inspRowData[\'' + sxJs(r.id) + '\'], \'inspection\')" title="Email report to requestor">📧 Email Report</button>'
             : '';
-          return '<tr onclick="openInspection(\'' + r.id + '\')">' +
-            '<td class="td-id">' + (r.inspection_id || r.id?.substring(0,8) || '—') + '</td>' +
-            '<td><div class="td-name">' + (r.insured_name || '—') + '</div><div class="td-sub">' + ([r.location, r.city, r.province_state].filter(Boolean).join(', ') || r.occupancy_class || '') + '</div></td>' +
-            '<td style="font-size:12px;color:var(--slate);">' + formatDate(r.inspection_date) + '</td>' +
-            '<td><span class="status-badge ' + statusClass + '">' + statusLabel + '</span></td>' +
+          return '<tr onclick="openInspection(\'' + sxJs(r.id) + '\')">' +
+            '<td class="td-id">' + (sxEsc(r.inspection_id || r.id?.substring(0,8) || '—')) + '</td>' +
+            '<td><div class="td-name">' + (sxEsc(r.insured_name || '—')) + '</div><div class="td-sub">' + (sxEsc([r.location, r.city, r.province_state].filter(Boolean).join(', ') || r.occupancy_class || '')) + '</div></td>' +
+            '<td style="font-size:12px;color:var(--slate);">' + sxEsc(formatDate(r.inspection_date)) + '</td>' +
+            '<td><span class="status-badge ' + sxEsc(statusClass) + '">' + sxEsc(statusLabel) + '</span></td>' +
             adminCell +
             reviewerCell +
-            '<td style="font-size:11px;color:var(--slate-light);font-family:monospace;">' + formatDate(r.updated_at) + '</td>' +
-            '<td style="white-space:nowrap;"><button class="btn-open" onclick="event.stopPropagation();openInspection(\'' + r.id + '\')">Open →</button>' +
-            '<button class="btn-open" onclick="event.stopPropagation();copyInspection(\'' + r.id + '\')" style="margin-left:4px;background:#c9a84c;color:#0d1b2a;border-color:#c9a84c;" title="Copy to new file">📋 Copy</button>' +
+            '<td style="font-size:11px;color:var(--slate-light);font-family:monospace;">' + sxEsc(formatDate(r.updated_at)) + '</td>' +
+            '<td style="white-space:nowrap;"><button class="btn-open" onclick="event.stopPropagation();openInspection(\'' + sxJs(r.id) + '\')">Open →</button>' +
+            '<button class="btn-open" onclick="event.stopPropagation();copyInspection(\'' + sxJs(r.id) + '\')" style="margin-left:4px;background:#c9a84c;color:#0d1b2a;border-color:#c9a84c;" title="Copy to new file">📋 Copy</button>' +
             viewBtn +
             emailBtn +
             deleteBtn + '</td>' +
@@ -772,8 +780,8 @@
         const icon = /\.pdf$/i.test(f.name) ? '📄' : '📝';
         const kb = (f.size / 1024).toFixed(0);
         return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;font-size:12px;">' +
-          '<span>' + icon + '</span><span style="flex:1;word-break:break-all;">' + f.name + '</span>' +
-          '<span style="color:var(--slate);font-size:11px;">' + kb + ' KB</span>' +
+          '<span>' + sxEsc(icon) + '</span><span style="flex:1;word-break:break-all;">' + sxEsc(f.name) + '</span>' +
+          '<span style="color:var(--slate);font-size:11px;">' + sxEsc(kb) + ' KB</span>' +
           '<span id="archive-queue-status-' + i + '" style="font-size:11px;color:var(--slate);min-width:70px;text-align:right;">Queued</span>' +
           '<button onclick="removeArchiveQueueItem(' + i + ')" style="background:none;border:none;color:#C53030;font-size:15px;cursor:pointer;padding:0 4px;" title="Remove">&#x2715;</button>' +
           '</div>';
@@ -863,7 +871,7 @@
         renderArchiveTable(archiveRowsCache);
       } catch (e) {
         console.error('Archive load error:', e);
-        wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error: ' + e.message + '</div></div>';
+        wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error: ' + sxEsc(e.message) + '</div></div>';
       }
     }
 
@@ -885,8 +893,8 @@
       const allOnPageSelected = pageRows.length > 0 && pageRows.every(r => archiveSelectedIds.has(String(r.id)));
 
       wrap.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;min-width:820px;border-collapse:collapse;font-size:13px;"><thead><tr>' +
-        '<th style="' + thS + ';width:30px;"><input type="checkbox" id="archive-select-all" ' + (allOnPageSelected ? 'checked' : '') + ' onchange="toggleArchiveSelectAll(this.checked)"></th>' +
-        '<th style="' + thS + '">File</th><th style="' + thS + '">Category</th><th style="' + thS + '">Insured</th><th style="' + thS + '">Policy #</th><th style="' + thS + '">Size</th><th style="' + thS + '">Uploaded</th><th style="' + thS + '">Actions</th>' +
+        '<th style="' + sxEsc(thS) + ';width:30px;"><input type="checkbox" id="archive-select-all" ' + (allOnPageSelected ? 'checked' : '') + ' onchange="toggleArchiveSelectAll(this.checked)"></th>' +
+        '<th style="' + sxEsc(thS) + '">File</th><th style="' + sxEsc(thS) + '">Category</th><th style="' + sxEsc(thS) + '">Insured</th><th style="' + sxEsc(thS) + '">Policy #</th><th style="' + sxEsc(thS) + '">Size</th><th style="' + sxEsc(thS) + '">Uploaded</th><th style="' + sxEsc(thS) + '">Actions</th>' +
         '</tr></thead><tbody>' +
         pageRows.map(r => {
           const icon = r.file_type === 'pdf' ? '📄' : '📝';
@@ -895,30 +903,30 @@
           const checked = archiveSelectedIds.has(String(r.id)) ? 'checked' : '';
           var convertAction = '';
           if (r.conversion_status === 'complete' && r.conversion_scan_submission_id) {
-            convertAction = '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;" onclick="window.open(\'scan.html?view_report=' + r.conversion_scan_submission_id + '\', \'_blank\')">📋 View SCAN ONE Report</button>' +
-              '<button class="btn-open" title="Run the conversion again — creates a new SCAN ONE report from this file" onclick="convertArchiveFile(\'' + r.id + '\')">🔄 Reconvert</button>';
+            convertAction = '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;" onclick="window.open(\'scan.html?view_report=' + sxJs(r.conversion_scan_submission_id) + '\', \'_blank\')">📋 View SCAN ONE Report</button>' +
+              '<button class="btn-open" title="Run the conversion again — creates a new SCAN ONE report from this file" onclick="convertArchiveFile(\'' + sxJs(r.id) + '\')">🔄 Reconvert</button>';
           } else if (r.conversion_status === 'complete') {
             // Completed, but the report link itself didn't get recorded — show
             // this distinctly rather than silently reverting to the original
             // Convert button, which hides a real problem worth investigating.
-            convertAction = '<button class="btn-open" style="color:#92400e;border-color:#92400e;" onclick="convertArchiveFile(\'' + r.id + '\')" title="Conversion completed but no report link was recorded — click to retry">⚠ Complete, no report link</button>';
+            convertAction = '<button class="btn-open" style="color:#92400e;border-color:#92400e;" onclick="convertArchiveFile(\'' + sxJs(r.id) + '\')" title="Conversion completed but no report link was recorded — click to retry">⚠ Complete, no report link</button>';
           } else if (r.conversion_status === 'processing') {
             convertAction = '<button class="btn-open" disabled style="opacity:0.6;">⏳ Converting…</button>';
           } else if (r.conversion_status === 'error') {
-            convertAction = '<button class="btn-open" style="color:#C53030;border-color:#C53030;" onclick="convertArchiveFile(\'' + r.id + '\')" title="' + (r.conversion_error || 'Conversion failed').replace(/"/g,'') + '">⚠ Retry Convert</button>';
+            convertAction = '<button class="btn-open" style="color:#C53030;border-color:#C53030;" onclick="convertArchiveFile(\'' + sxJs(r.id) + '\')" title="' + sxEsc(r.conversion_error || 'Conversion failed') + '">⚠ Retry Convert</button>';
           } else {
-            convertAction = '<button class="btn-open" onclick="convertArchiveFile(\'' + r.id + '\')">🔄 Convert to SCAN ONE</button>';
+            convertAction = '<button class="btn-open" onclick="convertArchiveFile(\'' + sxJs(r.id) + '\')">🔄 Convert to SCAN ONE</button>';
           }
           return '<tr>' +
-            '<td style="text-align:center;"><input type="checkbox" class="archive-row-check" data-id="' + r.id + '" ' + checked + ' onchange="toggleArchiveSelect(\'' + r.id + '\', this.checked)"></td>' +
-            '<td style="font-size:12px;">' + icon + ' ' + (r.file_name || '—') + '</td>' +
-            '<td style="font-size:12px;">' + (r.category || '—') + '</td>' +
-            '<td style="font-size:12px;">' + (r.insured_name || '—') + '</td>' +
-            '<td style="font-size:12px;">' + (r.policy_number || '—') + '</td>' +
-            '<td style="font-size:12px;">' + kb + '</td>' +
-            '<td style="font-size:12px;">' + date + '</td>' +
-            '<td><div style="display:flex;gap:4px;flex-wrap:wrap;">' + convertAction + '<button class="btn-open" onclick="downloadArchiveFile(\'' + r.storage_path + '\',\'' + (r.file_name || '').replace(/'/g, '') + '\')">⬇ Download</button>' +
-            '<button class="btn-open" style="color:#C53030;border-color:#C53030;" onclick="deleteArchiveFile(\'' + r.id + '\',\'' + r.storage_path + '\')">✕</button></div></td></tr>';
+            '<td style="text-align:center;"><input type="checkbox" class="archive-row-check" data-id="' + sxEsc(r.id) + '" ' + sxEsc(checked) + ' onchange="toggleArchiveSelect(\'' + sxJs(r.id) + '\', this.checked)"></td>' +
+            '<td style="font-size:12px;">' + sxEsc(icon) + ' ' + (sxEsc(r.file_name || '—')) + '</td>' +
+            '<td style="font-size:12px;">' + (sxEsc(r.category || '—')) + '</td>' +
+            '<td style="font-size:12px;">' + (sxEsc(r.insured_name || '—')) + '</td>' +
+            '<td style="font-size:12px;">' + (sxEsc(r.policy_number || '—')) + '</td>' +
+            '<td style="font-size:12px;">' + sxEsc(kb) + '</td>' +
+            '<td style="font-size:12px;">' + sxEsc(date) + '</td>' +
+            '<td><div style="display:flex;gap:4px;flex-wrap:wrap;">' + convertAction + '<button class="btn-open" onclick="downloadArchiveFile(\'' + sxJs(r.storage_path) + '\',\'' + sxJs(r.file_name || '') + '\')">⬇ Download</button>' +
+            '<button class="btn-open" style="color:#C53030;border-color:#C53030;" onclick="deleteArchiveFile(\'' + sxJs(r.id) + '\',\'' + sxJs(r.storage_path) + '\')">✕</button></div></td></tr>';
         }).join('') +
         '</tbody></table></div>' + archivePaginationHtml(rows.length, totalPages);
       renderArchiveSelectionBar();
@@ -942,11 +950,11 @@
           (active ? 'background:var(--navy);color:#fff;border-color:var(--navy);' : 'background:#fff;color:var(--navy);') + '">' + p + '</button>';
       }
       return '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--slate-light);">' +
-        '<div>' + countLine + '</div>' +
+        '<div>' + sxEsc(countLine) + '</div>' +
         '<div style="display:flex;align-items:center;">' +
-          '<button onclick="goToArchivePage(' + (archivePage - 1) + ')" ' + (archivePage <= 1 ? 'disabled' : '') + ' style="padding:4px 8px;margin-right:4px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;' + (archivePage <= 1 ? 'opacity:0.4;' : '') + '">‹ Prev</button>' +
+          '<button onclick="goToArchivePage(' + (Number(archivePage - 1)) + ')" ' + (archivePage <= 1 ? 'disabled' : '') + ' style="padding:4px 8px;margin-right:4px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;' + (archivePage <= 1 ? 'opacity:0.4;' : '') + '">‹ Prev</button>' +
           pageBtns +
-          '<button onclick="goToArchivePage(' + (archivePage + 1) + ')" ' + (archivePage >= totalPages ? 'disabled' : '') + ' style="padding:4px 8px;margin-left:4px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;' + (archivePage >= totalPages ? 'opacity:0.4;' : '') + '">Next ›</button>' +
+          '<button onclick="goToArchivePage(' + (Number(archivePage + 1)) + ')" ' + (archivePage >= totalPages ? 'disabled' : '') + ' style="padding:4px 8px;margin-left:4px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;' + (archivePage >= totalPages ? 'opacity:0.4;' : '') + '">Next ›</button>' +
         '</div>' +
       '</div>';
     }
@@ -1140,18 +1148,18 @@
         if (!rows || !rows.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No enquiries yet</div></div>'; return; }
         const thS = 'background:#f0f2f5;padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:\'IBM Plex Mono\',monospace;white-space:nowrap';
         wrap.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;min-width:700px;border-collapse:collapse;font-size:13px;"><thead><tr>' +
-          '<th style="' + thS + '">Date</th><th style="' + thS + '">Contact</th><th style="' + thS + '">Organization</th><th style="' + thS + '">Role</th><th style="' + thS + '">Message</th>' +
+          '<th style="' + sxEsc(thS) + '">Date</th><th style="' + sxEsc(thS) + '">Contact</th><th style="' + sxEsc(thS) + '">Organization</th><th style="' + sxEsc(thS) + '">Role</th><th style="' + sxEsc(thS) + '">Message</th>' +
           '</tr></thead><tbody style="background:#fff;">' +
           rows.map(r => {
             const date = r.created_at ? new Date(r.created_at).toLocaleDateString('en-CA', {year:'numeric',month:'short',day:'numeric'}) : '—';
-            return '<tr><td style="font-size:12px;color:var(--slate);">' + date + '</td>' +
-              '<td><div style="font-weight:600;font-size:13px;">' + (r.first_name||'') + ' ' + (r.last_name||'') + '</div><div style="font-size:11px;color:var(--slate);">' + (r.email||'') + '</div></td>' +
-              '<td style="font-size:12px;">' + (r.organization||'—') + '</td>' +
-              '<td style="font-size:12px;">' + (r.role||'—') + '</td>' +
-              '<td style="font-size:12px;color:var(--slate);max-width:260px;">' + (r.message ? r.message.substring(0,120) + (r.message.length>120?'…':'') : '—') + '</td></tr>';
+            return '<tr><td style="font-size:12px;color:var(--slate);">' + sxEsc(date) + '</td>' +
+              '<td><div style="font-weight:600;font-size:13px;">' + (sxEsc(r.first_name||'')) + ' ' + (sxEsc(r.last_name||'')) + '</div><div style="font-size:11px;color:var(--slate);">' + (sxEsc(r.email||'')) + '</div></td>' +
+              '<td style="font-size:12px;">' + (sxEsc(r.organization||'—')) + '</td>' +
+              '<td style="font-size:12px;">' + (sxEsc(r.role||'—')) + '</td>' +
+              '<td style="font-size:12px;color:var(--slate);max-width:260px;">' + (r.message ? sxEsc(r.message.substring(0,120) + (r.message.length>120?'…':'')) : '—') + '</td></tr>';
           }).join('') +
           '</tbody></table></div><div style="font-size:11px;color:var(--slate-light);padding:10px 14px;">' + rows.length + ' enquir' + (rows.length===1?'y':'ies') + ' received</div>';
-      } catch(e) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error: ' + e.message + '</div></div>'; }
+      } catch(e) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error: ' + sxEsc(e.message) + '</div></div>'; }
     }
 
     // ── SCAN ONE SUBMISSIONS ──
@@ -1200,7 +1208,7 @@
         }
         renderScanTable(rows || []);
       } catch(e) {
-        wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error: ' + e.message + '</div></div>';
+        wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error: ' + sxEsc(e.message) + '</div></div>';
       }
     }
 
@@ -1233,11 +1241,11 @@
           (active ? 'background:var(--navy);color:#fff;border-color:var(--navy);' : 'background:#fff;color:var(--navy);') + '">' + p + '</button>';
       }
       return '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--slate-light);">' +
-        '<div>' + countLine + '</div>' +
+        '<div>' + sxEsc(countLine) + '</div>' +
         '<div style="display:flex;align-items:center;">' +
-          '<button onclick="goToScanPage(' + (_scanPage - 1) + ')" ' + (_scanPage <= 1 ? 'disabled' : '') + ' style="padding:4px 8px;margin-right:4px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;' + (_scanPage <= 1 ? 'opacity:0.4;' : '') + '">‹ Prev</button>' +
+          '<button onclick="goToScanPage(' + (Number(_scanPage - 1)) + ')" ' + (_scanPage <= 1 ? 'disabled' : '') + ' style="padding:4px 8px;margin-right:4px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;' + (_scanPage <= 1 ? 'opacity:0.4;' : '') + '">‹ Prev</button>' +
           pageBtns +
-          '<button onclick="goToScanPage(' + (_scanPage + 1) + ')" ' + (_scanPage >= totalPages ? 'disabled' : '') + ' style="padding:4px 8px;margin-left:4px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;' + (_scanPage >= totalPages ? 'opacity:0.4;' : '') + '">Next ›</button>' +
+          '<button onclick="goToScanPage(' + (Number(_scanPage + 1)) + ')" ' + (_scanPage >= totalPages ? 'disabled' : '') + ' style="padding:4px 8px;margin-left:4px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;' + (_scanPage >= totalPages ? 'opacity:0.4;' : '') + '">Next ›</button>' +
         '</div>' +
       '</div>';
     }
@@ -1268,22 +1276,22 @@
           _scanRowData[r.id] = r;  // store for inline onclick
           var tr = document.createElement('tr');
           tr.innerHTML =
-            '<td><span style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;background:var(--gold-pale);color:var(--navy);padding:2px 8px;border-radius:8px;font-weight:700;">' + fileNo + '</span></td>' +
-            '<td style="font-size:12px;color:var(--slate)">' + date + '</td>' +
-            '<td><div style="font-weight:600;font-size:13px">' + (r.insured_name||'—') + '</div>' +
-            '<div style="font-size:11px;color:var(--slate)">' + [r.address,r.city,r.province].filter(Boolean).join(', ') + '</div></td>' +
-            '<td style="font-size:12px">' + (r.occupancy||'—') + '</td>' +
-            '<td style="text-align:center"><span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;background:' + sBg + ';color:' + sColor + '">' + sLabel + '</span></td>' +
-            '<td style="text-align:center"><span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;background:' + qaBg + ';color:' + qaColor + '">' + qaLabel + '</span></td>' +
-            '<td style="text-align:center;font-size:13px;font-weight:600;color:var(--slate)">' + (r.photo_count||0) + '</td>' +
+            '<td><span style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;background:var(--gold-pale);color:var(--navy);padding:2px 8px;border-radius:8px;font-weight:700;">' + sxEsc(fileNo) + '</span></td>' +
+            '<td style="font-size:12px;color:var(--slate)">' + sxEsc(date) + '</td>' +
+            '<td><div style="font-weight:600;font-size:13px">' + (sxEsc(r.insured_name||'—')) + '</div>' +
+            '<div style="font-size:11px;color:var(--slate)">' + sxEsc([r.address,r.city,r.province].filter(Boolean).join(', ')) + '</div></td>' +
+            '<td style="font-size:12px">' + (sxEsc(r.occupancy||'—')) + '</td>' +
+            '<td style="text-align:center"><span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;background:' + sxEsc(sBg) + ';color:' + sxEsc(sColor) + '">' + sxEsc(sLabel) + '</span></td>' +
+            '<td style="text-align:center"><span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;background:' + sxEsc(qaBg) + ';color:' + sxEsc(qaColor) + '">' + sxEsc(qaLabel) + '</span></td>' +
+            '<td style="text-align:center;font-size:13px;font-weight:600;color:var(--slate)">' + (sxEsc(r.photo_count||0)) + '</td>' +
             '<td style="text-align:center;white-space:nowrap">' +
               (r.status === 'analysed' && r.scan_result
-                ? '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;font-size:11px;display:block;width:100%;margin-bottom:3px" data-view-id="' + r.id + '">📋 View Report</button>' +
-                  '<button class="btn-open" style="background:#7c3aed;color:#fff;border-color:#7c3aed;font-size:11px;display:block;width:100%;margin-bottom:3px" onclick="openEmailModal(_scanRowData[\'' + r.id + '\'])">📧 Email Report</button>'
+                ? '<button class="btn-open" style="background:#276749;color:#fff;border-color:#276749;font-size:11px;display:block;width:100%;margin-bottom:3px" data-view-id="' + sxEsc(r.id) + '">📋 View Report</button>' +
+                  '<button class="btn-open" style="background:#7c3aed;color:#fff;border-color:#7c3aed;font-size:11px;display:block;width:100%;margin-bottom:3px" onclick="openEmailModal(_scanRowData[\'' + sxJs(r.id) + '\'])">📧 Email Report</button>'
                 : '') +
-              '<button class="btn-open" style="background:#0891b2;color:#fff;border-color:#0891b2;font-size:11px;display:block;width:100%;margin-bottom:3px" data-scan-id="' + r.id + '">📂 Open Submission</button>' +
+              '<button class="btn-open" style="background:#0891b2;color:#fff;border-color:#0891b2;font-size:11px;display:block;width:100%;margin-bottom:3px" data-scan-id="' + sxEsc(r.id) + '">📂 Open Submission</button>' +
               
-              '<button class="btn-open" style="color:#c53030;border-color:#c53030;font-size:11px;display:block;width:100%;" data-del-id="' + r.id + '">🗑 Delete</button>' +
+              '<button class="btn-open" style="color:#c53030;border-color:#c53030;font-size:11px;display:block;width:100%;" data-del-id="' + sxEsc(r.id) + '">🗑 Delete</button>' +
             '</td>';
 
           // View Report — opens scan.html in view_report mode (full report with photos)
@@ -1318,14 +1326,14 @@
         table.style.cssText = 'width:100%;min-width:800px;border-collapse:collapse;font-size:13px';
         table.innerHTML =
           '<thead><tr>' +
-          '<th style="' + thL + '">File #</th>' +
-          '<th style="' + thL + '">Date</th>' +
-          '<th style="' + thL + '">Property</th>' +
-          '<th style="' + thL + '">Occupancy</th>' +
-          '<th style="' + thC + '">Status</th>' +
-          '<th style="' + thC + '">QA</th>' +
-          '<th style="' + thC + '">Photos</th>' +
-          '<th style="' + thC + '">Action</th>' +
+          '<th style="' + sxEsc(thL) + '">File #</th>' +
+          '<th style="' + sxEsc(thL) + '">Date</th>' +
+          '<th style="' + sxEsc(thL) + '">Property</th>' +
+          '<th style="' + sxEsc(thL) + '">Occupancy</th>' +
+          '<th style="' + sxEsc(thC) + '">Status</th>' +
+          '<th style="' + sxEsc(thC) + '">QA</th>' +
+          '<th style="' + sxEsc(thC) + '">Photos</th>' +
+          '<th style="' + sxEsc(thC) + '">Action</th>' +
           '</tr></thead>';
 
         var tbody = document.createElement('tbody');
@@ -1342,7 +1350,7 @@
         wrap.appendChild(footer);
 
       } catch(e) {
-        wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error: ' + e.message + '</div></div>';
+        wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error: ' + sxEsc(e.message) + '</div></div>';
       }
     }
 
@@ -1387,38 +1395,38 @@
         const urgencyColor = u => !u ? '#888' : u.includes('Urgent') ? '#e53e3e' : u.includes('Priority') ? '#dd6b20' : '#2f855a';
         const statusBadge  = s => {
           const colors = { 'Pending':'background:#fff3e0;color:#dd6b20;border:1px solid #dd6b20;', 'Assigned':'background:#ebf4ff;color:#2b6cb0;border:1px solid #2b6cb0;', 'Converted':'background:#f0fff4;color:#276749;border:1px solid #2f855a;', 'Completed':'background:#f0fff4;color:#276749;border:1px solid #2f855a;', 'Reassigned':'background:#faf5ff;color:#6b46c1;border:1px solid #805ad5;' };
-          return '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;' + (colors[s]||'background:#f7f7f7;color:#888;border:1px solid #ccc;') + '">' + (s||'—') + '</span>';
+          return '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;' + (sxEsc(colors[s]||'background:#f7f7f7;color:#888;border:1px solid #ccc;')) + '">' + (sxEsc(s||'—')) + '</span>';
         };
-        const inspOpts = _inspectorList.map(p => '<option value="' + (p.full_name||p.email) + '">' + (p.full_name||p.email) + '</option>').join('');
+        const inspOpts = _inspectorList.map(p => '<option value="' + (sxEsc(p.full_name||p.email)) + '">' + (sxEsc(p.full_name||p.email)) + '</option>').join('');
         const thS = 'background:#f0f2f5;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);border-bottom:1px solid var(--border);font-family:\'IBM Plex Mono\',monospace;white-space:nowrap';
         tbl.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;min-width:1100px;border-collapse:collapse;font-size:13px;"><thead><tr>' +
-          '<th style="' + thS + '">Ref #</th><th style="' + thS + '">Submitted</th><th style="' + thS + '">Property</th><th style="' + thS + '">Occupancy</th><th style="' + thS + '">Purpose</th><th style="' + thS + '">Urgency</th><th style="' + thS + '">Status</th><th style="' + thS + '">Assigned To</th><th style="' + thS + '">Pref. Date</th><th style="' + thS + '">Actions</th>' +
+          '<th style="' + sxEsc(thS) + '">Ref #</th><th style="' + sxEsc(thS) + '">Submitted</th><th style="' + sxEsc(thS) + '">Property</th><th style="' + sxEsc(thS) + '">Occupancy</th><th style="' + sxEsc(thS) + '">Purpose</th><th style="' + sxEsc(thS) + '">Urgency</th><th style="' + sxEsc(thS) + '">Status</th><th style="' + sxEsc(thS) + '">Assigned To</th><th style="' + sxEsc(thS) + '">Pref. Date</th><th style="' + sxEsc(thS) + '">Actions</th>' +
           '</tr></thead><tbody>' +
           rows.map(r => {
             const date = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-CA') : '—';
             const pref = r.preferred_date ? new Date(r.preferred_date+'T00:00:00').toLocaleDateString('en-CA') : '—';
             const isCompleted = r.status === 'Completed' || r.status === 'Converted';
             return '<tr style="' + (isCompleted?'opacity:0.65;':'') + '">' +
-              '<td><span style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;background:var(--gold-pale);color:var(--navy);padding:2px 8px;border-radius:10px;">' + (r.request_ref||'—') + '</span></td>' +
-              '<td style="font-size:12px;">' + date + '</td>' +
-              '<td><strong style="font-size:12px;">' + (r.insured_name||'—') + '</strong><br><span style="font-size:10px;color:var(--slate)">' + [r.address, r.city, r.province].filter(Boolean).join(', ') + '</span></td>' +
-              '<td style="font-size:12px;">' + (r.occupancy_type||'—') + '</td>' +
-              '<td style="font-size:12px;">' + (r.purpose||'—') + '</td>' +
-              '<td><span style="font-size:11px;font-weight:600;color:' + urgencyColor(r.urgency) + '">' + (r.urgency?r.urgency.split('—')[0].trim():'—') + '</span></td>' +
+              '<td><span style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;background:var(--gold-pale);color:var(--navy);padding:2px 8px;border-radius:10px;">' + (sxEsc(r.request_ref||'—')) + '</span></td>' +
+              '<td style="font-size:12px;">' + sxEsc(date) + '</td>' +
+              '<td><strong style="font-size:12px;">' + (sxEsc(r.insured_name||'—')) + '</strong><br><span style="font-size:10px;color:var(--slate)">' + sxEsc([r.address, r.city, r.province].filter(Boolean).join(', ')) + '</span></td>' +
+              '<td style="font-size:12px;">' + (sxEsc(r.occupancy_type||'—')) + '</td>' +
+              '<td style="font-size:12px;">' + (sxEsc(r.purpose||'—')) + '</td>' +
+              '<td><span style="font-size:11px;font-weight:600;color:' + sxEsc(urgencyColor(r.urgency)) + '">' + (r.urgency?sxEsc(r.urgency.split('—')[0].trim()):'—') + '</span></td>' +
               '<td>' + statusBadge(r.status) + '</td>' +
-              '<td>' + (r.assigned_to ? '<span style="font-size:11px;font-weight:600;color:var(--navy);">👤 ' + r.assigned_to + '</span>' : '<span style="font-size:11px;color:var(--slate-light);font-style:italic;">Unassigned</span>') +
+              '<td>' + (r.assigned_to ? '<span style="font-size:11px;font-weight:600;color:var(--navy);">👤 ' + sxEsc(r.assigned_to) + '</span>' : '<span style="font-size:11px;color:var(--slate-light);font-style:italic;">Unassigned</span>') +
               '<div style="margin-top:6px;display:flex;gap:4px;align-items:center;">' +
-              '<select id="assign-sel-' + r.id + '" style="font-size:10px;padding:2px 4px;border-radius:6px;border:1px solid var(--border);max-width:120px;"><option value="">— Assign to —</option>' + inspOpts + '</select>' +
-              '<button class="btn-open" style="font-size:10px;padding:3px 8px;white-space:nowrap;" onclick="assignInspector(\'' + r.id + '\',\'' + r.status + '\')">' + (r.assigned_to?'↻ Reassign':'Assign') + '</button></div></td>' +
-              '<td style="font-size:12px;">' + pref + '</td>' +
+              '<select id="assign-sel-' + sxEsc(r.id) + '" style="font-size:10px;padding:2px 4px;border-radius:6px;border:1px solid var(--border);max-width:120px;"><option value="">— Assign to —</option>' + inspOpts + '</select>' +
+              '<button class="btn-open" style="font-size:10px;padding:3px 8px;white-space:nowrap;" onclick="assignInspector(\'' + sxJs(r.id) + '\',\'' + sxJs(r.status) + '\')">' + (r.assigned_to?'↻ Reassign':'Assign') + '</button></div></td>' +
+              '<td style="font-size:12px;">' + sxEsc(pref) + '</td>' +
               '<td><div style="display:flex;flex-direction:column;gap:4px;">' +
-              '<button class="btn-open" style="font-size:11px;" onclick="convertRequest(\'' + r.id + '\')">↪ Convert</button>' +
-              '<button class="btn-open" style="font-size:11px;' + (isCompleted?'opacity:0.5;cursor:not-allowed;':'') + '" onclick="markCompleted(\'' + r.id + '\')">' + (isCompleted?'✓ Done':'✓ Complete') + '</button>' +
-              (isCompleted ? '<button class="btn-open" style="font-size:10px;color:#dd6b20;border-color:#dd6b20;" onclick="reopenRequest(\'' + r.id + '\')">↺ Reopen</button>' : '') +
+              '<button class="btn-open" style="font-size:11px;" onclick="convertRequest(\'' + sxJs(r.id) + '\')">↪ Convert</button>' +
+              '<button class="btn-open" style="font-size:11px;' + (isCompleted?'opacity:0.5;cursor:not-allowed;':'') + '" onclick="markCompleted(\'' + sxJs(r.id) + '\')">' + (isCompleted?'✓ Done':'✓ Complete') + '</button>' +
+              (isCompleted ? '<button class="btn-open" style="font-size:10px;color:#dd6b20;border-color:#dd6b20;" onclick="reopenRequest(\'' + sxJs(r.id) + '\')">↺ Reopen</button>' : '') +
               '</div></td></tr>';
           }).join('') +
           '</tbody></table></div><div style="font-size:11px;color:var(--slate-light);padding:10px 14px;">↻ Reassign resets status to Assigned &nbsp;·&nbsp; ↺ Reopen resets Completed back to Pending</div>';
-      } catch(e) { tbl.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Failed to load: ' + e.message + '</div></div>'; }
+      } catch(e) { tbl.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Failed to load: ' + sxEsc(e.message) + '</div></div>'; }
     }
 
     async function assignInspector(id, currentStatus) {
@@ -1577,7 +1585,7 @@
           pdfNote.style.background = '#f0fff4';
           pdfNote.style.borderColor = '#9ae6b4';
           pdfNote.style.color = '#276749';
-          pdfNote.innerHTML = '📎 <strong>Attachment:</strong> PDF report ready — <code>' + r.report_pdf_path + '</code>';
+          pdfNote.innerHTML = '📎 <strong>Attachment:</strong> PDF report ready — <code>' + sxEsc(r.report_pdf_path) + '</code>';
         } else if (isInsp) {
           pdfNote.style.background = '#fff5f5';
           pdfNote.style.borderColor = '#fc8181';

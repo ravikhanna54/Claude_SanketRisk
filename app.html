@@ -1358,6 +1358,16 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
+
+  // ── Display-safety helpers: escape data before it is written into the page as HTML ──
+  // field2/fieldFull accept {__html: '...'} for values that are deliberately HTML
+  function sxEscV(v) { return (v && typeof v === 'object' && v.__html !== undefined) ? String(v.__html) : sxEsc(v); }
+  function sxEsc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  // for values placed inside a quoted JS string within an inline handler, e.g. onclick="f('...')"
+  function sxJs(v) { return String(v == null ? '' : v).replace(/[^\w .@\-\/:,]/g, function(c) { return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4); }); }
+  // for href / src values: only web, mail, phone, in-page or relative links; blocks javascript: and similar
+  function sxUrl(v) { var s = String(v == null ? '' : v).trim(); return (/^(https?:|mailto:|tel:|blob:|data:image\/(png|jpe?g|gif|webp);|#|\/(?!\/))/i.test(s) || /^[\w.\-\/]+(\?[^\s]*)?$/.test(s)) ? sxEsc(s) : ''; }
+
 // Auto-reload if cached version is stale
 (function() {
   var CURRENT_VERSION = '20260403-1018';
@@ -8069,11 +8079,11 @@
       row.style.cssText = 'display:flex;justify-content:space-between;gap:12px;margin-top:28px;padding-top:18px;border-top:1px solid var(--border);';
       var left = '';
       if (idx > 0) {
-        left = '<button type="button" class="btn-secondary" onclick="navToSection(\'' + SECTION_FLOW[idx - 1] + '\')">← Previous</button>';
+        left = '<button type="button" class="btn-secondary" onclick="navToSection(\'' + sxJs(SECTION_FLOW[idx - 1]) + '\')">← Previous</button>';
       }
       var right = '';
       if (idx < SECTION_FLOW.length - 1) {
-        right = '<button type="button" class="btn-primary" onclick="saveAndNext(\'' + SECTION_FLOW[idx + 1] + '\')" style="background:var(--gold);color:var(--navy);font-weight:700;">💾 Save &amp; Next →</button>';
+        right = '<button type="button" class="btn-primary" onclick="saveAndNext(\'' + sxJs(SECTION_FLOW[idx + 1]) + '\')" style="background:var(--gold);color:var(--navy);font-weight:700;">💾 Save &amp; Next →</button>';
       } else {
         right = '<button type="button" class="btn-primary" onclick="saveInspection()" style="background:var(--gold);color:var(--navy);font-weight:700;">💾 Save</button>';
       }
@@ -8140,20 +8150,20 @@
     if (!val || !NFPA_GUIDE[val]) { guide.style.display = 'none'; return; }
     const g = NFPA_GUIDE[val];
     body.innerHTML =
-      '<div style="margin-bottom:8px;">' + g.desc + '</div>' +
+      '<div style="margin-bottom:8px;">' + sxEsc(g.desc) + '</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">' +
         '<div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;">' +
           '<div style="font-size:10px;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Typical Occupancies</div>' +
-          '<div style="color:var(--navy);">' + g.examples + '</div>' +
+          '<div style="color:var(--navy);">' + sxEsc(g.examples) + '</div>' +
         '</div>' +
         '<div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;">' +
           '<div style="font-size:10px;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Fire Protection Considerations</div>' +
-          '<div style="color:var(--navy);">' + g.controls + '</div>' +
+          '<div style="color:var(--navy);">' + sxEsc(g.controls) + '</div>' +
         '</div>' +
       '</div>' +
-      '<div style="margin-top:8px;background:#fff;border-left:3px solid ' + g.color + ';border-radius:0 6px 6px 0;padding:8px 12px;border:1px solid var(--border);">' +
+      '<div style="margin-top:8px;background:#fff;border-left:3px solid ' + sxEsc(g.color) + ';border-radius:0 6px 6px 0;padding:8px 12px;border:1px solid var(--border);">' +
         '<span style="font-size:10px;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:.06em;">UW Signal — </span>' +
-        '<span style="font-weight:600;color:' + g.color + ';">' + g.uw + '</span>' +
+        '<span style="font-weight:600;color:' + sxEsc(g.color) + ';">' + sxEsc(g.uw) + '</span>' +
       '</div>';
     guide.style.display = 'block';
   }
@@ -8198,11 +8208,11 @@
     div.id = 'rec-' + rc;
     div.innerHTML =
       '<div class="rec-header">' +
-        '<span class="rec-num">#' + rc + '</span>' +
+        '<span class="rec-num">#' + sxEsc(rc) + '</span>' +
         '<div class="radio-group" style="flex-wrap:nowrap;gap:6px">' +
-          '<label class="radio-btn" style="padding:4px 10px;font-size:11px" data-level="high" data-rec="rec-' + rc + '">High</label>' +
-          '<label class="radio-btn" style="padding:4px 10px;font-size:11px" data-level="med"  data-rec="rec-' + rc + '">Medium</label>' +
-          '<label class="radio-btn" style="padding:4px 10px;font-size:11px" data-level="low"  data-rec="rec-' + rc + '">Low</label>' +
+          '<label class="radio-btn" style="padding:4px 10px;font-size:11px" data-level="high" data-rec="rec-' + sxEsc(rc) + '">High</label>' +
+          '<label class="radio-btn" style="padding:4px 10px;font-size:11px" data-level="med"  data-rec="rec-' + sxEsc(rc) + '">Medium</label>' +
+          '<label class="radio-btn" style="padding:4px 10px;font-size:11px" data-level="low"  data-rec="rec-' + sxEsc(rc) + '">Low</label>' +
         '</div>' +
         '<select style="margin-left:auto;width:160px;font-size:12px"><option>Requirement</option><option>Recommendation</option></select>' +
       '</div>' +
@@ -8293,8 +8303,8 @@
     wrap.id = `photo-card-${num}`;
     wrap.innerHTML = `
       <div class="photo-preview-wrap" onclick="triggerPhotoUpload(${num})">
-        <img id="${id}-img" alt="Photo ${num}">
-        <div class="photo-placeholder" id="${id}-placeholder">
+        <img id="${sxEsc(id)}-img" alt="Photo ${num}">
+        <div class="photo-placeholder" id="${sxEsc(id)}-placeholder">
           <div class="photo-placeholder-icon">📷</div>
           <div class="photo-placeholder-text">Click to add Photo ${num}</div>
         </div>
@@ -8302,12 +8312,12 @@
       </div>
       <div class="photo-meta">
         <div class="photo-num">Photo ${num}</div>
-        <input type="text" id="${id}-caption" placeholder="Caption — describe what is shown" style="font-size:12px;">
-        <select id="${id}-category" style="font-size:12px;margin-top:2px;">
-          ${PHOTO_CATEGORIES.map(c => `<option>${c}</option>`).join('')}
+        <input type="text" id="${sxEsc(id)}-caption" placeholder="Caption — describe what is shown" style="font-size:12px;">
+        <select id="${sxEsc(id)}-category" style="font-size:12px;margin-top:2px;">
+          ${PHOTO_CATEGORIES.map(c => `<option>${sxEsc(c)}</option>`).join('')}
         </select>
       </div>
-      <input type="file" id="${id}-file" accept="image/*" style="display:none"
+      <input type="file" id="${sxEsc(id)}-file" accept="image/*" style="display:none"
         onchange="handlePhotoFile(${num}, this)">`;
     return wrap;
   }
@@ -8455,10 +8465,10 @@
       return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8f5f0;border-radius:8px;border:1px solid var(--border);">' +
         '<span style="font-size:24px;">📎</span>' +
         '<div style="flex:1;">' +
-          '<div style="font-weight:600;font-size:13px;color:var(--navy);">' + pdf.name + '</div>' +
-          '<div style="font-size:11px;color:var(--slate);">' + size + '</div>' +
+          '<div style="font-weight:600;font-size:13px;color:var(--navy);">' + sxEsc(pdf.name) + '</div>' +
+          '<div style="font-size:11px;color:var(--slate);">' + sxEsc(size) + '</div>' +
         '</div>' +
-        (pdf.url ? '<a href="' + pdf.url + '" target="_blank" style="font-size:12px;color:var(--navy);font-weight:600;text-decoration:none;padding:4px 10px;border:1px solid var(--navy);border-radius:6px;">View</a>' : '') +
+        (pdf.url ? '<a href="' + sxUrl(pdf.url) + '" target="_blank" style="font-size:12px;color:var(--navy);font-weight:600;text-decoration:none;padding:4px 10px;border:1px solid var(--navy);border-radius:6px;">View</a>' : '') +
         '<button onclick="removePDF(' + idx + ')" style="background:none;border:none;color:#c53030;font-size:18px;cursor:pointer;padding:0 4px;">✕</button>' +
         '</div>';
     }).join('');
@@ -8966,13 +8976,13 @@
     const occSel = document.getElementById('filter-occupancy');
     const occs = [...new Set(rows.map(r => r.occupancy_class).filter(Boolean))].sort();
     occSel.innerHTML = '<option value="">All Occupancies</option>' +
-      occs.map(o => `<option value="${o}">${o}</option>`).join('');
+      occs.map(o => `<option value="${sxEsc(o)}">${sxEsc(o)}</option>`).join('');
     // Inspector filter (admin only)
     const inspSel = document.getElementById('filter-inspector');
     if (inspSel && currentUserRole === 'admin') {
       const insps = [...new Set(rows.map(r => r.inspector_name).filter(Boolean))].sort();
       inspSel.innerHTML = '<option value="">All Inspectors</option>' +
-        insps.map(i => `<option value="${i}">${i}</option>`).join('');
+        insps.map(i => `<option value="${sxEsc(i)}">${sxEsc(i)}</option>`).join('');
     }
   }
   // ══════════════════════════════════════════
@@ -9095,7 +9105,7 @@
         rows.forEach(function(r) {
           var div = document.createElement('div');
           div.className = 'cdd-result-item';
-          div.innerHTML = r.location + '<span class="cdd-prov">' + r.province + '</span>';
+          div.innerHTML = sxEsc(r.location) + '<span class="cdd-prov">' + sxEsc(r.province) + '</span>';
           div.onclick = function() { cddSelect(r); };
           box.appendChild(div);
         });
@@ -9881,7 +9891,7 @@
       renderDashboardTable(allInspections);
     } catch(e) {
       console.error('[SRC] Dashboard load error:', e);
-      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div>Could not load inspections.<br>' + (e.message || 'Check console for details.') + '</div>';
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div>Could not load inspections.<br>' + (sxEsc(e.message || 'Check console for details.')) + '</div>';
     }
   }
   function renderDashboardTable(rows) {
@@ -9907,36 +9917,36 @@
       const loc = [r.city, r.province_state].filter(Boolean).join(', ') || '—';
       const rq = r.risk_quality || '—';
       return `<tr>
-        <td>${r.account_number ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--gold-pale);color:var(--navy);padding:2px 8px;border-radius:10px;">${r.account_number}</span>` : '—'}</td>
-        <td>${r.policy_number ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:#ebf4ff;color:#2b6cb0;padding:2px 8px;border-radius:10px;">${r.policy_number}</span>` : '—'}</td>
-        <td><strong>${r.inspection_id || '—'}</strong></td>
+        <td>${r.account_number ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--gold-pale);color:var(--navy);padding:2px 8px;border-radius:10px;">${sxEsc(r.account_number)}</span>` : '—'}</td>
+        <td>${r.policy_number ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:#ebf4ff;color:#2b6cb0;padding:2px 8px;border-radius:10px;">${sxEsc(r.policy_number)}</span>` : '—'}</td>
+        <td><strong>${sxEsc(r.inspection_id || '—')}</strong></td>
         <td>${date}</td>
-        <td>${r.insured_name || '—'}</td>
-        <td>${loc}</td>
-        <td>${r.occupancy_class || '—'}</td>
-        <td>${r.inspector_name || '—'}</td>
-        <td><span class="risk-badge ${riskClass(rq)}">${rq}</span></td>
+        <td>${sxEsc(r.insured_name || '—')}</td>
+        <td>${sxEsc(loc)}</td>
+        <td>${sxEsc(r.occupancy_class || '—')}</td>
+        <td>${sxEsc(r.inspector_name || '—')}</td>
+        <td><span class="risk-badge ${riskClass(rq)}">${sxEsc(rq)}</span></td>
         <td>${updated}</td>
         <td style="white-space:nowrap;">
           <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start;">
             <div style="display:flex;gap:3px;">
-              <button class="btn-load-insp" style="padding:4px 8px;font-size:10px;min-height:36px;min-width:50px;" onclick="event.stopPropagation();event.preventDefault();loadInspection('${r.id}')">Load</button>
+              <button class="btn-load-insp" style="padding:4px 8px;font-size:10px;min-height:36px;min-width:50px;" onclick="event.stopPropagation();event.preventDefault();loadInspection('${sxJs(r.id)}')">Load</button>
               <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px;${
                 r.report_status === 'approved'  ? 'background:#F0FFF4;color:#276749;' :
                 r.report_status === 'inreview'  ? 'background:#FAF5FF;color:#6B46C1;' :
                 r.report_status === 'submitted' ? 'background:#FFF3E0;color:#C05621;' :
                 r.report_status === 'returned'  ? 'background:#FEE2E2;color:#C53030;' :
                 'background:rgba(255,255,255,0.1);color:#7a9ab5;'
-              }">${r.report_status ? r.report_status.charAt(0).toUpperCase() + r.report_status.slice(1) : 'Draft'}${r.qa_reviewer ? ' — ' + r.qa_reviewer : ''}</span>
-              ${(r.report_status === 'submitted') ? '<select id="assign-qa-' + r.id + '" style="font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;margin-left:4px;" onchange="assignToReviewer(\'' + r.id + '\', this.value)"><option value="">— Assign to Reviewer —</option>' + qaReviewerList.map(function(rev){return '<option value="' + (rev.full_name||rev.email) + '">' + (rev.full_name||rev.email) + '</option>';}).join('') + '</select>' : ''}
-              ${(r.report_status === 'inreview' && (currentUserRole === 'admin' || currentUserRole === 'reviewer')) ? '<button class="btn-load-insp" style="padding:4px 8px;font-size:10px;margin-left:4px;background:#276749;color:white;" onclick="event.stopPropagation();event.preventDefault();dashboardApproveQA(\'' + r.id + '\',\'' + (r.inspection_id || '') + '\')">✅ Accept</button>' + '<button class="btn-load-insp" style="padding:4px 8px;font-size:10px;margin-left:4px;background:#C53030;color:white;" onclick="event.stopPropagation();event.preventDefault();dashboardReturnQA(\'' + r.id + '\',\'' + (r.inspection_id || '') + '\')">↩ Send Back</button>' : ''}
+              }">${sxEsc(r.report_status ? r.report_status.charAt(0).toUpperCase() + r.report_status.slice(1) : 'Draft')}${r.qa_reviewer ? ' — ' + sxEsc(r.qa_reviewer) : ''}</span>
+              ${(r.report_status === 'submitted') ? '<select id="assign-qa-' + sxEsc(r.id) + '" style="font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;margin-left:4px;" onchange="assignToReviewer(\'' + sxJs(r.id) + '\', this.value)"><option value="">— Assign to Reviewer —</option>' + qaReviewerList.map(function(rev){return '<option value="' + (sxEsc(rev.full_name||rev.email)) + '">' + (sxEsc(rev.full_name||rev.email)) + '</option>';}).join('') + '</select>' : ''}
+              ${(r.report_status === 'inreview' && (currentUserRole === 'admin' || currentUserRole === 'reviewer')) ? '<button class="btn-load-insp" style="padding:4px 8px;font-size:10px;margin-left:4px;background:#276749;color:white;" onclick="event.stopPropagation();event.preventDefault();dashboardApproveQA(\'' + sxJs(r.id) + '\',\'' + (sxJs(r.inspection_id || '')) + '\')">✅ Accept</button>' + '<button class="btn-load-insp" style="padding:4px 8px;font-size:10px;margin-left:4px;background:#C53030;color:white;" onclick="event.stopPropagation();event.preventDefault();dashboardReturnQA(\'' + sxJs(r.id) + '\',\'' + (sxJs(r.inspection_id || '')) + '\')">↩ Send Back</button>' : ''}
               <button class="btn-load-insp" style="padding:4px 8px;font-size:10px;${r.report_published ? 'background:#276749;color:white;' : 'background:#f0fff4;color:#276749;border:1px solid #276749;'}"
-                onclick="togglePublishReport('${r.id}', ${r.report_published ? 'true' : 'false'}, '${r.inspection_id || ''}', '${r.insured_name ? r.insured_name.replace(/'/g, '') : ''}')">
+                onclick="togglePublishReport('${sxJs(r.id)}', ${r.report_published ? 'true' : 'false'}, '${sxJs(r.inspection_id || '')}', '${sxJs(r.insured_name ? r.insured_name.replace(/'/g, '') : '')}')">
                 ${r.report_published ? 'Unpublish' : 'Publish'}
               </button>
-              <button class="btn-del-insp" style="padding:4px 8px;font-size:10px;margin-left:0;" onclick="deleteInspection('${r.id}','${r.inspection_id}')">✕</button>
+              <button class="btn-del-insp" style="padding:4px 8px;font-size:10px;margin-left:0;" onclick="deleteInspection('${sxJs(r.id)}','${sxJs(r.inspection_id)}')">✕</button>
             </div>
-            ${r.report_published ? `<a href="/report?ref=${r.inspection_id}" target="_blank"
+            ${r.report_published ? `<a href="/report?ref=${encodeURIComponent(r.inspection_id)}" target="_blank"
               style="font-size:10px;color:#2b6cb0;text-decoration:none;">&#x1F517; View Report</a>` : ''}
           </div>
         </td>
@@ -10033,53 +10043,53 @@
           'Reassigned': 'background:#faf5ff;color:#6b46c1;border:1px solid #805ad5;',
         };
         const style = colors[s] || 'background:#f7f7f7;color:#888;border:1px solid #ccc;';
-        return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;${style}">${s || '—'}</span>`;
+        return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;${sxEsc(style)}">${sxEsc(s || '—')}</span>`;
       };
       // Inspector options for dropdown
       const inspOpts = _inspectorList.length
-        ? _inspectorList.map(p => `<option value="${p.full_name || p.email}">${p.full_name || p.email}</option>`).join('')
+        ? _inspectorList.map(p => `<option value="${sxEsc(p.full_name || p.email)}">${sxEsc(p.full_name || p.email)}</option>`).join('')
         : '<option value="">— No inspectors found —</option>';
       const rows_html = rows.map(r => {
         const date = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-CA') : '—';
         const pref = r.preferred_date ? new Date(r.preferred_date + 'T00:00:00').toLocaleDateString('en-CA') : '—';
         const assignedTo = r.assigned_to
-          ? `<span style="font-size:11px;font-weight:600;color:var(--navy);">&#x1F464; ${r.assigned_to}</span>`
+          ? `<span style="font-size:11px;font-weight:600;color:var(--navy);">&#x1F464; ${sxEsc(r.assigned_to)}</span>`
           : `<span style="font-size:11px;color:var(--text-light);font-style:italic;">Unassigned</span>`;
-        const rJson = JSON.stringify(r).split('"').join('&quot;');
+        const rJson = sxEsc(JSON.stringify(r));
         const isCompleted = r.status === 'Completed';
         return `<tr style="${isCompleted ? 'opacity:0.6;' : ''}">
-          <td><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--gold-pale);color:var(--navy);padding:2px 8px;border-radius:10px;">${r.request_ref || '—'}</span></td>
-          <td style="font-size:12px;">${date}</td>
-          <td style="word-break:break-word;"><strong style="font-size:12px;">${r.insured_name || '—'}</strong><br>
-              <span style="font-size:10px;color:var(--slate)">${[r.city, r.province].filter(Boolean).join(', ')}</span></td>
-          <td style="font-size:12px;">${r.occupancy_type || '—'}</td>
-          <td style="font-size:12px;">${r.purpose || '—'}</td>
-          <td><span style="font-size:11px;font-weight:600;color:${urgencyColor(r.urgency)}">${r.urgency ? r.urgency.split('—')[0].trim() : '—'}</span></td>
-          <td>${statusBadge(r.status)}</td>
+          <td><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--gold-pale);color:var(--navy);padding:2px 8px;border-radius:10px;">${sxEsc(r.request_ref || '—')}</span></td>
+          <td style="font-size:12px;">${sxEsc(date)}</td>
+          <td style="word-break:break-word;"><strong style="font-size:12px;">${sxEsc(r.insured_name || '—')}</strong><br>
+              <span style="font-size:10px;color:var(--slate)">${sxEsc([r.city, r.province].filter(Boolean).join(', '))}</span></td>
+          <td style="font-size:12px;">${sxEsc(r.occupancy_type || '—')}</td>
+          <td style="font-size:12px;">${sxEsc(r.purpose || '—')}</td>
+          <td><span style="font-size:11px;font-weight:600;color:${sxEsc(urgencyColor(r.urgency))}">${r.urgency ? sxEsc(r.urgency.split('—')[0].trim()) : '—'}</span></td>
+          <td>${sxEsc(statusBadge(r.status))}</td>
           <td>
-            ${assignedTo}
+            ${sxEsc(assignedTo)}
             <div style="margin-top:6px;display:flex;gap:4px;align-items:center;">
-              <select id="assign-sel-${r.id}" style="font-size:10px;padding:2px 4px;border-radius:6px;border:1px solid var(--border);max-width:110px;">
+              <select id="assign-sel-${sxEsc(r.id)}" style="font-size:10px;padding:2px 4px;border-radius:6px;border:1px solid var(--border);max-width:110px;">
                 <option value="">— Assign to —</option>
-                ${inspOpts}
+                ${sxEsc(inspOpts)}
               </select>
               <button class="btn-load-insp" style="font-size:10px;padding:3px 8px;white-space:nowrap;"
-                onclick="assignInspector('${r.id}', '${r.status}')">
+                onclick="assignInspector('${sxJs(r.id)}', '${sxJs(r.status)}')">
                 ${r.assigned_to ? '&#x21BB; Reassign' : 'Assign'}
               </button>
             </div>
           </td>
-          <td style="font-size:12px;">${pref}</td>
+          <td style="font-size:12px;">${sxEsc(pref)}</td>
           <td style="white-space:nowrap;">
             <div style="display:flex;flex-direction:column;gap:4px;">
               <button class="btn-load-insp" onclick="convertRequest(${rJson})"
                 style="font-size:11px;">&#x21AA; Convert</button>
-              <button class="btn-del-insp" onclick="markCompleted('${r.id}')"
+              <button class="btn-del-insp" onclick="markCompleted('${sxJs(r.id)}')"
                 style="font-size:11px;${isCompleted ? 'background:#ccc;color:#888;cursor:not-allowed;' : ''}">
                 ${isCompleted ? '&#x2713; Done' : '&#x2713; Complete'}</button>
               ${r.status === 'Completed' || r.status === 'Converted'
                 ? `<button class="btn-load-insp" style="font-size:10px;padding:3px 8px;background:#fff3e0;color:#dd6b20;border-color:#dd6b20;"
-                    onclick="reopenRequest('${r.id}')">&#x21BA; Reopen</button>`
+                    onclick="reopenRequest('${sxJs(r.id)}')">&#x21BA; Reopen</button>`
                 : ''}
             </div>
           </td>
@@ -10113,7 +10123,7 @@
         </div>`;
     } catch(e) {
       console.error(e);
-      tbl.innerHTML = '<div style="padding:20px;color:#e53e3e;">Failed to load requests: ' + (e.message || e) + '</div>';
+      tbl.innerHTML = '<div style="padding:20px;color:#e53e3e;">Failed to load requests: ' + (sxEsc(e.message || e)) + '</div>';
     }
   }
 
@@ -10163,8 +10173,8 @@
       var icon = /\.pdf$/i.test(f.name) ? '📄' : '📝';
       var kb = (f.size / 1024).toFixed(0);
       return '<div id="archive-queue-item-' + i + '" style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:white;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;font-size:12px;">' +
-        '<span>' + icon + '</span><span style="flex:1;word-break:break-all;">' + f.name + '</span>' +
-        '<span style="color:var(--slate);font-size:11px;">' + kb + ' KB</span>' +
+        '<span>' + sxEsc(icon) + '</span><span style="flex:1;word-break:break-all;">' + sxEsc(f.name) + '</span>' +
+        '<span style="color:var(--slate);font-size:11px;">' + sxEsc(kb) + ' KB</span>' +
         '<span id="archive-queue-status-' + i + '" style="font-size:11px;color:var(--slate);min-width:70px;text-align:right;">Queued</span>' +
         '<button onclick="removeArchiveQueueItem(' + i + ')" style="background:none;border:none;color:#C53030;font-size:15px;cursor:pointer;padding:0 4px;" title="Remove">&#x2715;</button>' +
         '</div>';
@@ -10240,7 +10250,7 @@
       renderArchiveTable(archiveRowsCache);
     } catch (e) {
       console.error('Archive load error:', e);
-      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div>Could not load archive.<br>' + (e.message || 'Check console.') + '</div>';
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div>Could not load archive.<br>' + (sxEsc(e.message || 'Check console.')) + '</div>';
     }
   }
 
@@ -10255,15 +10265,15 @@
       var date = r.uploaded_at ? new Date(r.uploaded_at).toLocaleDateString('en-CA') : '—';
       var kb = r.file_size ? (r.file_size / 1024).toFixed(0) + ' KB' : '—';
       return '<tr>' +
-        '<td style="font-size:12px;">' + icon + ' ' + (r.file_name || '—') + '</td>' +
-        '<td style="font-size:12px;">' + (r.category || '—') + '</td>' +
-        '<td style="font-size:12px;">' + (r.insured_name || '—') + '</td>' +
-        '<td style="font-size:12px;">' + (r.policy_number || '—') + '</td>' +
-        '<td style="font-size:12px;">' + kb + '</td>' +
-        '<td style="font-size:12px;">' + date + '</td>' +
+        '<td style="font-size:12px;">' + sxEsc(icon) + ' ' + (sxEsc(r.file_name || '—')) + '</td>' +
+        '<td style="font-size:12px;">' + (sxEsc(r.category || '—')) + '</td>' +
+        '<td style="font-size:12px;">' + (sxEsc(r.insured_name || '—')) + '</td>' +
+        '<td style="font-size:12px;">' + (sxEsc(r.policy_number || '—')) + '</td>' +
+        '<td style="font-size:12px;">' + sxEsc(kb) + '</td>' +
+        '<td style="font-size:12px;">' + sxEsc(date) + '</td>' +
         '<td style="white-space:nowrap;">' +
-        '<button class="btn-load-insp" style="font-size:10px;padding:3px 8px;" onclick="downloadArchiveFile(\'' + r.storage_path + '\',\'' + (r.file_name || '').replace(/'/g, '') + '\')">⬇ Download</button> ' +
-        '<button class="btn-del-insp" style="font-size:10px;padding:3px 8px;" onclick="deleteArchiveFile(\'' + r.id + '\',\'' + r.storage_path + '\')">✕</button>' +
+        '<button class="btn-load-insp" style="font-size:10px;padding:3px 8px;" onclick="downloadArchiveFile(\'' + sxJs(r.storage_path) + '\',\'' + sxJs(r.file_name || '') + '\')">⬇ Download</button> ' +
+        '<button class="btn-del-insp" style="font-size:10px;padding:3px 8px;" onclick="deleteArchiveFile(\'' + sxJs(r.id) + '\',\'' + sxJs(r.storage_path) + '\')">✕</button>' +
         '</td></tr>';
     }).join('');
     wrap.innerHTML = '<div style="overflow-x:auto;"><table class="insp-table" style="width:100%;min-width:800px;">' +
@@ -11382,7 +11392,7 @@
     div.id = 'gl-nav-' + id;
     div.setAttribute('data-section', m.section);
     div.onclick = function() { showSection(m.section, this); };
-    div.innerHTML = '<div class="supp-dot"></div> ' + m.icon + ' ' + m.label + '<span class="supp-badge">GL</span>';
+    div.innerHTML = '<div class="supp-dot"></div> ' + sxEsc(m.icon) + ' ' + sxEsc(m.label) + '<span class="supp-badge">GL</span>';
     container.appendChild(div);
   }
   function removeGLNav(id) {
@@ -11487,7 +11497,7 @@
     div.id = 'supp-nav-' + id;
     div.setAttribute('data-section', s.section);
     div.onclick = function() { showSection(s.section, this); };
-    div.innerHTML = '<div class="supp-dot"></div> ' + s.icon + ' ' + s.label + '<span class="supp-badge">SUPP</span>';
+    div.innerHTML = '<div class="supp-dot"></div> ' + sxEsc(s.icon) + ' ' + sxEsc(s.label) + '<span class="supp-badge">SUPP</span>';
     container.appendChild(div);
   }
   function removeSuppNav(id) {
@@ -11517,19 +11527,19 @@
         <div class="form-grid">
           <div class="field">
             <label>Building Name / Description</label>
-            <input type="text" id="${b}-name" placeholder="e.g. Warehouse B, Detached Garage">
+            <input type="text" id="${sxEsc(b)}-name" placeholder="e.g. Warehouse B, Detached Garage">
           </div>
           <div class="field">
             <label>Building Use / Occupancy</label>
-            <input type="text" id="${b}-use" placeholder="e.g. Storage, Office, Manufacturing">
+            <input type="text" id="${sxEsc(b)}-use" placeholder="e.g. Storage, Office, Manufacturing">
           </div>
           <div class="field">
             <label>Street Address (if different)</label>
-            <input type="text" id="${b}-address" placeholder="Address or lot description">
+            <input type="text" id="${sxEsc(b)}-address" placeholder="Address or lot description">
           </div>
           <div class="field">
             <label>Relationship to Main Building</label>
-            <select id="${b}-relationship">
+            <select id="${sxEsc(b)}-relationship">
               <option value="">— Select —</option>
               <option>Attached</option>
               <option>Detached — Adjacent</option>
@@ -11539,7 +11549,7 @@
           </div>
           <div class="field">
             <label>Distance to Main Building (ft)</label>
-            <input type="number" id="${b}-distance-to-main" min="0" placeholder="Nearest exterior wall to nearest exterior wall">
+            <input type="number" id="${sxEsc(b)}-distance-to-main" min="0" placeholder="Nearest exterior wall to nearest exterior wall">
             <div style="font-size:10px;color:var(--slate);margin-top:4px;">Only used for PML/NLE mutual exposure (item iii) when Relationship is Detached — not applied for Attached/Communicating buildings.</div>
           </div>
         </div>
@@ -11551,19 +11561,19 @@
         <div class="form-grid">
           <div class="field">
             <label>Year Built</label>
-            <input type="number" id="${b}-year-built" placeholder="e.g. 1998">
+            <input type="number" id="${sxEsc(b)}-year-built" placeholder="e.g. 1998">
           </div>
           <div class="field">
             <label>Total Square Footage</label>
-            <input type="number" id="${b}-sq-footage" placeholder="sq ft">
+            <input type="number" id="${sxEsc(b)}-sq-footage" placeholder="sq ft">
           </div>
           <div class="field">
             <label>Number of Storeys</label>
-            <input type="number" id="${b}-storeys" placeholder="e.g. 1">
+            <input type="number" id="${sxEsc(b)}-storeys" placeholder="e.g. 1">
           </div>
           <div class="field">
             <label>ISO Construction Class</label>
-            <select id="${b}-construction-class" onchange="prefillBldgE2ValueConstruction(${num})">
+            <select id="${sxEsc(b)}-construction-class" onchange="prefillBldgE2ValueConstruction(${num})">
               <option value="">— Select —</option>
               <option>Class 1 — Frame</option>
               <option>Class 2 — Joisted Masonry</option>
@@ -11575,7 +11585,7 @@
           </div>
           <div class="field">
             <label>Exterior Wall Construction</label>
-            <select id="${b}-wall-construction">
+            <select id="${sxEsc(b)}-wall-construction">
               <option value="">— Select —</option>
               <option>Wood Frame</option>
               <option>Brick / Masonry</option>
@@ -11588,7 +11598,7 @@
           </div>
           <div class="field">
             <label>Roof Material</label>
-            <select id="${b}-roof-material">
+            <select id="${sxEsc(b)}-roof-material">
               <option value="">— Select —</option>
               <option>Built-Up (Tar & Gravel)</option>
               <option>Modified Bitumen</option>
@@ -11602,11 +11612,11 @@
           </div>
           <div class="field">
             <label>Roof Age (years)</label>
-            <input type="number" id="${b}-roof-age" placeholder="e.g. 8">
+            <input type="number" id="${sxEsc(b)}-roof-age" placeholder="e.g. 8">
           </div>
           <div class="field">
             <label>Roof Structure</label>
-            <select id="${b}-roof-structure">
+            <select id="${sxEsc(b)}-roof-structure">
               <option value="">— Select —</option>
               <option>Wood Joists / Rafters</option>
               <option>Steel Bar Joist</option>
@@ -11618,7 +11628,7 @@
         </div>
         <div class="field form-full" style="margin-top:8px;">
           <label>Construction Notes</label>
-          <textarea spellcheck="true" id="${b}-construction-notes" rows="3" placeholder="Construction quality, condition, renovations, notable features..."></textarea>
+          <textarea spellcheck="true" id="${sxEsc(b)}-construction-notes" rows="3" placeholder="Construction quality, condition, renovations, notable features..."></textarea>
         </div>
       </div>
       <div class="divider"></div>
@@ -11629,15 +11639,15 @@
         <div class="form-grid">
           <div class="field">
             <label>Structure Type (e2Value)</label>
-            <select id="${b}-e2value-structuretype"><option value="">&#x2014; Select &#x2014;</option></select>
+            <select id="${sxEsc(b)}-e2value-structuretype"><option value="">&#x2014; Select &#x2014;</option></select>
           </div>
           <div class="field">
             <label>Postal Code <span style="font-size:10px;color:var(--slate);font-weight:400">(required by e2Value, e.g. K2P 1L7)</span></label>
-            <input type="text" id="${b}-e2value-postal" placeholder="e.g. K2P 1L7">
+            <input type="text" id="${sxEsc(b)}-e2value-postal" placeholder="e.g. K2P 1L7">
           </div>
           <div class="field">
             <label>Construction Type (sent to e2Value) <span style="font-size:10px;color:var(--slate);font-weight:400">(QA check &#x2014; confirm before requesting)</span></label>
-            <select id="${b}-e2value-construction">
+            <select id="${sxEsc(b)}-e2value-construction">
               <option value="">&#x2014; Select or leave for e2Value to infer &#x2014;</option>
               <option>Class 1 — Frame</option>
               <option>Class 2 — Joisted Masonry</option>
@@ -11648,9 +11658,9 @@
             </select>
           </div>
         </div>
-        <button type="button" class="btn-secondary" id="${b}-btn-e2value-estimate" onclick="getBldgE2ValueEstimate(${num})">Get e2Value Estimate</button>
-        <div id="${b}-e2value-cost-result" style="margin-top:10px;"></div>
-        <input type="hidden" id="${b}-e2value-result-json" value="">
+        <button type="button" class="btn-secondary" id="${sxEsc(b)}-btn-e2value-estimate" onclick="getBldgE2ValueEstimate(${num})">Get e2Value Estimate</button>
+        <div id="${sxEsc(b)}-e2value-cost-result" style="margin-top:10px;"></div>
+        <input type="hidden" id="${sxEsc(b)}-e2value-result-json" value="">
       </div>
       <div class="divider"></div>
       <!-- O — Occupancy -->
@@ -11659,7 +11669,7 @@
         <div class="form-grid">
           <div class="field">
             <label>Occupancy Class</label>
-            <select id="${b}-occupancy-class">
+            <select id="${sxEsc(b)}-occupancy-class">
               <option value="">— Select —</option>
               <option>Office / Professional</option>
               <option>Retail — Low Hazard</option>
@@ -11677,12 +11687,12 @@
           </div>
           <div class="field">
             <label>% Vacant / Unoccupied</label>
-            <input type="number" id="${b}-vacancy-pct" placeholder="0–100" min="0" max="100">
+            <input type="number" id="${sxEsc(b)}-vacancy-pct" placeholder="0–100" min="0" max="100">
           </div>
         </div>
         <div class="field form-full" style="margin-top:8px;">
           <label>Occupancy Notes</label>
-          <textarea spellcheck="true" id="${b}-occupancy-notes" rows="3" placeholder="Operations description, tenant info, hazardous processes, storage commodities..."></textarea>
+          <textarea spellcheck="true" id="${sxEsc(b)}-occupancy-notes" rows="3" placeholder="Operations description, tenant info, hazardous processes, storage commodities..."></textarea>
         </div>
       </div>
       <div class="divider"></div>
@@ -11692,7 +11702,7 @@
         <div class="form-grid">
           <div class="field">
             <label>Sprinkler System</label>
-            <select id="${b}-sprinkler">
+            <select id="${sxEsc(b)}-sprinkler">
               <option value="">— Select —</option>
               <option>Full Wet Pipe</option>
               <option>Partial Wet Pipe</option>
@@ -11704,7 +11714,7 @@
           </div>
           <div class="field">
             <label>Fire Alarm</label>
-            <select id="${b}-fire-alarm">
+            <select id="${sxEsc(b)}-fire-alarm">
               <option value="">— Select —</option>
               <option>Central Station Monitored</option>
               <option>Local Alarm Only</option>
@@ -11714,7 +11724,7 @@
           </div>
           <div class="field">
             <label>Fire Extinguishers</label>
-            <select id="${b}-extinguishers">
+            <select id="${sxEsc(b)}-extinguishers">
               <option value="">— Select —</option>
               <option>Present — Serviced</option>
               <option>Present — Not Serviced</option>
@@ -11723,7 +11733,7 @@
           </div>
           <div class="field">
             <label>Emergency Lighting</label>
-            <select id="${b}-emergency-lighting">
+            <select id="${sxEsc(b)}-emergency-lighting">
               <option value="">— Select —</option>
               <option>Present</option>
               <option>Not Present</option>
@@ -11732,7 +11742,7 @@
         </div>
         <div class="field form-full" style="margin-top:8px;">
           <label>Protection Notes</label>
-          <textarea spellcheck="true" id="${b}-protection-notes" rows="3" placeholder="Sprinkler coverage details, alarm panel location, deficiencies noted..."></textarea>
+          <textarea spellcheck="true" id="${sxEsc(b)}-protection-notes" rows="3" placeholder="Sprinkler coverage details, alarm panel location, deficiencies noted..."></textarea>
         </div>
       </div>
       <div class="divider"></div>
@@ -11742,24 +11752,24 @@
         <div class="form-grid">
           <div class="field">
             <label>Exposure — North</label>
-            <input type="text" id="${b}-exposure-north" placeholder="Adjacent occupancy / distance">
+            <input type="text" id="${sxEsc(b)}-exposure-north" placeholder="Adjacent occupancy / distance">
           </div>
           <div class="field">
             <label>Exposure — South</label>
-            <input type="text" id="${b}-exposure-south" placeholder="Adjacent occupancy / distance">
+            <input type="text" id="${sxEsc(b)}-exposure-south" placeholder="Adjacent occupancy / distance">
           </div>
           <div class="field">
             <label>Exposure — East</label>
-            <input type="text" id="${b}-exposure-east" placeholder="Adjacent occupancy / distance">
+            <input type="text" id="${sxEsc(b)}-exposure-east" placeholder="Adjacent occupancy / distance">
           </div>
           <div class="field">
             <label>Exposure — West</label>
-            <input type="text" id="${b}-exposure-west" placeholder="Adjacent occupancy / distance">
+            <input type="text" id="${sxEsc(b)}-exposure-west" placeholder="Adjacent occupancy / distance">
           </div>
         </div>
         <div class="field form-full" style="margin-top:8px;">
           <label>Exposure / General Notes</label>
-          <textarea spellcheck="true" id="${b}-exposure-notes" rows="3" placeholder="Separation distances, shared walls, wildfire/flood zone, site drainage..."></textarea>
+          <textarea spellcheck="true" id="${sxEsc(b)}-exposure-notes" rows="3" placeholder="Separation distances, shared walls, wildfire/flood zone, site drainage..."></textarea>
         </div>
       </div>
     </div>`;
@@ -11886,7 +11896,7 @@
     if (!address1) errors.push('Enter a Street Address (on this building or the main property).');
     if (!/^[A-Z][0-9][A-Z] [0-9][A-Z][0-9]$/.test(postalCode)) errors.push('Enter a valid Canadian Postal Code, e.g. K2P 1L7.');
     if (errors.length) {
-      resultEl.innerHTML = _copeCostMsg(errors.join(' '));
+      resultEl.innerHTML = _copeCostMsg(sxEsc(errors.join(' ')));
       return;
     }
 
@@ -11919,7 +11929,7 @@
           result.data.sentConstructionType = mappedConstructionType; // for display only
         }
         if (!result.ok || result.data.status !== 'success') {
-          resultEl.innerHTML = _copeCostMsg('e2Value estimate failed: ' + (result.data.error || result.data.errorMessage || 'unknown error') + '.');
+          resultEl.innerHTML = _copeCostMsg('e2Value estimate failed: ' + sxEsc(result.data.error || result.data.errorMessage || 'unknown error') + '.');
           return;
         }
         cacheEl.value = JSON.stringify(result.data);
@@ -11928,7 +11938,7 @@
       .catch(err => {
         btn.disabled = false;
         btn.textContent = 'Get e2Value Estimate';
-        resultEl.innerHTML = _copeCostMsg('Network error contacting e2Value: ' + err.message);
+        resultEl.innerHTML = _copeCostMsg('Network error contacting e2Value: ' + sxEsc(err.message));
       });
   }
 
@@ -12270,7 +12280,7 @@
       filterRecLibrary();
     } catch (err) {
       console.error('Rec library load error:', err.message || err);
-      resultsEl.innerHTML = '<div class="rec-lib-empty">⚠️ ' + (err.message || 'Could not load recommendations library. Check your connection and try again.') + '</div>';
+      resultsEl.innerHTML = '<div class="rec-lib-empty">⚠️ ' + (sxEsc(err.message || 'Could not load recommendations library. Check your connection and try again.')) + '</div>';
     }
   }
   function filterRecLibrary() {
@@ -12307,13 +12317,13 @@
       var safeText  = (r.rec_text || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
       var safePrio  = (r.priority  || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
       var safeCat   = (r.category  || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-      return '<div class="rec-lib-item prio-' + prioClass + '">' +
+      return '<div class="rec-lib-item prio-' + sxEsc(prioClass) + '">' +
         '<div class="rec-lib-item-header">' +
-          '<span class="rec-lib-badge badge-' + prioClass + '">' + (r.priority || '') + '</span>' +
-          '<span class="rec-lib-title">' + (r.title || '') + '</span>' +
-          '<span class="rec-lib-cat">' + (r.subcategory || r.category || '') + '</span>' +
+          '<span class="rec-lib-badge badge-' + sxEsc(prioClass) + '">' + (sxEsc(r.priority || '')) + '</span>' +
+          '<span class="rec-lib-title">' + (sxEsc(r.title || '')) + '</span>' +
+          '<span class="rec-lib-cat">' + (sxEsc(r.subcategory || r.category || '')) + '</span>' +
         '</div>' +
-        '<div class="rec-lib-preview">' + preview + '</div>' +
+        '<div class="rec-lib-preview">' + sxEsc(preview) + '</div>' +
         '<button class="rec-lib-insert-btn" ' +
           'onclick=\'insertRecFromLibrary(this)\' ' +
           'data-title="' + safeTitle + '" ' +
@@ -12382,7 +12392,7 @@
     var sectionVal = catToSection[category] || 'Other';
     var sectionOptions = ['Construction','Occupancy','Protection — Fire','Protection — Security','Exposure','Safety / Compliance','Housekeeping','Other'];
     var sectionOpts = sectionOptions.map(function(o) {
-      return '<option' + (o === sectionVal ? ' selected' : '') + '>' + o + '</option>';
+      return '<option' + (o === sectionVal ? ' selected' : '') + '>' + sxEsc(o) + '</option>';
     }).join('');
     var hHigh = level === 'high' ? ' selected' : '';
     var hMed  = level === 'med'  ? ' selected' : '';
@@ -12390,11 +12400,11 @@
     var rc = recCount;
     div.innerHTML =
       '<div class="rec-header">' +
-        '<span class="rec-num">#' + rc + '</span>' +
+        '<span class="rec-num">#' + sxEsc(rc) + '</span>' +
         '<div class="radio-group" style="flex-wrap:nowrap;gap:6px">' +
-          '<label class="radio-btn' + hHigh + '" style="padding:4px 10px;font-size:11px" data-level="high" data-rec="rec-' + rc + '">High</label>' +
-          '<label class="radio-btn' + hMed  + '" style="padding:4px 10px;font-size:11px" data-level="med"  data-rec="rec-' + rc + '">Medium</label>' +
-          '<label class="radio-btn' + hLow  + '" style="padding:4px 10px;font-size:11px" data-level="low"  data-rec="rec-' + rc + '">Low</label>' +
+          '<label class="radio-btn' + hHigh + '" style="padding:4px 10px;font-size:11px" data-level="high" data-rec="rec-' + sxEsc(rc) + '">High</label>' +
+          '<label class="radio-btn' + hMed  + '" style="padding:4px 10px;font-size:11px" data-level="med"  data-rec="rec-' + sxEsc(rc) + '">Medium</label>' +
+          '<label class="radio-btn' + hLow  + '" style="padding:4px 10px;font-size:11px" data-level="low"  data-rec="rec-' + sxEsc(rc) + '">Low</label>' +
         '</div>' +
         '<select style="margin-left:auto;width:160px;font-size:12px"><option>Requirement</option><option>Recommendation</option></select>' +
       '</div>' +
@@ -13178,18 +13188,18 @@
     };
     var sectionVal = catToSection[category] || 'Other';
     var sectionOptions = ['Construction','Occupancy','Protection — Fire','Protection — Security','Exposure','Safety / Compliance','Housekeeping','Other'];
-    var sectionOpts = sectionOptions.map(function(o) { return '<option' + (o === sectionVal ? ' selected' : '') + '>' + o + '</option>'; }).join('');
+    var sectionOpts = sectionOptions.map(function(o) { return '<option' + (o === sectionVal ? ' selected' : '') + '>' + sxEsc(o) + '</option>'; }).join('');
     var hHigh = level === 'high' ? ' selected' : '';
     var hMed  = level === 'med'  ? ' selected' : '';
     var hLow  = level === 'low'  ? ' selected' : '';
     var rc = recCount;
     div.innerHTML =
       '<div class="rec-header">' +
-        '<span class="rec-num">#' + rc + ' <span style="font-size:10px;font-weight:400;color:var(--gold-dark);text-transform:uppercase;letter-spacing:.04em;">Auto-suggested</span></span>' +
+        '<span class="rec-num">#' + sxEsc(rc) + ' <span style="font-size:10px;font-weight:400;color:var(--gold-dark);text-transform:uppercase;letter-spacing:.04em;">Auto-suggested</span></span>' +
         '<div class="radio-group" style="flex-wrap:nowrap;gap:6px">' +
-          '<label class="radio-btn' + hHigh + '" style="padding:4px 10px;font-size:11px" data-level="high" data-rec="rec-' + rc + '">High</label>' +
-          '<label class="radio-btn' + hMed  + '" style="padding:4px 10px;font-size:11px" data-level="med"  data-rec="rec-' + rc + '">Medium</label>' +
-          '<label class="radio-btn' + hLow  + '" style="padding:4px 10px;font-size:11px" data-level="low"  data-rec="rec-' + rc + '">Low</label>' +
+          '<label class="radio-btn' + hHigh + '" style="padding:4px 10px;font-size:11px" data-level="high" data-rec="rec-' + sxEsc(rc) + '">High</label>' +
+          '<label class="radio-btn' + hMed  + '" style="padding:4px 10px;font-size:11px" data-level="med"  data-rec="rec-' + sxEsc(rc) + '">Medium</label>' +
+          '<label class="radio-btn' + hLow  + '" style="padding:4px 10px;font-size:11px" data-level="low"  data-rec="rec-' + sxEsc(rc) + '">Low</label>' +
         '</div>' +
         '<select style="margin-left:auto;width:160px;font-size:12px"><option>Requirement</option><option>Recommendation</option></select>' +
       '</div>' +
@@ -13585,7 +13595,7 @@
       sorted.forEach(function(f) {
         var color = sevColor[f.severity] || '#666';
         html += '<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);font-size:12.5px;">' +
-          '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;background:' + color + ';margin-right:6px;">' + E(f.severity || 'Note') + '</span>' +
+          '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;background:' + sxEsc(color) + ';margin-right:6px;">' + E(f.severity || 'Note') + '</span>' +
           '<strong>' + E(f.section || '') + (f.field ? ' — ' + E(f.field) : '') + ':</strong> ' + E(f.finding || '') +
           '</div>';
       });
@@ -13779,7 +13789,7 @@
     if (!container) return;
     var options = PCT_OPTIONS[type] || [];
     var optHtml = '<option value="">— Select —</option>' + options.map(function(o) {
-      return '<option>' + o + '</option>';
+      return '<option>' + sxEsc(o) + '</option>';
     }).join('');
     var row = document.createElement('div');
     row.className = 'pct-row';
@@ -13807,7 +13817,7 @@
     if (!container) return;
     var options = getOptionsForType(type);
     var optHtml = '<option value="">— Material —</option>' + options.map(function(o) {
-      return '<option>' + o + '</option>';
+      return '<option>' + sxEsc(o) + '</option>';
     }).join('');
     var row = document.createElement('div');
     row.className = 'finish-row';
@@ -13899,9 +13909,9 @@
     var noteEl = document.getElementById('cope-cost-region-note');
     if (noteEl) {
       if (matchedRegion) {
-        noteEl.innerHTML = '<div style="font-size:11px;color:var(--slate);margin:4px 0 8px;">Showing rates for <strong>' + matchedRegion + '</strong>, matched from City: "' + cityVal + '".</div>';
+        noteEl.innerHTML = '<div style="font-size:11px;color:var(--slate);margin:4px 0 8px;">Showing rates for <strong>' + sxEsc(matchedRegion) + '</strong>, matched from City: "' + sxEsc(cityVal) + '".</div>';
       } else if (cityVal) {
-        noteEl.innerHTML = '<div style="font-size:11px;color:#92400e;margin:4px 0 8px;">City "' + cityVal + '" isn\'t mapped to a specific cost region — showing all regions below (region shown in brackets). Pick the closest metro area\'s figure manually.</div>';
+        noteEl.innerHTML = '<div style="font-size:11px;color:#92400e;margin:4px 0 8px;">City "' + sxEsc(cityVal) + '" isn\'t mapped to a specific cost region — showing all regions below (region shown in brackets). Pick the closest metro area\'s figure manually.</div>';
       } else {
         noteEl.innerHTML = '<div style="font-size:11px;color:var(--slate);margin:4px 0 8px;">Enter a City above to filter this list to the matching region.</div>';
       }
@@ -13971,17 +13981,17 @@
       var low = Math.round(area * row.cost_low);
       var high = Math.round(area * row.cost_high);
       html = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
-        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost</td><td style="padding:4px 0;font-weight:700;">$' + low.toLocaleString('en-CA') + ' &#x2014; $' + high.toLocaleString('en-CA') + '</td></tr>' +
-        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied</td><td style="padding:4px 0;">$' + row.cost_low + ' &#x2013; $' + row.cost_high + ' / sq ft \u00D7 ' + area.toLocaleString('en-CA') + ' sq ft</td></tr>' +
-        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">' + row.source + ' (' + row.year + '), ' + row.region + '</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost</td><td style="padding:4px 0;font-weight:700;">$' + sxEsc(low.toLocaleString('en-CA')) + ' &#x2014; $' + sxEsc(high.toLocaleString('en-CA')) + '</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied</td><td style="padding:4px 0;">$' + sxEsc(row.cost_low) + ' &#x2013; $' + sxEsc(row.cost_high) + ' / sq ft \u00D7 ' + sxEsc(area.toLocaleString('en-CA')) + ' sq ft</td></tr>' +
+        '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">' + sxEsc(row.source) + ' (' + sxEsc(row.year) + '), ' + sxEsc(row.region) + '</td></tr>' +
         '</table>';
       if (city && matchedRegion && row.region !== matchedRegion) {
-        html += _copeCostMsg('You selected a <strong>' + row.region + '</strong> rate, but "' + city + '" matches the <strong>' + matchedRegion + '</strong> region. Double-check this is the rate you intended.');
+        html += _copeCostMsg('You selected a <strong>' + sxEsc(row.region) + '</strong> rate, but "' + sxEsc(city) + '" matches the <strong>' + sxEsc(matchedRegion) + '</strong> region. Double-check this is the rate you intended.');
       } else if (city && !matchedRegion) {
-        html += _copeCostMsg('"' + city + '" isn\'t mapped to a specific Altus Group cost region — this is the <strong>' + row.region + '</strong> rate, chosen manually. Altus Group does not publish a distinct rural/remote figure, so treat this as a rough reference only, and consider a detailed CoreLogic or RSMeans valuation for an accurate estimate.');
+        html += _copeCostMsg('"' + sxEsc(city) + '" isn\'t mapped to a specific Altus Group cost region — this is the <strong>' + sxEsc(row.region) + '</strong> rate, chosen manually. Altus Group does not publish a distinct rural/remote figure, so treat this as a rough reference only, and consider a detailed CoreLogic or RSMeans valuation for an accurate estimate.');
       }
       if (row.notes) {
-        html += '<div style="font-size:11px;color:var(--slate-light);margin-top:4px;">Note: ' + row.notes + '</div>';
+        html += '<div style="font-size:11px;color:var(--slate-light);margin-top:4px;">Note: ' + sxEsc(row.notes) + '</div>';
       }
     }
     html += '<div style="font-size:10px;color:var(--slate-light);margin-top:8px;">Hard construction costs only — excludes land, soft costs, FF&E, and site development. For occupancies not listed here, or for a valuation suitable for insurance/replacement cost purposes, request a detailed CoreLogic or RSMeans valuation.</div>';
@@ -14070,21 +14080,21 @@
   // embedding — same underlying cached data, same markup.
   function renderCopeE2ValueResultHtml(result) {
     if (!result || result.status !== 'success') {
-      return _copeCostMsg('The last e2Value call did not return a usable estimate' + (result && result.errorMessage ? ': ' + result.errorMessage : '.'));
+      return _copeCostMsg('The last e2Value call did not return a usable estimate' + (result && result.errorMessage ? ': ' + sxEsc(result.errorMessage) : '.'));
     }
     var cd = result.costDetails || {};
     var med = cd.med || {};
     var low = cd.low || {};
     var high = cd.high || {};
     var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
-      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost (Mid)</td><td style="padding:4px 0;font-weight:700;">$' + (med.totalReplacementCost != null ? Math.round(med.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + '</td></tr>' +
-      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Range (Low &#x2013; High)</td><td style="padding:4px 0;">$' + (low.totalReplacementCost != null ? Math.round(low.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + ' &#x2014; $' + (high.totalReplacementCost != null ? Math.round(high.totalReplacementCost).toLocaleString('en-CA') : '&#x2014;') + '</td></tr>' +
-      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied (Mid)</td><td style="padding:4px 0;">$' + (med.costPerSqft != null ? med.costPerSqft : '&#x2014;') + ' / sq ft</td></tr>';
+      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Estimated Replacement Cost (Mid)</td><td style="padding:4px 0;font-weight:700;">$' + (med.totalReplacementCost != null ? sxEsc(Math.round(med.totalReplacementCost).toLocaleString('en-CA')) : '&#x2014;') + '</td></tr>' +
+      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Range (Low &#x2013; High)</td><td style="padding:4px 0;">$' + (low.totalReplacementCost != null ? sxEsc(Math.round(low.totalReplacementCost).toLocaleString('en-CA')) : '&#x2014;') + ' &#x2014; $' + (high.totalReplacementCost != null ? sxEsc(Math.round(high.totalReplacementCost).toLocaleString('en-CA')) : '&#x2014;') + '</td></tr>' +
+      '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Rate Applied (Mid)</td><td style="padding:4px 0;">$' + (med.costPerSqft != null ? sxEsc(med.costPerSqft) : '&#x2014;') + ' / sq ft</td></tr>';
     html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction Type Sent</td><td style="padding:4px 0;">' +
-      (result.sentConstructionType || '<span style="color:#b45309;">none &#x2014; e2Value inferred it from occupancy/address alone</span>') + '</td></tr>';
+      (sxEsc(result.sentConstructionType) || '<span style="color:#b45309;">none &#x2014; e2Value inferred it from occupancy/address alone</span>') + '</td></tr>';
     if (result.constructionQuality || result.constructionType || result.exterior || result.roofCovering) {
       html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Construction (per e2Value response)</td><td style="padding:4px 0;">' +
-        [result.constructionQuality, result.constructionType, result.exterior, result.roofCovering].filter(Boolean).join(', ') + '</td></tr>';
+        sxEsc([result.constructionQuality, result.constructionType, result.exterior, result.roofCovering].filter(Boolean).join(', ')) + '</td></tr>';
     }
     html += '<tr><td style="padding:4px 8px 4px 0;color:var(--slate);">Source</td><td style="padding:4px 0;">e2Value Pronto Commercial Lite</td></tr>' +
       '</table>';
@@ -14127,7 +14137,7 @@
     if (!address1) errors.push('Enter a Street Address above.');
     if (!/^[A-Z][0-9][A-Z] [0-9][A-Z][0-9]$/.test(postalCode)) errors.push('Enter a valid Canadian Postal Code above, e.g. K2P 1L7.');
     if (errors.length) {
-      resultEl.innerHTML = _copeCostMsg(errors.join(' '));
+      resultEl.innerHTML = _copeCostMsg(sxEsc(errors.join(' ')));
       return;
     }
 
@@ -14162,7 +14172,7 @@
           result.data.sentConstructionType = mappedConstructionType; // for display only — not part of e2Value's own response
         }
         if (!result.ok || result.data.status !== 'success') {
-          resultEl.innerHTML = _copeCostMsg('e2Value estimate failed: ' + (result.data.error || result.data.errorMessage || 'unknown error') + '.');
+          resultEl.innerHTML = _copeCostMsg('e2Value estimate failed: ' + sxEsc(result.data.error || result.data.errorMessage || 'unknown error') + '.');
           return;
         }
         cacheEl.value = JSON.stringify(result.data);
@@ -14171,7 +14181,7 @@
       .catch(function(err) {
         btn.disabled = false;
         btn.textContent = 'Get e2Value Estimate';
-        resultEl.innerHTML = _copeCostMsg('Network error contacting e2Value: ' + err.message);
+        resultEl.innerHTML = _copeCostMsg('Network error contacting e2Value: ' + sxEsc(err.message));
       });
   }
 
@@ -14766,7 +14776,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
 <div class="loading">
   <div class="spinner"></div>
   <h2>Generating Narrative Report</h2>
-  <p>Claude AI is writing your inspection narrative for<br><strong>${insuredName}</strong>...</p>
+  <p>Claude AI is writing your inspection narrative for<br><strong>${sxEsc(insuredName)}</strong>...</p>
 </div>
 </body>
 </html>`;
@@ -14829,7 +14839,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
       totalLosses, totalIncurred, primaryCause, lossComments, safetyText, recText, e2ValueNarrative);
     // ── Convert markdown to HTML ──
     function mdToHtml(text) {
-      return text
+      return sxEsc(text)
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
         .replace(/^#{1,3}\s+(.+)$/gm, '<h3>$1</h3>')
         .replace(/^\d+\.\s+\*\*([^*]+)\*\*:?\s*/gm, '<h3>$1</h3>')
@@ -14857,7 +14867,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
       pIdx++;
     }
     var photosHTML = allPhotos.length ? allPhotos.map(function(p) {
-      return '<div class="photo-item"><img class="photo-img" src="' + p.src + '" alt="Photo ' + p.num + '"><div class="photo-caption"><div class="photo-num">Photo ' + p.num + (p.category ? ' — ' + p.category : '') + '</div>' + (p.caption ? '<div>' + p.caption + '</div>' : '') + '</div></div>';
+      return '<div class="photo-item"><img class="photo-img" src="' + sxUrl(p.src) + '" alt="Photo ' + sxEsc(p.num) + '"><div class="photo-caption"><div class="photo-num">Photo ' + sxEsc(p.num) + (p.category ? ' — ' + sxEsc(p.category) : '') + '</div>' + (p.caption ? '<div>' + sxEsc(p.caption) + '</div>' : '') + '</div></div>';
     }).join('') : '<p style="color:#aaa;">No photos attached.</p>';
 
     // ── Build final report page ──
@@ -14867,7 +14877,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="referrer" content="origin">
-<title>Narrative Report — ${insuredName}</title>
+<title>Narrative Report — ${sxEsc(insuredName)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root { --navy:#0d1b2a; --gold:#c9a84c; --gold-light:#e8d5a3; --cream:#f8f5f0; --slate:#4a6580; --border:#ddd8d0; }
@@ -14910,22 +14920,22 @@ Write in formal insurance inspection language. Be specific with measurements, da
 </div>
 <div class="report-wrap">
   <div class="cover-band">
-    ${coverPhotoSrc ? `<img src="${coverPhotoSrc}" style="width:calc(100% + 80px);margin:-36px -40px 24px;display:block;height:220px;object-fit:cover;border-radius:8px 8px 0 0;opacity:0.85;">` : ''}
+    ${coverPhotoSrc ? `<img src="${sxUrl(coverPhotoSrc)}" style="width:calc(100% + 80px);margin:-36px -40px 24px;display:block;height:220px;object-fit:cover;border-radius:8px 8px 0 0;opacity:0.85;">` : ''}
     <div class="tag">N A R R A T I V E &nbsp; I N S P E C T I O N &nbsp; R E P O R T</div>
-    <h1>${insuredName}</h1>
-    <div class="sub">${fullAddress} &nbsp;·&nbsp; ${occupancy}</div>
+    <h1>${sxEsc(insuredName)}</h1>
+    <div class="sub">${sxEsc(fullAddress)} &nbsp;·&nbsp; ${sxEsc(occupancy)}</div>
     <div class="meta-grid">
-      <div class="meta-item"><label>Inspection ID</label><span>${inspId}</span></div>
-      <div class="meta-item"><label>Date of Inspection</label><span>${inspDate}</span></div>
-      <div class="meta-item"><label>Inspector</label><span>${inspName}</span></div>
-      <div class="meta-item"><label>Risk Quality</label><span style="color:var(--gold);">${riskQuality}</span></div>
-      <div class="meta-item"><label>UW Recommendation</label><span style="color:var(--gold);">${uwRec}</span></div>
-      <div class="meta-item"><label>Overall Score</label><span>${scoreO !== '—' ? scoreO + ' / 5' : '—'}</span></div>
+      <div class="meta-item"><label>Inspection ID</label><span>${sxEsc(inspId)}</span></div>
+      <div class="meta-item"><label>Date of Inspection</label><span>${sxEsc(inspDate)}</span></div>
+      <div class="meta-item"><label>Inspector</label><span>${sxEsc(inspName)}</span></div>
+      <div class="meta-item"><label>Risk Quality</label><span style="color:var(--gold);">${sxEsc(riskQuality)}</span></div>
+      <div class="meta-item"><label>UW Recommendation</label><span style="color:var(--gold);">${sxEsc(uwRec)}</span></div>
+      <div class="meta-item"><label>Overall Score</label><span>${scoreO !== '—' ? sxEsc(scoreO) + ' / 5' : '—'}</span></div>
     </div>
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.15);display:flex;gap:24px;flex-wrap:wrap;">
-      <div style="font-size:8pt;color:#7a9ab5;"><span style="color:var(--gold-light);font-weight:600;">Construction</span>&nbsp; ${scoreC !== '—' ? scoreC + '/5' : '—'}</div>
-      <div style="font-size:8pt;color:#7a9ab5;"><span style="color:var(--gold-light);font-weight:600;">Protection</span>&nbsp; ${scoreP !== '—' ? scoreP + '/5' : '—'}</div>
-      <div style="font-size:8pt;color:#7a9ab5;"><span style="color:var(--gold-light);font-weight:600;">Safety</span>&nbsp; ${scoreS !== '—' ? scoreS + '/5' : '—'}</div>
+      <div style="font-size:8pt;color:#7a9ab5;"><span style="color:var(--gold-light);font-weight:600;">Construction</span>&nbsp; ${scoreC !== '—' ? sxEsc(scoreC) + '/5' : '—'}</div>
+      <div style="font-size:8pt;color:#7a9ab5;"><span style="color:var(--gold-light);font-weight:600;">Protection</span>&nbsp; ${scoreP !== '—' ? sxEsc(scoreP) + '/5' : '—'}</div>
+      <div style="font-size:8pt;color:#7a9ab5;"><span style="color:var(--gold-light);font-weight:600;">Safety</span>&nbsp; ${scoreS !== '—' ? sxEsc(scoreS) + '/5' : '—'}</div>
     </div>
   </div>
   <div class="ai-badge">✦ Sanket Risk Consultants &nbsp;·&nbsp; Narrative Report &nbsp;·&nbsp; Review before finalising</div>
@@ -14937,24 +14947,24 @@ Write in formal insurance inspection language. Be specific with measurements, da
     <h3>Site Location</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
       <div style="break-inside:avoid;">
-        <img src="${nMapAerial}" alt="Aerial view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
+        <img src="${sxUrl(nMapAerial)}" alt="Aerial view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Aerial / Hybrid View</strong> — site, roof, and immediate exposures</div>
       </div>
       <div style="break-inside:avoid;">
-        <img src="${nMapRoad}" alt="Area road map" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
+        <img src="${sxUrl(nMapRoad)}" alt="Area road map" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Area Context</strong> — surrounding streets and district</div>
       </div>
       <div style="break-inside:avoid;grid-column:1 / -1;">
-        <img src="${nMapStreet}" alt="Street view of site" style="width:100%;max-height:480px;object-fit:cover;border:1px solid #ddd8d0;border-radius:8px;">
+        <img src="${sxUrl(nMapStreet)}" alt="Street view of site" style="width:100%;max-height:480px;object-fit:cover;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Street View</strong> — building exterior from street level</div>
       </div>
     </div>
-    <div style="font-size:8pt;color:#8a8472;margin-top:4px;">Location: ${nMapQ} · Imagery and map data © Google</div>
+    <div style="font-size:8pt;color:#8a8472;margin-top:4px;">Location: ${sxEsc(nMapQ)} · Imagery and map data © Google</div>
   </div>` : ''}
   ${sitePlanOn() ? `
   <div class="section" style="page-break-inside:avoid;">
     <h3>Site Plan</h3>
-    <img src="${_sitePlanData}" alt="Site plan" style="width:100%;max-width:640px;display:block;margin:12px auto 0;border:1px solid #ddd8d0;border-radius:6px;">
+    <img src="${sxUrl(_sitePlanData)}" alt="Site plan" style="width:100%;max-width:640px;display:block;margin:12px auto 0;border:1px solid #ddd8d0;border-radius:6px;">
   </div>` : ''}
   ${allPhotos.length > 0 ? `
   <div class="section">
@@ -14962,10 +14972,10 @@ Write in formal insurance inspection language. Be specific with measurements, da
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:12px;">
       ${allPhotos.map((p, idx) => `
         <div style="break-inside:avoid;${(idx + 1) % 4 === 0 ? 'page-break-after:always;' : ''}">
-          <img src="${p.src}" alt="Photo ${p.num}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;border:1px solid #ddd8d0;">
+          <img src="${sxUrl(p.src)}" alt="Photo ${sxEsc(p.num)}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;border:1px solid #ddd8d0;">
           <div style="font-size:9pt;color:#4a6580;margin-top:4px;">
-            <strong>Photo ${p.num}</strong>${p.category ? ' — ' + p.category : ''}
-            ${p.caption ? '<br>' + p.caption : ''}
+            <strong>Photo ${sxEsc(p.num)}</strong>${p.category ? ' — ' + sxEsc(p.category) : ''}
+            ${p.caption ? '<br>' + sxEsc(p.caption) : ''}
           </div>
         </div>`).join('')}
     </div>
@@ -15003,8 +15013,8 @@ Write in formal insurance inspection language. Be specific with measurements, da
               var pdfContainer = w.document.createElement('div');
               pdfContainer.style.cssText = 'margin-top:20px;page-break-before:always;';
               pdfContainer.innerHTML = '<div style="padding:8px 12px;background:#f8f5f0;border:1px solid #ddd8d0;border-radius:6px;margin-bottom:8px;display:flex;align-items:center;gap:8px;">' +
-                '<span>\ud83d\udcc4</span><strong style="font-size:11pt;">' + pdf.name + '</strong>' +
-                '<span style="margin-left:auto;font-size:9pt;color:#4a6580;">' + (pdf.size > 1048576 ? (pdf.size/1048576).toFixed(1)+' MB' : Math.round(pdf.size/1024)+' KB') + '</span></div>';
+                '<span>\ud83d\udcc4</span><strong style="font-size:11pt;">' + sxEsc(pdf.name) + '</strong>' +
+                '<span style="margin-left:auto;font-size:9pt;color:#4a6580;">' + (pdf.size > 1048576 ? (pdf.size/1048576).toFixed(1)+' MB' : sxEsc(Math.round(pdf.size/1024))+' KB') + '</span></div>';
               pdfSection.appendChild(pdfContainer);
               w.pdfjsLib.getDocument(pdf.url).promise.then(function(pdfDoc) {
                 var numPages = pdfDoc.numPages;
@@ -15024,7 +15034,7 @@ Write in formal insurance inspection language. Be specific with measurements, da
                 };
                 renderPage(1);
               }).catch(function(e) {
-                pdfContainer.innerHTML += '<p style="color:#c53030;font-size:10pt;">Could not render PDF: ' + e.message + '</p>';
+                pdfContainer.innerHTML += '<p style="color:#c53030;font-size:10pt;">Could not render PDF: ' + sxEsc(e.message) + '</p>';
               });
             });
           };
@@ -15068,13 +15078,13 @@ function generateFormalReport() {
     const rows = pct[containerId] || [];
     const filled = rows.filter(r => r.val && r.pct);
     if (!filled.length) return '<span class="val-empty">—</span>';
-    return filled.map(r => `<span class="pct-item"><span class="pct-label">${r.val}</span><span class="pct-num">${r.pct}%</span></span>`).join('');
+    return filled.map(r => `<span class="pct-item"><span class="pct-label">${sxEsc(r.val)}</span><span class="pct-num">${sxEsc(r.pct)}%</span></span>`).join('');
   }
   function finTable(containerId) {
     const rows = fin[containerId] || [];
     const filled = rows.filter(r => r.val);
     if (!filled.length) return '<span class="val-empty">—</span>';
-    return filled.map(r => `<span class="pct-item"><span class="pct-label">${r.val}${r.note ? ' — ' + r.note : ''}</span><span class="pct-num">${r.pct || ''}${r.pct ? '%' : ''}</span></span>`).join('');
+    return filled.map(r => `<span class="pct-item"><span class="pct-label">${sxEsc(r.val)}${r.note ? ' — ' + sxEsc(r.note) : ''}</span><span class="pct-num">${sxEsc(r.pct || '')}${r.pct ? '%' : ''}</span></span>`).join('');
   }
   function pillVal(key) {
     const arr = pills[key] || [];
@@ -15100,22 +15110,22 @@ function generateFormalReport() {
   function secHeader(icon, title, tag) {
     return `<div class="sec-header">
       <div class="sec-header-left">
-        <span class="sec-icon">${icon}</span>
-        <span class="sec-title">${title}</span>
+        <span class="sec-icon">${sxEsc(icon)}</span>
+        <span class="sec-title">${sxEsc(title)}</span>
       </div>
-      <span class="sec-tag">${tag}</span>
+      <span class="sec-tag">${sxEsc(tag)}</span>
     </div>`;
   }
   function field2(label, value) {
     return `<div class="field-block">
       <div class="field-label">${label}</div>
-      <div class="field-value">${value || '—'}</div>
+      <div class="field-value">${sxEscV(value || '—')}</div>
     </div>`;
   }
   function fieldFull(label, value) {
     return `<div class="field-block field-full">
       <div class="field-label">${label}</div>
-      <div class="field-value">${value || '—'}</div>
+      <div class="field-value">${sxEscV(value || '—')}</div>
     </div>`;
   }
   // ── Recommendations — read from DOM (current session data) ──
@@ -15173,11 +15183,11 @@ function generateFormalReport() {
   // (refnum auto-fill happens below, after the date parts are computed)
   function priorityBadge(p) {
     const cls = p === 'High' ? 'badge-high' : p === 'Medium' ? 'badge-med' : p === 'Low' ? 'badge-low' : 'badge-default';
-    return `<span class="priority-badge ${cls}">${p || '—'}</span>`;
+    return `<span class="priority-badge ${sxEsc(cls)}">${sxEsc(p || '—')}</span>`;
   }
   function typeBadge(t) {
     const cls = t === 'Requirement' ? 'badge-req' : 'badge-rec';
-    return `<span class="type-badge ${cls}">${t || '—'}</span>`;
+    return `<span class="type-badge ${sxEsc(cls)}">${sxEsc(t || '—')}</span>`;
   }
   // ── Risk Quality ──
   const rqRaw = g('risk-quality') || pillVal('risk_quality_rating') || d.risk_quality || '';
@@ -15439,19 +15449,19 @@ function generateFormalReport() {
         '<div class="sub-heading">Sprinkler Grade Result</div>' +
         '<div class="score-row">' +
         '<div class="score-tile overall" style="grid-column:span 2;">' +
-        '<span class="score-val">' + spkGradeLabel + '</span>' +
+        '<span class="score-val">' + sxEsc(spkGradeLabel) + '</span>' +
         '<div class="score-lbl">Final Assigned Grade</div>' +
         '</div>' +
         '<div class="score-tile">' +
-        '<span class="score-val">' + spkScore + '</span>' +
+        '<span class="score-val">' + sxEsc(spkScore) + '</span>' +
         '<div class="score-lbl">Score / 100</div>' +
         '</div>' +
         '<div class="score-tile">' +
-        '<span class="score-val">' + spkDemerits + '</span>' +
+        '<span class="score-val">' + sxEsc(spkDemerits) + '</span>' +
         '<div class="score-lbl">Total Demerits</div>' +
         '</div>' +
         '</div>' +
-        (spkGradeDesc && spkGradeDesc !== '—' ? '<div class="notice notice-info" style="margin-bottom:16px;">' + spkGradeDesc + '</div>' : '') +
+        (spkGradeDesc && spkGradeDesc !== '—' ? '<div class="notice notice-info" style="margin-bottom:16px;">' + sxEsc(spkGradeDesc) + '</div>' : '') +
         '<div class="sub-heading">System Overview</div>' +
         '<div class="field-grid">' +
         field2('System Type', selText('system-type')) +
@@ -15601,7 +15611,7 @@ function generateFormalReport() {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="referrer" content="origin">
-<title>Inspection Report — ${insuredName}</title>
+<title>Inspection Report — ${sxEsc(insuredName)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -16224,17 +16234,17 @@ function generateFormalReport() {
   <div class="cover-company">Sanket <span>Risk Consultants</span></div>
   <div class="cover-subtitle">Commercial Property Risk Inspection</div>
   <div class="cover-divider"></div>
-  ${coverPhotoSrc ? `<img class="cover-photo" src="${coverPhotoSrc}" alt="Property Photo">` : ''}
+  ${coverPhotoSrc ? `<img class="cover-photo" src="${sxUrl(coverPhotoSrc)}" alt="Property Photo">` : ''}
   <div class="cover-title">Inspection Report</div>
   <div class="cover-meta">
-    <div class="cover-meta-item"><label>Inspection ID</label><span>${inspId}</span></div>
-    <div class="cover-meta-item"><label>Date of Inspection</label><span>${inspDate}</span></div>
-    <div class="cover-meta-item"><label>Insured</label><span>${insuredName}</span></div>
-    <div class="cover-meta-item"><label>Location</label><span>${fullAddress}</span></div>
-    <div class="cover-meta-item"><label>Occupancy</label><span>${occupancy}</span></div>
-    <div class="cover-meta-item"><label>Inspector</label><span>${inspName}</span></div>
-    ${sprGrade ? `<div class="cover-meta-item"><label>Sprinkler Grade</label><span>${sprGradeLabel}</span></div>` : ''}
-    ${rqRaw ? `<div class="cover-meta-item"><label>Risk Quality</label><span>${rqRaw}</span></div>` : ''}
+    <div class="cover-meta-item"><label>Inspection ID</label><span>${sxEsc(inspId)}</span></div>
+    <div class="cover-meta-item"><label>Date of Inspection</label><span>${sxEsc(inspDate)}</span></div>
+    <div class="cover-meta-item"><label>Insured</label><span>${sxEsc(insuredName)}</span></div>
+    <div class="cover-meta-item"><label>Location</label><span>${sxEsc(fullAddress)}</span></div>
+    <div class="cover-meta-item"><label>Occupancy</label><span>${sxEsc(occupancy)}</span></div>
+    <div class="cover-meta-item"><label>Inspector</label><span>${sxEsc(inspName)}</span></div>
+    ${sprGrade ? `<div class="cover-meta-item"><label>Sprinkler Grade</label><span>${sxEsc(sprGradeLabel)}</span></div>` : ''}
+    ${rqRaw ? `<div class="cover-meta-item"><label>Risk Quality</label><span>${sxEsc(rqRaw)}</span></div>` : ''}
   </div>
   <div class="cover-footer">Generated by Sanket Risk Consultants Inspection Platform</div>
   <div class="cover-confidential">Confidential — Underwriting Use Only</div>
@@ -16244,15 +16254,15 @@ function generateFormalReport() {
   <div class="toc-header">
     <div class="toc-header-left">
       <div class="toc-title">Table of Contents</div>
-      <div class="toc-subtitle">${insuredName} — ${inspId}</div>
+      <div class="toc-subtitle">${sxEsc(insuredName)} — ${sxEsc(inspId)}</div>
     </div>
     <div class="toc-logo-sm">S</div>
   </div>
   <ul class="toc-list">
     ${tocSections.map(s => `
     <li class="toc-item">
-      <span class="toc-num">${String(s.num).padStart(2,'0')}</span>
-      <span class="toc-name ${s.title.startsWith('Supplement') ? 'toc-supplement' : ''}">${s.title}</span>
+      <span class="toc-num">${sxEsc(String(s.num).padStart(2,'0'))}</span>
+      <span class="toc-name ${s.title.startsWith('Supplement') ? 'toc-supplement' : ''}">${sxEsc(s.title)}</span>
       <span class="toc-dots"></span>
     </li>`).join('')}
   </ul>
@@ -16605,12 +16615,12 @@ function generateFormalReport() {
         const panel = document.getElementById(p.id);
         if (!panel || panel.style.display === 'none') return '';
         const rows = p.fields.map(([lbl, val]) =>
-          val && val !== '—' ? `<tr><td style="width:45%;padding:5px 8px;color:#4a6580;font-size:11px;border-bottom:1px solid #eee;">${lbl}</td><td style="padding:5px 8px;font-size:12px;border-bottom:1px solid #eee;">${val}</td></tr>` : ''
+          val && val !== '—' ? `<tr><td style="width:45%;padding:5px 8px;color:#4a6580;font-size:11px;border-bottom:1px solid #eee;">${sxEsc(lbl)}</td><td style="padding:5px 8px;font-size:12px;border-bottom:1px solid #eee;">${sxEsc(val)}</td></tr>` : ''
         ).join('');
-        const notesHtml = p.notes ? `<tr><td colspan="2" style="padding:6px 8px;font-size:11px;color:#4a6580;border-top:2px solid #e2c97e;"><strong>Notes:</strong> ${p.notes}</td></tr>` : '';
+        const notesHtml = p.notes ? `<tr><td colspan="2" style="padding:6px 8px;font-size:11px;color:#4a6580;border-top:2px solid #e2c97e;"><strong>Notes:</strong> ${sxEsc(p.notes)}</td></tr>` : '';
         return `
           <div style="margin-top:12px;border:1px solid #d0c9bb;border-radius:8px;overflow:hidden;">
-            <div style="background:#0d1b2a;color:#c9a84c;padding:7px 12px;font-size:11px;font-weight:700;letter-spacing:.06em;">${p.label}</div>
+            <div style="background:#0d1b2a;color:#c9a84c;padding:7px 12px;font-size:11px;font-weight:700;letter-spacing:.06em;">${sxEsc(p.label)}</div>
             <table style="width:100%;border-collapse:collapse;background:#fff;">${rows}${notesHtml}</table>
           </div>`;
       }).join('');
@@ -16706,19 +16716,19 @@ function generateFormalReport() {
     <div class="sub-heading">Site Location Maps</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
       <div style="break-inside:avoid;">
-        <img src="${mapAerialUrl}" alt="Aerial view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
+        <img src="${sxUrl(mapAerialUrl)}" alt="Aerial view of site" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Aerial / Hybrid View</strong> — site, roof, and immediate exposures</div>
       </div>
       <div style="break-inside:avoid;">
-        <img src="${mapRoadUrl}" alt="Area road map" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
+        <img src="${sxUrl(mapRoadUrl)}" alt="Area road map" style="width:100%;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Area Context</strong> — surrounding streets and district</div>
       </div>
       <div style="break-inside:avoid;grid-column:1 / -1;">
-        <img src="${mapStreetUrl}" alt="Street view of site" style="width:100%;max-height:480px;object-fit:cover;border:1px solid #ddd8d0;border-radius:8px;">
+        <img src="${sxUrl(mapStreetUrl)}" alt="Street view of site" style="width:100%;max-height:480px;object-fit:cover;border:1px solid #ddd8d0;border-radius:8px;">
         <div style="font-size:9pt;color:#4a6580;margin-top:4px;"><strong>Street View</strong> — building exterior from street level</div>
       </div>
     </div>
-    <div style="font-size:8pt;color:#8a8472;margin-top:4px;">Location: ${mapQ} · Imagery and map data © Google</div>` : ''}
+    <div style="font-size:8pt;color:#8a8472;margin-top:4px;">Location: ${sxEsc(mapQ)} · Imagery and map data © Google</div>` : ''}
   </div>
 </div>
 <!-- ══ 7. NATURAL CATASTROPHE ══ -->
@@ -16739,7 +16749,7 @@ function generateFormalReport() {
       ${field2('PGA (g)', val('usa-cdd-pga'))}
       ${field2('PGA<sub>M</sub> \u2014 Site-Modified (g)', val('usa-cdd-pgam'))}
       ${field2('Seismic Design Category', val('usa-cdd-sdc'))}
-      ${field2('Seismic Hazard Tier', val('usa-cdd-tier') !== '\u2014' ? '<strong>' + val('usa-cdd-tier') + '</strong>' : '\u2014')}
+      ${field2('Seismic Hazard Tier', val('usa-cdd-tier') !== '\u2014' ? {__html: '<strong>' + sxEsc(val('usa-cdd-tier')) + '</strong>'} : '\u2014')}
     </div>
     ${fieldFull('Climatic Data Notes', val('usa-cdd-notes'))}
     <div style="font-size:10px;color:#8a8472;margin-top:4px;">Source: USGS Earthquake Hazards Program, Design Ground Motions web service (ASCE 7-22). Values are probabilistic estimates for the resolved coordinate and declared Site Class/Risk Category \u2014 not a substitute for a site-specific seismic hazard study or a licensed engineer's determination.</div>`;
@@ -16758,7 +16768,7 @@ function generateFormalReport() {
       ${field2('Annual Precipitation (mm)', val('cdd-ann-precip'))}
       ${field2('Driving Rain Wind Pressure (Pa, 1/5)', val('cdd-driving-rain'))}
       ${field2('Seismic Smax (Site Class Unknown)', val('cdd-smax'))}
-      ${field2('Seismic Hazard Tier', val('cdd-seismic-tier') !== '\u2014' ? '<strong>' + val('cdd-seismic-tier') + '</strong>' : '\u2014')}
+      ${field2('Seismic Hazard Tier', val('cdd-seismic-tier') !== '\u2014' ? {__html: '<strong>' + sxEsc(val('cdd-seismic-tier')) + '</strong>'} : '\u2014')}
     </div>
     ${fieldFull('Climatic Data Notes', val('cdd-notes'))}
     <div style="font-size:10px;color:#8a8472;margin-top:4px;">Source: National Building Code of Canada 2025, Appendix C, Tables C-2 and C-3 (NRC). Values apply to the listed reference location and elevation. Seismic tier derived from Smax thresholds in NBC Parts 4/9 \u2014 verify for binding design decisions.</div>`;
@@ -16800,33 +16810,33 @@ function generateFormalReport() {
     <div class="sub-heading">Natural Catastrophe Grading — SRC Demerit Assessment</div>
     <div class="score-row">
       <div class="score-tile overall" style="grid-column:span 2;">
-        <span class="score-val" style="font-size:15pt;">${selText('nc-final-grade') !== '—' ? selText('nc-final-grade').split(' (')[0] : '—'}</span>
+        <span class="score-val" style="font-size:15pt;">${selText('nc-final-grade') !== '—' ? sxEsc(selText('nc-final-grade').split(' (')[0]) : '—'}</span>
         <div class="score-lbl">Final Assigned Nat-Cat Grade</div>
       </div>
       <div class="score-tile">
-        <span class="score-val">${val('nc-score')}</span>
+        <span class="score-val">${sxEsc(val('nc-score'))}</span>
         <div class="score-lbl">Score / 100</div>
       </div>
       <div class="score-tile">
-        <span class="score-val">${ncd('total')}</span>
+        <span class="score-val">${sxEsc(ncd('total'))}</span>
         <div class="score-lbl">Total Demerits</div>
       </div>
     </div>
     <div class="score-row">
       <div class="score-tile">
-        <span class="score-val">${ncd('eq')}</span>
+        <span class="score-val">${sxEsc(ncd('eq'))}</span>
         <div class="score-lbl">Earthquake Demerits</div>
       </div>
       <div class="score-tile">
-        <span class="score-val">${ncd('wind')}</span>
+        <span class="score-val">${sxEsc(ncd('wind'))}</span>
         <div class="score-lbl">Wind / Storm Demerits</div>
       </div>
       <div class="score-tile">
-        <span class="score-val">${ncd('flood')}</span>
+        <span class="score-val">${sxEsc(ncd('flood'))}</span>
         <div class="score-lbl">Flood / Water Demerits</div>
       </div>
       <div class="score-tile">
-        <span class="score-val" style="font-size:14pt;">${ncDem.tier ? ncDem.tier + ' ×' + ncDem.tierMult : '—'}</span>
+        <span class="score-val" style="font-size:14pt;">${ncDem.tier ? sxEsc(ncDem.tier) + ' ×' + sxEsc(ncDem.tierMult) : '—'}</span>
         <div class="score-lbl">Seismic Tier Weighting</div>
       </div>
     </div>
@@ -16893,7 +16903,7 @@ function generateFormalReport() {
         ].map(([label, nid]) => {
           var noteEl = document.getElementById(nid + '-text');
           var note = noteEl ? noteEl.value.trim() : (d.safety_notes && d.safety_notes[nid] ? d.safety_notes[nid] : '');
-          return `<tr><td>${label}${note ? `<div style="font-size:8pt;color:var(--slate);margin-top:3px;font-style:italic;">${note}</div>` : ''}</td><td class="rating-val">${ratingVal(label)}</td></tr>`;
+          return `<tr><td>${sxEsc(label)}${note ? `<div style="font-size:8pt;color:var(--slate);margin-top:3px;font-style:italic;">${sxEsc(note)}</div>` : ''}</td><td class="rating-val">${sxEsc(ratingVal(label))}</td></tr>`;
         }).join('')}
       </tbody>
     </table>
@@ -16918,11 +16928,11 @@ function generateFormalReport() {
       <tbody>
         ${recItems.map((r, idx) => `
         <tr>
-          <td style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--navy);font-size:8pt;">${r.refnum || (idx+1)}</td>
+          <td style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--navy);font-size:8pt;">${sxEsc(r.refnum || (idx+1))}</td>
           <td>${priorityBadge(r.priority)}</td>
           <td>${typeBadge(r.type)}</td>
-          <td style="font-size:9pt;font-weight:600;">${r.title || '\u2014'}</td>
-          <td style="font-size:8.5pt;color:var(--slate);">${r.section || '\u2014'}</td>
+          <td style="font-size:9pt;font-weight:600;">${sxEsc(r.title || '\u2014')}</td>
+          <td style="font-size:8.5pt;color:var(--slate);">${sxEsc(r.section || '\u2014')}</td>
         </tr>`).join('')}
       </tbody>
     </table>
@@ -16935,13 +16945,13 @@ function generateFormalReport() {
         <div class="rec-card-badges">
           ${priorityBadge(r.priority)}
           ${typeBadge(r.type)}
-          ${r.section ? `<span class="rec-card-section">${r.section}</span>` : ''}
+          ${r.section ? `<span class="rec-card-section">${sxEsc(r.section)}</span>` : ''}
         </div>
       </div>
       <div class="rec-card-body">
-        ${r.title ? `<div style="font-size:10.5pt;font-weight:700;color:var(--navy);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e8e4dc;">${r.refnum ? r.refnum + ' — ' : ''}${r.title}</div>` : ''}
-        <div class="rec-card-desc">${r.desc}</div>
-        ${r.notes ? `<div class="rec-card-notes"><strong>Inspector Notes:</strong> ${r.notes}</div>` : ''}
+        ${r.title ? `<div style="font-size:10.5pt;font-weight:700;color:var(--navy);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e8e4dc;">${r.refnum ? sxEsc(r.refnum) + ' — ' : ''}${sxEsc(r.title)}</div>` : ''}
+        <div class="rec-card-desc">${sxEsc(r.desc)}</div>
+        ${r.notes ? `<div class="rec-card-notes"><strong>Inspector Notes:</strong> ${sxEsc(r.notes)}</div>` : ''}
       </div>
     </div>`).join('')}
     ` : `<div class="notice notice-info">No recommendations recorded for this inspection.</div>`}
@@ -16953,49 +16963,49 @@ function generateFormalReport() {
   <div class="sec-body">
     <div class="score-row">
       <div class="score-tile">
-        <span class="score-val">${scoreC}</span>
+        <span class="score-val">${sxEsc(scoreC)}</span>
         <div class="score-lbl">Construction</div>
       </div>
       <div class="score-tile">
-        <span class="score-val">${scoreP}</span>
+        <span class="score-val">${sxEsc(scoreP)}</span>
         <div class="score-lbl">Protection</div>
       </div>
       <div class="score-tile">
-        <span class="score-val">${scoreS}</span>
+        <span class="score-val">${sxEsc(scoreS)}</span>
         <div class="score-lbl">Safety</div>
       </div>
       <div class="score-tile overall">
-        <span class="score-val">${scoreO}</span>
+        <span class="score-val">${sxEsc(scoreO)}</span>
         <div class="score-lbl">Overall</div>
       </div>
     </div>
     <div class="risk-banner">
       <div>
         <div class="risk-banner-label">Risk Quality Rating</div>
-        <div class="risk-banner-value">${fmt(rqRaw)}</div>
+        <div class="risk-banner-value">${sxEsc(fmt(rqRaw))}</div>
       </div>
       <div style="text-align:right;">
         <div class="risk-banner-label">Underwriting Recommendation</div>
-        <div class="risk-banner-rec">${fmt(uwRec)}</div>
+        <div class="risk-banner-rec">${sxEsc(fmt(uwRec))}</div>
       </div>
     </div>
     ${(f['pml-percent-result'] && f['pml-include-report-flag'] === 'yes') ? `
     <div class="sub-heading">PML / NLE Summary</div>
     <div class="score-row">
       <div class="score-tile">
-        <span class="score-val">${val('pml-percent-result')}</span>
+        <span class="score-val">${sxEsc(val('pml-percent-result'))}</span>
         <div class="score-lbl">Building PML %</div>
       </div>
       <div class="score-tile">
-        <span class="score-val" style="font-size:13pt;">${val('pml-dollar-result')}</span>
+        <span class="score-val" style="font-size:13pt;">${sxEsc(val('pml-dollar-result'))}</span>
         <div class="score-lbl">Building PML $</div>
       </div>
       <div class="score-tile">
-        <span class="score-val" style="font-size:13pt;">${val('nle-dollar-result')}</span>
+        <span class="score-val" style="font-size:13pt;">${sxEsc(val('nle-dollar-result'))}</span>
         <div class="score-lbl">NLE $</div>
       </div>
       <div class="score-tile overall">
-        <span class="score-val" style="font-size:13pt;">${val('pml-contents-dollar-result')}</span>
+        <span class="score-val" style="font-size:13pt;">${sxEsc(val('pml-contents-dollar-result'))}</span>
         <div class="score-lbl">Contents PML $</div>
       </div>
     </div>
@@ -17029,7 +17039,7 @@ ${activeSuppHTML}
 <!-- ══ SITE PLAN (optional) ══ -->
 ${sitePlanOn() ? `<div class="report-section" id="sec-siteplan">
   ${secHeader('🗺', 'Site Plan', 'MODULE')}
-  <div class="sec-body"><img src="${_sitePlanData}" alt="Site plan" style="width:100%;max-width:680px;display:block;margin:6px auto;border:1px solid #ddd8d0;border-radius:4px;"></div>
+  <div class="sec-body"><img src="${sxUrl(_sitePlanData)}" alt="Site plan" style="width:100%;max-width:680px;display:block;margin:6px auto;border:1px solid #ddd8d0;border-radius:4px;"></div>
 </div>` : ''}
 <!-- ══ PHOTOS ══ -->
 <div class="report-section" id="sec-photos">
@@ -17039,10 +17049,10 @@ ${sitePlanOn() ? `<div class="report-section" id="sec-siteplan">
     <div class="photo-grid">
       ${allPhotos.map(p => `
       <div class="photo-item">
-        <img class="photo-img" src="${p.src}" alt="Photo ${p.num}">
+        <img class="photo-img" src="${sxUrl(p.src)}" alt="Photo ${sxEsc(p.num)}">
         <div class="photo-caption">
-          <div class="photo-num">Photo ${p.num}${p.category ? ' — ' + p.category : ''}</div>
-          ${p.caption || '<em style="color:#aaa;">No caption provided</em>'}
+          <div class="photo-num">Photo ${sxEsc(p.num)}${p.category ? ' — ' + sxEsc(p.category) : ''}</div>
+          ${sxEsc(p.caption) || '<em style="color:#aaa;">No caption provided</em>'}
         </div>
       </div>`).join('')}
     </div>` : '<p style="color:#aaa;font-size:9pt;padding:8px 0;">No photos attached to this inspection.</p>'}
@@ -17085,8 +17095,8 @@ ${sitePlanOn() ? `<div class="report-section" id="sec-siteplan">
             var pdfContainer = w.document.createElement('div');
             pdfContainer.style.cssText = 'margin-top:20px;page-break-before:always;';
             pdfContainer.innerHTML = '<div style="padding:8px 12px;background:#f8f5f0;border:1px solid #ddd8d0;border-radius:6px;margin-bottom:8px;display:flex;align-items:center;gap:8px;">' +
-              '<span>📄</span><strong style="font-size:11pt;">' + pdf.name + '</strong>' +
-              '<span style="margin-left:auto;font-size:9pt;color:#4a6580;">' + (pdf.size > 1048576 ? (pdf.size/1048576).toFixed(1)+' MB' : Math.round(pdf.size/1024)+' KB') + '</span></div>';
+              '<span>📄</span><strong style="font-size:11pt;">' + sxEsc(pdf.name) + '</strong>' +
+              '<span style="margin-left:auto;font-size:9pt;color:#4a6580;">' + (pdf.size > 1048576 ? (pdf.size/1048576).toFixed(1)+' MB' : sxEsc(Math.round(pdf.size/1024))+' KB') + '</span></div>';
             pdfSection.appendChild(pdfContainer);
 
             w.pdfjsLib.getDocument(pdf.url).promise.then(function(pdfDoc) {
@@ -17107,7 +17117,7 @@ ${sitePlanOn() ? `<div class="report-section" id="sec-siteplan">
               };
               renderPage(1);
             }).catch(function(e) {
-              pdfContainer.innerHTML += '<p style="color:#c53030;font-size:10pt;">Could not render PDF: ' + e.message + '</p>';
+              pdfContainer.innerHTML += '<p style="color:#c53030;font-size:10pt;">Could not render PDF: ' + sxEsc(e.message) + '</p>';
             });
           });
         };
@@ -17339,10 +17349,10 @@ ${sitePlanOn() ? `<div class="report-section" id="sec-siteplan">
     }).slice(0, 15);
     if (!matches.length) { dropdown.style.display = 'none'; return; }
     dropdown.innerHTML = matches.map(function(item) {
-      return '<div onclick="selectSICCode(' + JSON.stringify(item.ibc) + ',' + JSON.stringify(item.sic) + ',' + JSON.stringify(item.naics) + ',' + JSON.stringify(item.label) + ')" ' +
+      return '<div onclick="selectSICCode(' + Number(JSON.stringify(item.ibc)) + ',' + Number(JSON.stringify(item.sic)) + ',' + Number(JSON.stringify(item.naics)) + ',' + Number(JSON.stringify(item.label)) + ')" ' +
         'style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0ece6;font-size:12px;line-height:1.6;">' +
-        '<div style="font-weight:700;color:var(--navy);">' + item.label + '</div>' +
-        '<div style="color:#4a6580;font-size:11px;">IBC: <b>' + item.ibc + '</b> | SIC: ' + item.sic + ' | NAICS: ' + item.naics + '</div>' +
+        '<div style="font-weight:700;color:var(--navy);">' + sxEsc(item.label) + '</div>' +
+        '<div style="color:#4a6580;font-size:11px;">IBC: <b>' + sxEsc(item.ibc) + '</b> | SIC: ' + sxEsc(item.sic) + ' | NAICS: ' + sxEsc(item.naics) + '</div>' +
         '</div>';
     }).join('');
     dropdown.style.display = 'block';
