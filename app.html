@@ -9944,6 +9944,7 @@
                 onclick="togglePublishReport('${sxJs(r.id)}', ${r.report_published ? 'true' : 'false'}, '${sxJs(r.inspection_id || '')}', '${sxJs(r.insured_name ? r.insured_name.replace(/'/g, '') : '')}')">
                 ${r.report_published ? 'Unpublish' : 'Publish'}
               </button>
+              <button class="btn-load-insp" style="padding:4px 8px;font-size:10px;" onclick="event.stopPropagation();sxOpenLog('inspection','${sxJs(r.id)}','${sxJs(r.inspection_id)}')">Log</button>
               <button class="btn-del-insp" style="padding:4px 8px;font-size:10px;margin-left:0;" onclick="deleteInspection('${sxJs(r.id)}','${sxJs(r.inspection_id)}')">✕</button>
             </div>
             ${r.report_published ? `<a href="/report?ref=${encodeURIComponent(r.inspection_id)}" target="_blank"
@@ -10065,13 +10066,13 @@
           <td style="font-size:12px;">${sxEsc(r.occupancy_type || '—')}</td>
           <td style="font-size:12px;">${sxEsc(r.purpose || '—')}</td>
           <td><span style="font-size:11px;font-weight:600;color:${sxEsc(urgencyColor(r.urgency))}">${r.urgency ? sxEsc(r.urgency.split('—')[0].trim()) : '—'}</span></td>
-          <td>${sxEsc(statusBadge(r.status))}</td>
+          <td>${statusBadge(r.status)}</td>
           <td>
-            ${sxEsc(assignedTo)}
+            ${assignedTo}
             <div style="margin-top:6px;display:flex;gap:4px;align-items:center;">
               <select id="assign-sel-${sxEsc(r.id)}" style="font-size:10px;padding:2px 4px;border-radius:6px;border:1px solid var(--border);max-width:110px;">
                 <option value="">— Assign to —</option>
-                ${sxEsc(inspOpts)}
+                ${inspOpts}
               </select>
               <button class="btn-load-insp" style="font-size:10px;padding:3px 8px;white-space:nowrap;"
                 onclick="assignInspector('${sxJs(r.id)}', '${sxJs(r.status)}')">
@@ -10084,6 +10085,7 @@
             <div style="display:flex;flex-direction:column;gap:4px;">
               <button class="btn-load-insp" onclick="convertRequest(${rJson})"
                 style="font-size:11px;">&#x21AA; Convert</button>
+              <button class="btn-load-insp" style="font-size:11px;" onclick="sxOpenLog('request','${sxJs(r.id)}','${sxJs(r.request_ref)}')">Log</button>
               <button class="btn-del-insp" onclick="markCompleted('${sxJs(r.id)}')"
                 style="font-size:11px;${isCompleted ? 'background:#ccc;color:#888;cursor:not-allowed;' : ''}">
                 ${isCompleted ? '&#x2713; Done' : '&#x2713; Complete'}</button>
@@ -10339,6 +10341,7 @@
       showToast(isReassign
         ? '✓ Request reassigned to ' + inspector
         : '✓ Assigned to ' + inspector);
+      sxAfterRequestAssigned(id);
       loadRequests();
     } catch(e) {
       showToast('⚠ Failed to assign: ' + (e.message || e), 'warn');
@@ -11949,6 +11952,111 @@
     showToast(`Building ${num} removed`);
   }
     // ── PUBLISH / UNPUBLISH REPORT ──
+  // ══════════ JOB LOG + JOB EMAILS (added) ══════════
+  async function sxNotify(ev, payload) {
+    try {
+      const sess = (await _supabase.auth.getSession()).data.session;
+      const r = await fetch('/.netlify/functions/notify-job', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (sess ? sess.access_token : '') },
+        body: JSON.stringify(Object.assign({ event: ev }, payload || {}))
+      });
+      const j = await r.json().catch(function() { return {}; });
+      if (!r.ok) return { error: j.error || 'Email request failed' };
+      return j;
+    } catch (e) { return { error: e.message }; }
+  }
+  // Sends one or more job emails and reports the outcome in one toast. Never blocks the assignment itself.
+  async function sxSendJobEmails(list) {
+    const ok = [], notes = [];
+    for (const item of list) {
+      const res = await sxNotify(item[0], item[1]);
+      if (res.error) notes.push(res.error);
+      (res.sent || []).forEach(function(s) { ok.push(s); });
+      (res.skipped || []).forEach(function(s) { notes.push(s); });
+    }
+    if (ok.length) showToast('✉ Email sent to: ' + ok.join(', ') + (notes.length ? ' — note: ' + notes.join(' ') : ''));
+    else if (notes.length) showToast('✉ No email sent — ' + notes.join(' '));
+  }
+  function sxAfterRequestAssigned(requestId) {
+    sxSendJobEmails([['inspector_assigned', { request_id: requestId }], ['client_assigned', { request_id: requestId }]]);
+  }
+  function sxModal(title) {
+    const old = document.getElementById('sx-modal'); if (old) old.remove();
+    const back = document.createElement('div'); back.id = 'sx-modal';
+    back.style.cssText = 'position:fixed;inset:0;background:rgba(13,27,42,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#fff;border-radius:10px;max-width:560px;width:100%;max-height:86vh;overflow:auto;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.35);font-family:inherit;color:#1a2433;';
+    const h = document.createElement('div'); h.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;';
+    const t = document.createElement('strong'); t.style.fontSize = '15px'; t.textContent = title;
+    const x = document.createElement('button'); x.textContent = '✕'; x.style.cssText = 'border:none;background:none;font-size:18px;cursor:pointer;';
+    x.onclick = function() { back.remove(); };
+    h.appendChild(t); h.appendChild(x); box.appendChild(h); back.appendChild(box);
+    back.addEventListener('click', function(e) { if (e.target === back) back.remove(); });
+    document.body.appendChild(back);
+    return box;
+  }
+  async function sxOpenLog(kind, id, label) {
+    const box = sxModal('Job log — ' + (label || ''));
+    const list = document.createElement('div'); list.textContent = 'Loading…'; box.appendChild(list);
+    const col = kind === 'request' ? 'request_id' : 'inspection_id';
+    async function load() {
+      const res = await _supabase.from('job_events').select('event_type,note,actor_name,created_at').eq(col, id).order('created_at');
+      list.textContent = '';
+      if (res.error) { list.textContent = '⚠ ' + res.error.message; return; }
+      if (!res.data.length) { list.textContent = 'Nothing logged yet. Events are recorded from now on.'; return; }
+      res.data.forEach(function(e) {
+        const row = document.createElement('div'); row.style.cssText = 'border-left:3px solid #c9a84c;padding:4px 10px;margin:0 0 8px;';
+        const when = document.createElement('div'); when.style.cssText = 'font-size:11px;color:#667;';
+        when.textContent = new Date(e.created_at).toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' }) + (e.actor_name ? ' · ' + e.actor_name : '');
+        const what = document.createElement('div'); what.style.cssText = 'font-size:13px;';
+        what.textContent = (e.event_type === 'email' ? '✉ ' : e.event_type === 'note' ? '📝 ' : '') + (e.note || e.event_type);
+        row.appendChild(when); row.appendChild(what); list.appendChild(row);
+      });
+    }
+    await load();
+    const form = document.createElement('div'); form.style.cssText = 'margin-top:12px;display:flex;gap:6px;';
+    const inp = document.createElement('input'); inp.type = 'text'; inp.maxLength = 2000; inp.placeholder = 'Add a note…';
+    inp.style.cssText = 'flex:1;padding:7px 9px;border:1px solid #ccc;border-radius:6px;font-size:13px;';
+    const btn = document.createElement('button'); btn.textContent = 'Add note';
+    btn.style.cssText = 'background:#0d1b2a;color:#c9a84c;border:none;border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer;';
+    btn.onclick = async function() {
+      const note = inp.value.trim(); if (!note) return;
+      const r = await _supabase.rpc('add_job_note', { p_inspection: kind === 'request' ? null : id, p_request: kind === 'request' ? id : null, p_note: note });
+      if (r.error) { showToast('⚠ ' + r.error.message); return; }
+      inp.value = ''; load();
+    };
+    form.appendChild(inp); form.appendChild(btn); box.appendChild(form);
+  }
+  // After publishing: offer to email the client; address prefilled from a matching request when one exists
+  async function sxOfferClientEmail(inspectionDbId, ref, insured) {
+    const box = sxModal('Email the client?');
+    const p = document.createElement('div'); p.style.cssText = 'font-size:13px;margin-bottom:10px;';
+    p.textContent = 'The report for ' + (insured || ref || 'this inspection') + ' is published. Send the client a link now? Leave the address empty to skip.';
+    const inp = document.createElement('input'); inp.type = 'email'; inp.placeholder = 'client@example.com';
+    inp.style.cssText = 'width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;';
+    const hint = document.createElement('div'); hint.style.cssText = 'font-size:11px;color:#667;margin:6px 0 12px;'; hint.textContent = 'Looking for the client address from their request…';
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;';
+    const skip = document.createElement('button'); skip.textContent = 'Skip'; skip.style.cssText = 'border:1px solid #ccc;background:#fff;border-radius:6px;padding:7px 14px;cursor:pointer;';
+    const send = document.createElement('button'); send.textContent = 'Send email'; send.style.cssText = 'background:#0d1b2a;color:#c9a84c;border:none;border-radius:6px;padding:7px 14px;cursor:pointer;';
+    skip.onclick = function() { document.getElementById('sx-modal').remove(); };
+    send.onclick = async function() {
+      const to = inp.value.trim(); if (!to) { skip.onclick(); return; }
+      send.disabled = true; send.textContent = 'Sending…';
+      const res = await sxNotify('client_released', { inspection_id: inspectionDbId, to: to });
+      document.getElementById('sx-modal') && document.getElementById('sx-modal').remove();
+      showToast(res.error ? '⚠ ' + res.error : '✉ Report link emailed to ' + to);
+    };
+    row.appendChild(skip); row.appendChild(send);
+    box.appendChild(p); box.appendChild(inp); box.appendChild(hint); box.appendChild(row);
+    const s = await sxNotify('suggest_client', { inspection_id: inspectionDbId });
+    if (s.suggestions && s.suggestions.length) {
+      if (!inp.value) inp.value = s.suggestions[0].email;
+      hint.textContent = 'Prefilled from request ' + (s.suggestions[0].ref || '') + ' — please check it is the right person.';
+    } else hint.textContent = 'No matching request found. Type the client address, or skip.';
+  }
+  // ══════════ END JOB LOG + JOB EMAILS ══════════
+
   async function togglePublishReport(id, isPublished, inspectionId, insuredName) {
     const action = isPublished ? 'unpublish' : 'publish';
     const msg = isPublished
@@ -11965,6 +12073,7 @@
         // Show the client link
         const link = `${window.location.origin}/report?ref=${inspectionId}`;
         showToast('✓ Report published — client link ready');
+        setTimeout(function() { sxOfferClientEmail(id, inspectionId, insuredName); }, 300);
         // Show copyable link in a small prompt
         setTimeout(() => {
           if (confirm('Report published! Click OK to copy the client link to clipboard.')) {
@@ -13386,6 +13495,7 @@
         .eq('id', dbId);
       if (error) throw error;
       showToast('✓ Assigned to ' + reviewerName + ' — status set to In Review.');
+      sxSendJobEmails([['reviewer_assigned', { inspection_id: dbId }]]);
       // If this is the currently loaded inspection, update local state
       if (currentInspectionId === dbId) {
         currentReportStatus = 'inreview';
