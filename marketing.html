@@ -332,6 +332,24 @@
       </div>
     </div>
     <div class="suite-card">
+      <div class="suite-card-accent" style="background:var(--scan)"></div>
+      <div class="suite-card-body">
+        <span class="suite-card-icon">&#x1F4F8;</span>
+        <div class="suite-product-name" style="color:#67e8f9">Sanket SCAN <span style="opacity:.6">_ONE</span></div>
+        <p class="suite-card-desc">AI-powered property assessment from submitted photographs. Full COPE analysis, hazard identification, and underwriting recommendations &mdash; generated from insured-supplied images.</p>
+        <span class="suite-status status-live">&#x25CF; Premium &middot; Available</span>
+      </div>
+    </div>
+    <div class="suite-card">
+      <div class="suite-card-accent" style="background:var(--valuation)"></div>
+      <div class="suite-card-body">
+        <span class="suite-card-icon">&#x1F3DB;&#xFE0F;</span>
+        <div class="suite-product-name" style="color:#d6a7f5">Sanket VALUATION <span style="opacity:.6">_ONE</span></div>
+        <p class="suite-card-desc">e2Value-powered building replacement cost valuation, requested live from inside your SanketRisk ONE inspection using the field data already entered. RSMeans valuation is also available for specialized needs.</p>
+        <span class="suite-status status-live">&#x25CF; Available</span>
+      </div>
+    </div>
+    <div class="suite-card">
       <div class="suite-card-accent" style="background:var(--vision)"></div>
       <div class="suite-card-body">
         <span class="suite-card-icon">&#x1F441;&#xFE0F;</span>
@@ -347,24 +365,6 @@
         <div class="suite-product-name" style="color:#68d391">Sanket LIDAR <span style="opacity:.6">_ONE</span></div>
         <p class="suite-card-desc">Precision LiDAR spatial surveys for commercial properties. Accurate floor plans, elevation data, structural measurements, and as-built documentation from point cloud data.</p>
         <span class="suite-status status-soon">&#x25CE; Coming Soon</span>
-      </div>
-    </div>
-    <div class="suite-card">
-      <div class="suite-card-accent" style="background:var(--valuation)"></div>
-      <div class="suite-card-body">
-        <span class="suite-card-icon">&#x1F3DB;&#xFE0F;</span>
-        <div class="suite-product-name" style="color:#d6a7f5">Sanket VALUATION <span style="opacity:.6">_ONE</span></div>
-        <p class="suite-card-desc">e2Value-powered building replacement cost valuation, requested live from inside your SanketRisk ONE inspection using the field data already entered. RSMeans valuation is also available for specialized needs.</p>
-        <span class="suite-status status-live">&#x25CF; Available</span>
-      </div>
-    </div>
-    <div class="suite-card">
-      <div class="suite-card-accent" style="background:var(--scan)"></div>
-      <div class="suite-card-body">
-        <span class="suite-card-icon">&#x1F4F8;</span>
-        <div class="suite-product-name" style="color:#67e8f9">Sanket SCAN <span style="opacity:.6">_ONE</span></div>
-        <p class="suite-card-desc">AI-powered property assessment from submitted photographs. Full COPE analysis, hazard identification, and underwriting recommendations &mdash; generated from insured-supplied images.</p>
-        <span class="suite-status status-live">&#x25CF; Available</span>
       </div>
     </div>
     <div class="suite-card">
@@ -449,7 +449,7 @@
     <div class="feature-item"><span class="feature-icon">&#x1F4C4;</span><div class="feature-title">Three Report Formats</div><p class="feature-desc">Screen Print, Formal Structured Report, and AI-powered Narrative Report &mdash; all generated from a single set of field data with cover page and risk scores.</p></div>
     <div class="feature-item"><span class="feature-icon">&#x1F4F7;</span><div class="feature-title">Bulk Photo Documentation</div><p class="feature-desc">Select dozens of photos in one action. Auto-slots, category tagging, captions, secure cloud storage, and cover page integration in reports.</p></div>
     <div class="feature-item"><span class="feature-icon">&#x2705;</span><div class="feature-title">QA Review Pipeline</div><p class="feature-desc">Built-in quality assurance &mdash; submit, review, approve or return with structured feedback. Full audit trail preserved throughout the report lifecycle.</p></div>
-    <div class="feature-item"><span class="feature-icon">&#x1F4D6;</span><div class="feature-title">Engineering Service Instructions</div><p class="feature-desc">Integrated ESI reference guide covering every form section, NFPA technical guides for all hazard types, and a live admin bulletin board.</p></div>
+    <div class="feature-item"><span class="feature-icon">&#x1F4D6;</span><div class="feature-title">Engineering Service Instructions, Knowledge Base &amp; Technical Papers</div><p class="feature-desc">One integrated reference: an ESI guide covering every form section, a Technical Reference with NFPA guides for all hazard types, a Knowledge Base with construction classification and climatic design data plus a document library, and a live admin bulletin board.</p></div>
     <div class="feature-item"><span class="feature-icon">&#x1F4E9;</span><div class="feature-title">Inspection Request Portal</div><p class="feature-desc">Public-facing portal for client submissions. Requestors check progress with their reference number and email; requests are managed, assigned, and converted to active inspections from the admin dashboard.</p></div>
     <div class="feature-item"><span class="feature-icon">&#x1F6E1;&#xFE0F;</span><div class="feature-title">Secure Cloud Architecture</div><p class="feature-desc">Built on Supabase PostgreSQL with row-level security, role-based access, Netlify edge delivery, and encrypted nightly backups.</p></div>
     <div class="feature-item"><span class="feature-icon">&#x1F4A1;</span><div class="feature-title">Automatic Recommendation Engine</div><p class="feature-desc">Inspection field entries &mdash; sprinkler condition, service tag status, grease filter buildup, and dozens more &mdash; automatically generate prioritized, NFPA-referenced recommendations with no manual drafting required.</p></div>
@@ -560,33 +560,22 @@
   <p class="section-sub" style="max-width:580px">The SanketRisk ONE suite combines live services and an active development roadmap. Each product integrates directly with the core inspection platform &mdash; extending risk intelligence beyond the form.</p>
   <div class="cs-grid reveal">
     <div class="cs-card">
-      <div class="cs-card-top" style="background:linear-gradient(135deg,#1a365d,#2b6cb0)">
-        <div class="cs-badge">Coming Soon</div>
-        <div class="cs-product-name">Sanket VISION <span class="one">_ONE</span></div>
-        <div class="cs-title">360&deg; Walkthrough &amp; Visual Documentation</div>
-        <p class="cs-sub">Immersive property visualization and remote survey capability &mdash; delivering the full context of a site visit without always requiring physical presence.</p>
+      <div class="cs-card-top" style="background:linear-gradient(135deg,#065f73,#0891b2)">
+        <div class="cs-badge" style="background:rgba(56,161,105,.2);color:#68d391;border-color:rgba(56,161,105,.3)">&#x25CF; Premium &middot; Available</div>
+        <div class="cs-product-name">Sanket SCAN <span class="one">_ONE</span></div>
+        <div class="cs-title">AI Property Assessment from Photographs</div>
+        <p class="cs-sub">The insured submits photos. Our AI does the rest &mdash; delivering a structured COPE assessment, hazard analysis, and underwriting recommendations without a physical site visit.</p>
       </div>
       <div class="cs-card-body">
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F504;</div>Full 360&deg; interior and exterior walkthrough capture integrated with the inspection record</div>
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F310;</div>Shareable virtual tour links for underwriters to review remotely</div>
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4CD;</div>Hotspot annotations &mdash; link inspection findings directly to points in the walkthrough</div>
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4F1;</div>Captured via standard smartphone or dedicated 360&deg; camera hardware</div>
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4CB;</div>Embedded in formal and narrative reports as supplementary visual evidence</div>
-      </div>
-    </div>
-    <div class="cs-card">
-      <div class="cs-card-top" style="background:linear-gradient(135deg,#1a4731,#276749)">
-        <div class="cs-badge">Coming Soon</div>
-        <div class="cs-product-name">Sanket LIDAR <span class="one">_ONE</span></div>
-        <div class="cs-title">Precision Spatial Survey &amp; As-Built Documentation</div>
-        <p class="cs-sub">LiDAR point cloud technology delivers millimetre-accurate spatial data for commercial properties &mdash; replacing manual measurements and outdated floor plans.</p>
-      </div>
-      <div class="cs-card-body">
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4D0;</div>Accurate floor plans, cross-sections, and elevations from LiDAR point cloud data</div>
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4CF;</div>Verified building dimensions for replacement cost valuation and construction class confirmation</div>
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F3D7;&#xFE0F;</div>Structural element identification supporting COPE data entry</div>
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F517;</div>Direct integration with Sanket VALUATION ONE for area-verified cost modelling</div>
-        <div class="cs-feature"><div class="cs-feat-icon">&#x2601;&#xFE0F;</div>Point cloud data stored and accessible via the SanketRisk ONE cloud platform</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4F8;</div>Insured, broker, or property manager submits photos via a simple upload link &mdash; exterior, interior, roof, mechanical, and any areas of concern</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F916;</div>AI analyzes submitted images to identify construction class, building characteristics, occupancy indicators, visible hazards, and exposure factors</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4CB;</div>Generates a structured report in SanketRisk ONE format &mdash; full COPE summary, risk score, and prioritized recommendations</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x26A1;</div>Fast turnaround &mdash; ideal for renewal assessments, lower-value properties, remote locations, and high-volume preliminary screening</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4B0;</div>A cost-effective alternative to full physical inspections for appropriate risk profiles &mdash; clearly delivered as a Photo-Based Preliminary Assessment</div>
+        <div style="margin-top:14px;padding:12px 14px;background:#f0fdff;border-radius:8px;border-left:3px solid #0891b2;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0891b2;font-family:'DM Mono',monospace;margin-bottom:5px;">SCAN ONE &mdash; The Motto</div>
+          <p style="font-size:12px;color:#4a6580;line-height:1.6;margin:0"><em>SCAN ONE</em> &mdash; one scan, one report, one decision. Designed for the modern insurer who needs speed without sacrificing the structure and credibility of a SanketRisk ONE assessment.</p>
+        </div>
       </div>
     </div>
     <div class="cs-card">
@@ -619,22 +608,33 @@
       </div>
     </div>
     <div class="cs-card">
-      <div class="cs-card-top" style="background:linear-gradient(135deg,#065f73,#0891b2)">
-        <div class="cs-badge" style="background:rgba(56,161,105,.2);color:#68d391;border-color:rgba(56,161,105,.3)">&#x25CF; Available</div>
-        <div class="cs-product-name">Sanket SCAN <span class="one">_ONE</span></div>
-        <div class="cs-title">AI Property Assessment from Photographs</div>
-        <p class="cs-sub">The insured submits photos. Our AI does the rest &mdash; delivering a structured COPE assessment, hazard analysis, and underwriting recommendations without a physical site visit.</p>
+      <div class="cs-card-top" style="background:linear-gradient(135deg,#1a365d,#2b6cb0)">
+        <div class="cs-badge">Coming Soon</div>
+        <div class="cs-product-name">Sanket VISION <span class="one">_ONE</span></div>
+        <div class="cs-title">360&deg; Walkthrough &amp; Visual Documentation</div>
+        <p class="cs-sub">Immersive property visualization and remote survey capability &mdash; delivering the full context of a site visit without always requiring physical presence.</p>
       </div>
       <div class="cs-card-body">
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4F8;</div>Insured, broker, or property manager submits photos via a simple upload link &mdash; exterior, interior, roof, mechanical, and any areas of concern</div>
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F916;</div>AI analyzes submitted images to identify construction class, building characteristics, occupancy indicators, visible hazards, and exposure factors</div>
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4CB;</div>Generates a structured report in SanketRisk ONE format &mdash; full COPE summary, risk score, and prioritized recommendations</div>
-        <div class="cs-feature"><div class="cs-feat-icon">&#x26A1;</div>Fast turnaround &mdash; ideal for renewal assessments, lower-value properties, remote locations, and high-volume preliminary screening</div>
-        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4B0;</div>A cost-effective alternative to full physical inspections for appropriate risk profiles &mdash; clearly delivered as a Photo-Based Preliminary Assessment</div>
-        <div style="margin-top:14px;padding:12px 14px;background:#f0fdff;border-radius:8px;border-left:3px solid #0891b2;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0891b2;font-family:'DM Mono',monospace;margin-bottom:5px;">SCAN ONE &mdash; The Motto</div>
-          <p style="font-size:12px;color:#4a6580;line-height:1.6;margin:0"><em>SCAN ONE</em> &mdash; one scan, one report, one decision. Designed for the modern insurer who needs speed without sacrificing the structure and credibility of a SanketRisk ONE assessment.</p>
-        </div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F504;</div>Full 360&deg; interior and exterior walkthrough capture integrated with the inspection record</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F310;</div>Shareable virtual tour links for underwriters to review remotely</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4CD;</div>Hotspot annotations &mdash; link inspection findings directly to points in the walkthrough</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4F1;</div>Captured via standard smartphone or dedicated 360&deg; camera hardware</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4CB;</div>Embedded in formal and narrative reports as supplementary visual evidence</div>
+      </div>
+    </div>
+    <div class="cs-card">
+      <div class="cs-card-top" style="background:linear-gradient(135deg,#1a4731,#276749)">
+        <div class="cs-badge">Coming Soon</div>
+        <div class="cs-product-name">Sanket LIDAR <span class="one">_ONE</span></div>
+        <div class="cs-title">Precision Spatial Survey &amp; As-Built Documentation</div>
+        <p class="cs-sub">LiDAR point cloud technology delivers millimetre-accurate spatial data for commercial properties &mdash; replacing manual measurements and outdated floor plans.</p>
+      </div>
+      <div class="cs-card-body">
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4D0;</div>Accurate floor plans, cross-sections, and elevations from LiDAR point cloud data</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F4CF;</div>Verified building dimensions for replacement cost valuation and construction class confirmation</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F3D7;&#xFE0F;</div>Structural element identification supporting COPE data entry</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x1F517;</div>Direct integration with Sanket VALUATION ONE for area-verified cost modelling</div>
+        <div class="cs-feature"><div class="cs-feat-icon">&#x2601;&#xFE0F;</div>Point cloud data stored and accessible via the SanketRisk ONE cloud platform</div>
       </div>
     </div>
     <div class="cs-card">
